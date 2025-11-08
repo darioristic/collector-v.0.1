@@ -80,7 +80,7 @@ spec:
         #!/bin/sh
         set -eu
 
-        export STORAGE_DRIVER=vfs
+        export STORAGE_DRIVER=overlay
         export BUILDAH_ISOLATION=chroot
         export BUILDAH_USERNS=host
         export BUILDAH_ROOTLESS=0
