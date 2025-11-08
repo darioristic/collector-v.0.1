@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: collector-postgres
+  labels:
+    app: collector-postgres
+spec:
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+      protocol: TCP
+  selector:
+    app: collector-postgres
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: collector-postgres-headless
+  labels:
+    app: collector-postgres
+spec:
+  clusterIP: None
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+      protocol: TCP
+  selector:
+    app: collector-postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: collector-postgres
+  labels:
+    app: collector-postgres
+spec:
+  serviceName: collector-postgres-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: collector-postgres
+  template:
+    metadata:
+      labels:
+        app: collector-postgres
+    spec:
+      securityContext:
+        fsGroup: 26
+        supplementalGroups:
+          - 26
+        fsGroupChangePolicy: "OnRootMismatch"
+      containers:
+        - name: postgresql
+          image: registry.redhat.io/rhel9/postgresql-15:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+              name: postgres
+          envFrom:
+            - secretRef:
+                name: collector-postgres-credentials
+          volumeMounts:
+            - name: pgdata
+              mountPath: /var/lib/pgsql/data
+          readinessProbe:
+            exec:
+              command:
+                - /usr/libexec/check-container
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            exec:
+              command:
+                - /usr/libexec/check-container
+                - --live
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1
+              memory: 1Gi
+  volumeClaimTemplates:
+    - metadata:
+        name: pgdata
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+

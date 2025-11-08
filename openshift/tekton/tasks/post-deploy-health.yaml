@@ -1,0 +1,34 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: post-deploy-health
+spec:
+  description: >
+    Verifikuje da je API spreman nakon deploy-a pozivanjem /api/health rute.
+  params:
+    - name: service-url
+      description: URL servisa koji se proverava (npr. http://api:4000/api/health)
+  steps:
+    - name: check-health
+      image: curlimages/curl:8.10.1
+      script: |
+        #!/bin/sh
+        set -eu
+
+        URL="$(params.service-url)"
+        ATTEMPTS=0
+        MAX_ATTEMPTS=15
+
+        until curl -fsS "${URL}"; do
+          ATTEMPTS=$((ATTEMPTS + 1))
+          if [ "${ATTEMPTS}" -ge "${MAX_ATTEMPTS}" ]; then
+            echo "Health check nije uspeo posle ${MAX_ATTEMPTS} pokušaja."
+            exit 1
+          fi
+
+          echo "Health check nije uspeo, čekam pre sledećeg pokušaja..."
+          sleep 5
+        done
+
+        echo "Health check uspešan za ${URL}"
+

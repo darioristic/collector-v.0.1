@@ -53,7 +53,6 @@ export const inventoryStore = inventory;
 type CreateRequest = FastifyRequest<{ Body: ProductCreateBody }>;
 type UpdateRequest = FastifyRequest<{ Params: ProductIdParams; Body: ProductUpdateBody }>;
 type DeleteRequest = FastifyRequest<{ Params: ProductIdParams }>;
-type DetailRequest = FastifyRequest<{ Params: ProductIdParams }>;
 
 export const listProducts = async (_request: FastifyRequest, reply: FastifyReply) => {
   await reply.status(200).send({ data: products });

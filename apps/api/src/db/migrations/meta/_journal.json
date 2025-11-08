@@ -1,0 +1,22 @@
+{
+  "version": "5",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "0001",
+      "when": 1762502400000,
+      "tag": "initial",
+      "breakpoints": false
+    },
+    {
+      "idx": 1,
+      "version": "0002",
+      "when": 1762502400001,
+      "tag": "accounts_seed",
+      "breakpoints": false
+    }
+  ]
+}
+
+

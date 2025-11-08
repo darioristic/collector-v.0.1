@@ -15,6 +15,7 @@ import { users } from "./settings.schema";
 
 export const leadStatusEnum = pgEnum("lead_status", ["new", "contacted", "qualified", "won", "lost"]);
 export const opportunityStageEnum = pgEnum("opportunity_stage", [
+  "prospecting",
   "qualification",
   "proposal",
   "negotiation",

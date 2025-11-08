@@ -1,18 +1,27 @@
 import type { FastifyInstance } from "fastify";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { Account } from "@crm/types";
 
-import { buildServer } from "../src/server";
+let buildServer: typeof import("../src/server").buildServer;
 
 const parseBody = <T>(responseBody: string): T => JSON.parse(responseBody) as T;
 
 describe("Accounts API routes", () => {
   let app: FastifyInstance;
+  let seededAccountIds: string[];
+
+  beforeAll(async () => {
+    process.env.DATABASE_URL = "";
+    process.env.ACCOUNTS_REPOSITORY = "memory";
+
+    ({ buildServer } = await import("../src/server"));
+  });
 
   beforeEach(async () => {
     app = await buildServer();
     await app.ready();
+    seededAccountIds = ["acc_0001", "acc_0002"];
   });
 
   afterEach(async () => {
@@ -32,16 +41,18 @@ describe("Accounts API routes", () => {
     expect(Array.isArray(payload)).toBe(true);
     expect(payload).toHaveLength(2);
     expect(payload[0]).toMatchObject({
-      id: "acc_001",
+      id: seededAccountIds[0],
       name: "Acme Manufacturing",
       type: "company"
     });
   });
 
   it("should return a single account by id", async () => {
+    const accountId = seededAccountIds[0];
+
     const response = await app.inject({
       method: "GET",
-      url: "/api/accounts/acc_001"
+      url: `/api/accounts/${accountId}`
     });
 
     expect(response.statusCode).toBe(200);
@@ -49,7 +60,7 @@ describe("Accounts API routes", () => {
     const payload = parseBody<Account>(response.body);
 
     expect(payload).toMatchObject({
-      id: "acc_001",
+      id: accountId,
       name: "Acme Manufacturing",
       type: "company"
     });
@@ -71,7 +82,7 @@ describe("Accounts API routes", () => {
 
     const created = parseBody<Account>(createResponse.body);
 
-    expect(created.id).toMatch(/^acc_/);
+    expect(created.id).toMatch(/^[0-9a-fA-F-]{36}$/);
     expect(created).toMatchObject({
       name: "New Horizon LLC",
       type: "company",
@@ -118,9 +129,11 @@ describe("Accounts API routes", () => {
   });
 
   it("should update an existing account", async () => {
+    const accountId = seededAccountIds[0];
+
     const response = await app.inject({
       method: "PUT",
-      url: "/api/accounts/acc_001",
+      url: `/api/accounts/${accountId}`,
       payload: {
         name: "Acme Manufacturing International",
         type: "company",
@@ -134,7 +147,7 @@ describe("Accounts API routes", () => {
     const payload = parseBody<Account>(response.body);
 
     expect(payload).toMatchObject({
-      id: "acc_001",
+      id: accountId,
       name: "Acme Manufacturing International",
       phone: "+1-555-0102"
     });

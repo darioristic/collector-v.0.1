@@ -9,7 +9,11 @@
     "start": "node dist/server.js",
     "lint": "bunx eslint --config ../../packages/config/eslint.config.js \"src/**/*.{ts,tsx}\"",
     "test": "bunx vitest run",
-    "test:watch": "bunx vitest"
+    "test:watch": "bunx vitest",
+    "db:generate": "bunx drizzle-kit generate --config drizzle.config.ts",
+    "db:push": "bunx drizzle-kit push --config drizzle.config.ts",
+    "db:studio": "bunx drizzle-kit studio --config drizzle.config.ts",
+    "db:migrate": "bun src/db/migrate.ts"
   },
   "dependencies": {
     "@crm/types": "workspace:*",
@@ -19,11 +23,13 @@
     "drizzle-orm": "^0.44.7",
     "fastify": "^4.28.1",
     "pg": "^8.16.3",
-    "postgres": "^3.4.7"
+    "pg-mem": "^3.0.5"
   },
   "devDependencies": {
     "@types/node": "^24.10.0",
     "@types/pg": "^8.15.6",
+    "drizzle-kit": "^0.30.3",
+    "pino-pretty": "^10.3.0",
     "vitest": "^2.1.3"
   }
 }

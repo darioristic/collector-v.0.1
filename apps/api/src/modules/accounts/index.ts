@@ -1,10 +1,13 @@
 import type { FastifyPluginAsync } from "fastify";
 
-import { createInMemoryAccountsRepository } from "./accounts.repository";
+import { createDrizzleAccountsRepository, createInMemoryAccountsRepository } from "./accounts.repository";
 import accountsRoutes from "./accounts.routes";
 
 const accountsModule: FastifyPluginAsync = async (app) => {
-  const repository = createInMemoryAccountsRepository();
+  const repository =
+    process.env.ACCOUNTS_REPOSITORY?.toLowerCase() === "memory"
+      ? createInMemoryAccountsRepository()
+      : createDrizzleAccountsRepository();
 
   if (!app.hasDecorator("accountsRepository")) {
     app.decorate("accountsRepository", repository);

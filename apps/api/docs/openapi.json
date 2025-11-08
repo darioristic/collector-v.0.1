@@ -1,0 +1,68 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Collector Dashboard API",
+    "description": "API surface for Collector Dashboard services.",
+    "version": "1.0.0"
+  },
+  "components": {
+    "schemas": {}
+  },
+  "paths": {},
+  "servers": [
+    {
+      "url": "/",
+      "description": "Current environment"
+    }
+  ],
+  "tags": [
+    {
+      "name": "accounts",
+      "description": "Customer account management"
+    },
+    {
+      "name": "crm",
+      "description": "CRM operations and resource management"
+    },
+    {
+      "name": "sales-deals",
+      "description": "Sales deals lifecycle"
+    },
+    {
+      "name": "sales-orders",
+      "description": "Sales order management"
+    },
+    {
+      "name": "sales-invoices",
+      "description": "Sales invoicing and billing"
+    },
+    {
+      "name": "projects",
+      "description": "Project portfolio operations"
+    },
+    {
+      "name": "project-tasks",
+      "description": "Project tasks management"
+    },
+    {
+      "name": "project-milestones",
+      "description": "Project milestone tracking"
+    },
+    {
+      "name": "hr-employees",
+      "description": "Employee records and lifecycle"
+    },
+    {
+      "name": "hr-roles",
+      "description": "HR role definitions"
+    },
+    {
+      "name": "hr-attendance",
+      "description": "HR attendance records"
+    },
+    {
+      "name": "health",
+      "description": "Service health endpoints"
+    }
+  ]
+}

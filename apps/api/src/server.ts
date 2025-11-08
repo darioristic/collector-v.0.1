@@ -1,4 +1,8 @@
-import Fastify, { type FastifyInstance, type FastifyPluginAsync } from "fastify";
+import Fastify, {
+  type FastifyInstance,
+  type FastifyPluginAsync,
+  type FastifyLoggerOptions
+} from "fastify";
 import { readdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { pathToFileURL } from "node:url";
@@ -6,6 +10,28 @@ import { pathToFileURL } from "node:url";
 import errorHandlerPlugin from "./plugins/error-handler";
 import openApiPlugin from "./plugins/openapi";
 import healthRoutes from "./routes/health";
+
+const createLoggerOptions = (): FastifyLoggerOptions => {
+  const baseLevel = process.env.LOG_LEVEL ?? (process.env.NODE_ENV === "production" ? "info" : "debug");
+
+  if (process.env.NODE_ENV === "production") {
+    return {
+      level: baseLevel
+    };
+  }
+
+  return {
+    level: baseLevel,
+    transport: {
+      target: "pino-pretty",
+      options: {
+        colorize: true,
+        singleLine: false,
+        translateTime: "SYS:standard"
+      }
+    }
+  };
+};
 
 const registerHealthcheck = (app: FastifyInstance) =>
   app.register(healthRoutes, { prefix: "/api" });
@@ -81,7 +107,7 @@ const registerModules = async (app: FastifyInstance) => {
 };
 
 export const buildServer = async () => {
-  const app = Fastify({ logger: true });
+  const app = Fastify({ logger: createLoggerOptions() });
 
   await app.register(errorHandlerPlugin);
   await app.register(openApiPlugin);

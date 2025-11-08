@@ -1,0 +1,9 @@
+{
+  "version": "5",
+  "dialect": "postgresql",
+  "tables": {},
+  "enums": {},
+  "schemas": {}
+}
+
+

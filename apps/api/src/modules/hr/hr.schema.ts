@@ -105,7 +105,6 @@ export const attendanceListSchema: FastifySchema = {
     })
   }
 };
-
 export type Employee = {
   id: string;
   name: string;
@@ -197,5 +196,6 @@ export const mockAttendance: AttendanceRecord[] = [
     status: "absent"
   }
 ];
+
 
 

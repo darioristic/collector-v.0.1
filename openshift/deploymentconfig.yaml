@@ -24,6 +24,18 @@ spec:
           ports:
             - containerPort: 4000
               protocol: TCP
+          envFrom:
+            - secretRef:
+                name: collector-api-secrets
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 4000
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+            successThreshold: 1
           env:
             - name: NODE_ENV
               value: production
@@ -65,6 +77,9 @@ spec:
           ports:
             - containerPort: 3000
               protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: dashboard-theme-config
           env:
             - name: NODE_ENV
               value: production

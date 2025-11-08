@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: collector-api-secrets
+type: Opaque
+stringData:
+  DATABASE_URL: postgresql://collector:collector@collector-postgres:5432/collector_dashboard
+  CRM_API_KEY: replace-with-crm-api-key
+  ANALYTICS_API_KEY: replace-with-analytics-api-key
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: collector-postgres-credentials
+type: Opaque
+stringData:
+  POSTGRESQL_USER: collector
+  POSTGRESQL_PASSWORD: change-me
+  POSTGRESQL_DATABASE: collector_dashboard
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-theme-config
+data:
+  THEME_PRESET_COOKIE: theme_preset
+  THEME_SCALE_COOKIE: theme_scale
+  THEME_RADIUS_COOKIE: theme_radius
+  THEME_CONTENT_LAYOUT_COOKIE: theme_content_layout
+  THEME_SIDEBAR_MODE_COOKIE: theme_sidebar_mode
+

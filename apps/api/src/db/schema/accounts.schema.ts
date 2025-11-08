@@ -19,7 +19,7 @@ export const accounts = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     name: text("name").notNull(),
     type: accountType("type").default("company").notNull(),
-    email: text("email"),
+    email: text("email").notNull(),
     phone: text("phone"),
     website: text("website"),
     ownerId: uuid("owner_id").references(() => users.id, { onDelete: "set null" }),

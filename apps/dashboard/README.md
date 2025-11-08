@@ -1,55 +1,83 @@
-# Shadcn UI Kit
+# Collector Dashboard Frontend
 
-A large collection of admin dashboards, website templates, UI components, and ready-to-use blocks. Save time and deliver projects faster.
+Next.js 16 aplikacija koja prikazuje prodajne, CRM, projekatske i HR panele za Collector platformu. UI je zasnovan na shadcn/ui komponentama, sa temama podešenim da prate smernice brenda (hladne palete, narandžasta rezervisana za CTA elemente).
 
-This is a [Next.js 16](https://nextjs.org/) project bootstrapped with [create-next-app](https://github.com/vercel/next.js/tree/canary/packages/create-next-app) and React 19.
+## Pokretanje
 
-## Installation
+U korenu monorepa:
 
-Follow these steps to get your project up and running locally:
+```sh
+bun install
+bun run dev
+```
 
-1. Clone the repository:
+Dashboard je dostupan na `http://localhost:3000`, a API servis na `http://localhost:4000`.
 
-    ```sh
-    git clone https://github.com/bundui/shadcn-ui-kit-dashboard.git
-    cd shadcn-ui-kit-dashboard
-    ```
+### Promenljive okruženja
 
-2. Install dependencies:
+Dashboard čita konfiguraciju iz `.env.local` (root) ili `apps/dashboard/.env`. Najvažnije vrednosti:
 
-    ```sh
-    # Production / CI
-    npm install
+```ini
+COLLECTOR_API_URL=http://localhost:4000
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_GA_ID=
+```
 
-    # Local development
-    bun install
-    ```
+`COLLECTOR_API_URL` je baza za server-side pozive prema API-ju (npr. `/api/accounts`). `NEXT_PUBLIC_APP_URL` se koristi za generisanje canonical meta podatka i OpenGraph linkova. Ako nije definisan, koristi se `http://localhost:3000`.
 
-   If you encounter any problems installing packages, try adding the `--legacy-peer-deps` or `--force` flag:
+## Navigacija
 
-    ```sh
-    npm install --legacy-peer-deps
-    ```
+Glavne sekcije su fokusirane na domen aplikacije:
 
-3. Run the development server:
+- **Sales** – prodajni KPI, nalozi, fakture i plaćanja.
+- **CRM** – accounts, leads i sales pipeline.
+- **Projects** – portfelj projekata i radni board.
+- **People** – HR pregled i planiranje prisutnosti.
+- **Settings** – podešavanja radnog prostora i profil korisnika.
 
-    ```sh
-    bun run dev
-    ```
+Sekundarne demonstracione stranice iz originalnog template-a više nisu prikazane u glavnom meniju, ali su i dalje dostupne direktno ukoliko zatrebaju tokom razvoja.
 
-3. Open [http://localhost:3000](http://localhost:3000) in your browser to view the result.
+## Teme i brending
 
-4. To edit the project, you can examine the files under the app folder and components folder.
+Default tema je `lake-view` (hladna plava paleta). Ostale teme su i dalje dostupne u Theme panelu, ali narandžaste varijacije su uklonjene iz podrazumevanog izgleda.
 
-5. For production builds:
+Logotip i meta podaci su prilagođeni Collector brendu (`Collector Dashboard`), a fallback ikone/metapodaci iz template-a su obrisani.
 
-    ```sh
-    npm run build --turbo
-    npm run start
-    ```
+## Struktura
 
-## Minimum system requirements
+- `app/` – Next.js App Router stranice
+- `components/` – layout, sidebar, UI helperi i shadcn wrapper-i
+- `lib/` – teme, util funkcije, fontovi
 
-- Node.js version 20 and above.
+Za deljeni kod koristimo `packages/ui` i `packages/types` pakete iz monorepa.
 
-Note: If you experience problems with versions above Node.js v20, please replace with version v20.
+## Accounts stranica
+
+- Nova stranica se nalazi na `app/dashboard/(auth)/accounts/page.tsx`.
+- Fetch se izvršava serverski (`COLLECTOR_API_URL + /api/accounts`) i koristi deljene tipove iz `@crm/types`.
+- Tabela je izgrađena preko shadcn/ui komponenti i prikazuje osnovne informacije (naziv, tip, email, telefon, datumi).
+- U slučaju greške API-ja, korisnik dobija destruktivni alert i može ručno da pokuša ponovo.
+
+Test pokriva renderovanje tabele i empty state-a (`apps/dashboard/__tests__/accounts-table.test.tsx`) koristeći Vitest i React Testing Library:
+
+```sh
+bun run test
+```
+
+## E2E tok (lokalno)
+
+1. U `apps/api` izvršite:
+   ```sh
+   bun install
+   bun run db:migrate
+   bun run db:seed
+   bun run dev
+   ```
+2. U `apps/dashboard` podesite `.env.local` sa `COLLECTOR_API_URL=http://localhost:4000` i startujte frontend:
+   ```sh
+   bun install
+   bun run dev
+   ```
+3. Otvorite `http://localhost:3000/dashboard/accounts` i proverite da li su se prikazala seedovana dva naloga.
+
+Seed podaci služe kao mock scenario za demo i QA, pa se lako mogu proširiti ili osvežiti ponovnim pokretanjem `bun run db:seed`.

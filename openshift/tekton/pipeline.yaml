@@ -25,6 +25,14 @@ spec:
       type: string
       description: Image tag applied to both API and dashboard images
       default: $(context.pipelineRun.uid)
+    - name: database-secret-name
+      type: string
+      description: Kubernetes Secret koji sadrži DATABASE_URL vrednost za migracije
+      default: collector-api-secrets
+    - name: database-secret-key
+      type: string
+      description: Ključ unutar tajne koji sadrži DATABASE_URL
+      default: DATABASE_URL
   workspaces:
     - name: shared-workspace
   tasks:
@@ -40,9 +48,18 @@ spec:
         - name: output
           workspace: shared-workspace
 
-    - name: build-api
+    - name: quality-check
       runAfter:
         - checkout-code
+      taskRef:
+        name: quality-check
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    - name: build-api
+      runAfter:
+        - quality-check
       taskRef:
         name: build-api
       params:
@@ -95,9 +112,23 @@ spec:
         - name: dashboard-image
           value: $(tasks.build-dashboard.results.image-url)
 
-    - name: deploy-api
+    - name: run-migrations
       runAfter:
         - push-images
+      taskRef:
+        name: run-migrations
+      params:
+        - name: database-secret-name
+          value: $(params.database-secret-name)
+        - name: database-secret-key
+          value: $(params.database-secret-key)
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    - name: deploy-api
+      runAfter:
+        - run-migrations
       taskRef:
         name: deploy-api
       params:
@@ -106,9 +137,18 @@ spec:
         - name: image-url
           value: $(tasks.build-api.results.image-url)
 
-    - name: deploy-dashboard
+    - name: post-deploy-health
       runAfter:
         - deploy-api
+      taskRef:
+        name: post-deploy-health
+      params:
+        - name: service-url
+          value: http://api:4000/api/health
+
+    - name: deploy-dashboard
+      runAfter:
+        - post-deploy-health
       taskRef:
         name: deploy-dashboard
       params:

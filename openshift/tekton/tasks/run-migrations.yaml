@@ -1,0 +1,44 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: run-migrations
+spec:
+  description: >
+    Pokreće Bun migracije nad bazom koristeći definisan DATABASE_URL iz tajne.
+  params:
+    - name: database-secret-name
+      description: Naziv Kubernetes Secret resursa sa konekcionim stringom
+    - name: database-secret-key
+      description: Ključ unutar tajne koji sadrži DATABASE_URL
+      default: DATABASE_URL
+  workspaces:
+    - name: source
+      description: Workspace sa kloniranim repozitorijumom
+  steps:
+    - name: migrate
+      image: oven/bun:1.1.38-debian
+      workingDir: $(workspaces.source.path)
+      securityContext:
+        privileged: true
+        runAsUser: 0
+      env:
+        - name: BUN_NO_TELEMETRY
+          value: "1"
+        - name: DEBIAN_FRONTEND
+          value: noninteractive
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: $(params.database-secret-name)
+              key: $(params.database-secret-key)
+      script: |
+        #!/bin/sh
+        set -eu
+
+        apt-get update
+        apt-get install -y --no-install-recommends ca-certificates
+        rm -rf /var/lib/apt/lists/*
+
+        bun install --frozen-lockfile
+        bun run --filter api db:migrate
+

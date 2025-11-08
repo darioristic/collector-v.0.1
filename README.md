@@ -44,11 +44,44 @@ This repository is organised as a Bun workspace that contains the existing Next.
 - Workspace path aliases are defined in `tsconfig.base.json` for `@crm/ui/*` and `@crm/types/*`.
 - The API server listens on port `4000` by default; override with the `PORT` environment variable if needed.
 
+## Environment configuration
+
+The API server loads variables from `.env` / `.env.local` at the repository root (or workspace-specific files). If `DATABASE_URL` is missing, the server automatically falls back to an in-memory `pg-mem` instance so local development works without a dedicated PostgreSQL instance.
+
+```ini
+# apps/api
+HOST=0.0.0.0
+PORT=4000
+DATABASE_URL=postgresql://collector:collector@localhost:5432/collector_dashboard
+DB_MAX_CONNECTIONS=10
+DB_SSL=false
+
+# apps/dashboard
+NEXT_PUBLIC_API_BASE_URL=http://localhost:4000/api
+NEXT_PUBLIC_GA_ID=
+```
+
+Copy the snippet above into `.env.local` (in the repo root) or into the respective workspace `.env` files before running the applications.
+
+### Database scripts
+
+Additional helper scripts are available from the workspace root:
+
+```sh
+# Generate SQL migrations from schema changes
+bun run db:generate
+
+# Apply migrations to the configured database
+bun run db:migrate
+```
+
 ## Deploying with Tekton on OpenShift
 
 1. **Bootstrap OpenShift resources**
 
    ```sh
+   oc apply -f openshift/runtime-config.yaml
+   oc apply -f openshift/postgresql.yaml
    oc apply -f openshift/imagestream.yaml
    oc apply -f openshift/deploymentconfig.yaml
    oc apply -f openshift/service.yaml
@@ -77,7 +110,32 @@ This repository is organised as a Bun workspace that contains the existing Next.
    tkn pipelinerun logs -f
    ```
 
-The pipeline builds both applications with Node 20 + pnpm, produces container images via `buildah` inside Tekton, pushes them to the OpenShift internal registry, and then rolls out the corresponding `DeploymentConfig` objects. The frontend build keeps the existing Tailwind and shadcn configuration intact—no additional customisation is performed during the CI/CD process.
+The pipeline sada uključuje sledeće korake:
+
+- Bun lint i test (`quality-check` task) pre same izgradnje.
+- Izgradnja API i dashboard slika, zatim push na interni registry.
+- Pokretanje Bun migracija (`run-migrations` task) korišćenjem `DATABASE_URL` tajne.
+- Rollout API i dashboard DeploymentConfig objekata.
+- Post-deploy health check (`post-deploy-health` task) koji proverava `http://api:4000/api/health`.
+
+Na taj način se build ne nastavlja ukoliko lint/test padnu, migracije se izvršavaju pre puštanja nove verzije, a health check garantuje da je API spreman pre nego što se frontend osveži.
+
+### Runtime konfiguracija i tajne
+
+- `openshift/runtime-config.yaml` definiše:
+  - `Secret` pod nazivom `collector-api-secrets` sa ključevima:
+    - `DATABASE_URL` – konekcioni string za PostgreSQL (`postgresql://collector:<lozinka>@collector-postgres:5432/collector_dashboard`).
+    - `CRM_API_KEY` i `ANALYTICS_API_KEY` – eksterni API ključevi (dodajte stvarne vrednosti pre deploy-a).
+  - `Secret` `collector-postgres-credentials` sa креденцијалима (`POSTGRESQL_USER`, `POSTGRESQL_PASSWORD`, `POSTGRESQL_DATABASE`) које користи StatefulSet.
+  - `ConfigMap` `dashboard-theme-config` sa вредностима cookie-ja који чувају корисничке теме (`THEME_PRESET_COOKIE`, `THEME_SCALE_COOKIE`, `THEME_RADIUS_COOKIE`, `THEME_CONTENT_LAYOUT_COOKIE`, `THEME_SIDEBAR_MODE_COOKIE`).
+- `openshift/postgresql.yaml` креира сервисе (`collector-postgres` и headless варијанту) и StatefulSet базиран на `registry.redhat.io/rhel9/postgresql-15` са persistent storage-ом и препорукама за readiness/liveness probe.
+- `openshift/deploymentconfig.yaml` користи наведене ресурсе кроз `envFrom`, тако да су променљиве доступне контејнерима без додатних измена.
+- Tekton pipeline параметар `database-secret-name` подразумевано показује на `collector-api-secrets`. Уколико користите другачији назив тајне, проследите га кроз `tkn pipeline start`.
+
+### Observability
+
+- API logger koristi `pino-pretty` u razvojnom okruženju (`NODE_ENV !== "production"`) radi čitljivijeg izlaza, dok u produkciji šalje JSON logove spremne za agregaciju.
+- Readiness probe (`/api/health`) je definisana na API DeploymentConfig-u, što omogućava OpenShift-u da blokira saobraćaj ka podu dok servis nije spreman.
 
 ### Automatsko pokretanje (CI/CD trigger)
 

@@ -1,0 +1,56 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: quality-check
+spec:
+  description: >
+    Pokreni Bun lint i test korake nad monorepom kako bi se verifikovao kvalitet koda pre izgradnje slika.
+  workspaces:
+    - name: source
+      description: Workspace sa kloniranim repozitorijumom
+  steps:
+    - name: install
+      image: oven/bun:1.1.38-debian
+      workingDir: $(workspaces.source.path)
+      securityContext:
+        privileged: true
+        runAsUser: 0
+      env:
+        - name: BUN_NO_TELEMETRY
+          value: "1"
+        - name: DEBIAN_FRONTEND
+          value: noninteractive
+      script: |
+        #!/bin/sh
+        set -eu
+
+        apt-get update
+        apt-get install -y --no-install-recommends ca-certificates
+        rm -rf /var/lib/apt/lists/*
+
+        bun install --frozen-lockfile
+    - name: lint
+      image: oven/bun:1.1.38-debian
+      workingDir: $(workspaces.source.path)
+      env:
+        - name: BUN_NO_TELEMETRY
+          value: "1"
+      script: |
+        #!/bin/sh
+        set -eu
+
+        bun run lint
+    - name: test-api
+      image: oven/bun:1.1.38-debian
+      workingDir: $(workspaces.source.path)
+      env:
+        - name: BUN_NO_TELEMETRY
+          value: "1"
+        - name: NODE_ENV
+          value: test
+      script: |
+        #!/bin/sh
+        set -eu
+
+        bun run --filter api test
+
