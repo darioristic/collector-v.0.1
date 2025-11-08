@@ -1,0 +1,51 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: crm-monorepo-template
+spec:
+  params:
+    - name: git-repo-url
+      description: HTTPS URL repozitorijuma koji se gradi
+    - name: git-revision
+      description: Git referenca (npr. refs/heads/main)
+    - name: registry
+      description: OpenShift interni registry
+      default: image-registry.openshift-image-registry.svc:5000
+    - name: namespace
+      description: OpenShift projekat u kome se izvršava deployment
+      default: crm-platform-prod
+    - name: image-tag
+      description: Tag za container slike
+      default: $(uid)
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1
+      kind: PipelineRun
+      metadata:
+        generateName: crm-monorepo-
+      spec:
+        pipelineRef:
+          name: crm-monorepo-pipeline
+        serviceAccountName: pipeline
+        params:
+          - name: git-repo-url
+            value: $(tt.params.git-repo-url)
+          - name: git-revision
+            value: $(tt.params.git-revision)
+          - name: registry
+            value: $(tt.params.registry)
+          - name: namespace
+            value: $(tt.params.namespace)
+          - name: image-tag
+            value: $(tt.params.image-tag)
+        workspaces:
+          - name: shared-workspace
+            volumeClaimTemplate:
+              metadata:
+                generateName: crm-monorepo-workspace-
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 5Gi
+

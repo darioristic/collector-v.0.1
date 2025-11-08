@@ -1,0 +1,110 @@
+import type { FastifySchema } from "fastify";
+
+import { ACCOUNT_TYPES } from "./accounts.types";
+
+const accountProperties = {
+  id: { type: "string" },
+  name: { type: "string", minLength: 1 },
+  type: { type: "string", enum: ACCOUNT_TYPES },
+  email: { type: "string", format: "email" },
+  phone: { type: "string", nullable: true }
+} as const;
+
+const accountResponseSchema = {
+  type: "object",
+  properties: {
+    ...accountProperties,
+    phone: { ...accountProperties.phone, nullable: true },
+    createdAt: { type: "string", format: "date-time" },
+    updatedAt: { type: "string", format: "date-time" }
+  },
+  required: ["id", "name", "type", "email", "createdAt", "updatedAt"],
+  additionalProperties: false
+} as const;
+
+const accountBodySchema = {
+  type: "object",
+  properties: {
+    name: { type: "string", minLength: 1 },
+    type: { type: "string", enum: ACCOUNT_TYPES },
+    email: { type: "string", format: "email" },
+    phone: { type: "string" }
+  },
+  required: ["name", "type", "email"],
+  additionalProperties: false
+} as const;
+
+const accountParamsSchema = {
+  type: "object",
+  properties: {
+    id: { type: "string", minLength: 1 }
+  },
+  required: ["id"],
+  additionalProperties: false
+} as const;
+
+const errorResponseSchema = {
+  type: "object",
+  properties: {
+    statusCode: { type: "number" },
+    error: { type: "string" },
+    message: { type: "string" }
+  },
+  required: ["statusCode", "error", "message"],
+  additionalProperties: false
+} as const;
+
+export const listAccountsSchema: FastifySchema = {
+  tags: ["accounts"],
+  summary: "List all accounts",
+  response: {
+    200: {
+      type: "array",
+      items: accountResponseSchema
+    }
+  }
+};
+
+export const getAccountSchema: FastifySchema = {
+  tags: ["accounts"],
+  summary: "Get account by id",
+  params: accountParamsSchema,
+  response: {
+    200: accountResponseSchema,
+    404: errorResponseSchema
+  }
+};
+
+export const createAccountSchema: FastifySchema = {
+  tags: ["accounts"],
+  summary: "Create new account",
+  body: accountBodySchema,
+  response: {
+    201: accountResponseSchema,
+    400: errorResponseSchema,
+    409: errorResponseSchema
+  }
+};
+
+export const updateAccountSchema: FastifySchema = {
+  tags: ["accounts"],
+  summary: "Update account",
+  params: accountParamsSchema,
+  body: accountBodySchema,
+  response: {
+    200: accountResponseSchema,
+    400: errorResponseSchema,
+    404: errorResponseSchema
+  }
+};
+
+export const deleteAccountSchema: FastifySchema = {
+  tags: ["accounts"],
+  summary: "Delete account",
+  params: accountParamsSchema,
+  response: {
+    204: { type: "null" },
+    404: errorResponseSchema
+  }
+};
+

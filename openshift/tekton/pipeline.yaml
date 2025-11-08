@@ -1,0 +1,137 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: crm-monorepo-pipeline
+spec:
+  description: >
+    CI/CD pipeline for the CRM monorepo. Builds the Fastify API and Next.js dashboard
+    with Node 20 + pnpm, pushes images to the OpenShift internal registry, and rolls out
+    the updated DeploymentConfigs.
+  params:
+    - name: git-repo-url
+      type: string
+      description: Git repository containing the monorepo
+    - name: git-revision
+      type: string
+      description: Git revision (branch, tag, or commit) to build
+      default: main
+    - name: registry
+      type: string
+      description: OpenShift internal registry host (e.g. image-registry.openshift-image-registry.svc:5000)
+    - name: namespace
+      type: string
+      description: OpenShift project/namespace used for images and deployments
+    - name: image-tag
+      type: string
+      description: Image tag applied to both API and dashboard images
+      default: $(context.pipelineRun.uid)
+  workspaces:
+    - name: shared-workspace
+  tasks:
+    - name: checkout-code
+      taskRef:
+        apiVersion: tekton.dev/v1
+        kind: ClusterTask
+        name: git-clone
+      params:
+        - name: url
+          value: $(params.git-repo-url)
+        - name: revision
+          value: $(params.git-revision)
+        - name: depth
+          value: "1"
+      workspaces:
+        - name: output
+          workspace: shared-workspace
+
+    - name: build-api
+      runAfter:
+        - checkout-code
+      taskRef:
+        apiVersion: tekton.dev/v1
+        kind: Task
+        name: build-api
+      params:
+        - name: registry
+          value: $(params.registry)
+        - name: namespace
+          value: $(params.namespace)
+        - name: image-tag
+          value: $(params.image-tag)
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    - name: build-dashboard
+      runAfter:
+        - build-api
+      taskRef:
+        apiVersion: tekton.dev/v1
+        kind: Task
+        name: build-dashboard
+      params:
+        - name: registry
+          value: $(params.registry)
+        - name: namespace
+          value: $(params.namespace)
+        - name: image-tag
+          value: $(params.image-tag)
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    - name: push-images
+      runAfter:
+        - build-dashboard
+      taskSpec:
+        params:
+          - name: api-image
+            type: string
+          - name: dashboard-image
+            type: string
+        steps:
+          - name: summary
+            image: alpine:3.20
+            script: |
+              #!/bin/sh
+              echo "Images pushed to the registry:"
+              echo "  API       : $(params.api-image)"
+              echo "  Dashboard : $(params.dashboard-image)"
+      params:
+        - name: api-image
+          value: $(tasks.build-api.results.image-url)
+        - name: dashboard-image
+          value: $(tasks.build-dashboard.results.image-url)
+
+    - name: deploy-api
+      runAfter:
+        - push-images
+      taskRef:
+        apiVersion: tekton.dev/v1
+        kind: Task
+        name: deploy-api
+      params:
+        - name: namespace
+          value: $(params.namespace)
+        - name: image-url
+          value: $(tasks.build-api.results.image-url)
+
+    - name: deploy-dashboard
+      runAfter:
+        - deploy-api
+      taskRef:
+        apiVersion: tekton.dev/v1
+        kind: Task
+        name: deploy-dashboard
+      params:
+        - name: namespace
+          value: $(params.namespace)
+        - name: image-url
+          value: $(tasks.build-dashboard.results.image-url)
+
+  results:
+    - name: api-image
+      value: $(tasks.build-api.results.image-url)
+    - name: dashboard-image
+      value: $(tasks.build-dashboard.results.image-url)
+

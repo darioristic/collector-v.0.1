@@ -1,0 +1,87 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: build-dashboard
+spec:
+  description: >
+    Build the Next.js dashboard using Node 20 and pnpm, then build and push a container
+    image to the OpenShift internal registry with buildah.
+  params:
+    - name: registry
+      description: OpenShift internal registry host (e.g. image-registry.openshift-image-registry.svc:5000)
+    - name: namespace
+      description: OpenShift project/namespace for the image stream
+    - name: image-tag
+      description: Image tag to apply when pushing
+      default: $(context.pipelineRun.uid)
+    - name: dockerfile
+      description: Relative path to the Dockerfile
+      default: apps/dashboard/Dockerfile.prod
+    - name: context
+      description: Build context directory
+      default: apps/dashboard
+    - name: tls-verify
+      description: Whether to verify TLS when pushing to the registry
+      default: "false"
+  results:
+    - name: image-url
+      description: Fully qualified image reference that was pushed
+  workspaces:
+    - name: source
+      description: Workspace with the cloned repository
+  steps:
+    - name: build-and-push
+      image: node:20-alpine
+      workingDir: $(workspaces.source.path)
+      env:
+        - name: REGISTRY
+          value: $(params.registry)
+        - name: NAMESPACE
+          value: $(params.namespace)
+        - name: IMAGE_TAG
+          value: $(params.image-tag)
+        - name: DOCKERFILE
+          value: $(params.dockerfile)
+        - name: CONTEXT_DIR
+          value: $(params.context)
+        - name: TLS_VERIFY
+          value: $(params.tls-verify)
+        - name: NODE_ENV
+          value: production
+        - name: NEXT_TELEMETRY_DISABLED
+          value: "1"
+      script: |
+        #!/bin/sh
+        set -euo pipefail
+
+        apk add --no-cache buildah fuse-overlayfs git ca-certificates
+
+        corepack enable
+        corepack prepare pnpm@latest --activate
+
+        pnpm install --frozen-lockfile
+
+        cd apps/dashboard
+        pnpm run build
+        cd - >/dev/null 2>&1 || exit 1
+
+        export STORAGE_DRIVER=vfs
+        export BUILDAH_ISOLATION=chroot
+        export REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE:-/tekton/home/auth.json}"
+
+        IMAGE_REF="${REGISTRY}/${NAMESPACE}/dashboard:${IMAGE_TAG}"
+
+        buildah bud \
+          --layers \
+          --storage-driver="${STORAGE_DRIVER}" \
+          -t "${IMAGE_REF}" \
+          -f "${DOCKERFILE}" \
+          "${CONTEXT_DIR}"
+
+        buildah push \
+          --storage-driver="${STORAGE_DRIVER}" \
+          --tls-verify="${TLS_VERIFY}" \
+          "${IMAGE_REF}"
+
+        printf "%s" "${IMAGE_REF}" > "$(results.image-url.path)"
+

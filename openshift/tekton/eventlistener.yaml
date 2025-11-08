@@ -1,0 +1,35 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: crm-monorepo-listener
+spec:
+  serviceAccountName: pipeline
+  triggers:
+    - name: github-main
+      interceptors:
+        - ref:
+            name: github
+            kind: ClusterInterceptor
+          params:
+            - name: secretRef
+              value:
+                secretName: github-webhook-secret
+                secretKey: secret
+            - name: eventTypes
+              value:
+                - push
+        - ref:
+            name: cel
+            kind: ClusterInterceptor
+          params:
+            - name: filter
+              value: "body.ref == 'refs/heads/main'"
+            - name: overlays
+              value:
+                - key: extensions.repositoryFullName
+                  expression: "body.repository.full_name"
+      bindings:
+        - ref: crm-monorepo-github-binding
+      template:
+        ref: crm-monorepo-template
+

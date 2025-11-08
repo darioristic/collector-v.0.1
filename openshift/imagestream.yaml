@@ -1,0 +1,20 @@
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: api
+  labels:
+    app: api
+spec:
+  lookupPolicy:
+    local: true
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: dashboard
+  labels:
+    app: dashboard
+spec:
+  lookupPolicy:
+    local: true
+

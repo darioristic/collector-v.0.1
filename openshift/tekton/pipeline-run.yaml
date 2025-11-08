@@ -1,0 +1,30 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: crm-monorepo-pipeline-run
+spec:
+  pipelineRef:
+    name: crm-monorepo-pipeline
+  serviceAccountName: pipeline
+  params:
+    - name: git-repo-url
+      value: https://github.com/collectordev/Collector-Dashboard.git
+    - name: git-revision
+      value: main
+    - name: registry
+      value: image-registry.openshift-image-registry.svc:5000
+    - name: namespace
+      value: crm-platform-prod
+    - name: image-tag
+      value: latest
+  workspaces:
+    - name: shared-workspace
+      volumeClaimTemplate:
+        metadata:
+          name: crm-monorepo-workspace
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 5Gi

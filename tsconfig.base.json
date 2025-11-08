@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@crm/ui/*": ["packages/ui/*"],
+      "@crm/types/*": ["packages/types/*"]
+    }
+  }
+}
+

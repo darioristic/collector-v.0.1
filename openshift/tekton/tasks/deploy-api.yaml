@@ -1,0 +1,32 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: deploy-api
+spec:
+  description: >
+    Tag the newly built API image, update the DeploymentConfig and roll out the change.
+  params:
+    - name: namespace
+      description: OpenShift project/namespace for the deployment
+    - name: image-url
+      description: Fully qualified image URL to deploy
+    - name: app-name
+      description: Application name / DeploymentConfig name
+      default: api
+  steps:
+    - name: rollout
+      image: quay.io/openshift/origin-cli:4.14
+      script: |
+        #!/bin/bash
+        set -euo pipefail
+
+        oc project "$(params.namespace)"
+
+        oc tag --source=docker "$(params.image-url)" "$(params.app-name):latest" --reference-policy=local -n "$(params.namespace)"
+
+        oc set image "dc/$(params.app-name)" "$(params.app-name)=$(params.image-url)" -n "$(params.namespace)"
+
+        oc rollout restart "dc/$(params.app-name)" -n "$(params.namespace)"
+
+        oc rollout status "dc/$(params.app-name)" -n "$(params.namespace)" --watch --timeout=5m
+

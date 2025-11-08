@@ -1,0 +1,82 @@
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: api
+  labels:
+    app: api
+spec:
+  replicas: 1
+  selector:
+    app: api
+    deploymentconfig: api
+  strategy:
+    type: Rolling
+  template:
+    metadata:
+      labels:
+        app: api
+        deploymentconfig: api
+    spec:
+      containers:
+        - name: api
+          image: image-registry.openshift-image-registry.svc:5000/$(NAMESPACE)/api:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 4000
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: production
+      restartPolicy: Always
+  triggers:
+    - type: ConfigChange
+    - type: ImageChange
+      imageChangeParams:
+        automatic: true
+        containerNames:
+          - api
+        from:
+          kind: ImageStreamTag
+          name: api:latest
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: dashboard
+  labels:
+    app: dashboard
+spec:
+  replicas: 2
+  selector:
+    app: dashboard
+    deploymentconfig: dashboard
+  strategy:
+    type: Rolling
+  template:
+    metadata:
+      labels:
+        app: dashboard
+        deploymentconfig: dashboard
+    spec:
+      containers:
+        - name: dashboard
+          image: image-registry.openshift-image-registry.svc:5000/$(NAMESPACE)/dashboard:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: production
+      restartPolicy: Always
+  triggers:
+    - type: ConfigChange
+    - type: ImageChange
+      imageChangeParams:
+        automatic: true
+        containerNames:
+          - dashboard
+        from:
+          kind: ImageStreamTag
+          name: dashboard:latest
+

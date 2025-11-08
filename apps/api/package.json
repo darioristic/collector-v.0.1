@@ -1,0 +1,25 @@
+{
+  "name": "api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "lint": "bunx eslint --config ../../packages/config/eslint.config.js \"src/**/*.{ts,tsx}\"",
+    "test": "bunx vitest run",
+    "test:watch": "bunx vitest"
+  },
+  "dependencies": {
+    "@crm/types": "workspace:*",
+    "@fastify/swagger": "^8.14.0",
+    "@fastify/swagger-ui": "^1.10.2",
+    "better-sqlite3": "^9.6.0",
+    "fastify": "^4.28.1"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.3"
+  }
+}
+
