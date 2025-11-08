@@ -81,7 +81,6 @@ spec:
           --layers \
           --storage-driver="${STORAGE_DRIVER}" \
           --isolation=chroot \
-          --userns=keep-id \
           -t "${IMAGE_REF}" \
           -f "${DOCKERFILE}" \
           "${CONTEXT_DIR}"
@@ -89,7 +88,6 @@ spec:
         buildah push \
           --storage-driver="${STORAGE_DRIVER}" \
           --isolation=chroot \
-          --userns=keep-id \
           --tls-verify="${TLS_VERIFY}" \
           "${IMAGE_REF}"
 
