@@ -33,6 +33,9 @@ spec:
     - name: prepare-node-build
       image: oven/bun:1.1.38-debian
       workingDir: $(workspaces.source.path)
+      securityContext:
+        privileged: true
+        runAsUser: 0
       script: |
         #!/bin/sh
         set -eu

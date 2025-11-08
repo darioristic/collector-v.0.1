@@ -5,7 +5,14 @@ metadata:
 spec:
   pipelineRef:
     name: crm-monorepo-pipeline
-  serviceAccountName: pipeline
+  serviceAccountName: pipeline-priv
+  taskRunTemplate:
+    serviceAccountName: pipeline-priv
+  taskRunSpecs:
+    - pipelineTaskName: build-api
+      serviceAccountName: pipeline-priv
+    - pipelineTaskName: build-dashboard
+      serviceAccountName: pipeline-priv
   params:
     - name: git-repo-url
       value: https://github.com/darioristic/collector-v.0.1.git

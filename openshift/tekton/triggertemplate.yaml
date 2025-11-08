@@ -26,7 +26,14 @@ spec:
       spec:
         pipelineRef:
           name: crm-monorepo-pipeline
-        serviceAccountName: pipeline
+        serviceAccountName: pipeline-priv
+        taskRunTemplate:
+          serviceAccountName: pipeline-priv
+        taskRunSpecs:
+          - pipelineTaskName: build-api
+            serviceAccountName: pipeline-priv
+          - pipelineTaskName: build-dashboard
+            serviceAccountName: pipeline-priv
         params:
           - name: git-repo-url
             value: $(tt.params.git-repo-url)

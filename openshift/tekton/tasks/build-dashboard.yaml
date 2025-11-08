@@ -38,6 +38,9 @@ spec:
           value: production
         - name: NEXT_TELEMETRY_DISABLED
           value: "1"
+      securityContext:
+        privileged: true
+        runAsUser: 0
       script: |
         #!/bin/sh
         set -eu

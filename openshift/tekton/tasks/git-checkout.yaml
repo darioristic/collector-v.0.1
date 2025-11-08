@@ -44,8 +44,6 @@ spec:
         SUCCESS=0
 
         if [ "${HOST}" = "github.com" ]; then
-          apk add --no-cache curl tar
-
           OWNER="$(printf '%s\n' "${REPO_URL}" | awk -F/ '{print $(NF-1)}')"
           REPO="$(printf '%s\n' "${REPO_URL}" | awk -F/ '{print $NF}')"
           REPO="${REPO%.git}"
@@ -54,7 +52,16 @@ spec:
 
           mkdir -p "${WORKSPACE_PATH}"
 
-          if curl -sSL "${ARCHIVE_URL}" | tar -xz --strip-components=1 -C "${WORKSPACE_PATH}"; then
+          if command -v curl >/dev/null 2>&1; then
+            DOWNLOADER="curl -sSL"
+          elif command -v wget >/dev/null 2>&1; then
+            DOWNLOADER="wget -qO-"
+          else
+            echo "Ni curl ni wget nisu dostupni u imagu, preskačem preuzimanje arhive."
+            DOWNLOADER=""
+          fi
+
+          if [ -n "${DOWNLOADER}" ] && ${DOWNLOADER} "${ARCHIVE_URL}" | tar -xz --strip-components=1 -C "${WORKSPACE_PATH}"; then
             SUCCESS=1
           else
             echo "Neuspešno preuzimanje arhive sa URL-a: ${ARCHIVE_URL}, prelazim na git clone."
