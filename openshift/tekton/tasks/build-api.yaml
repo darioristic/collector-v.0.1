@@ -51,6 +51,9 @@ spec:
     - name: build-and-push
       image: quay.io/buildah/stable:v1.41.4
       workingDir: $(workspaces.source.path)
+      securityContext:
+        privileged: true
+        runAsUser: 0
       env:
         - name: REGISTRY
           value: $(params.registry)
