@@ -19,7 +19,7 @@ spec:
       default: apps/api/Dockerfile.prod
     - name: context
       description: Build context directory
-      default: apps/api
+      default: .
     - name: tls-verify
       description: Whether to verify TLS when pushing to the registry
       default: "false"
@@ -30,8 +30,26 @@ spec:
     - name: source
       description: Workspace with the cloned repository
   steps:
+    - name: prepare-node-build
+      image: oven/bun:1.1.38-debian
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/bin/sh
+        set -eu
+
+        export BUN_NO_TELEMETRY=1
+        export DEBIAN_FRONTEND=noninteractive
+
+        apt-get update
+        apt-get install -y --no-install-recommends python3 build-essential libsqlite3-dev ca-certificates
+        ln -sf /usr/bin/python3 /usr/bin/python
+        rm -rf /var/lib/apt/lists/*
+        export PYTHON=python3
+
+        bun install --frozen-lockfile
+        bun run --filter api build
     - name: build-and-push
-      image: node:20-alpine
+      image: quay.io/buildah/stable:v1.41.4
       workingDir: $(workspaces.source.path)
       env:
         - name: REGISTRY
@@ -48,18 +66,7 @@ spec:
           value: $(params.tls-verify)
       script: |
         #!/bin/sh
-        set -euo pipefail
-
-        apk add --no-cache buildah fuse-overlayfs git ca-certificates
-
-        corepack enable
-        corepack prepare pnpm@latest --activate
-
-        pnpm install --frozen-lockfile
-
-        cd apps/api
-        pnpm run build
-        cd - >/dev/null 2>&1 || exit 1
+        set -eu
 
         export STORAGE_DRIVER=vfs
         export BUILDAH_ISOLATION=chroot

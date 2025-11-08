@@ -1,6 +1,6 @@
 import type { FastifyReply, RouteHandler } from "fastify";
 
-import { createHttpError } from "../../lib/errors";
+import { createHttpError, type ApiReply } from "../../lib/errors";
 
 import type {
   Account,
@@ -22,13 +22,14 @@ declare module "fastify" {
 
 export type ListAccountsReply = Account[];
 export type GetAccountParams = { id: string };
-export type GetAccountReply = Account;
+export type GetAccountReply = ApiReply<Account>;
 export type CreateAccountBody = AccountCreateInput;
-export type CreateAccountReply = Account;
+export type CreateAccountReply = ApiReply<Account>;
 export type UpdateAccountParams = GetAccountParams;
 export type UpdateAccountBody = AccountUpdateInput;
-export type UpdateAccountReply = Account;
+export type UpdateAccountReply = ApiReply<Account>;
 export type DeleteAccountParams = GetAccountParams;
+export type DeleteAccountReply = ApiReply<void>;
 
 export const listAccountsHandler: RouteHandler<{ Reply: ListAccountsReply }> = async (request) => {
   return request.accountsRepository.list();
@@ -86,7 +87,7 @@ export const updateAccountHandler: RouteHandler<{
 
 export const deleteAccountHandler: RouteHandler<{
   Params: DeleteAccountParams;
-  Reply: void;
+  Reply: DeleteAccountReply;
 }> = async (request, reply: FastifyReply) => {
   const deleted = await request.accountsRepository.delete(request.params.id);
 

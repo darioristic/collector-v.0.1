@@ -1,0 +1,75 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: git-checkout
+spec:
+  description: >
+    Clone the specified Git repository into the provided workspace using alpine/git.
+  params:
+    - name: url
+      description: HTTPS URL repozitorijuma
+    - name: revision
+      description: Grana ili commit koji se klonira
+      default: main
+  workspaces:
+    - name: output
+      description: Workspace u koji se klonira repozitorijum
+  steps:
+    - name: clone
+      image: alpine/git:2.45.2
+      workingDir: $(workspaces.output.path)
+      script: |
+        #!/bin/sh
+        set -euo pipefail
+
+        WORKSPACE_PATH="$(workspaces.output.path)"
+        REPO_URL="$(params.url)"
+        REVISION="$(params.revision)"
+
+        if [ ! -d "${WORKSPACE_PATH}" ]; then
+          echo "Workspace path ne postoji: ${WORKSPACE_PATH}"
+          exit 1
+        fi
+
+        find "${WORKSPACE_PATH}" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+        REF="${REVISION}"
+        case "${REF}" in
+          refs/heads/*) REF="${REF#refs/heads/}" ;;
+          refs/tags/*) REF="${REF#refs/tags/}" ;;
+        esac
+
+        HOST="$(printf '%s\n' "${REPO_URL}" | awk -F/ '{print $3}')"
+
+        SUCCESS=0
+
+        if [ "${HOST}" = "github.com" ]; then
+          apk add --no-cache curl tar
+
+          OWNER="$(printf '%s\n' "${REPO_URL}" | awk -F/ '{print $(NF-1)}')"
+          REPO="$(printf '%s\n' "${REPO_URL}" | awk -F/ '{print $NF}')"
+          REPO="${REPO%.git}"
+
+          ARCHIVE_URL="https://codeload.github.com/${OWNER}/${REPO}/tar.gz/${REF}"
+
+          mkdir -p "${WORKSPACE_PATH}"
+
+          if curl -sSL "${ARCHIVE_URL}" | tar -xz --strip-components=1 -C "${WORKSPACE_PATH}"; then
+            SUCCESS=1
+          else
+            echo "Neuspešno preuzimanje arhive sa URL-a: ${ARCHIVE_URL}, prelazim na git clone."
+          fi
+        fi
+
+        if [ "${SUCCESS}" -ne 1 ]; then
+          git clone --depth 1 "${REPO_URL}" .
+
+          if [ -n "${REF}" ] && ! git rev-parse --verify "${REF}" >/dev/null 2>&1; then
+            git fetch --depth 1 origin "${REF}"
+          fi
+
+          if [ -n "${REF}" ]; then
+            git checkout "${REF}"
+          fi
+        fi
+

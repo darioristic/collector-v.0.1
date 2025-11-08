@@ -1,6 +1,6 @@
 import type { RouteHandler } from "fastify";
 
-import { createHttpError } from "../../lib/errors";
+import { createHttpError, type ApiDataReply, type ApiReply } from "../../lib/errors";
 
 import type { Activity, ActivityCreateInput, ActivityType, ActivityUpdateInput } from "@crm/types";
 
@@ -10,14 +10,14 @@ export type ListActivitiesQuery = {
   limit?: number;
   offset?: number;
 };
-export type ListActivitiesReply = { data: Activity[] };
+export type ListActivitiesReply = ApiDataReply<Activity[]>;
 export type GetActivityParams = { id: string };
-export type GetActivityReply = { data: Activity };
+export type GetActivityReply = ApiDataReply<Activity>;
 export type CreateActivityBody = ActivityCreateInput;
-export type CreateActivityReply = { data: Activity };
+export type CreateActivityReply = ApiDataReply<Activity>;
 export type UpdateActivityParams = GetActivityParams;
 export type UpdateActivityBody = ActivityUpdateInput;
-export type UpdateActivityReply = { data: Activity };
+export type UpdateActivityReply = ApiDataReply<Activity>;
 export type DeleteActivityParams = GetActivityParams;
 
 export const listActivities: RouteHandler<{
@@ -88,10 +88,10 @@ export const updateActivity: RouteHandler<{
   return { data: updated };
 };
 
-export const deleteActivity: RouteHandler<{ Params: DeleteActivityParams }> = async (
-  request,
-  reply
-) => {
+export const deleteActivity: RouteHandler<{
+  Params: DeleteActivityParams;
+  Reply: ApiReply<void>;
+}> = async (request, reply) => {
   const deleted = await request.crmService.deleteActivity(request.params.id);
 
   if (!deleted) {

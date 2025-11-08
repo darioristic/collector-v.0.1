@@ -7,6 +7,10 @@ export type HttpErrorPayload = {
   details?: unknown;
 };
 
+export type ApiReply<T> = T | HttpErrorPayload;
+export type ApiDataReply<T> = { data: T } | HttpErrorPayload;
+export type ApiListReply<T> = { data: T[] } | HttpErrorPayload;
+
 const DEFAULT_ERROR = "Error";
 
 export const createHttpError = (

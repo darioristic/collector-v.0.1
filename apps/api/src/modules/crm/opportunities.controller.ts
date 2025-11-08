@@ -1,6 +1,6 @@
 import type { RouteHandler } from "fastify";
 
-import { createHttpError } from "../../lib/errors";
+import { createHttpError, type ApiDataReply, type ApiReply } from "../../lib/errors";
 
 import type {
   Opportunity,
@@ -16,14 +16,14 @@ export type ListOpportunitiesQuery = {
   limit?: number;
   offset?: number;
 };
-export type ListOpportunitiesReply = { data: Opportunity[] };
+export type ListOpportunitiesReply = ApiDataReply<Opportunity[]>;
 export type GetOpportunityParams = { id: string };
-export type GetOpportunityReply = { data: Opportunity };
+export type GetOpportunityReply = ApiDataReply<Opportunity>;
 export type CreateOpportunityBody = OpportunityCreateInput;
-export type CreateOpportunityReply = { data: Opportunity };
+export type CreateOpportunityReply = ApiDataReply<Opportunity>;
 export type UpdateOpportunityParams = GetOpportunityParams;
 export type UpdateOpportunityBody = OpportunityUpdateInput;
-export type UpdateOpportunityReply = { data: Opportunity };
+export type UpdateOpportunityReply = ApiDataReply<Opportunity>;
 export type DeleteOpportunityParams = GetOpportunityParams;
 
 export const listOpportunities: RouteHandler<{
@@ -102,10 +102,10 @@ export const updateOpportunity: RouteHandler<{
   return { data: updated };
 };
 
-export const deleteOpportunity: RouteHandler<{ Params: DeleteOpportunityParams }> = async (
-  request,
-  reply
-) => {
+export const deleteOpportunity: RouteHandler<{
+  Params: DeleteOpportunityParams;
+  Reply: ApiReply<void>;
+}> = async (request, reply) => {
   const deleted = await request.crmService.deleteOpportunity(request.params.id);
 
   if (!deleted) {

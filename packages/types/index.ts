@@ -5,7 +5,7 @@ export type Account = {
   name: string;
   type: AccountType;
   email: string;
-  phone?: string;
+  phone?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -14,10 +14,10 @@ export type AccountCreateInput = {
   name: string;
   type: AccountType;
   email: string;
-  phone?: string;
+  phone?: string | null;
 };
 
-export type AccountUpdateInput = AccountCreateInput;
+export type AccountUpdateInput = Partial<AccountCreateInput>;
 
 export type User = {
   id: string;
@@ -28,25 +28,26 @@ export type User = {
 export const LEAD_STATUSES = ["new", "contacted", "qualified", "won", "lost"] as const;
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
 
-export type LeadBase = {
+export type Lead = {
+  id: string;
   name: string;
   email: string;
   status: LeadStatus;
   source: string;
-};
-
-export type Lead = LeadBase & {
-  id: string;
   createdAt: string;
   updatedAt?: string | null;
 };
 
-export type LeadCreateInput = LeadBase & {
+export type LeadCreateInput = {
+  name: string;
+  email: string;
+  status: LeadStatus;
+  source: string;
   createdAt?: string;
   updatedAt?: string | null;
 };
 
-export type LeadUpdateInput = Partial<LeadBase> & {
+export type LeadUpdateInput = Partial<Omit<LeadCreateInput, "createdAt">> & {
   updatedAt?: string | null;
 };
 
@@ -57,68 +58,7 @@ export const OPPORTUNITY_STAGES = [
   "closedWon",
   "closedLost"
 ] as const;
-
 export type OpportunityStage = (typeof OPPORTUNITY_STAGES)[number];
-
-export type OpportunityBase = {
-  accountId: string;
-  title: string;
-  stage: OpportunityStage;
-  value: number;
-  probability: number;
-  closeDate: string;
-};
-
-export type Opportunity = OpportunityBase & {
-  id: string;
-  createdAt: string;
-  updatedAt?: string | null;
-};
-
-export type OpportunityCreateInput = OpportunityBase & {
-  createdAt?: string;
-  updatedAt?: string | null;
-};
-
-export type OpportunityUpdateInput = Partial<OpportunityBase> & {
-  updatedAt?: string | null;
-};
-
-export const ACTIVITY_TYPES = ["call", "email", "meeting", "task"] as const;
-
-export type ActivityType = (typeof ACTIVITY_TYPES)[number];
-
-export type ActivityBase = {
-  type: ActivityType;
-  subject: string;
-  date: string;
-  relatedTo: string;
-};
-
-export type Activity = ActivityBase & {
-  id: string;
-  createdAt: string;
-  updatedAt?: string | null;
-};
-
-export type ActivityCreateInput = Omit<ActivityBase, "date"> & { date?: string };
-
-export type ActivityUpdateInput = Partial<ActivityBase> & {
-  date?: string;
-  updatedAt?: string | null;
-};
-
-export const CRM_ROLES = ["admin", "sales_manager", "sales_rep", "support", "viewer"] as const;
-export type CRMRole = (typeof CRM_ROLES)[number];
-  createdAt: string;
-};
-
-export type OpportunityStage =
-  | "qualification"
-  | "proposal"
-  | "negotiation"
-  | "closedWon"
-  | "closedLost";
 
 export type Opportunity = {
   id: string;
@@ -128,9 +68,27 @@ export type Opportunity = {
   value: number;
   probability: number;
   closeDate: string;
+  createdAt: string;
+  updatedAt?: string | null;
 };
 
-export type ActivityType = "call" | "email" | "meeting" | "task";
+export type OpportunityCreateInput = {
+  accountId: string;
+  title: string;
+  stage: OpportunityStage;
+  value: number;
+  probability: number;
+  closeDate: string;
+  createdAt?: string;
+  updatedAt?: string | null;
+};
+
+export type OpportunityUpdateInput = Partial<Omit<OpportunityCreateInput, "createdAt">> & {
+  updatedAt?: string | null;
+};
+
+export const ACTIVITY_TYPES = ["call", "email", "meeting", "task"] as const;
+export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 
 export type Activity = {
   id: string;
@@ -138,5 +96,238 @@ export type Activity = {
   subject: string;
   date: string;
   relatedTo: string;
+  createdAt: string;
+  updatedAt?: string | null;
 };
 
+export type ActivityCreateInput = {
+  type: ActivityType;
+  subject: string;
+  relatedTo: string;
+  date?: string;
+  updatedAt?: string | null;
+};
+
+export type ActivityUpdateInput = Partial<ActivityCreateInput> & {
+  date?: string;
+  updatedAt?: string | null;
+};
+
+export const CRM_ROLES = ["admin", "sales_manager", "sales_rep", "support", "viewer"] as const;
+export type CRMRole = (typeof CRM_ROLES)[number];
+
+export const DEAL_STAGES = [
+  "prospecting",
+  "qualification",
+  "proposal",
+  "negotiation",
+  "closedWon",
+  "closedLost"
+] as const;
+export type DealStage = (typeof DEAL_STAGES)[number];
+
+export type Deal = {
+  id: string;
+  accountId: string;
+  title: string;
+  stage: DealStage;
+  amount: number;
+  closeDate: string;
+};
+
+export type DealCreateInput = Omit<Deal, "id">;
+export type DealUpdateInput = Partial<DealCreateInput>;
+
+export const ORDER_STATUSES = ["pending", "processing", "completed", "cancelled"] as const;
+export type OrderStatus = (typeof ORDER_STATUSES)[number];
+
+export type OrderItem = {
+  id: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+};
+
+export type Order = {
+  id: string;
+  dealId: string;
+  items: OrderItem[];
+  totalAmount: number;
+  status: OrderStatus;
+};
+
+export type OrderItemCreateInput = Omit<OrderItem, "id"> & { id?: string };
+export type OrderCreateInput = {
+  dealId: string;
+  items: OrderItemCreateInput[];
+  status: OrderStatus;
+};
+
+export type OrderCreateReply = Order;
+
+export const INVOICE_STATUSES = ["draft", "sent", "paid", "overdue"] as const;
+export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
+
+export type Invoice = {
+  id: string;
+  orderId: string;
+  issueDate: string;
+  dueDate: string;
+  amount: number;
+  status: InvoiceStatus;
+};
+
+export type InvoiceCreateInput = Omit<Invoice, "id">;
+
+export type InvoiceCreateReply = Invoice;
+
+export type Product = {
+  id: string;
+  name: string;
+  sku: string;
+  price: number;
+  currency: string;
+  category: string;
+  active: boolean;
+  relatedSalesOrders: string[];
+};
+
+export type ProductCreateInput = {
+  name: string;
+  sku: string;
+  price: number;
+  currency: string;
+  category: string;
+  active?: boolean;
+  relatedSalesOrders?: string[];
+};
+
+export type ProductUpdateInput = Partial<ProductCreateInput>;
+
+export type InventoryEntry = {
+  productId: string;
+  warehouse: string;
+  quantity: number;
+  threshold: number;
+};
+
+export const PROJECT_STATUSES = ["draft", "inProgress", "completed", "onHold", "cancelled"] as const;
+export type ProjectStatus = (typeof PROJECT_STATUSES)[number];
+
+export type Project = {
+  id: string;
+  name: string;
+  accountId: string;
+  status: ProjectStatus;
+  startDate: string;
+  endDate: string;
+};
+
+export type ProjectCreateInput = {
+  name: string;
+  accountId: string;
+  status: ProjectStatus;
+  startDate: string;
+  endDate: string;
+};
+
+export const TASK_STATUSES = ["todo", "inProgress", "done", "blocked"] as const;
+export type TaskStatus = (typeof TASK_STATUSES)[number];
+
+export type Task = {
+  id: string;
+  projectId: string;
+  title: string;
+  assignee: string;
+  dueDate: string;
+  status: TaskStatus;
+};
+
+export type TaskCreateInput = {
+  title: string;
+  assignee: string;
+  dueDate: string;
+  status: TaskStatus;
+};
+
+export type Milestone = {
+  id: string;
+  projectId: string;
+  title: string;
+  targetDate: string;
+  completed: boolean;
+};
+
+export type MilestoneCreateInput = {
+  title: string;
+  targetDate: string;
+  completed: boolean;
+};
+
+export type Employee = {
+  id: string;
+  name: string;
+  email: string;
+  position: string;
+  department: string;
+  hireDate: string;
+  active: boolean;
+};
+
+export type EmployeeCreateInput = {
+  name: string;
+  email: string;
+  position: string;
+  department: string;
+  hireDate: string;
+  active?: boolean;
+};
+
+export type Role = {
+  id: string;
+  name: string;
+  permissions: string[];
+};
+
+export const ATTENDANCE_STATUSES = ["present", "absent", "remote", "leave"] as const;
+export type AttendanceStatus = (typeof ATTENDANCE_STATUSES)[number];
+
+export type AttendanceRecord = {
+  id: string;
+  employeeId: string;
+  date: string;
+  status: AttendanceStatus;
+};
+
+export type SettingsUser = {
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+  active: boolean;
+};
+
+export type SettingsUserCreateInput = {
+  username: string;
+  email: string;
+  role: string;
+  active?: boolean;
+};
+
+export type SettingsPermission = {
+  id: string;
+  name: string;
+  description: string;
+  roleId: string;
+};
+
+export const INTEGRATION_STATUSES = ["connected", "disconnected", "error"] as const;
+export type IntegrationStatus = (typeof INTEGRATION_STATUSES)[number];
+
+export type SettingsIntegration = {
+  id: string;
+  name: string;
+  type: string;
+  status: IntegrationStatus;
+  connectedAt: string;
+};

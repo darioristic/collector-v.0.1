@@ -1,7 +1,6 @@
 import type { RouteHandler } from "fastify";
-import type { SqliteError } from "better-sqlite3";
 
-import { createHttpError } from "../../lib/errors";
+import { createHttpError, type ApiDataReply } from "../../lib/errors";
 
 import type { Lead, LeadCreateInput, LeadStatus, LeadUpdateInput } from "@crm/types";
 
@@ -12,21 +11,23 @@ export type ListLeadsQuery = {
   limit?: number;
   offset?: number;
 };
-export type ListLeadsReply = { data: Lead[] };
+type SqliteErrorLike = { code?: string };
+
+export type ListLeadsReply = ApiDataReply<Lead[]>;
 export type GetLeadParams = { id: string };
-export type GetLeadReply = { data: Lead };
+export type GetLeadReply = ApiDataReply<Lead>;
 export type CreateLeadBody = LeadCreateInput;
-export type CreateLeadReply = { data: Lead };
+export type CreateLeadReply = ApiDataReply<Lead>;
 export type UpdateLeadParams = GetLeadParams;
 export type UpdateLeadBody = LeadUpdateInput;
-export type UpdateLeadReply = { data: Lead };
+export type UpdateLeadReply = ApiDataReply<Lead>;
 export type DeleteLeadParams = GetLeadParams;
 
 const isUniqueConstraintError = (error: unknown) =>
   typeof error === "object" &&
   error !== null &&
   "code" in error &&
-  (error as SqliteError).code === "SQLITE_CONSTRAINT_UNIQUE";
+  (error as SqliteErrorLike).code === "SQLITE_CONSTRAINT_UNIQUE";
 
 export const listLeads: RouteHandler<{ Querystring: ListLeadsQuery; Reply: ListLeadsReply }> = async (
   request
