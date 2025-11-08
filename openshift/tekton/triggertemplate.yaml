@@ -6,6 +6,7 @@ spec:
   params:
     - name: git-repo-url
       description: HTTPS URL repozitorijuma koji se gradi
+      default: https://github.com/darioristic/collector-v.0.1.git
     - name: git-revision
       description: Git referenca (npr. refs/heads/main)
     - name: registry

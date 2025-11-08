@@ -1,8 +1,16 @@
 import { randomUUID } from "node:crypto";
 
-import type { Database } from "better-sqlite3";
+import { desc, eq } from "drizzle-orm";
 
-import { getDatabase } from "../../lib/database";
+import { db } from "../../db";
+import {
+  activities,
+  activityTypeEnum,
+  leadStatusEnum,
+  leads,
+  opportunityStageEnum,
+  opportunities
+} from "../../db/schema";
 import type {
   Activity,
   ActivityCreateInput,
@@ -14,40 +22,6 @@ import type {
   OpportunityCreateInput,
   OpportunityUpdateInput
 } from "@crm/types";
-
-const isoNow = () => new Date().toISOString();
-
-const mapLeadRow = (row: any): Lead => ({
-  id: row.id,
-  name: row.name,
-  email: row.email,
-  status: row.status,
-  source: row.source,
-  createdAt: row.created_at,
-  updatedAt: row.updated_at ?? null
-});
-
-const mapOpportunityRow = (row: any): Opportunity => ({
-  id: row.id,
-  accountId: row.account_id,
-  title: row.title,
-  stage: row.stage,
-  value: row.value,
-  probability: row.probability,
-  closeDate: row.close_date,
-  createdAt: row.created_at,
-  updatedAt: row.updated_at ?? null
-});
-
-const mapActivityRow = (row: any): Activity => ({
-  id: row.id,
-  type: row.type,
-  subject: row.subject,
-  date: row.date,
-  relatedTo: row.related_to,
-  createdAt: row.created_at,
-  updatedAt: row.updated_at ?? null
-});
 
 export interface CRMService {
   listLeads(): Promise<Lead[]>;
@@ -69,330 +43,284 @@ export interface CRMService {
   deleteActivity(id: string): Promise<boolean>;
 }
 
-class SqliteCRMService implements CRMService {
-  constructor(private readonly db: Database) {}
+type CRMDatabase = typeof db;
+
+const toIsoString = (value: Date | string | null | undefined): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  return value instanceof Date ? value.toISOString() : value;
+};
+
+const ensureEnumValue = <T extends readonly string[]>(value: string, options: T): T[number] => {
+  return options.includes(value as T[number]) ? (value as T[number]) : options[0];
+};
+
+const mapLeadRow = (row: typeof leads.$inferSelect): Lead => ({
+  id: row.id,
+  name: row.name,
+  email: row.email,
+  status: ensureEnumValue(row.status, leadStatusEnum.enumValues),
+  source: row.source ?? "",
+  createdAt: toIsoString(row.createdAt) ?? new Date().toISOString(),
+  updatedAt: toIsoString(row.updatedAt)
+});
+
+const mapOpportunityRow = (row: typeof opportunities.$inferSelect): Opportunity => ({
+  id: row.id,
+  accountId: row.accountId,
+  title: row.title,
+  stage: ensureEnumValue(row.stage, opportunityStageEnum.enumValues),
+  value: Number(row.value ?? 0),
+  probability: Number(row.probability ?? 0),
+  closeDate: toIsoString(row.closeDate) ?? new Date().toISOString(),
+  createdAt: toIsoString(row.createdAt) ?? new Date().toISOString(),
+  updatedAt: toIsoString(row.updatedAt)
+});
+
+const mapActivityRow = (row: typeof activities.$inferSelect): Activity => ({
+  id: row.id,
+  type: ensureEnumValue(row.type, activityTypeEnum.enumValues),
+  subject: row.subject,
+  date: toIsoString(row.date) ?? new Date().toISOString(),
+  relatedTo: row.relatedTo,
+  createdAt: toIsoString(row.createdAt) ?? new Date().toISOString(),
+  updatedAt: toIsoString(row.updatedAt)
+});
+
+class DrizzleCRMService implements CRMService {
+  constructor(private readonly database: CRMDatabase = db) {}
 
   async listLeads(): Promise<Lead[]> {
-    const rows = this.db
-      .prepare(
-        `SELECT id, name, email, status, source, created_at, updated_at
-         FROM leads
-         ORDER BY datetime(created_at) DESC`
-      )
-      .all();
-
+    const rows = await this.database.select().from(leads).orderBy(desc(leads.createdAt));
     return rows.map(mapLeadRow);
   }
 
   async getLead(id: string): Promise<Lead | undefined> {
-    const row = this.db
-      .prepare(
-        `SELECT id, name, email, status, source, created_at, updated_at
-         FROM leads
-         WHERE id = ?`
-      )
-      .get(id);
-
+    const [row] = await this.database.select().from(leads).where(eq(leads.id, id)).limit(1);
     return row ? mapLeadRow(row) : undefined;
   }
 
   async createLead(input: LeadCreateInput): Promise<Lead> {
-    const id = `lead_${randomUUID()}`;
-    const createdAt = input.createdAt ?? isoNow();
-    const updatedAt = input.updatedAt ?? null;
+    const createdAt = input.createdAt ? new Date(input.createdAt) : new Date();
+    const updatedAt = input.updatedAt ? new Date(input.updatedAt) : createdAt;
 
-    this.db
-      .prepare(
-        `INSERT INTO leads (id, name, email, status, source, created_at, updated_at)
-         VALUES (@id, @name, @email, @status, @source, @createdAt, @updatedAt)`
-      )
-      .run({
-        id,
+    const [created] = await this.database
+      .insert(leads)
+      .values({
+        id: randomUUID(),
         name: input.name,
         email: input.email,
         status: input.status,
         source: input.source,
         createdAt,
         updatedAt
-      });
+      })
+      .returning();
 
-    return {
-      id,
-      name: input.name,
-      email: input.email,
-      status: input.status,
-      source: input.source,
-      createdAt,
-      updatedAt
-    };
+    return mapLeadRow(created);
   }
 
   async updateLead(id: string, input: LeadUpdateInput): Promise<Lead | undefined> {
-    const existing = await this.getLead(id);
-
-    if (!existing) {
-      return undefined;
-    }
-
-    const updated: Lead = {
-      ...existing,
-      ...input,
-      updatedAt: input.updatedAt ?? isoNow()
+    const payload: Partial<typeof leads.$inferInsert> = {
+      updatedAt: input.updatedAt ? new Date(input.updatedAt) : new Date()
     };
 
-    this.db
-      .prepare(
-        `UPDATE leads
-         SET name = @name,
-             email = @email,
-             status = @status,
-             source = @source,
-             updated_at = @updatedAt
-         WHERE id = @id`
-      )
-      .run({
-        id,
-        name: updated.name,
-        email: updated.email,
-        status: updated.status,
-        source: updated.source,
-        updatedAt: updated.updatedAt
-      });
+    if (typeof input.name !== "undefined") {
+      payload.name = input.name;
+    }
 
-    return updated;
+    if (typeof input.email !== "undefined") {
+      payload.email = input.email;
+    }
+
+    if (typeof input.status !== "undefined") {
+      payload.status = input.status;
+    }
+
+    if (typeof input.source !== "undefined") {
+      payload.source = input.source;
+    }
+
+    const [updated] = await this.database
+      .update(leads)
+      .set(payload)
+      .where(eq(leads.id, id))
+      .returning();
+
+    return updated ? mapLeadRow(updated) : undefined;
   }
 
   async deleteLead(id: string): Promise<boolean> {
-    const result = this.db.prepare(`DELETE FROM leads WHERE id = ?`).run(id);
-    return result.changes > 0;
+    const deleted = await this.database
+      .delete(leads)
+      .where(eq(leads.id, id))
+      .returning({ id: leads.id });
+
+    return deleted.length > 0;
   }
 
   async listOpportunities(): Promise<Opportunity[]> {
-    const rows = this.db
-      .prepare(
-        `SELECT id, account_id, title, stage, value, probability, close_date, created_at, updated_at
-         FROM opportunities
-         ORDER BY datetime(created_at) DESC`
-      )
-      .all();
-
+    const rows = await this.database.select().from(opportunities).orderBy(desc(opportunities.createdAt));
     return rows.map(mapOpportunityRow);
   }
 
   async getOpportunity(id: string): Promise<Opportunity | undefined> {
-    const row = this.db
-      .prepare(
-        `SELECT id, account_id, title, stage, value, probability, close_date, created_at, updated_at
-         FROM opportunities
-         WHERE id = ?`
-      )
-      .get(id);
+    const [row] = await this.database
+      .select()
+      .from(opportunities)
+      .where(eq(opportunities.id, id))
+      .limit(1);
 
     return row ? mapOpportunityRow(row) : undefined;
   }
 
   async createOpportunity(input: OpportunityCreateInput): Promise<Opportunity> {
-    const id = `opp_${randomUUID()}`;
-    const createdAt = input.createdAt ?? isoNow();
-    const updatedAt = input.updatedAt ?? null;
+    const createdAt = input.createdAt ? new Date(input.createdAt) : new Date();
+    const updatedAt = input.updatedAt ? new Date(input.updatedAt) : createdAt;
 
-    this.db
-      .prepare(
-        `INSERT INTO opportunities (
-            id,
-            account_id,
-            title,
-            stage,
-            value,
-            probability,
-            close_date,
-            created_at,
-            updated_at
-         )
-         VALUES (
-           @id,
-           @accountId,
-           @title,
-           @stage,
-           @value,
-           @probability,
-           @closeDate,
-           @createdAt,
-           @updatedAt
-         )`
-      )
-      .run({
-        id,
+    const [created] = await this.database
+      .insert(opportunities)
+      .values({
+        id: randomUUID(),
         accountId: input.accountId,
         title: input.title,
         stage: input.stage,
-        value: input.value,
-        probability: input.probability,
-        closeDate: input.closeDate,
+        value: input.value.toString(),
+        probability: input.probability.toString(),
+        closeDate: input.closeDate ? new Date(input.closeDate) : null,
         createdAt,
         updatedAt
-      });
+      })
+      .returning();
 
-    return {
-      id,
-      accountId: input.accountId,
-      title: input.title,
-      stage: input.stage,
-      value: input.value,
-      probability: input.probability,
-      closeDate: input.closeDate,
-      createdAt,
-      updatedAt
-    };
+    return mapOpportunityRow(created);
   }
 
   async updateOpportunity(
     id: string,
     input: OpportunityUpdateInput
   ): Promise<Opportunity | undefined> {
-    const existing = await this.getOpportunity(id);
-
-    if (!existing) {
-      return undefined;
-    }
-
-    const updated: Opportunity = {
-      ...existing,
-      ...input,
-      updatedAt: input.updatedAt ?? isoNow()
+    const payload: Partial<typeof opportunities.$inferInsert> = {
+      updatedAt: input.updatedAt ? new Date(input.updatedAt) : new Date()
     };
 
-    this.db
-      .prepare(
-        `UPDATE opportunities
-         SET account_id = @accountId,
-             title = @title,
-             stage = @stage,
-             value = @value,
-             probability = @probability,
-             close_date = @closeDate,
-             updated_at = @updatedAt
-         WHERE id = @id`
-      )
-      .run({
-        id,
-        accountId: updated.accountId,
-        title: updated.title,
-        stage: updated.stage,
-        value: updated.value,
-        probability: updated.probability,
-        closeDate: updated.closeDate,
-        updatedAt: updated.updatedAt
-      });
+    if (typeof input.accountId !== "undefined") {
+      payload.accountId = input.accountId;
+    }
 
-    return updated;
+    if (typeof input.title !== "undefined") {
+      payload.title = input.title;
+    }
+
+    if (typeof input.stage !== "undefined") {
+      payload.stage = input.stage;
+    }
+
+    if (typeof input.value !== "undefined") {
+      payload.value = input.value.toString();
+    }
+
+    if (typeof input.probability !== "undefined") {
+      payload.probability = input.probability.toString();
+    }
+
+    if (typeof input.closeDate !== "undefined") {
+      payload.closeDate = input.closeDate ? new Date(input.closeDate) : null;
+    }
+
+    const [updated] = await this.database
+      .update(opportunities)
+      .set(payload)
+      .where(eq(opportunities.id, id))
+      .returning();
+
+    return updated ? mapOpportunityRow(updated) : undefined;
   }
 
   async deleteOpportunity(id: string): Promise<boolean> {
-    const result = this.db.prepare(`DELETE FROM opportunities WHERE id = ?`).run(id);
-    return result.changes > 0;
+    const deleted = await this.database
+      .delete(opportunities)
+      .where(eq(opportunities.id, id))
+      .returning({ id: opportunities.id });
+
+    return deleted.length > 0;
   }
 
   async listActivities(): Promise<Activity[]> {
-    const rows = this.db
-      .prepare(
-        `SELECT id, type, subject, date, related_to, created_at, updated_at
-         FROM activities
-         ORDER BY datetime(date) DESC`
-      )
-      .all();
-
+    const rows = await this.database.select().from(activities).orderBy(desc(activities.date));
     return rows.map(mapActivityRow);
   }
 
   async getActivity(id: string): Promise<Activity | undefined> {
-    const row = this.db
-      .prepare(
-        `SELECT id, type, subject, date, related_to, created_at, updated_at
-         FROM activities
-         WHERE id = ?`
-      )
-      .get(id);
-
+    const [row] = await this.database.select().from(activities).where(eq(activities.id, id)).limit(1);
     return row ? mapActivityRow(row) : undefined;
   }
 
   async createActivity(input: ActivityCreateInput): Promise<Activity> {
-    const id = `act_${randomUUID()}`;
-    const createdAt = isoNow();
-    const updatedAt = input.updatedAt ?? null;
-    const date = input.date ?? isoNow();
+    const createdAt = new Date();
+    const date = input.date ? new Date(input.date) : createdAt;
+    const updatedAt = input.updatedAt ? new Date(input.updatedAt) : createdAt;
 
-    this.db
-      .prepare(
-        `INSERT INTO activities (id, type, subject, date, related_to, created_at, updated_at)
-         VALUES (@id, @type, @subject, @date, @relatedTo, @createdAt, @updatedAt)`
-      )
-      .run({
-        id,
-        type: input.type,
+    const [created] = await this.database
+      .insert(activities)
+      .values({
+        id: randomUUID(),
+        type: input.type ?? activityTypeEnum.enumValues[0],
         subject: input.subject,
-        date,
         relatedTo: input.relatedTo,
+        date,
         createdAt,
         updatedAt
-      });
+      })
+      .returning();
 
-    return {
-      id,
-      type: input.type,
-      subject: input.subject,
-      date,
-      relatedTo: input.relatedTo,
-      createdAt,
-      updatedAt
-    };
+    return mapActivityRow(created);
   }
 
   async updateActivity(id: string, input: ActivityUpdateInput): Promise<Activity | undefined> {
-    const existing = await this.getActivity(id);
-
-    if (!existing) {
-      return undefined;
-    }
-
-    const updated: Activity = {
-      ...existing,
-      ...input,
-      date: input.date ?? existing.date,
-      updatedAt: input.updatedAt ?? isoNow()
+    const payload: Partial<typeof activities.$inferInsert> = {
+      updatedAt: input.updatedAt ? new Date(input.updatedAt) : new Date()
     };
 
-    this.db
-      .prepare(
-        `UPDATE activities
-         SET type = @type,
-             subject = @subject,
-             date = @date,
-             related_to = @relatedTo,
-             updated_at = @updatedAt
-         WHERE id = @id`
-      )
-      .run({
-        id,
-        type: updated.type,
-        subject: updated.subject,
-        date: updated.date,
-        relatedTo: updated.relatedTo,
-        updatedAt: updated.updatedAt
-      });
+    if (typeof input.type !== "undefined") {
+      payload.type = input.type;
+    }
 
-    return updated;
+    if (typeof input.subject !== "undefined") {
+      payload.subject = input.subject;
+    }
+
+    if (typeof input.date !== "undefined" && input.date) {
+      payload.date = new Date(input.date);
+    }
+
+    if (typeof input.relatedTo !== "undefined") {
+      payload.relatedTo = input.relatedTo;
+    }
+
+    const [updated] = await this.database
+      .update(activities)
+      .set(payload)
+      .where(eq(activities.id, id))
+      .returning();
+
+    return updated ? mapActivityRow(updated) : undefined;
   }
 
   async deleteActivity(id: string): Promise<boolean> {
-    const result = this.db.prepare(`DELETE FROM activities WHERE id = ?`).run(id);
-    return result.changes > 0;
+    const deleted = await this.database
+      .delete(activities)
+      .where(eq(activities.id, id))
+      .returning({ id: activities.id });
+
+    return deleted.length > 0;
   }
 }
 
-export const createCRMService = (db: Database = getDatabase()): CRMService => {
-  return new SqliteCRMService(db);
+export const createCRMService = (database: CRMDatabase = db): CRMService => {
+  return new DrizzleCRMService(database);
 };
 
 declare module "fastify" {

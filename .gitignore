@@ -2,3 +2,12 @@
 /.bun/
 /apps/dashboard/node_modules/
 /apps/dashboard/.bun/
+/apps/api/.env
+/apps/dashboard/.env.local
+.DS_Store
+apps/api/node_modules/
+apps/api/.bun/
+apps/api/dist/
+apps/dashboard/node_modules/
+apps/dashboard/.bun/
+apps/dashboard/dist/

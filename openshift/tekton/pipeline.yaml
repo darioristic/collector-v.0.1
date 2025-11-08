@@ -30,16 +30,12 @@ spec:
   tasks:
     - name: checkout-code
       taskRef:
-        apiVersion: tekton.dev/v1
-        kind: ClusterTask
-        name: git-clone
+        name: git-checkout
       params:
         - name: url
           value: $(params.git-repo-url)
         - name: revision
           value: $(params.git-revision)
-        - name: depth
-          value: "1"
       workspaces:
         - name: output
           workspace: shared-workspace
@@ -48,8 +44,6 @@ spec:
       runAfter:
         - checkout-code
       taskRef:
-        apiVersion: tekton.dev/v1
-        kind: Task
         name: build-api
       params:
         - name: registry
@@ -66,8 +60,6 @@ spec:
       runAfter:
         - build-api
       taskRef:
-        apiVersion: tekton.dev/v1
-        kind: Task
         name: build-dashboard
       params:
         - name: registry
@@ -107,8 +99,6 @@ spec:
       runAfter:
         - push-images
       taskRef:
-        apiVersion: tekton.dev/v1
-        kind: Task
         name: deploy-api
       params:
         - name: namespace
@@ -120,8 +110,6 @@ spec:
       runAfter:
         - deploy-api
       taskRef:
-        apiVersion: tekton.dev/v1
-        kind: Task
         name: deploy-dashboard
       params:
         - name: namespace

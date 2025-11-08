@@ -8,7 +8,7 @@ spec:
   serviceAccountName: pipeline
   params:
     - name: git-repo-url
-      value: https://github.com/collectordev/Collector-Dashboard.git
+      value: https://github.com/darioristic/collector-v.0.1.git
     - name: git-revision
       value: main
     - name: registry
