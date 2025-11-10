@@ -53,7 +53,7 @@ Za deljeni kod koristimo `packages/ui` i `packages/types` pakete iz monorepa.
 
 ## Accounts stranica
 
-- Nova stranica se nalazi na `app/dashboard/(auth)/accounts/page.tsx`.
+- Nova stranica se nalazi na `app/(protected)/accounts/page.tsx`.
 - Fetch se izvršava serverski (`COLLECTOR_API_URL + /api/accounts`) i koristi deljene tipove iz `@crm/types`.
 - Tabela je izgrađena preko shadcn/ui komponenti i prikazuje osnovne informacije (naziv, tip, email, telefon, datumi).
 - U slučaju greške API-ja, korisnik dobija destruktivni alert i može ručno da pokuša ponovo.
@@ -78,6 +78,6 @@ bun run test
    bun install
    bun run dev
    ```
-3. Otvorite `http://localhost:3000/dashboard/accounts` i proverite da li su se prikazala seedovana dva naloga.
+3. Otvorite `http://localhost:3000/accounts/contacts` i proverite da li su se prikazala seedovana dva naloga.
 
 Seed podaci služe kao mock scenario za demo i QA, pa se lako mogu proširiti ili osvežiti ponovnim pokretanjem `bun run db:seed`.

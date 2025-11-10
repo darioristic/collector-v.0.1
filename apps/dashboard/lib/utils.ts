@@ -27,7 +27,7 @@ export function generateMeta({
     description: description,
     metadataBase: new URL(`https://shadcnuikit.com`),
     alternates: {
-      canonical: `/dashboard${canonical}`
+      canonical
     },
     openGraph: {
       images: [`/images/seo.jpg`]

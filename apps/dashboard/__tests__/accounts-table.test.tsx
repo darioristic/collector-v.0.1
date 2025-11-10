@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import type { Account } from "@crm/types";
 
-import AccountsTable from "@/app/dashboard/(auth)/accounts/accounts-table";
+import AccountsTable from "@/app/(protected)/accounts/accounts-table";
 
 const createAccount = (overrides: Partial<Account>): Account => ({
   id: "00000000-0000-0000-0000-000000000100",

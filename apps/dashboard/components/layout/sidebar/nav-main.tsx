@@ -70,23 +70,23 @@ export const navItems: NavGroup[] = [
     items: [
       {
         title: "Dashboard",
-        href: "/dashboard/finance",
+        href: "/finance",
         icon: WalletMinimalIcon
       },
       {
         title: "Chats",
-        href: "/dashboard/apps/chat",
+        href: "/apps/chat",
         icon: MessageSquareIcon,
         isDataBadge: "5"
       },
       {
         title: "Inbox",
-        href: "/dashboard/apps/mail",
+        href: "/apps/mail",
         icon: MailIcon
       },
       {
         title: "Tasks",
-        href: "/dashboard/apps/tasks",
+        href: "/apps/tasks",
         icon: ClipboardCheckIcon
       }
     ]
@@ -96,46 +96,41 @@ export const navItems: NavGroup[] = [
     items: [
       {
         title: "Accounts",
-        href: "/dashboard/pages/users",
+        href: "/accounts/contacts",
         icon: UsersIcon,
         items: [
-          { title: "Contacts", href: "/dashboard/pages/users" },
-          { title: "Companies", href: "/dashboard/pages/users?tab=companies" }
+          { title: "Contacts", href: "/accounts/contacts" }
         ]
       },
       {
         title: "Sales",
-        href: "/dashboard/sales",
+        href: "/sales",
         icon: BadgeDollarSignIcon,
         items: [
-          { title: "Quotes", href: "/dashboard/sales?tab=quotes" },
-          { title: "Orders", href: "/dashboard/pages/orders" },
-          { title: "Invoices", href: "/dashboard/sales?tab=invoices" },
-          { title: "Payments", href: "/dashboard/sales?tab=payments" }
+          { title: "Overview", href: "/sales" },
+          { title: "Quotes", href: "/sales/quotes" },
+          { title: "Orders", href: "/sales/orders" }
         ]
       },
       {
         title: "CRM",
-        href: "/dashboard/crm",
+        href: "/crm",
         icon: ChartBarDecreasingIcon,
         items: [
-          { title: "Leads", href: "/dashboard/crm?tab=leads" },
-          { title: "Deals", href: "/dashboard/crm?tab=deals" },
-          { title: "Activities", href: "/dashboard/crm?tab=activities" },
-          { title: "Reports", href: "/dashboard/crm?tab=reports" }
+          { title: "Leads", href: "/crm?tab=leads" },
+          { title: "Deals", href: "/crm?tab=deals" },
+          { title: "Activities", href: "/crm?tab=activities" },
+          { title: "Reports", href: "/crm?tab=reports" }
         ]
       },
       {
         title: "Products",
-        href: "#",
+        href: "/products",
         icon: ShoppingBagIcon,
         items: [
-          { title: "Dashboard", href: "/dashboard/ecommerce" },
-          { title: "Product List", href: "/dashboard/pages/products" },
-          { title: "Product Detail", href: "/dashboard/pages/products/1" },
-          { title: "Add Product", href: "/dashboard/pages/products/create" },
-          { title: "Order List", href: "/dashboard/pages/orders" },
-          { title: "Order Detail", href: "/dashboard/pages/orders/detail" }
+          { title: "Catalog", href: "/products" },
+          { title: "Product Detail", href: "/products/1" },
+          { title: "Add Product", href: "/products/create" }
         ]
       }
     ]
@@ -145,34 +140,34 @@ export const navItems: NavGroup[] = [
     items: [
       {
         title: "Projects",
-        href: "/dashboard/project-management",
+        href: "/project-management",
         icon: FolderDotIcon,
         items: [
-          { title: "Calendar", href: "/dashboard/apps/calendar" },
-          { title: "Kanban", href: "/dashboard/apps/kanban" },
-          { title: "Todo List App", href: "/dashboard/apps/todo-list-app" },
-          { title: "Dashboard", href: "/dashboard/project-management" },
-          { title: "Project List", href: "/dashboard/project-list" }
+          { title: "Calendar", href: "/apps/calendar" },
+          { title: "Kanban", href: "/apps/kanban" },
+          { title: "Todo List App", href: "/apps/todo-list-app" },
+          { title: "Dashboard", href: "/project-management" },
+          { title: "Project List", href: "/project-list" }
         ]
       },
       {
         title: "HR",
-        href: "/dashboard/employee-dashboard",
+        href: "/employee-dashboard",
         icon: UsersIcon,
         items: [
-          { title: "Employees", href: "/dashboard/employee-dashboard" },
-          { title: "Departments", href: "/dashboard/employee-dashboard?tab=departments" },
-          { title: "Payroll", href: "/dashboard/employee-dashboard?tab=payroll" }
+          { title: "Employees", href: "/employee-dashboard" },
+          { title: "Departments", href: "/employee-dashboard?tab=departments" },
+          { title: "Payroll", href: "/employee-dashboard?tab=payroll" }
         ]
       },
       {
         title: "Vault",
-        href: "/dashboard/apps/file-manager",
+        href: "/apps/file-manager",
         icon: ArchiveRestoreIcon
       },
       {
         title: "AI Assistant",
-        href: "/dashboard/apps/ai-chat-v2",
+        href: "/apps/ai-chat-v2",
         icon: BrainCircuitIcon
       }
     ]
@@ -182,21 +177,21 @@ export const navItems: NavGroup[] = [
     items: [
       {
         title: "Profile",
-        href: "/dashboard/pages/profile",
+        href: "/pages/profile",
         icon: UserIcon
       },
       {
         title: "Settings",
-        href: "/dashboard/pages/settings",
+        href: "/pages/settings",
         icon: SettingsIcon,
         items: [
-          { title: "Profile", href: "/dashboard/pages/settings" },
-          { title: "Account", href: "/dashboard/pages/settings/account" },
-          { title: "Billing", href: "/dashboard/pages/settings/billing" },
-          { title: "Appearance", href: "/dashboard/pages/settings/appearance" },
-          { title: "Notifications", href: "/dashboard/pages/settings/notifications" },
-          { title: "Display", href: "/dashboard/pages/settings/display" },
-          { title: "Api Keys", href: "/dashboard/apps/api-keys", icon: KeyIcon }
+          { title: "Profile", href: "/pages/settings" },
+          { title: "Account", href: "/pages/settings/account" },
+          { title: "Billing", href: "/pages/settings/billing" },
+          { title: "Appearance", href: "/pages/settings/appearance" },
+          { title: "Notifications", href: "/pages/settings/notifications" },
+          { title: "Display", href: "/pages/settings/display" },
+          { title: "Api Keys", href: "/apps/api-keys", icon: KeyIcon }
         ]
       },
       {
@@ -204,11 +199,11 @@ export const navItems: NavGroup[] = [
         href: "/",
         icon: FingerprintIcon,
         items: [
-          { title: "Login v1", href: "/dashboard/login/v1" },
-          { title: "Login v2", href: "/dashboard/login/v2" },
-          { title: "Register v1", href: "/dashboard/register/v1" },
-          { title: "Register v2", href: "/dashboard/register/v2" },
-          { title: "Forgot Password", href: "/dashboard/forgot-password" }
+          { title: "Login v1", href: "/login/v1" },
+          { title: "Login v2", href: "/login/v2" },
+          { title: "Register v1", href: "/register/v1" },
+          { title: "Register v2", href: "/register/v2" },
+          { title: "Forgot Password", href: "/forgot-password" }
         ]
       }
     ]
