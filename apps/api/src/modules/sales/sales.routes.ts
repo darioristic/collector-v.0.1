@@ -19,6 +19,13 @@ import {
   deletePaymentHandler
 } from "./payments.controller";
 import {
+  listQuotesHandler,
+  getQuoteHandler,
+  createQuoteHandler,
+  updateQuoteHandler,
+  deleteQuoteHandler
+} from "./quotes.controller";
+import {
   createDealSchema,
   createInvoiceSchema,
   createOrderSchema,
@@ -32,8 +39,22 @@ import {
   createPaymentSchema,
   deletePaymentSchema
 } from "./payments.schema";
+import {
+  listQuotesSchema,
+  getQuoteSchema,
+  createQuoteSchema,
+  updateQuoteSchema,
+  deleteQuoteSchema
+} from "./quotes.schema";
 
 const salesRoutes: FastifyPluginAsync = async (app) => {
+  // Quote routes
+  app.get("/quotes", { schema: listQuotesSchema }, listQuotesHandler);
+  app.get("/quotes/:id", { schema: getQuoteSchema }, getQuoteHandler);
+  app.post("/quotes", { schema: createQuoteSchema }, createQuoteHandler);
+  app.patch("/quotes/:id", { schema: updateQuoteSchema }, updateQuoteHandler);
+  app.delete("/quotes/:id", { schema: deleteQuoteSchema }, deleteQuoteHandler);
+
   app.get("/deals", { schema: listDealsSchema }, listDealsHandler);
   app.post("/deals", { schema: createDealSchema }, createDealHandler);
 

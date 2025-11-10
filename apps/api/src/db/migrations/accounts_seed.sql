@@ -1,6 +1,3 @@
-ALTER TABLE "accounts"
-ALTER COLUMN "email" SET NOT NULL;
-
 INSERT INTO "accounts" (
   "id",
   "name",
@@ -8,6 +5,8 @@ INSERT INTO "accounts" (
   "email",
   "phone",
   "website",
+  "tax_id",
+  "country",
   "owner_id",
   "created_at",
   "updated_at"
@@ -20,6 +19,8 @@ VALUES
     'contact@acme.example',
     '+1-555-0101',
     NULL,
+    'RS0000001',
+    'RS',
     NULL,
     NOW(),
     NOW()
@@ -31,9 +32,10 @@ VALUES
     'jane.doe@example.com',
     '+1-555-0123',
     NULL,
+    'RS0000002',
+    'RS',
     NULL,
     NOW(),
     NOW()
   )
 ON CONFLICT ("id") DO NOTHING;
-

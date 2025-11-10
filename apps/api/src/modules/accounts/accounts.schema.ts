@@ -7,7 +7,10 @@ const accountProperties = {
   name: { type: "string", minLength: 1 },
   type: { type: "string", enum: ACCOUNT_TYPES },
   email: { type: "string", format: "email" },
-  phone: { type: "string", nullable: true }
+  phone: { type: "string", nullable: true },
+  website: { type: "string", nullable: true },
+  taxId: { type: "string" },
+  country: { type: "string", minLength: 2, maxLength: 2 }
 } as const;
 
 const accountResponseSchema = {
@@ -15,10 +18,11 @@ const accountResponseSchema = {
   properties: {
     ...accountProperties,
     phone: { ...accountProperties.phone, nullable: true },
+    website: { ...accountProperties.website, nullable: true },
     createdAt: { type: "string", format: "date-time" },
     updatedAt: { type: "string", format: "date-time" }
   },
-  required: ["id", "name", "type", "email", "createdAt", "updatedAt"],
+  required: ["id", "name", "type", "email", "taxId", "country", "createdAt", "updatedAt"],
   additionalProperties: false
 } as const;
 
@@ -29,6 +33,8 @@ const contactResponseSchema = {
     accountId: { type: "string" },
     accountName: { anyOf: [{ type: "string" }, { type: "null" }] },
     name: { type: "string" },
+    firstName: { anyOf: [{ type: "string" }, { type: "null" }] },
+    lastName: { anyOf: [{ type: "string" }, { type: "null" }] },
     title: { anyOf: [{ type: "string" }, { type: "null" }] },
     email: { anyOf: [{ type: "string", format: "email" }, { type: "null" }] },
     phone: { anyOf: [{ type: "string" }, { type: "null" }] },
@@ -46,9 +52,12 @@ const accountBodySchema = {
     name: { type: "string", minLength: 1 },
     type: { type: "string", enum: ACCOUNT_TYPES },
     email: { type: "string", format: "email" },
-    phone: { type: "string" }
+    phone: { type: "string" },
+    website: { type: "string" },
+    taxId: { type: "string" },
+    country: { type: "string", minLength: 2, maxLength: 2 }
   },
-  required: ["name", "type", "email"],
+  required: ["name", "type", "email", "taxId", "country"],
   additionalProperties: false
 } as const;
 

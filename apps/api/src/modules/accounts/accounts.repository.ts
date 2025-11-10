@@ -26,12 +26,24 @@ type Database = typeof defaultDb;
 const normalizeDate = (value: Date | string): string =>
   value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 
+const normalizeOptional = (value: string | null | undefined): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
 const mapAccount = (row: AccountsTableRow): Account => ({
   id: row.id,
   name: row.name,
   type: row.type,
   email: row.email,
-  phone: row.phone ?? null,
+  phone: normalizeOptional(row.phone),
+  website: normalizeOptional(row.website),
+  taxId: row.taxId,
+  country: row.country,
   createdAt: normalizeDate(row.createdAt),
   updatedAt: normalizeDate(row.updatedAt)
 });
@@ -41,10 +53,12 @@ const mapAccountContact = (row: AccountContactsTableRow, accountName: string | n
   accountId: row.accountId,
   accountName,
   name: row.name,
-  title: row.title ?? null,
-  email: row.email ?? null,
-  phone: row.phone ?? null,
-  ownerId: row.ownerId ?? null,
+  firstName: normalizeOptional(row.firstName),
+  lastName: normalizeOptional(row.lastName),
+  title: normalizeOptional(row.title),
+  email: normalizeOptional(row.email),
+  phone: normalizeOptional(row.phone),
+  ownerId: normalizeOptional(row.ownerId),
   createdAt: normalizeDate(row.createdAt),
   updatedAt: normalizeDate(row.updatedAt)
 });
@@ -87,7 +101,10 @@ class DrizzleAccountsRepository implements AccountsRepository {
         name: input.name,
         type: input.type,
         email: input.email,
-        phone: input.phone ?? null
+        phone: input.phone ?? null,
+        website: input.website ?? null,
+        taxId: input.taxId,
+        country: input.country
       })
       .returning();
 
@@ -117,6 +134,18 @@ class DrizzleAccountsRepository implements AccountsRepository {
 
     if (typeof input.phone !== "undefined") {
       payload.phone = input.phone ?? null;
+    }
+
+    if (typeof input.website !== "undefined") {
+      payload.website = input.website ?? null;
+    }
+
+    if (typeof input.taxId !== "undefined") {
+      payload.taxId = input.taxId;
+    }
+
+    if (typeof input.country !== "undefined") {
+      payload.country = input.country;
     }
 
     const [row] = await this.database
@@ -174,6 +203,8 @@ const inMemoryContactsSeed = (): AccountContact[] => {
       accountId: "acc_0001",
       accountName: "Acme Manufacturing",
       name: "Stern Thireau",
+      firstName: "Stern",
+      lastName: "Thireau",
       title: "Operations Manager",
       email: "sthireau@acme.example",
       phone: "+1-555-1001",
@@ -186,6 +217,8 @@ const inMemoryContactsSeed = (): AccountContact[] => {
       accountId: "acc_0002",
       accountName: "Jane Doe",
       name: "Ford McKibbin",
+      firstName: "Ford",
+      lastName: "McKibbin",
       title: "Project Manager",
       email: "fmckibbin@collect.example",
       phone: "+1-555-1002",

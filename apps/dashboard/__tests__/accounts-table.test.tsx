@@ -9,6 +9,9 @@ const createAccount = (overrides: Partial<Account>): Account => ({
   type: "company",
   email: "hello@example.com",
   phone: "+1-555-0100",
+  website: null,
+  taxId: "RS0000999",
+  country: "RS",
   createdAt: "2024-01-01T09:00:00.000Z",
   updatedAt: "2024-01-02T09:00:00.000Z",
   ...overrides
@@ -21,14 +24,18 @@ describe("AccountsTable", () => {
         id: "00000000-0000-0000-0000-000000000101",
         name: "Acme Manufacturing",
         type: "company",
-        email: "contact@acme.test"
+        email: "contact@acme.test",
+        taxId: "RS123",
+        country: "RS"
       }),
       createAccount({
         id: "00000000-0000-0000-0000-000000000102",
         name: "Jane Doe",
         type: "individual",
         email: "jane@example.test",
-        phone: null
+        phone: null,
+        taxId: "RS124",
+        country: "RS"
       })
     ];
 

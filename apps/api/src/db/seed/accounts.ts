@@ -10,6 +10,9 @@ const accountsSeedData = [
     type: "company",
     email: "contact@acme.example",
     phone: "+1-555-0101",
+    website: null,
+    taxId: "RS0000001",
+    country: "RS",
     ownerId: null
   },
   {
@@ -18,6 +21,9 @@ const accountsSeedData = [
     type: "individual",
     email: "jane.doe@example.com",
     phone: "+1-555-0123",
+    website: null,
+    taxId: "RS0000002",
+    country: "RS",
     ownerId: null
   }
 ];
@@ -27,6 +33,8 @@ const contactsSeedData = [
     id: "00000000-0000-0000-0000-000000000201",
     accountId: "00000000-0000-0000-0000-000000000001",
     name: "Stern Thireau",
+    firstName: "Stern",
+    lastName: "Thireau",
     title: "Operations Manager",
     email: "sthireau@acme.example",
     phone: "+1-555-1001",
@@ -36,6 +44,8 @@ const contactsSeedData = [
     id: "00000000-0000-0000-0000-000000000202",
     accountId: "00000000-0000-0000-0000-000000000001",
     name: "Durward Guenther",
+    firstName: "Durward",
+    lastName: "Guenther",
     title: "Electrical Supervisor",
     email: "dguenther@acme.example",
     phone: "+1-555-1002",
@@ -45,6 +55,8 @@ const contactsSeedData = [
     id: "00000000-0000-0000-0000-000000000203",
     accountId: "00000000-0000-0000-0000-000000000002",
     name: "Ford McKibbin",
+    firstName: "Ford",
+    lastName: "McKibbin",
     title: "Project Manager",
     email: "fmckibbin@collector.example",
     phone: "+1-555-1003",
@@ -66,6 +78,9 @@ export const seedAccounts = async (database = defaultDb) => {
               type: item.type,
               email: item.email,
               phone: item.phone,
+              website: item.website,
+              taxId: item.taxId,
+              country: item.country,
               ownerId: item.ownerId,
               createdAt: sql`NOW()`,
               updatedAt: sql`NOW()`
@@ -84,6 +99,8 @@ export const seedAccounts = async (database = defaultDb) => {
             set: {
               accountId: item.accountId,
               name: item.name,
+              firstName: item.firstName,
+              lastName: item.lastName,
               title: item.title,
               email: item.email,
               phone: item.phone,

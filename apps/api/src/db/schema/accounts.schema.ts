@@ -22,6 +22,8 @@ export const accounts = pgTable(
     email: text("email").notNull(),
     phone: text("phone"),
     website: text("website"),
+    taxId: text("tax_id").notNull().default(""),
+    country: text("country").notNull().default("RS"),
     ownerId: uuid("owner_id").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
@@ -40,6 +42,8 @@ export const accountContacts = pgTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
+    firstName: text("first_name").notNull().default(""),
+    lastName: text("last_name").notNull().default(""),
     title: text("title"),
     email: text("email"),
     phone: text("phone"),

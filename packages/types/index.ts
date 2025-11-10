@@ -6,6 +6,9 @@ export type Account = {
   type: AccountType;
   email: string;
   phone?: string | null;
+  website?: string | null;
+  taxId: string;
+  country: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -15,6 +18,9 @@ export type AccountCreateInput = {
   type: AccountType;
   email: string;
   phone?: string | null;
+  website?: string | null;
+  taxId: string;
+  country: string;
 };
 
 export type AccountUpdateInput = Partial<AccountCreateInput>;
@@ -24,6 +30,8 @@ export type AccountContact = {
   accountId: string;
   accountName: string | null;
   name: string;
+  firstName?: string | null;
+  lastName?: string | null;
   title?: string | null;
   email?: string | null;
   phone?: string | null;
@@ -228,6 +236,60 @@ export type PaymentCreateInput = {
 };
 
 export type PaymentUpdateInput = Partial<Omit<PaymentCreateInput, "invoiceId">>;
+
+// Quote Types
+export const QUOTE_STATUSES = ["draft", "sent", "accepted", "rejected"] as const;
+export type QuoteStatus = (typeof QUOTE_STATUSES)[number];
+
+export type QuoteItem = {
+  id: number;
+  quoteId: number;
+  productId?: string | null;
+  description?: string | null;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  createdAt: string;
+};
+
+export type Quote = {
+  id: number;
+  quoteNumber: string;
+  companyId?: string | null;
+  contactId?: string | null;
+  issueDate: string;
+  expiryDate?: string | null;
+  currency: string;
+  subtotal: number;
+  tax: number;
+  total: number;
+  status: string;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  items?: QuoteItem[];
+};
+
+export type QuoteItemCreateInput = {
+  productId?: string;
+  description?: string;
+  quantity: number;
+  unitPrice: number;
+};
+
+export type QuoteCreateInput = {
+  quoteNumber: string;
+  companyId?: string;
+  contactId?: string;
+  issueDate?: string;
+  expiryDate?: string;
+  currency?: string;
+  status?: string;
+  notes?: string;
+  items: QuoteItemCreateInput[];
+};
+
+export type QuoteUpdateInput = Partial<Omit<QuoteCreateInput, "quoteNumber">>;
 
 export type Product = {
   id: string;

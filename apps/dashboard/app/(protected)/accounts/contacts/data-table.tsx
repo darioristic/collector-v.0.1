@@ -50,7 +50,15 @@ const dateFormatter = new Intl.DateTimeFormat("sr-RS", {
 });
 
 const contactSearch = (contact: Contact) =>
-  [contact.name, contact.email ?? "", contact.accountName ?? "", contact.title ?? "", contact.phone ?? ""]
+  [
+    contact.firstName ?? "",
+    contact.lastName ?? "",
+    contact.name,
+    contact.email ?? "",
+    contact.accountName ?? "",
+    contact.title ?? "",
+    contact.phone ?? ""
+  ]
     .join(" ")
     .toLowerCase();
 
@@ -82,14 +90,18 @@ const columns: ColumnDef<Contact>[] = [
     header: "Ime i prezime",
     cell: ({ row }) => {
       const contact = row.original;
+      const initialsSource = contact.firstName ? `${contact.firstName} ${contact.lastName ?? ""}`.trim() : contact.name;
+      const displayName = contact.firstName
+        ? `${contact.firstName}${contact.lastName ? ` ${contact.lastName}` : ""}`
+        : contact.name;
 
       return (
         <div className="flex items-center gap-3">
           <Avatar className="size-9">
-            <AvatarFallback>{generateAvatarFallback(contact.name)}</AvatarFallback>
+            <AvatarFallback>{generateAvatarFallback(initialsSource)}</AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
-            <span className="font-medium">{contact.name}</span>
+            <span className="font-medium">{displayName}</span>
             {contact.title ? (
               <span className="text-muted-foreground text-xs">{contact.title}</span>
             ) : null}
