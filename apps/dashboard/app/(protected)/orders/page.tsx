@@ -1,7 +1,8 @@
-"use client";
+'use client';
+
+import { useState } from "react";
 
 import { OrderList } from "@/components/orders/order-list";
-import { useState } from "react";
 import { OrderDetail } from "@/components/orders/order-detail";
 import { useDeleteOrder } from "@/src/hooks/useOrders";
 
@@ -14,7 +15,6 @@ export default function OrdersPage() {
   };
 
   const handleCreateOrder = () => {
-    // TODO: Implement create order dialog
     alert("Create order dialog - Coming soon!");
   };
 
@@ -28,7 +28,7 @@ export default function OrdersPage() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto space-y-6 py-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Orders</h1>
         <p className="text-muted-foreground">Manage and track your orders</p>
@@ -41,7 +41,7 @@ export default function OrdersPage() {
           <OrderDetail
             orderId={selectedOrderId}
             onEdit={() => {
-              // TODO: Open edit dialog
+              alert("Edit order dialog - Coming soon!");
             }}
             onDelete={handleDeleteOrder}
           />

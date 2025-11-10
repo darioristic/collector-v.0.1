@@ -108,9 +108,9 @@ export const navItems: NavGroup[] = [
         icon: BadgeDollarSignIcon,
         items: [
           { title: "Overview", href: "/sales" },
-          { title: "Quotes", href: "/sales/quotes" },
-          { title: "Orders", href: "/sales/orders" },
-          { title: "Invoices", href: "/sales/invoices" }
+          { title: "Quotes", href: "/quotes" },
+          { title: "Orders", href: "/orders" },
+          { title: "Invoices", href: "/invoices" }
         ]
       },
       {
