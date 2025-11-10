@@ -615,206 +615,206 @@ export default function ContactsDataTable({ data }: ContactsDataTableProps) {
               </div>
 
               <ScrollArea className="h-[calc(100vh-200px)] flex-1">
-                  <Tabs defaultValue="overview" className="flex h-full flex-col gap-4 py-4">
-                    <div className="px-6">
-                      <TabsList className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:grid-cols-4">
-                        <TabsTrigger value="overview" className="flex items-center gap-2">
-                          <Eye className="h-4 w-4" />
-                          Overview
-                        </TabsTrigger>
-                        <TabsTrigger value="notes" className="flex items-center gap-2">
-                          <StickyNote className="h-4 w-4" />
-                          Notes
-                        </TabsTrigger>
-                        <TabsTrigger value="activity" className="flex items-center gap-2">
-                          <CalendarClock className="h-4 w-4" />
-                          Activity
-                        </TabsTrigger>
-                        <TabsTrigger value="files" className="flex items-center gap-2">
-                          <FolderOpen className="h-4 w-4" />
-                          Files
-                        </TabsTrigger>
-                      </TabsList>
-                    </div>
+                <Tabs defaultValue="overview" className="flex h-full flex-col gap-4 py-4">
+                  <div className="px-6">
+                    <TabsList className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:grid-cols-4">
+                      <TabsTrigger value="overview" className="flex items-center gap-2">
+                        <Eye className="h-4 w-4" />
+                        Overview
+                      </TabsTrigger>
+                      <TabsTrigger value="notes" className="flex items-center gap-2">
+                        <StickyNote className="h-4 w-4" />
+                        Notes
+                      </TabsTrigger>
+                      <TabsTrigger value="activity" className="flex items-center gap-2">
+                        <CalendarClock className="h-4 w-4" />
+                        Activity
+                      </TabsTrigger>
+                      <TabsTrigger value="files" className="flex items-center gap-2">
+                        <FolderOpen className="h-4 w-4" />
+                        Files
+                      </TabsTrigger>
+                    </TabsList>
+                  </div>
 
-                    <TabsContent value="overview" className="space-y-4 px-6 pb-4">
-                      <Card className="shadow-sm">
-                        <CardContent className="space-y-6 p-5">
-                          <div className="flex flex-col gap-4">
-                            <div className="flex flex-wrap items-center gap-4">
-                              <Avatar className="size-16">
-                                <AvatarFallback>
-                                  {generateAvatarFallback(getInitialsSource(activeContact))}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex flex-col gap-1.5">
-                                <p className="text-xl leading-tight font-semibold">
-                                  {getDisplayName(activeContact)}
-                                </p>
-                                {activeContact.title ? (
-                                  <Badge
-                                    variant="secondary"
-                                    className="w-fit px-3 py-1 text-xs font-medium uppercase">
-                                    {activeContact.title}
-                                  </Badge>
-                                ) : null}
-                              </div>
-                            </div>
-                            <div className="space-y-3">
-                              {activeContact.accountName ? (
-                                <Link
-                                  href={
-                                    activeContact.accountId
-                                      ? `/accounts/${activeContact.accountId}`
-                                      : "/accounts"
-                                  }
-                                  className="text-primary inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">
-                                  <Building2 className="h-4 w-4" />
-                                  Linked to {activeContact.accountName}
-                                </Link>
-                              ) : (
-                                <span className="text-muted-foreground text-sm">
-                                  No linked company
-                                </span>
-                              )}
-                              <p className="text-muted-foreground text-sm leading-relaxed">
-                                Keep track of relationship context, internal notes, and recent
-                                activities for{" "}
-                                <span className="text-foreground font-medium">
-                                  {getDisplayName(activeContact)}
-                                </span>
-                                .
+                  <TabsContent value="overview" className="space-y-4 px-6 pb-4">
+                    <Card className="shadow-sm">
+                      <CardContent className="space-y-6 p-5">
+                        <div className="flex flex-col gap-4">
+                          <div className="flex flex-wrap items-center gap-4">
+                            <Avatar className="size-16">
+                              <AvatarFallback>
+                                {generateAvatarFallback(getInitialsSource(activeContact))}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col gap-1.5">
+                              <p className="text-xl leading-tight font-semibold">
+                                {getDisplayName(activeContact)}
                               </p>
+                              {activeContact.title ? (
+                                <Badge
+                                  variant="secondary"
+                                  className="w-fit px-3 py-1 text-xs font-medium uppercase">
+                                  {activeContact.title}
+                                </Badge>
+                              ) : null}
                             </div>
                           </div>
-                          <Separator />
-                          <dl className="grid gap-4 sm:grid-cols-2">
-                            <div className="flex items-start gap-3">
-                              <Mail className="text-muted-foreground mt-1 h-4 w-4" />
-                              <div>
-                                <dt className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
-                                  Email
-                                </dt>
-                                <dd className="text-foreground text-sm break-all">
-                                  {activeContact.email ?? "Not available"}
-                                </dd>
-                              </div>
+                          <div className="space-y-3">
+                            {activeContact.accountName ? (
+                              <Link
+                                href={
+                                  activeContact.accountId
+                                    ? `/accounts/${activeContact.accountId}`
+                                    : "/accounts"
+                                }
+                                className="text-primary inline-flex w-fit items-center gap-2 text-sm font-medium underline-offset-4 hover:underline">
+                                <Building2 className="h-4 w-4" />
+                                Linked to {activeContact.accountName}
+                              </Link>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">
+                                No linked company
+                              </span>
+                            )}
+                            <p className="text-muted-foreground text-sm leading-relaxed">
+                              Keep track of relationship context, internal notes, and recent
+                              activities for{" "}
+                              <span className="text-foreground font-medium">
+                                {getDisplayName(activeContact)}
+                              </span>
+                              .
+                            </p>
+                          </div>
+                        </div>
+                        <Separator />
+                        <dl className="grid gap-4 sm:grid-cols-2">
+                          <div className="flex items-start gap-3">
+                            <Mail className="text-muted-foreground mt-1 h-4 w-4" />
+                            <div>
+                              <dt className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
+                                Email
+                              </dt>
+                              <dd className="text-foreground text-sm break-all">
+                                {activeContact.email ?? "Not available"}
+                              </dd>
                             </div>
-                            <div className="flex items-start gap-3">
-                              <Phone className="text-muted-foreground mt-1 h-4 w-4" />
-                              <div>
-                                <dt className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
-                                  Phone
-                                </dt>
-                                <dd className="text-foreground text-sm">
-                                  {activeContact.phone ?? "Not available"}
-                                </dd>
-                              </div>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <Phone className="text-muted-foreground mt-1 h-4 w-4" />
+                            <div>
+                              <dt className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
+                                Phone
+                              </dt>
+                              <dd className="text-foreground text-sm">
+                                {activeContact.phone ?? "Not available"}
+                              </dd>
                             </div>
-                            <div className="flex items-start gap-3">
-                              <CalendarClock className="text-muted-foreground mt-1 h-4 w-4" />
-                              <div>
-                                <dt className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
-                                  Created
-                                </dt>
-                                <dd className="text-foreground text-sm">
-                                  {dateFormatter.format(new Date(activeContact.createdAt))}
-                                </dd>
-                              </div>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <CalendarClock className="text-muted-foreground mt-1 h-4 w-4" />
+                            <div>
+                              <dt className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
+                                Created
+                              </dt>
+                              <dd className="text-foreground text-sm">
+                                {dateFormatter.format(new Date(activeContact.createdAt))}
+                              </dd>
                             </div>
-                            <div className="flex items-start gap-3">
-                              <CalendarClock className="text-muted-foreground mt-1 h-4 w-4" />
-                              <div>
-                                <dt className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
-                                  Updated
-                                </dt>
-                                <dd className="text-foreground text-sm">
-                                  {dateFormatter.format(new Date(activeContact.updatedAt))}
-                                </dd>
-                              </div>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <CalendarClock className="text-muted-foreground mt-1 h-4 w-4" />
+                            <div>
+                              <dt className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
+                                Updated
+                              </dt>
+                              <dd className="text-foreground text-sm">
+                                {dateFormatter.format(new Date(activeContact.updatedAt))}
+                              </dd>
                             </div>
-                          </dl>
-                        </CardContent>
-                      </Card>
+                          </div>
+                        </dl>
+                      </CardContent>
+                    </Card>
 
-                      <Card className="shadow-sm">
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2 text-base">
-                            <StickyNote className="h-4 w-4" />
-                            Notes
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4 text-sm">
-                          <p className="text-muted-foreground">
-                            Keep internal notes to inform teammates about the latest conversations
-                            and commitments.
-                          </p>
-                          <Button type="button" variant="secondary" size="sm">
-                            Add note
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    </TabsContent>
+                    <Card className="shadow-sm">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <StickyNote className="h-4 w-4" />
+                          Notes
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4 text-sm">
+                        <p className="text-muted-foreground">
+                          Keep internal notes to inform teammates about the latest conversations and
+                          commitments.
+                        </p>
+                        <Button type="button" variant="secondary" size="sm">
+                          Add note
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
 
-                    <TabsContent value="notes" className="px-6 pb-4">
-                      <Card className="shadow-sm">
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2 text-base">
-                            <StickyNote className="h-4 w-4" />
-                            Notes
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4 text-sm">
-                          <p className="text-muted-foreground">
-                            Keep internal notes to inform teammates about the latest conversations
-                            and commitments.
-                          </p>
-                          <Button type="button" variant="secondary" size="sm">
-                            Add note
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    </TabsContent>
+                  <TabsContent value="notes" className="px-6 pb-4">
+                    <Card className="shadow-sm">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <StickyNote className="h-4 w-4" />
+                          Notes
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4 text-sm">
+                        <p className="text-muted-foreground">
+                          Keep internal notes to inform teammates about the latest conversations and
+                          commitments.
+                        </p>
+                        <Button type="button" variant="secondary" size="sm">
+                          Add note
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
 
-                    <TabsContent value="activity" className="px-6 pb-4">
-                      <Card className="shadow-sm">
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2 text-base">
-                            <CalendarClock className="h-4 w-4" />
-                            Activity
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4 text-sm">
-                          <p className="text-muted-foreground">
-                            Calls, emails, and tasks will appear here as activity tracking is
-                            connected.
-                          </p>
-                          <Button type="button" variant="outline" size="sm">
-                            Log activity
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    </TabsContent>
+                  <TabsContent value="activity" className="px-6 pb-4">
+                    <Card className="shadow-sm">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <CalendarClock className="h-4 w-4" />
+                          Activity
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4 text-sm">
+                        <p className="text-muted-foreground">
+                          Calls, emails, and tasks will appear here as activity tracking is
+                          connected.
+                        </p>
+                        <Button type="button" variant="outline" size="sm">
+                          Log activity
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
 
-                    <TabsContent value="files" className="px-6 pb-4">
-                      <Card className="shadow-sm">
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2 text-base">
-                            <FolderOpen className="h-4 w-4" />
-                            Files
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4 text-sm">
-                          <p className="text-muted-foreground">
-                            Store proposals, contracts, and supporting documents for quick access.
-                          </p>
-                          <Button type="button" variant="outline" size="sm">
-                            Upload file
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    </TabsContent>
-                  </Tabs>
+                  <TabsContent value="files" className="px-6 pb-4">
+                    <Card className="shadow-sm">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <FolderOpen className="h-4 w-4" />
+                          Files
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4 text-sm">
+                        <p className="text-muted-foreground">
+                          Store proposals, contracts, and supporting documents for quick access.
+                        </p>
+                        <Button type="button" variant="outline" size="sm">
+                          Upload file
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </Tabs>
               </ScrollArea>
             </div>
           ) : null}
