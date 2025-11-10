@@ -1,10 +1,8 @@
 "use client";
 
 import * as React from "react";
+import type { ColumnDef, SortingState, VisibilityState } from "@tanstack/react-table";
 import {
-  ColumnDef,
-  SortingState,
-  VisibilityState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -22,7 +20,6 @@ import {
   Eye,
   FolderOpen,
   Mail,
-  MoreHorizontal,
   MessageCircle,
   Pencil,
   Phone,
@@ -38,9 +35,6 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import {
@@ -74,7 +68,6 @@ import { generateAvatarFallback } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Link from "next/link";
 
 export type Contact = AccountContact;
@@ -128,11 +121,8 @@ export default function ContactsDataTable({ data }: ContactsDataTableProps) {
   const [globalFilter, setGlobalFilter] = React.useState("");
   const [activeQuickFilter, setActiveQuickFilter] = React.useState<string>("custom");
   const [activeContact, setActiveContact] = React.useState<Contact | null>(null);
-  const [sidebarMode, setSidebarMode] = React.useState<"view" | "edit">("view");
-
-  const openSidebar = React.useCallback((contact: Contact, mode: "view" | "edit" = "view") => {
+  const openSidebar = React.useCallback((contact: Contact) => {
     setActiveContact(contact);
-    setSidebarMode(mode);
   }, []);
 
   const closeSidebar = React.useCallback(() => {
@@ -141,16 +131,19 @@ export default function ContactsDataTable({ data }: ContactsDataTableProps) {
 
   const handleView = React.useCallback(
     (contact: Contact) => {
-      openSidebar(contact, "view");
+      openSidebar(contact);
     },
     [openSidebar]
   );
 
   const handleEdit = React.useCallback(
     (contact: Contact) => {
-      openSidebar(contact, "edit");
+      toast({
+        title: "Edit contact is not available",
+        description: `Editing ${contact.name} will be enabled soon.`
+      });
     },
-    [openSidebar]
+    [toast]
   );
 
   const handleDelete = React.useCallback(
@@ -198,16 +191,6 @@ export default function ContactsDataTable({ data }: ContactsDataTableProps) {
       toast({
         title: "Messaging is not available",
         description: `Chat integrations for ${contact.name} will be enabled soon.`
-      });
-    },
-    [toast]
-  );
-
-  const handleSummarize = React.useCallback(
-    (contact: Contact) => {
-      toast({
-        title: "AI summary is coming soon",
-        description: `We'll soon provide AI-generated insights for ${contact.name}.`
       });
     },
     [toast]
@@ -484,6 +467,8 @@ export default function ContactsDataTable({ data }: ContactsDataTableProps) {
     setGlobalFilter(query);
   };
 
+  let ellipsisCounter = 0;
+
   return (
     <>
       <div className="space-y-6">
@@ -614,21 +599,27 @@ export default function ContactsDataTable({ data }: ContactsDataTableProps) {
                 disabled={!table.getCanPreviousPage()}>
                 Previous
               </Button>
-              {paginationItems.map((item, index) =>
-                item === "ellipsis" ? (
-                  <span key={`ellipsis-${index}`} className="px-2">
-                    ...
-                  </span>
-                ) : (
+              {paginationItems.map((item) => {
+                if (item === "ellipsis") {
+                  const key = `ellipsis-${ellipsisCounter}`;
+                  ellipsisCounter += 1;
+                  return (
+                    <span key={key} className="px-2">
+                      ...
+                    </span>
+                  );
+                }
+
+                return (
                   <Button
-                    key={item}
+                    key={`page-${item}`}
                     variant={pagination.pageIndex === item ? "default" : "outline"}
                     size="sm"
                     onClick={() => table.setPageIndex(item)}>
                     {item + 1}
                   </Button>
-                )
-              )}
+                );
+              })}
               <Button
                 variant="outline"
                 size="sm"
@@ -652,55 +643,19 @@ export default function ContactsDataTable({ data }: ContactsDataTableProps) {
           side="right"
           className="flex h-full w-full flex-col overflow-hidden border-l p-0 sm:max-w-xl">
           {activeContact ? (
-            <TooltipProvider>
-              <div className="flex h-full flex-col">
-                <div className="border-b px-6 py-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <SheetTitle className="text-2xl leading-tight font-semibold">Contact Details</SheetTitle>
-                      <SheetDescription>
-                        Manage the context and next steps for {getDisplayName(activeContact)}.
-                      </SheetDescription>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="icon" className="size-9">
-                            <span className="sr-only">Open quick actions</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-52">
-                          <DropdownMenuLabel>Quick actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onSelect={() => handleEdit(activeContact)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Edit contact
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onSelect={() => handleDelete(activeContact)}>
-                            <Trash2 className="text-destructive mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onSelect={() => handleSendEmail(activeContact)}>
-                            <Mail className="mr-2 h-4 w-4" />
-                            Send email
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onSelect={() => handleCall(activeContact)}>
-                            <Phone className="mr-2 h-4 w-4" />
-                            Call contact
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onSelect={() => handleMessage(activeContact)}>
-                            <MessageCircle className="mr-2 h-4 w-4" />
-                            Message
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
+            <div className="flex h-full flex-col">
+              <div className="border-b px-6 py-5">
+                <div className="space-y-1">
+                  <SheetTitle className="text-2xl leading-tight font-semibold">
+                    Contact Details
+                  </SheetTitle>
+                  <SheetDescription>
+                    Manage the context and next steps for {getDisplayName(activeContact)}.
+                  </SheetDescription>
                 </div>
+              </div>
 
-                <ScrollArea className="h-[calc(100vh-200px)] flex-1">
+              <ScrollArea className="h-[calc(100vh-200px)] flex-1">
                   <Tabs defaultValue="overview" className="flex h-full flex-col gap-4 py-4">
                     <div className="px-6">
                       <TabsList className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:grid-cols-4">
@@ -771,18 +726,6 @@ export default function ContactsDataTable({ data }: ContactsDataTableProps) {
                                 </span>
                                 .
                               </p>
-                              <div className="flex flex-wrap gap-2">
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Badge variant="outline" className="gap-2 font-mono text-xs">
-                                      ID: {activeContact.id.slice(0, 8)}…
-                                    </Badge>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="bottom">
-                                    <p className="text-xs">Full ID: {activeContact.id}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </div>
                             </div>
                           </div>
                           <Separator />
@@ -836,28 +779,19 @@ export default function ContactsDataTable({ data }: ContactsDataTableProps) {
                       </Card>
 
                       <Card className="shadow-sm">
-                        <CardHeader className="gap-2">
+                        <CardHeader>
                           <CardTitle className="flex items-center gap-2 text-base">
-                            <MessageCircle className="h-4 w-4" />
-                            AI Insights
+                            <StickyNote className="h-4 w-4" />
+                            Notes
                           </CardTitle>
-                          <p className="text-muted-foreground text-sm">
-                            Automated suggestions will help you decide the next best action for this
-                            contact.
-                          </p>
                         </CardHeader>
                         <CardContent className="space-y-4 text-sm">
-                          <p>
-                            Suggestion: Follow up with {getDisplayName(activeContact)} via email to
-                            confirm the latest engagement details.
+                          <p className="text-muted-foreground">
+                            Keep internal notes to inform teammates about the latest conversations
+                            and commitments.
                           </p>
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="sm"
-                            className="w-fit"
-                            onClick={() => handleSummarize(activeContact)}>
-                            Generate insights
+                          <Button type="button" variant="secondary" size="sm">
+                            Add note
                           </Button>
                         </CardContent>
                       </Card>
@@ -922,9 +856,8 @@ export default function ContactsDataTable({ data }: ContactsDataTableProps) {
                       </Card>
                     </TabsContent>
                   </Tabs>
-                </ScrollArea>
-              </div>
-            </TooltipProvider>
+              </ScrollArea>
+            </div>
           ) : null}
         </SheetContent>
       </Sheet>

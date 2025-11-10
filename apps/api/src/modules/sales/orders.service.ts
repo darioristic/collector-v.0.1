@@ -1,0 +1,244 @@
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import Decimal from "decimal.js";
+import { orders, orderItems } from "../../db/schema/sales.schema.js";
+import type {
+  Order,
+  OrderCreateInput,
+  OrderItem,
+  OrderItemCreateInput,
+  OrderUpdateInput
+} from "@crm/types";
+
+export class OrdersService {
+  constructor(private database: PostgresJsDatabase<Record<string, never>>) {}
+
+  async list(filters?: {
+    companyId?: string;
+    contactId?: string;
+    quoteId?: number;
+    status?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ data: Order[]; total: number }> {
+    const limit = filters?.limit ?? 50;
+    const offset = filters?.offset ?? 0;
+
+    const conditions = [];
+    if (filters?.companyId) {
+      conditions.push(eq(orders.companyId, filters.companyId));
+    }
+    if (filters?.contactId) {
+      conditions.push(eq(orders.contactId, filters.contactId));
+    }
+    if (filters?.quoteId) {
+      conditions.push(eq(orders.quoteId, filters.quoteId));
+    }
+    if (filters?.status) {
+      conditions.push(eq(orders.status, filters.status));
+    }
+    if (filters?.search) {
+      conditions.push(
+        or(
+          ilike(orders.orderNumber, `%${filters.search}%`),
+          ilike(orders.notes, `%${filters.search}%`)
+        )
+      );
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [data, countResult] = await Promise.all([
+      this.database
+        .select()
+        .from(orders)
+        .where(whereClause)
+        .orderBy(desc(orders.createdAt))
+        .limit(limit)
+        .offset(offset),
+      this.database
+        .select({ count: sql<number>`count(*)` })
+        .from(orders)
+        .where(whereClause)
+    ]);
+
+    return {
+      data: data.map((o) => this.mapOrderFromDb(o)),
+      total: Number(countResult[0]?.count ?? 0)
+    };
+  }
+
+  async getById(id: number): Promise<Order | null> {
+    const [order] = await this.database.select().from(orders).where(eq(orders.id, id)).limit(1);
+
+    if (!order) {
+      return null;
+    }
+
+    // Fetch items
+    const items = await this.database
+      .select()
+      .from(orderItems)
+      .where(eq(orderItems.orderId, id))
+      .orderBy(orderItems.id);
+
+    return {
+      ...this.mapOrderFromDb(order),
+      items: items.map((item) => this.mapOrderItemFromDb(item))
+    };
+  }
+
+  async create(input: OrderCreateInput): Promise<Order> {
+    // Calculate totals from items
+    const { subtotal, tax, total } = this.calculateTotals(input.items);
+
+    // Create order
+    const [newOrder] = await this.database
+      .insert(orders)
+      .values({
+        orderNumber: input.orderNumber,
+        quoteId: input.quoteId || null,
+        companyId: input.companyId || null,
+        contactId: input.contactId || null,
+        orderDate: input.orderDate || new Date().toISOString().split("T")[0],
+        expectedDelivery: input.expectedDelivery || null,
+        currency: input.currency || "EUR",
+        subtotal: subtotal.toString(),
+        tax: tax.toString(),
+        total: total.toString(),
+        status: input.status || "pending",
+        notes: input.notes || null
+      })
+      .returning();
+
+    // Create order items
+    if (input.items.length > 0) {
+      await this.database.insert(orderItems).values(
+        input.items.map((item) => ({
+          orderId: newOrder.id,
+          productId: item.productId || null,
+          description: item.description || null,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice.toString(),
+          total: new Decimal(item.quantity).times(item.unitPrice).toString()
+        }))
+      );
+    }
+
+    return this.getById(newOrder.id) as Promise<Order>;
+  }
+
+  async update(id: number, input: OrderUpdateInput): Promise<Order | null> {
+    const existing = await this.getById(id);
+    if (!existing) {
+      return null;
+    }
+
+    // If items are provided, recalculate totals
+    let subtotal: Decimal | undefined;
+    let tax: Decimal | undefined;
+    let total: Decimal | undefined;
+
+    if (input.items) {
+      const calculated = this.calculateTotals(input.items);
+      subtotal = calculated.subtotal;
+      tax = calculated.tax;
+      total = calculated.total;
+    }
+
+    // Update order
+    const updateData: any = {};
+    if (input.quoteId !== undefined) updateData.quoteId = input.quoteId || null;
+    if (input.companyId !== undefined) updateData.companyId = input.companyId || null;
+    if (input.contactId !== undefined) updateData.contactId = input.contactId || null;
+    if (input.orderDate !== undefined) updateData.orderDate = input.orderDate;
+    if (input.expectedDelivery !== undefined) updateData.expectedDelivery = input.expectedDelivery;
+    if (input.currency !== undefined) updateData.currency = input.currency;
+    if (input.status !== undefined) updateData.status = input.status;
+    if (input.notes !== undefined) updateData.notes = input.notes;
+    if (subtotal !== undefined) updateData.subtotal = subtotal.toString();
+    if (tax !== undefined) updateData.tax = tax.toString();
+    if (total !== undefined) updateData.total = total.toString();
+    updateData.updatedAt = new Date();
+
+    await this.database.update(orders).set(updateData).where(eq(orders.id, id));
+
+    // Update items if provided
+    if (input.items) {
+      // Delete existing items
+      await this.database.delete(orderItems).where(eq(orderItems.orderId, id));
+
+      // Insert new items
+      if (input.items.length > 0) {
+        await this.database.insert(orderItems).values(
+          input.items.map((item) => ({
+            orderId: id,
+            productId: item.productId || null,
+            description: item.description || null,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice.toString(),
+            total: new Decimal(item.quantity).times(item.unitPrice).toString()
+          }))
+        );
+      }
+    }
+
+    return this.getById(id);
+  }
+
+  async delete(id: number): Promise<boolean> {
+    const result = await this.database.delete(orders).where(eq(orders.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  private calculateTotals(items: OrderItemCreateInput[]): {
+    subtotal: Decimal;
+    tax: Decimal;
+    total: Decimal;
+  } {
+    const subtotal = items.reduce((acc, item) => {
+      const itemTotal = new Decimal(item.quantity).times(item.unitPrice);
+      return acc.plus(itemTotal);
+    }, new Decimal(0));
+
+    // Tax is 20% of subtotal
+    const tax = subtotal.times(0.2);
+    const total = subtotal.plus(tax);
+
+    return { subtotal, tax, total };
+  }
+
+  private mapOrderFromDb(dbOrder: any): Order {
+    return {
+      id: dbOrder.id,
+      orderNumber: dbOrder.orderNumber,
+      quoteId: dbOrder.quoteId,
+      companyId: dbOrder.companyId,
+      contactId: dbOrder.contactId,
+      orderDate: dbOrder.orderDate,
+      expectedDelivery: dbOrder.expectedDelivery,
+      currency: dbOrder.currency,
+      subtotal: Number(dbOrder.subtotal),
+      tax: Number(dbOrder.tax),
+      total: Number(dbOrder.total),
+      status: dbOrder.status,
+      notes: dbOrder.notes,
+      createdAt: dbOrder.createdAt.toISOString(),
+      updatedAt: dbOrder.updatedAt.toISOString()
+    };
+  }
+
+  private mapOrderItemFromDb(dbItem: any): OrderItem {
+    return {
+      id: dbItem.id,
+      orderId: dbItem.orderId,
+      productId: dbItem.productId,
+      description: dbItem.description,
+      quantity: dbItem.quantity,
+      unitPrice: Number(dbItem.unitPrice),
+      total: Number(dbItem.total),
+      createdAt: dbItem.createdAt.toISOString()
+    };
+  }
+}

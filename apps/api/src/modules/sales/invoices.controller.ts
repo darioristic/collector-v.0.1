@@ -1,58 +1,95 @@
-import { randomUUID } from "node:crypto";
+import type { FastifyReply, FastifyRequest } from "fastify";
+import { db } from "../../db/index.js";
+import { InvoicesService } from "./invoices.service.js";
+import type { InvoiceCreateInput, InvoiceUpdateInput } from "@crm/types";
 
-import type { RouteHandler } from "fastify";
+const service = new InvoicesService(db);
 
-export type Invoice = {
-  id: string;
-  orderId: string;
-  issueDate: string;
-  dueDate: string;
-  amount: number;
-  status: "draft" | "sent" | "paid" | "overdue";
-};
+type ListRequest = FastifyRequest<{
+  Querystring: {
+    customerId?: string;
+    orderId?: string;
+    status?: string;
+    search?: string;
+    limit?: string;
+    offset?: string;
+  };
+}>;
 
-const invoicesStore: Invoice[] = [
-  {
-    id: "inv_001",
-    orderId: "order_001",
-    issueDate: new Date(Date.now() - 3 * 86_400_000).toISOString().slice(0, 10),
-    dueDate: new Date(Date.now() + 27 * 86_400_000).toISOString().slice(0, 10),
-    amount: 50 * 1_950 + 28_500,
-    status: "sent"
-  },
-  {
-    id: "inv_002",
-    orderId: "order_002",
-    issueDate: new Date().toISOString().slice(0, 10),
-    dueDate: new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10),
-    amount: 20 * 1_850,
-    status: "draft"
-  }
-];
+type GetRequest = FastifyRequest<{
+  Params: { id: string };
+}>;
 
-export type ListInvoicesReply = { data: Invoice[] };
-export type CreateInvoiceBody = Omit<Invoice, "id">;
-export type CreateInvoiceReply = { data: Invoice };
+type CreateRequest = FastifyRequest<{
+  Body: InvoiceCreateInput;
+}>;
 
-export const listInvoicesHandler: RouteHandler<{ Reply: ListInvoicesReply }> = async () => {
-  return { data: invoicesStore };
-};
+type UpdateRequest = FastifyRequest<{
+  Params: { id: string };
+  Body: InvoiceUpdateInput;
+}>;
 
-export const createInvoiceHandler: RouteHandler<{
-  Body: CreateInvoiceBody;
-  Reply: CreateInvoiceReply;
-}> = async (request, reply) => {
-  const newInvoice: Invoice = {
-    id: randomUUID(),
-    ...request.body
+type DeleteRequest = FastifyRequest<{
+  Params: { id: string };
+}>;
+
+export const listInvoicesHandler = async (request: ListRequest, reply: FastifyReply) => {
+  const filters = {
+    customerId: request.query.customerId,
+    orderId: request.query.orderId ? Number.parseInt(request.query.orderId, 10) : undefined,
+    status: request.query.status,
+    search: request.query.search,
+    limit: request.query.limit ? Number.parseInt(request.query.limit, 10) : undefined,
+    offset: request.query.offset ? Number.parseInt(request.query.offset, 10) : undefined
   };
 
-  invoicesStore.push(newInvoice);
+  const result = await service.list(filters);
 
-  reply.code(201);
-  return { data: newInvoice };
+  await reply.status(200).send({
+    data: result.data,
+    total: result.total,
+    limit: filters.limit ?? 50,
+    offset: filters.offset ?? 0
+  });
 };
 
-export const mockInvoices = invoicesStore;
+export const getInvoiceHandler = async (request: GetRequest, reply: FastifyReply) => {
+  const { id } = request.params;
 
+  const invoice = await service.getById(id);
 
+  if (!invoice) {
+    return reply.status(404).send({ error: "Invoice not found" });
+  }
+
+  await reply.status(200).send({ data: invoice });
+};
+
+export const createInvoiceHandler = async (request: CreateRequest, reply: FastifyReply) => {
+  const invoice = await service.create(request.body);
+  await reply.status(201).send({ data: invoice });
+};
+
+export const updateInvoiceHandler = async (request: UpdateRequest, reply: FastifyReply) => {
+  const { id } = request.params;
+
+  const invoice = await service.update(id, request.body);
+
+  if (!invoice) {
+    return reply.status(404).send({ error: "Invoice not found" });
+  }
+
+  await reply.status(200).send({ data: invoice });
+};
+
+export const deleteInvoiceHandler = async (request: DeleteRequest, reply: FastifyReply) => {
+  const { id } = request.params;
+
+  const deleted = await service.delete(id);
+
+  if (!deleted) {
+    return reply.status(404).send({ error: "Invoice not found" });
+  }
+
+  await reply.status(204).send();
+};
