@@ -1,4 +1,4 @@
-import { ensureResponse } from "@/src/lib/fetch-utils";
+import { ensureResponse, getApiUrl } from "@/src/lib/fetch-utils";
 import type { Order, OrderCreateInput, OrderUpdateInput } from "@crm/types";
 
 type OrdersListResponse = {
@@ -38,24 +38,24 @@ export async function fetchOrders(filters?: {
   if (filters?.limit) params.append("limit", filters.limit.toString());
   if (filters?.offset) params.append("offset", filters.offset.toString());
 
-  const url = params.toString()
-    ? `/api/sales/orders?${params.toString()}`
-    : "/api/sales/orders";
+  const endpoint = params.toString()
+    ? `sales/orders?${params.toString()}`
+    : "sales/orders";
 
-  const response = await ensureResponse(await fetch(url));
+  const response = await ensureResponse(await fetch(getApiUrl(endpoint)));
   const payload = (await response.json()) as OrdersListResponse;
   return payload;
 }
 
 export async function fetchOrder(id: number): Promise<Order> {
-  const response = await ensureResponse(await fetch(`/api/sales/orders/${id}`));
+  const response = await ensureResponse(await fetch(getApiUrl(`sales/orders/${id}`)));
   const payload = (await response.json()) as { data: Order };
   return payload.data;
 }
 
 export async function createOrder(input: OrderCreateInput): Promise<Order> {
   const response = await ensureResponse(
-    await fetch("/api/sales/orders", {
+    await fetch(getApiUrl("sales/orders"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input)
@@ -67,7 +67,7 @@ export async function createOrder(input: OrderCreateInput): Promise<Order> {
 
 export async function updateOrder(id: number, input: OrderUpdateInput): Promise<Order> {
   const response = await ensureResponse(
-    await fetch(`/api/sales/orders/${id}`, {
+    await fetch(getApiUrl(`sales/orders/${id}`), {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input)
@@ -79,7 +79,7 @@ export async function updateOrder(id: number, input: OrderUpdateInput): Promise<
 
 export async function deleteOrder(id: number): Promise<void> {
   await ensureResponse(
-    await fetch(`/api/sales/orders/${id}`, {
+    await fetch(getApiUrl(`sales/orders/${id}`), {
       method: "DELETE"
     })
   );

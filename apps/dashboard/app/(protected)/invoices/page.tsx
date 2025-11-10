@@ -34,7 +34,7 @@ export default function InvoicesPage() {
         <p className="text-muted-foreground">Manage and track your invoices</p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className={`grid gap-6 ${selectedInvoiceId ? "lg:grid-cols-2" : "grid-cols-1"}`}>
         <InvoiceList onInvoiceClick={handleInvoiceClick} onCreateInvoice={handleCreateInvoice} />
 
         {selectedInvoiceId && (

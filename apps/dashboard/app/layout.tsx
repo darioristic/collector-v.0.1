@@ -11,6 +11,7 @@ import "./globals.css";
 import { ActiveThemeProvider } from "@/components/active-theme";
 import { DEFAULT_THEME } from "@/lib/themes";
 import { Toaster } from "@/components/ui/sonner";
+import { QueryProvider } from "@/components/providers/query-provider";
 
 export default async function RootLayout({
   children
@@ -38,18 +39,20 @@ export default async function RootLayout({
         suppressHydrationWarning
         className={cn("bg-background group/layout font-sans", fontVariables)}
         {...bodyAttributes}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem
-          disableTransitionOnChange>
-          <ActiveThemeProvider initialTheme={themeSettings}>
-            {children}
-            <Toaster position="top-center" richColors />
-            <NextTopLoader color="var(--primary)" showSpinner={false} height={2} shadow-sm="none" />
-            {process.env.NODE_ENV === "production" ? <GoogleAnalyticsInit /> : null}
-          </ActiveThemeProvider>
-        </ThemeProvider>
+        <QueryProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="light"
+            enableSystem
+            disableTransitionOnChange>
+            <ActiveThemeProvider initialTheme={themeSettings}>
+              {children}
+              <Toaster position="top-center" richColors />
+              <NextTopLoader color="var(--primary)" showSpinner={false} height={2} shadow-sm="none" />
+              {process.env.NODE_ENV === "production" ? <GoogleAnalyticsInit /> : null}
+            </ActiveThemeProvider>
+          </ThemeProvider>
+        </QueryProvider>
       </body>
     </html>
   );

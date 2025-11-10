@@ -1,4 +1,4 @@
-import { ensureResponse } from "@/src/lib/fetch-utils";
+import { ensureResponse, getApiUrl } from "@/src/lib/fetch-utils";
 import type { Invoice, InvoiceCreateInput, InvoiceUpdateInput } from "@crm/types";
 
 type InvoicesListResponse = {
@@ -35,24 +35,24 @@ export async function fetchInvoices(filters?: {
   if (filters?.limit) params.append("limit", filters.limit.toString());
   if (filters?.offset) params.append("offset", filters.offset.toString());
 
-  const url = params.toString()
-    ? `/api/sales/invoices?${params.toString()}`
-    : "/api/sales/invoices";
+  const endpoint = params.toString()
+    ? `sales/invoices?${params.toString()}`
+    : "sales/invoices";
 
-  const response = await ensureResponse(await fetch(url));
+  const response = await ensureResponse(await fetch(getApiUrl(endpoint)));
   const payload = (await response.json()) as InvoicesListResponse;
   return payload;
 }
 
 export async function fetchInvoice(id: string): Promise<Invoice> {
-  const response = await ensureResponse(await fetch(`/api/sales/invoices/${id}`));
+  const response = await ensureResponse(await fetch(getApiUrl(`sales/invoices/${id}`)));
   const payload = (await response.json()) as { data: Invoice };
   return payload.data;
 }
 
 export async function createInvoice(input: InvoiceCreateInput): Promise<Invoice> {
   const response = await ensureResponse(
-    await fetch("/api/sales/invoices", {
+    await fetch(getApiUrl("sales/invoices"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input)
@@ -64,7 +64,7 @@ export async function createInvoice(input: InvoiceCreateInput): Promise<Invoice>
 
 export async function updateInvoice(id: string, input: InvoiceUpdateInput): Promise<Invoice> {
   const response = await ensureResponse(
-    await fetch(`/api/sales/invoices/${id}`, {
+    await fetch(getApiUrl(`sales/invoices/${id}`), {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input)
@@ -76,7 +76,7 @@ export async function updateInvoice(id: string, input: InvoiceUpdateInput): Prom
 
 export async function deleteInvoice(id: string): Promise<void> {
   await ensureResponse(
-    await fetch(`/api/sales/invoices/${id}`, {
+    await fetch(getApiUrl(`sales/invoices/${id}`), {
       method: "DELETE"
     })
   );

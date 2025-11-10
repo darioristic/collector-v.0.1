@@ -34,7 +34,7 @@ export default function OrdersPage() {
         <p className="text-muted-foreground">Manage and track your orders</p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className={`grid gap-6 ${selectedOrderId ? "lg:grid-cols-2" : "grid-cols-1"}`}>
         <OrderList onOrderClick={handleOrderClick} onCreateOrder={handleCreateOrder} />
 
         {selectedOrderId && (

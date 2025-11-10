@@ -35,7 +35,7 @@ export default function QuotesPage() {
         <p className="text-muted-foreground">Manage and track your sales quotes</p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className={`grid gap-6 ${selectedQuoteId ? "lg:grid-cols-2" : "grid-cols-1"}`}>
         <QuoteList onQuoteClick={handleQuoteClick} onCreateQuote={handleCreateQuote} />
 
         {selectedQuoteId && (
