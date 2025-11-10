@@ -42,3 +42,15 @@ export const getInitials = (fullName: string) => {
   const lastNameInitial = nameParts[1].charAt(0).toUpperCase();
   return `${firstNameInitial}${lastNameInitial}`;
 };
+
+/**
+ * Format a number as currency with proper formatting
+ */
+export function formatCurrency(amount: number, currency: string = "USD"): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount);
+}

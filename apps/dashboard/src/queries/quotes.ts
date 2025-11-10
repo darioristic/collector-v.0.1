@@ -1,5 +1,5 @@
 import type { Quote, QuoteCreateInput, QuoteUpdateInput } from "@crm/types";
-import { ensureResponse } from "@/lib/http";
+import { ensureResponse } from "@/src/lib/fetch-utils";
 
 export const quoteKeys = {
   all: ["quotes"] as const,

@@ -1,5 +1,5 @@
 import type { Payment, PaymentCreateInput } from "@crm/types";
-import { ensureResponse } from "@/lib/http";
+import { ensureResponse } from "@/src/lib/fetch-utils";
 
 export const paymentKeys = {
   all: ["payments"] as const,

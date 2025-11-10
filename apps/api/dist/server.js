@@ -5,6 +5,25 @@ import { pathToFileURL } from "node:url";
 import errorHandlerPlugin from "./plugins/error-handler";
 import openApiPlugin from "./plugins/openapi";
 import healthRoutes from "./routes/health";
+const createLoggerOptions = () => {
+    const baseLevel = process.env.LOG_LEVEL ?? (process.env.NODE_ENV === "production" ? "info" : "debug");
+    if (process.env.NODE_ENV === "production") {
+        return {
+            level: baseLevel
+        };
+    }
+    return {
+        level: baseLevel,
+        transport: {
+            target: "pino-pretty",
+            options: {
+                colorize: true,
+                singleLine: false,
+                translateTime: "SYS:standard"
+            }
+        }
+    };
+};
 const registerHealthcheck = (app) => app.register(healthRoutes, { prefix: "/api" });
 const modulesBaseUrl = new URL("./modules/", import.meta.url);
 const modulesPath = fileURLToPath(modulesBaseUrl);
@@ -58,7 +77,7 @@ const registerModules = async (app) => {
     }
 };
 export const buildServer = async () => {
-    const app = Fastify({ logger: true });
+    const app = Fastify({ logger: createLoggerOptions() });
     await app.register(errorHandlerPlugin);
     await app.register(openApiPlugin);
     await registerHealthcheck(app);
