@@ -15,4 +15,5 @@ export const pgClient = postgres(connectionString, {
   prepare: false
 });
 
+export const connectionPool = pgClient;
 export const db = drizzle(pgClient);

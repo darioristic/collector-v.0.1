@@ -4,6 +4,7 @@ import { createHttpError, type ApiReply } from "../../lib/errors";
 
 import type {
   Account,
+  AccountContact,
   AccountCreateInput,
   AccountUpdateInput
 } from "./accounts.types";
@@ -21,6 +22,7 @@ declare module "fastify" {
 }
 
 export type ListAccountsReply = Account[];
+export type ListContactsReply = AccountContact[];
 export type GetAccountParams = { id: string };
 export type GetAccountReply = ApiReply<Account>;
 export type CreateAccountBody = AccountCreateInput;
@@ -33,6 +35,10 @@ export type DeleteAccountReply = ApiReply<void>;
 
 export const listAccountsHandler: RouteHandler<{ Reply: ListAccountsReply }> = async (request) => {
   return request.accountsRepository.list();
+};
+
+export const listContactsHandler: RouteHandler<{ Reply: ListContactsReply }> = async (request) => {
+  return request.accountsRepository.listContacts();
 };
 
 export const getAccountHandler: RouteHandler<{

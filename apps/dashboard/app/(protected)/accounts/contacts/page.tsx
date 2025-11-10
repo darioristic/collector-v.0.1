@@ -1,11 +1,10 @@
-import { promises as fs } from "fs";
-import path from "path";
-
 import Link from "next/link";
+import type { AccountContact } from "@crm/types";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { generateMeta } from "@/lib/utils";
 
-import { PlusCircledIcon } from "@radix-ui/react-icons";
-import { Button } from "@/components/ui/button";
 import ContactsDataTable from "./data-table";
 
 export async function generateMetadata() {
@@ -17,27 +16,61 @@ export async function generateMetadata() {
   });
 }
 
-async function getUsers() {
-  const data = await fs.readFile(
-    path.join(process.cwd(), "app/(protected)/accounts/contacts/data.json")
-  );
-  return JSON.parse(data.toString());
+const apiBaseUrl = process.env.COLLECTOR_API_URL;
+
+async function getContacts(): Promise<AccountContact[]> {
+  if (!apiBaseUrl) {
+    throw new Error("Promenljiva okruženja COLLECTOR_API_URL nije definisana.");
+  }
+
+  const response = await fetch(`${apiBaseUrl}/api/accounts/contacts`, {
+    cache: "no-store",
+    headers: {
+      Accept: "application/json"
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`API je odgovorio statusom ${response.status}.`);
+  }
+
+  return (await response.json()) as AccountContact[];
 }
 
 export default async function Page() {
-  const users = await getUsers();
+  let contacts: AccountContact[] = [];
+  let error: string | null = null;
+
+  try {
+    contacts = await getContacts();
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Greška prilikom učitavanja kontakata.";
+  }
 
   return (
     <>
-      <div className="flex items-center justify-between space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight">Contacts</h1>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Contacts</h1>
+          <p className="text-muted-foreground text-sm">
+            Pregledaj kontakte povezane sa account-ima i brzo pronađi traženu osobu.
+          </p>
+        </div>
         <Button asChild>
           <Link href="#">
-            <PlusCircledIcon /> Add New Contact
+            <span className="flex items-center gap-2">Add New Contact</span>
           </Link>
         </Button>
       </div>
-      <ContactsDataTable data={users} />
+
+      {error ? (
+        <Alert variant="destructive" className="mt-4">
+          <AlertTitle>Učitavanje nije uspelo</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : (
+        <ContactsDataTable data={contacts} />
+      )}
     </>
   );
 }

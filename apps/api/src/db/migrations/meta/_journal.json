@@ -15,6 +15,13 @@
       "when": 1762502400001,
       "tag": "accounts_seed",
       "breakpoints": false
+    },
+    {
+      "idx": 2,
+      "version": "0003",
+      "when": 1762502400002,
+      "tag": "account_contacts_seed",
+      "breakpoints": false
     }
   ]
 }

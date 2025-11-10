@@ -15,6 +15,18 @@ export type AccountCreateInput = {
     phone?: string | null;
 };
 export type AccountUpdateInput = Partial<AccountCreateInput>;
+export type AccountContact = {
+    id: string;
+    accountId: string;
+    accountName: string | null;
+    name: string;
+    title?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    ownerId?: string | null;
+    createdAt: string;
+    updatedAt: string;
+};
 export type User = {
     id: string;
     name: string;

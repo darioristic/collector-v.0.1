@@ -13,6 +13,12 @@ import {
   listOrdersHandler
 } from "./orders.controller";
 import {
+  listPaymentsHandler,
+  getPaymentHandler,
+  createPaymentHandler,
+  deletePaymentHandler
+} from "./payments.controller";
+import {
   createDealSchema,
   createInvoiceSchema,
   createOrderSchema,
@@ -20,6 +26,12 @@ import {
   listInvoicesSchema,
   listOrdersSchema
 } from "./sales.schema";
+import {
+  listPaymentsSchema,
+  getPaymentSchema,
+  createPaymentSchema,
+  deletePaymentSchema
+} from "./payments.schema";
 
 const salesRoutes: FastifyPluginAsync = async (app) => {
   app.get("/deals", { schema: listDealsSchema }, listDealsHandler);
@@ -30,6 +42,12 @@ const salesRoutes: FastifyPluginAsync = async (app) => {
 
   app.get("/invoices", { schema: listInvoicesSchema }, listInvoicesHandler);
   app.post("/invoices", { schema: createInvoiceSchema }, createInvoiceHandler);
+
+  // Payment routes
+  app.get("/payments", { schema: listPaymentsSchema }, listPaymentsHandler);
+  app.get("/payments/:id", { schema: getPaymentSchema }, getPaymentHandler);
+  app.post("/payments", { schema: createPaymentSchema }, createPaymentHandler);
+  app.delete("/payments/:id", { schema: deletePaymentSchema }, deletePaymentHandler);
 };
 
 export default salesRoutes;

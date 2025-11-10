@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   ColumnDef,
-  ColumnFiltersState,
   SortingState,
   VisibilityState,
   flexRender,
@@ -13,18 +12,12 @@ import {
   getSortedRowModel,
   useReactTable
 } from "@tanstack/react-table";
-import { ArrowUpDown, Columns, MoreHorizontal, PlusCircle } from "lucide-react";
+import { Columns as ColumnsIcon, MoreHorizontal } from "lucide-react";
+import type { AccountContact } from "@crm/types";
 
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList
-} from "@/components/ui/command";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -32,6 +25,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle
+} from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -41,38 +41,37 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { generateAvatarFallback } from "@/lib/utils";
-import { Checkbox } from "@/components/ui/checkbox";
 
-export type User = {
-  id: number;
-  firstName: string;
-  lastName: string;
-  image: string;
-  country: string;
-  status: "active" | "inactive" | "pending";
-  plan_name: string;
-};
+export type Contact = AccountContact;
 
-export const columns: ColumnDef<User>[] = [
+const dateFormatter = new Intl.DateTimeFormat("sr-RS", {
+  dateStyle: "medium"
+});
+
+const contactSearch = (contact: Contact) =>
+  [contact.name, contact.email ?? "", contact.accountName ?? "", contact.title ?? "", contact.phone ?? ""]
+    .join(" ")
+    .toLowerCase();
+
+const columns: ColumnDef<Contact>[] = [
   {
     id: "select",
     header: ({ table }) => (
       <Checkbox
         checked={
-          table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")
+          table.getIsAllPageRowsSelected() ||
+          (table.getIsSomePageRowsSelected() && "indeterminate")
         }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
+        onCheckedChange={(value) => table.toggleAllPageRowsSelected(Boolean(value))}
+        aria-label="Označi sve kontakte na stranici"
       />
     ),
     cell: ({ row }) => (
       <Checkbox
         checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
+        onCheckedChange={(value) => row.toggleSelected(Boolean(value))}
+        aria-label={`Označi kontakt ${row.original.name}`}
       />
     ),
     enableSorting: false,
@@ -80,123 +79,76 @@ export const columns: ColumnDef<User>[] = [
   },
   {
     accessorKey: "name",
-    header: "Name",
-    cell: ({ row }) => (
-      <div className="flex items-center gap-4">
-        <Avatar>
-          <AvatarImage src={row.original.image} alt="shadcn ui kit" />
-          <AvatarFallback>{generateAvatarFallback(row.getValue("name"))}</AvatarFallback>
-        </Avatar>
-        <div className="capitalize">{row.getValue("name")}</div>
-      </div>
-    )
+    header: "Ime i prezime",
+    cell: ({ row }) => {
+      const contact = row.original;
+
+      return (
+        <div className="flex items-center gap-3">
+          <Avatar className="size-9">
+            <AvatarFallback>{generateAvatarFallback(contact.name)}</AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col">
+            <span className="font-medium">{contact.name}</span>
+            {contact.title ? (
+              <span className="text-muted-foreground text-xs">{contact.title}</span>
+            ) : null}
+          </div>
+        </div>
+      );
+    }
   },
   {
-    accessorKey: "role",
-    header: ({ column }) => {
-      return (
-        <Button
-          className="-ml-3"
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          Role
-          <ArrowUpDown />
-        </Button>
-      );
-    },
-    cell: ({ row }) => row.getValue("role")
-  },
-  {
-    accessorKey: "plan_name",
-    header: ({ column }) => {
-      return (
-        <Button
-          className="-ml-3"
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          Plan
-          <ArrowUpDown />
-        </Button>
-      );
-    },
-    cell: ({ row }) => row.getValue("plan_name")
+    accessorKey: "accountName",
+    header: "Account",
+    cell: ({ row }) => row.original.accountName ?? "—"
   },
   {
     accessorKey: "email",
-    header: ({ column }) => {
-      return (
-        <Button
-          className="-ml-3"
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          Email
-          <ArrowUpDown />
-        </Button>
-      );
-    },
-    cell: ({ row }) => row.getValue("email")
+    header: "Email",
+    cell: ({ row }) => row.original.email ?? "—"
   },
   {
-    accessorKey: "country",
-    header: ({ column }) => {
-      return (
-        <Button
-          className="-ml-3"
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          Country
-          <ArrowUpDown />
-        </Button>
-      );
-    },
-    cell: ({ row }) => row.getValue("country")
+    accessorKey: "phone",
+    header: "Telefon",
+    cell: ({ row }) => row.original.phone ?? "—"
   },
   {
-    accessorKey: "status",
-    header: ({ column }) => {
-      return (
-        <Button
-          className="-ml-3"
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          Status
-          <ArrowUpDown />
-        </Button>
-      );
-    },
-    cell: ({ row }) => {
-      const status = row.original.status;
-
-      const statusMap = {
-        active: "success",
-        inactive: "destructive",
-        pending: "warning"
-      } as const;
-
-      const statusClass = statusMap[status] ?? "outline";
-
-      return (
-        <Badge variant={statusClass} className="capitalize">
-          {status.replace("-", " ")}
-        </Badge>
-      );
-    }
+    accessorKey: "createdAt",
+    header: "Dodat",
+    cell: ({ row }) => dateFormatter.format(new Date(row.original.createdAt)),
+    sortingFn: "datetime"
   },
   {
     id: "actions",
     enableHiding: false,
     cell: ({ row }) => {
+      const contact = row.original;
+
+      const copyEmail = async () => {
+        if (!contact.email) {
+          return;
+        }
+
+        try {
+          await navigator.clipboard?.writeText(contact.email);
+        } catch (error) {
+          console.error("Copy email failed", error);
+        }
+      };
+
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal />
+              <span className="sr-only">Otvori meni akcija</span>
+              <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>View user</DropdownMenuItem>
-            <DropdownMenuItem>Delete</DropdownMenuItem>
+            <DropdownMenuItem disabled={!contact.email} onSelect={copyEmail}>
+              Kopiraj email
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );
@@ -204,280 +156,155 @@ export const columns: ColumnDef<User>[] = [
   }
 ];
 
-export default function ContactsDataTable({ data }: { data: User[] }) {
+interface ContactsDataTableProps {
+  data: Contact[];
+}
+
+export default function ContactsDataTable({ data }: ContactsDataTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
+  const [globalFilter, setGlobalFilter] = React.useState("");
 
   const table = useReactTable({
     data,
     columns,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
     state: {
       sorting,
-      columnFilters,
       columnVisibility,
-      rowSelection
+      rowSelection,
+      globalFilter
+    },
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: (row, _columnId, filterValue) => {
+      if (!filterValue) {
+        return true;
+      }
+
+      return contactSearch(row.original).includes(String(filterValue).toLowerCase());
+    },
+    initialState: {
+      pagination: {
+        pageSize: 10
+      }
     }
   });
 
-  const statuses = [
-    {
-      value: "active",
-      label: "Active"
-    },
-    {
-      value: "inactive",
-      label: "Inactive"
-    },
-    {
-      value: "pending",
-      label: "Pending"
-    }
-  ];
-
-  const plans = [
-    {
-      value: "basic",
-      label: "Basic"
-    },
-    {
-      value: "team",
-      label: "Team"
-    },
-    {
-      value: "enterprise",
-      label: "Enterprise"
-    }
-  ];
-
-  const roles = [
-    {
-      value: "construction-foreman",
-      label: "Construction Foreman"
-    },
-    {
-      value: "project-manager",
-      label: "Project Manager"
-    },
-    {
-      value: "surveyor",
-      label: "Surveyor"
-    },
-    {
-      value: "architect",
-      label: "Architect"
-    },
-    {
-      value: "subcontractor",
-      label: "Subcontractor"
-    },
-    {
-      value: "electrician",
-      label: "Electrician"
-    },
-    {
-      value: "estimator",
-      label: "Estimator"
-    }
-  ];
+  const filteredRowCount = table.getFilteredRowModel().rows.length;
+  const pagination = table.getState().pagination;
+  const pageStart = filteredRowCount === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1;
+  const pageEnd = filteredRowCount === 0 ? 0 : Math.min(filteredRowCount, pagination.pageSize * (pagination.pageIndex + 1));
+  const selectionCount = table.getSelectedRowModel().rows.length;
+  const visibleColumnCount = table.getVisibleLeafColumns().length;
 
   return (
-    <div className="w-full">
-      <div className="flex items-center gap-4 py-4">
-        <div className="flex gap-2">
-          <Input
-            placeholder="Search users..."
-            value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-            onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
-            className="max-w-sm"
-          />
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline">
-                <PlusCircle />
-                Status
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-52 p-0">
-              <Command>
-                <CommandInput placeholder="Status" className="h-9" />
-                <CommandList>
-                  <CommandEmpty>No status found.</CommandEmpty>
-                  <CommandGroup>
-                    {statuses.map((status) => (
-                      <CommandItem key={status.value} value={status.value}>
-                        <div className="flex items-center space-x-3 py-1">
-                          <Checkbox id={status.value} />
-                          <label
-                            htmlFor={status.value}
-                            className="leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                            {status.label}
-                          </label>
-                        </div>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline">
-                <PlusCircle />
-                Plan
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-52 p-0">
-              <Command>
-                <CommandInput placeholder="Plan" className="h-9" />
-                <CommandList>
-                  <CommandEmpty>No plan found.</CommandEmpty>
-                  <CommandGroup>
-                    {plans.map((plan) => (
-                      <CommandItem key={plan.value} value={plan.value}>
-                        <div className="flex items-center space-x-3 py-1">
-                          <Checkbox id={plan.value} />
-                          <label
-                            htmlFor={plan.value}
-                            className="leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                            {plan.label}
-                          </label>
-                        </div>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline">
-                <PlusCircle className="h-4 w-4" />
-                Role
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-52 p-0">
-              <Command>
-                <CommandInput placeholder="Role" className="h-9" />
-                <CommandList>
-                  <CommandEmpty>No role found.</CommandEmpty>
-                  <CommandGroup>
-                    {roles.map((role) => (
-                      <CommandItem
-                        key={role.value}
-                        value={role.value}
-                        onSelect={(currentValue) => {
-                          // setValue(currentValue === value ? "" : currentValue);
-                          // setOpen(false);
-                        }}>
-                        <div className="flex items-center space-x-3 py-1">
-                          <Checkbox id={role.value} />
-                          <label
-                            htmlFor={role.value}
-                            className="leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                            {role.label}
-                          </label>
-                        </div>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        </div>
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <Input
+          placeholder="Pretraži kontakte prema imenu, emailu ili accountu"
+          value={globalFilter}
+          onChange={(event) => setGlobalFilter(event.target.value)}
+          className="w-full max-w-md"
+        />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-auto">
-              <Columns /> <span className="hidden md:inline">Columns</span>
+            <Button variant="outline" className="flex items-center gap-2">
+              <ColumnsIcon className="h-4 w-4" />
+              Kolone
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="w-48">
             {table
-              .getAllColumns()
+              .getAllLeafColumns()
               .filter((column) => column.getCanHide())
-              .map((column) => {
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) => column.toggleVisibility(value)}>
-                    {column.id}
-                  </DropdownMenuCheckboxItem>
-                );
-              })}
+              .map((column) => (
+                <DropdownMenuCheckboxItem
+                  key={column.id}
+                  className="capitalize"
+                  checked={column.getIsVisible()}
+                  onCheckedChange={(value) => column.toggleVisibility(Boolean(value))}
+                >
+                  {column.id}
+                </DropdownMenuCheckboxItem>
+              ))}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <div className="rounded-md border">
+
+      <div className="overflow-hidden rounded-md border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  );
-                })}
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
+                ))}
               </TableRow>
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
+                    <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No results.
+                <TableCell colSpan={visibleColumnCount} className="p-6">
+                  <Empty className="border-none p-0">
+                    <EmptyHeader>
+                      <EmptyTitle>Nema kontakata</EmptyTitle>
+                      <EmptyDescription>
+                        Kreiraj novi kontakt ili proveri da li su seed podaci uspešno upisani u bazu.
+                      </EmptyDescription>
+                    </EmptyHeader>
+                    <EmptyContent>
+                      <p className="text-muted-foreground text-sm">
+                        Trenutno nema zapisa koji odgovaraju filteru.
+                      </p>
+                    </EmptyContent>
+                  </Empty>
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 pt-4">
-        <div className="text-muted-foreground flex-1 text-sm">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
+
+      <div className="flex flex-col gap-3 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
+        <div>
+          {selectionCount > 0
+            ? `Odabrano ${selectionCount} kontakt${selectionCount === 1 ? "" : "a"}`
+            : `Prikazano ${filteredRowCount === 0 ? 0 : `${pageStart}-${pageEnd}`} od ${filteredRowCount} kontakata`}
         </div>
-        <div className="space-x-2">
+        <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}>
-            Previous
+            disabled={!table.getCanPreviousPage()}
+          >
+            Prethodna
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}>
-            Next
+            disabled={!table.getCanNextPage()}
+          >
+            Sledeća
           </Button>
         </div>
       </div>

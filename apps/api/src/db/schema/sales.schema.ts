@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import {
+  date,
   index,
   numeric,
   pgEnum,
@@ -10,7 +11,7 @@ import {
   uniqueIndex
 } from "drizzle-orm/pg-core";
 
-import { accounts } from "./accounts.schema";
+import { accounts, accountContacts } from "./accounts.schema";
 import { opportunities } from "./crm.schema";
 import { products } from "./products.schema";
 import { users } from "./settings.schema";
@@ -18,6 +19,7 @@ import { users } from "./settings.schema";
 export const orderStatus = pgEnum("order_status", ["draft", "confirmed", "fulfilled", "cancelled"]);
 export const invoiceStatus = pgEnum("invoice_status", ["draft", "sent", "paid", "overdue", "void"]);
 export const paymentStatus = pgEnum("payment_status", ["pending", "completed", "failed", "refunded"]);
+export const paymentMethod = pgEnum("payment_method", ["bank_transfer", "cash", "card", "crypto"]);
 
 export const salesDeals = pgTable(
   "sales_deals",
@@ -103,13 +105,21 @@ export const payments = pgTable(
     invoiceId: uuid("invoice_id")
       .notNull()
       .references(() => invoices.id, { onDelete: "cascade" }),
-    status: paymentStatus("status").default("pending").notNull(),
+    companyId: uuid("company_id").references(() => accounts.id, { onDelete: "set null" }),
+    contactId: uuid("contact_id").references(() => accountContacts.id, { onDelete: "set null" }),
+    status: paymentStatus("status").default("completed").notNull(),
     amount: numeric("amount", { precision: 14, scale: 2 }).default("0").notNull(),
-    processedAt: timestamp("processed_at", { withTimezone: true }),
+    currency: text("currency").default("EUR").notNull(),
+    method: paymentMethod("method").default("bank_transfer").notNull(),
+    reference: text("reference"),
+    notes: text("notes"),
+    paymentDate: date("payment_date").defaultNow().notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
   },
   (table) => ({
-    invoiceIdx: index("payments_invoice_idx").on(table.invoiceId)
+    invoiceIdx: index("payments_invoice_idx").on(table.invoiceId),
+    companyIdx: index("payments_company_idx").on(table.companyId),
+    statusIdx: index("payments_status_idx").on(table.status)
   })
 );
 
@@ -168,6 +178,14 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
   invoice: one(invoices, {
     fields: [payments.invoiceId],
     references: [invoices.id]
+  }),
+  company: one(accounts, {
+    fields: [payments.companyId],
+    references: [accounts.id]
+  }),
+  contact: one(accountContacts, {
+    fields: [payments.contactId],
+    references: [accountContacts.id]
   })
 }));
 

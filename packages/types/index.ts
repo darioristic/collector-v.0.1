@@ -19,6 +19,19 @@ export type AccountCreateInput = {
 
 export type AccountUpdateInput = Partial<AccountCreateInput>;
 
+export type AccountContact = {
+  id: string;
+  accountId: string;
+  accountName: string | null;
+  name: string;
+  title?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  ownerId?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type User = {
   id: string;
   name: string;
@@ -180,6 +193,41 @@ export type Invoice = {
 export type InvoiceCreateInput = Omit<Invoice, "id">;
 
 export type InvoiceCreateReply = Invoice;
+
+// Payment Types
+export const PAYMENT_STATUSES = ["pending", "completed", "failed", "refunded"] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+
+export const PAYMENT_METHODS = ["bank_transfer", "cash", "card", "crypto"] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
+
+export type Payment = {
+  id: string;
+  invoiceId: string;
+  companyId?: string | null;
+  contactId?: string | null;
+  status: PaymentStatus;
+  amount: number;
+  currency: string;
+  method: PaymentMethod;
+  reference?: string | null;
+  notes?: string | null;
+  paymentDate: string;
+  createdAt: string;
+};
+
+export type PaymentCreateInput = {
+  invoiceId: string;
+  amount: number;
+  currency?: string;
+  method: PaymentMethod;
+  reference?: string;
+  notes?: string;
+  paymentDate?: string;
+  status?: PaymentStatus;
+};
+
+export type PaymentUpdateInput = Partial<Omit<PaymentCreateInput, "invoiceId">>;
 
 export type Product = {
   id: string;

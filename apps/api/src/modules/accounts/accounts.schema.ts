@@ -22,6 +22,24 @@ const accountResponseSchema = {
   additionalProperties: false
 } as const;
 
+const contactResponseSchema = {
+  type: "object",
+  properties: {
+    id: { type: "string" },
+    accountId: { type: "string" },
+    accountName: { anyOf: [{ type: "string" }, { type: "null" }] },
+    name: { type: "string" },
+    title: { anyOf: [{ type: "string" }, { type: "null" }] },
+    email: { anyOf: [{ type: "string", format: "email" }, { type: "null" }] },
+    phone: { anyOf: [{ type: "string" }, { type: "null" }] },
+    ownerId: { anyOf: [{ type: "string" }, { type: "null" }] },
+    createdAt: { type: "string", format: "date-time" },
+    updatedAt: { type: "string", format: "date-time" }
+  },
+  required: ["id", "accountId", "name", "createdAt", "updatedAt"],
+  additionalProperties: false
+} as const;
+
 const accountBodySchema = {
   type: "object",
   properties: {
@@ -61,6 +79,17 @@ export const listAccountsSchema: FastifySchema = {
     200: {
       type: "array",
       items: accountResponseSchema
+    }
+  }
+};
+
+export const listContactsSchema: FastifySchema = {
+  tags: ["accounts"],
+  summary: "List account contacts",
+  response: {
+    200: {
+      type: "array",
+      items: contactResponseSchema
     }
   }
 };

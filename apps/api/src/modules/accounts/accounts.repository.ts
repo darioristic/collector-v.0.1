@@ -3,11 +3,15 @@ import { randomUUID } from "node:crypto";
 import { asc, eq } from "drizzle-orm";
 
 import { db as defaultDb } from "../../db";
-import { accounts as accountsTable } from "../../db/schema/accounts.schema";
-import type { Account, AccountCreateInput, AccountUpdateInput } from "./accounts.types";
+import {
+  accountContacts as accountContactsTable,
+  accounts as accountsTable
+} from "../../db/schema/accounts.schema";
+import type { Account, AccountContact, AccountCreateInput, AccountUpdateInput } from "./accounts.types";
 
 export interface AccountsRepository {
   list(): Promise<Account[]>;
+  listContacts(): Promise<AccountContact[]>;
   findById(id: string): Promise<Account | undefined>;
   findByEmail(email: string): Promise<Account | undefined>;
   create(input: AccountCreateInput): Promise<Account>;
@@ -16,6 +20,7 @@ export interface AccountsRepository {
 }
 
 type AccountsTableRow = typeof accountsTable.$inferSelect;
+type AccountContactsTableRow = typeof accountContactsTable.$inferSelect;
 type Database = typeof defaultDb;
 
 const normalizeDate = (value: Date | string): string =>
@@ -31,12 +36,38 @@ const mapAccount = (row: AccountsTableRow): Account => ({
   updatedAt: normalizeDate(row.updatedAt)
 });
 
+const mapAccountContact = (row: AccountContactsTableRow, accountName: string | null): AccountContact => ({
+  id: row.id,
+  accountId: row.accountId,
+  accountName,
+  name: row.name,
+  title: row.title ?? null,
+  email: row.email ?? null,
+  phone: row.phone ?? null,
+  ownerId: row.ownerId ?? null,
+  createdAt: normalizeDate(row.createdAt),
+  updatedAt: normalizeDate(row.updatedAt)
+});
+
 class DrizzleAccountsRepository implements AccountsRepository {
   constructor(private readonly database: Database = defaultDb) {}
 
   async list(): Promise<Account[]> {
     const rows = await this.database.select().from(accountsTable).orderBy(asc(accountsTable.createdAt));
     return rows.map(mapAccount);
+  }
+
+  async listContacts(): Promise<AccountContact[]> {
+    const rows = await this.database
+      .select({
+        contact: accountContactsTable,
+        accountName: accountsTable.name
+      })
+      .from(accountContactsTable)
+      .leftJoin(accountsTable, eq(accountContactsTable.accountId, accountsTable.id))
+      .orderBy(asc(accountContactsTable.createdAt));
+
+    return rows.map(({ contact, accountName }) => mapAccountContact(contact, accountName ?? null));
   }
 
   async findById(id: string): Promise<Account | undefined> {
@@ -109,7 +140,7 @@ class DrizzleAccountsRepository implements AccountsRepository {
 export const createDrizzleAccountsRepository = (database?: Database): AccountsRepository =>
   new DrizzleAccountsRepository(database);
 
-const inMemorySeed = (): Account[] => {
+const inMemoryAccountsSeed = (): Account[] => {
   const now = new Date().toISOString();
 
   return [
@@ -134,20 +165,56 @@ const inMemorySeed = (): Account[] => {
   ];
 };
 
+const inMemoryContactsSeed = (): AccountContact[] => {
+  const now = new Date().toISOString();
+
+  return [
+    {
+      id: "ctc_0001",
+      accountId: "acc_0001",
+      accountName: "Acme Manufacturing",
+      name: "Stern Thireau",
+      title: "Operations Manager",
+      email: "sthireau@acme.example",
+      phone: "+1-555-1001",
+      ownerId: null,
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: "ctc_0002",
+      accountId: "acc_0002",
+      accountName: "Jane Doe",
+      name: "Ford McKibbin",
+      title: "Project Manager",
+      email: "fmckibbin@collect.example",
+      phone: "+1-555-1002",
+      ownerId: null,
+      createdAt: now,
+      updatedAt: now
+    }
+  ];
+};
+
 export const createInMemoryAccountsRepository = (): AccountsRepository => {
-  const state: Account[] = inMemorySeed();
+  const accountsState: Account[] = inMemoryAccountsSeed();
+  const contactsState: AccountContact[] = inMemoryContactsSeed();
 
   return {
     async list() {
-      return [...state];
+      return [...accountsState];
+    },
+
+    async listContacts() {
+      return contactsState.map((contact) => ({ ...contact }));
     },
 
     async findById(id: string) {
-      return state.find((account) => account.id === id);
+      return accountsState.find((account) => account.id === id);
     },
 
     async findByEmail(email: string) {
-      return state.find((account) => account.email === email);
+      return accountsState.find((account) => account.email === email);
     },
 
     async create(input: AccountCreateInput) {
@@ -159,37 +226,37 @@ export const createInMemoryAccountsRepository = (): AccountsRepository => {
         ...input
       };
 
-      state.push(account);
+      accountsState.push(account);
 
       return account;
     },
 
     async update(id: string, input: AccountUpdateInput) {
-      const index = state.findIndex((account) => account.id === id);
+      const index = accountsState.findIndex((account) => account.id === id);
 
       if (index === -1) {
         return undefined;
       }
 
       const updatedAccount: Account = {
-        ...state[index],
+        ...accountsState[index],
         ...input,
         updatedAt: new Date().toISOString()
       };
 
-      state[index] = updatedAccount;
+      accountsState[index] = updatedAccount;
 
       return updatedAccount;
     },
 
     async delete(id: string) {
-      const index = state.findIndex((account) => account.id === id);
+      const index = accountsState.findIndex((account) => account.id === id);
 
       if (index === -1) {
         return false;
       }
 
-      state.splice(index, 1);
+      accountsState.splice(index, 1);
 
       return true;
     }
