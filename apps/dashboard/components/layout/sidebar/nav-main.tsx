@@ -109,7 +109,8 @@ export const navItems: NavGroup[] = [
         items: [
           { title: "Overview", href: "/sales" },
           { title: "Quotes", href: "/sales/quotes" },
-          { title: "Orders", href: "/sales/orders" }
+          { title: "Orders", href: "/sales/orders" },
+          { title: "Invoices", href: "/sales/invoices" }
         ]
       },
       {

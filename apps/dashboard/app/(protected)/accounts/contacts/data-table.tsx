@@ -20,7 +20,6 @@ import {
   Eye,
   FolderOpen,
   Mail,
-  MessageCircle,
   Pencil,
   Phone,
   StickyNote,
@@ -151,46 +150,6 @@ export default function ContactsDataTable({ data }: ContactsDataTableProps) {
       toast({
         title: "Delete contact is not available",
         description: `The delete action for ${contact.name} will be enabled soon.`
-      });
-    },
-    [toast]
-  );
-
-  const handleSendEmail = React.useCallback(
-    (contact: Contact) => {
-      if (!contact.email) {
-        toast({
-          title: "No email available",
-          description: `${contact.name} does not have an email address yet.`
-        });
-        return;
-      }
-
-      window.open(`mailto:${contact.email}`, "_blank", "noopener,noreferrer");
-    },
-    [toast]
-  );
-
-  const handleCall = React.useCallback(
-    (contact: Contact) => {
-      if (!contact.phone) {
-        toast({
-          title: "No phone number available",
-          description: `${contact.name} does not have a phone number yet.`
-        });
-        return;
-      }
-
-      window.open(`tel:${contact.phone}`, "_self");
-    },
-    [toast]
-  );
-
-  const handleMessage = React.useCallback(
-    (contact: Contact) => {
-      toast({
-        title: "Messaging is not available",
-        description: `Chat integrations for ${contact.name} will be enabled soon.`
       });
     },
     [toast]
