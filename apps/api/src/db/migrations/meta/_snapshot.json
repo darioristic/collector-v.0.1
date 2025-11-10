@@ -1,8 +1,15 @@
 {
   "version": "5",
   "dialect": "postgresql",
-  "tables": {},
-  "enums": {},
+  "tables": {
+    "users": {},
+    "accounts": {},
+    "account_contacts": {}
+  },
+  "enums": {
+    "user_status": {},
+    "account_type": {}
+  },
   "schemas": {}
 }
 

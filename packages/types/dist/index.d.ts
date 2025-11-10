@@ -28,6 +28,7 @@ export type AccountContact = {
     name: string;
     firstName?: string | null;
     lastName?: string | null;
+    fullName?: string | null;
     title?: string | null;
     email?: string | null;
     phone?: string | null;
@@ -124,42 +125,6 @@ export type Deal = {
 };
 export type DealCreateInput = Omit<Deal, "id">;
 export type DealUpdateInput = Partial<DealCreateInput>;
-export declare const ORDER_STATUSES: readonly ["pending", "processing", "completed", "cancelled"];
-export type OrderStatus = (typeof ORDER_STATUSES)[number];
-export type OrderItem = {
-    id: string;
-    name: string;
-    quantity: number;
-    unitPrice: number;
-};
-export type Order = {
-    id: string;
-    dealId: string;
-    items: OrderItem[];
-    totalAmount: number;
-    status: OrderStatus;
-};
-export type OrderItemCreateInput = Omit<OrderItem, "id"> & {
-    id?: string;
-};
-export type OrderCreateInput = {
-    dealId: string;
-    items: OrderItemCreateInput[];
-    status: OrderStatus;
-};
-export type OrderCreateReply = Order;
-export declare const INVOICE_STATUSES: readonly ["draft", "sent", "paid", "overdue"];
-export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
-export type Invoice = {
-    id: string;
-    orderId: string;
-    issueDate: string;
-    dueDate: string;
-    amount: number;
-    status: InvoiceStatus;
-};
-export type InvoiceCreateInput = Omit<Invoice, "id">;
-export type InvoiceCreateReply = Invoice;
 export declare const PAYMENT_STATUSES: readonly ["pending", "completed", "failed", "refunded"];
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 export declare const PAYMENT_METHODS: readonly ["bank_transfer", "cash", "card", "crypto"];
@@ -236,6 +201,118 @@ export type QuoteCreateInput = {
     items: QuoteItemCreateInput[];
 };
 export type QuoteUpdateInput = Partial<Omit<QuoteCreateInput, "quoteNumber">>;
+export declare const ORDER_STATUSES: readonly ["pending", "processing", "shipped", "completed", "cancelled"];
+export type OrderStatus = (typeof ORDER_STATUSES)[number];
+export type OrderItem = {
+    id: number;
+    orderId: number;
+    productId?: string | null;
+    description?: string | null;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+    createdAt: string;
+};
+export type Order = {
+    id: number;
+    orderNumber: string;
+    quoteId?: number | null;
+    companyId?: string | null;
+    contactId?: string | null;
+    orderDate: string;
+    expectedDelivery?: string | null;
+    currency: string;
+    subtotal: number;
+    tax: number;
+    total: number;
+    status: string;
+    notes?: string | null;
+    createdAt: string;
+    updatedAt: string;
+    items?: OrderItem[];
+};
+export type OrderItemCreateInput = {
+    productId?: string;
+    description?: string;
+    quantity: number;
+    unitPrice: number;
+};
+export type OrderCreateInput = {
+    orderNumber: string;
+    quoteId?: number;
+    companyId?: string;
+    contactId?: string;
+    orderDate?: string;
+    expectedDelivery?: string;
+    currency?: string;
+    status?: string;
+    notes?: string;
+    items: OrderItemCreateInput[];
+};
+export type OrderUpdateInput = Partial<Omit<OrderCreateInput, "orderNumber">>;
+export declare const INVOICE_STATUSES: readonly ["draft", "sent", "paid", "overdue", "void", "unpaid"];
+export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
+export type InvoiceItem = {
+    id: number;
+    invoiceId: string;
+    description?: string | null;
+    quantity: number;
+    unit: string;
+    unitPrice: number;
+    discountRate: number;
+    vatRate: number;
+    totalExclVat: number;
+    vatAmount: number;
+    totalInclVat: number;
+    createdAt: string;
+};
+export type Invoice = {
+    id: string;
+    orderId?: number | null;
+    invoiceNumber: string;
+    customerId: string;
+    customerName: string;
+    customerEmail?: string | null;
+    billingAddress?: string | null;
+    status: InvoiceStatus;
+    issuedAt: string;
+    dueDate?: string | null;
+    amountBeforeDiscount: number;
+    discountTotal: number;
+    subtotal: number;
+    totalVat: number;
+    total: number;
+    amountPaid: number;
+    balance: number;
+    currency: string;
+    notes?: string | null;
+    createdAt: string;
+    updatedAt: string;
+    items?: InvoiceItem[];
+};
+export type InvoiceItemCreateInput = {
+    description?: string;
+    quantity: number;
+    unit?: string;
+    unitPrice: number;
+    discountRate?: number;
+    vatRate?: number;
+};
+export type InvoiceCreateInput = {
+    invoiceNumber: string;
+    orderId?: number;
+    customerId: string;
+    customerName: string;
+    customerEmail?: string;
+    billingAddress?: string;
+    issuedAt?: string;
+    dueDate?: string;
+    currency?: string;
+    status?: InvoiceStatus;
+    notes?: string;
+    items: InvoiceItemCreateInput[];
+};
+export type InvoiceUpdateInput = Partial<Omit<InvoiceCreateInput, "invoiceNumber" | "customerId">>;
 export type Product = {
     id: string;
     name: string;

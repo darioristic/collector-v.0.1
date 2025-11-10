@@ -1,15 +1,16 @@
 # Seed podaci
 
-Planirano je da svaki modul dobije svoj `*.seed.ts` fajl sa osnovnim mock podacima. Ovi fajlovi će koristiti Drizzle ORM i `db` instancu iz `src/db/index.ts` kako bi popunili bazu za razvoj i testiranje.
+Planirano je da svaki modul dobije svoj `*.seed.ts` fajl sa osnovnim mock podacima. Ovi fajlovi koriste Drizzle ORM i `db` instancu iz `src/db/index.ts` kako bi popunili bazu za razvoj i testiranje.
 
-# Seed podaci
+## Implementirano
 
-Ovde možemo držati skripte za inicijalno punjenje baze podataka po modulima (Accounts, CRM, Sales, Products, Projects, HR, Settings).
+- `accounts.ts` – kreira demonstracione naloge i kontakte
+- `sales.ts` – generiše proizvode, ponude, porudžbine, fakture i stavke (50 orders, 50 invoices, 500 invoice items)
 
-TODO:
+## TODO
 
-- Kreirati TypeScript skripte koje koriste `db` instancu iz `apps/api/src/db`
-- Podeliti seed podatke po domenima (npr. `accounts.seed.ts`, `crm.seed.ts`)
-- Dodati npm/pnpm skriptu za pokretanje kompletnog seeda (npr. `pnpm --filter api seed`)
+- Dodati seed skripte za ostale domene (CRM, HR, Projects...)
+- Dodati CLI wrapper za selektivno pokretanje (npr. `bun run seed --module=sales`)
+- Razmotriti punjenje payments / inventory podataka kada budu potrebni
 
 

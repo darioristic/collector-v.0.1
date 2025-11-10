@@ -6,21 +6,28 @@
       "idx": 0,
       "version": "0001",
       "when": 1762502400000,
-      "tag": "initial",
+      "tag": "0001_initial",
       "breakpoints": false
     },
     {
       "idx": 1,
       "version": "0002",
       "when": 1762502400001,
-      "tag": "accounts_seed",
+      "tag": "0002_accounts_seed",
       "breakpoints": false
     },
     {
       "idx": 2,
       "version": "0003",
       "when": 1762502400002,
-      "tag": "account_contacts_seed",
+      "tag": "0003_account_contacts_seed",
+      "breakpoints": false
+    },
+    {
+      "idx": 3,
+      "version": "0004",
+      "when": 1762502400003,
+      "tag": "0004_sales_status_updates",
       "breakpoints": false
     }
   ]

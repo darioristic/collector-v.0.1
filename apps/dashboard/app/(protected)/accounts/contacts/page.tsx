@@ -20,7 +20,7 @@ const apiBaseUrl = process.env.COLLECTOR_API_URL;
 
 async function getContacts(): Promise<AccountContact[]> {
   if (!apiBaseUrl) {
-    throw new Error("Promenljiva okruženja COLLECTOR_API_URL nije definisana.");
+    throw new Error("Environment variable COLLECTOR_API_URL is not defined.");
   }
 
   const response = await fetch(`${apiBaseUrl}/api/accounts/contacts`, {
@@ -31,7 +31,7 @@ async function getContacts(): Promise<AccountContact[]> {
   });
 
   if (!response.ok) {
-    throw new Error(`API je odgovorio statusom ${response.status}.`);
+    throw new Error(`API responded with status ${response.status}.`);
   }
 
   return (await response.json()) as AccountContact[];
@@ -44,16 +44,18 @@ export default async function Page() {
   try {
     contacts = await getContacts();
   } catch (err) {
-    error = err instanceof Error ? err.message : "Greška prilikom učitavanja kontakata.";
+    error = err instanceof Error ? err.message : "Unable to load contacts.";
   }
 
   return (
     <>
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Contacts</h1>
-          <p className="text-muted-foreground text-sm">
-            Pregledaj kontakte povezane sa account-ima i brzo pronađi traženu osobu.
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight">Contacts</h1>
+          <p className="text-muted-foreground text-base">
+            Browse account contacts and quickly find the people you collaborate with.
+            <br />
+            <br />
           </p>
         </div>
         <Button asChild>
@@ -65,7 +67,7 @@ export default async function Page() {
 
       {error ? (
         <Alert variant="destructive" className="mt-4">
-          <AlertTitle>Učitavanje nije uspelo</AlertTitle>
+          <AlertTitle>Loading failed</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : (

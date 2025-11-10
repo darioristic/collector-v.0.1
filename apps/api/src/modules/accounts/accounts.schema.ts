@@ -35,6 +35,7 @@ const contactResponseSchema = {
     name: { type: "string" },
     firstName: { anyOf: [{ type: "string" }, { type: "null" }] },
     lastName: { anyOf: [{ type: "string" }, { type: "null" }] },
+    fullName: { anyOf: [{ type: "string" }, { type: "null" }] },
     title: { anyOf: [{ type: "string" }, { type: "null" }] },
     email: { anyOf: [{ type: "string", format: "email" }, { type: "null" }] },
     phone: { anyOf: [{ type: "string" }, { type: "null" }] },

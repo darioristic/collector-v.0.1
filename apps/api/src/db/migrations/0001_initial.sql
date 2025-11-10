@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS "account_contacts" (
   "name" text NOT NULL,
   "first_name" text NOT NULL DEFAULT '',
   "last_name" text NOT NULL DEFAULT '',
+  "full_name" text NOT NULL DEFAULT '',
   "title" text,
   "email" text,
   "phone" text,
@@ -61,3 +62,6 @@ ALTER TABLE "account_contacts" ALTER COLUMN "first_name" SET NOT NULL;
 ALTER TABLE "account_contacts" ADD COLUMN IF NOT EXISTS "last_name" text NOT NULL DEFAULT '';
 ALTER TABLE "account_contacts" ALTER COLUMN "last_name" SET DEFAULT '';
 ALTER TABLE "account_contacts" ALTER COLUMN "last_name" SET NOT NULL;
+ALTER TABLE "account_contacts" ADD COLUMN IF NOT EXISTS "full_name" text NOT NULL DEFAULT '';
+ALTER TABLE "account_contacts" ALTER COLUMN "full_name" SET DEFAULT '';
+ALTER TABLE "account_contacts" ALTER COLUMN "full_name" SET NOT NULL;

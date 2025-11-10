@@ -1,8 +1,10 @@
 import { pgClient } from "../index";
 import { seedAccounts } from "./accounts";
+import { seedSales } from "./sales";
 
 const run = async () => {
   await seedAccounts();
+  await seedSales();
 };
 
 run()

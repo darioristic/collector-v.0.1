@@ -44,6 +44,7 @@ export const accountContacts = pgTable(
     name: text("name").notNull(),
     firstName: text("first_name").notNull().default(""),
     lastName: text("last_name").notNull().default(""),
+    fullName: text("full_name").notNull().default(""),
     title: text("title"),
     email: text("email"),
     phone: text("phone"),

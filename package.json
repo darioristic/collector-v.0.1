@@ -6,7 +6,8 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "bun run --filter ./apps/dashboard dev & bun run --filter api dev",
+    "dev": "bun scripts/dev.ts",
+    "dev:raw": "bun run --filter ./apps/dashboard dev & bun run --filter api dev",
     "build": "bun run --filter ./apps/dashboard build && bun run --filter api build && bun run --filter @crm/ui build && bun run --filter @crm/types build && bun run --filter config build",
     "lint": "bunx eslint --config packages/config/eslint.config.js \"apps/**/*.{ts,tsx,js,jsx}\" \"packages/**/*.{ts,tsx,js,jsx}\""
   },

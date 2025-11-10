@@ -19,8 +19,24 @@ import { products } from "./products.schema";
 import { users } from "./settings.schema";
 
 export const quoteStatus = pgEnum("quote_status", ["draft", "sent", "accepted", "rejected"]);
-export const orderStatus = pgEnum("order_status", ["draft", "confirmed", "fulfilled", "cancelled"]);
-export const invoiceStatus = pgEnum("invoice_status", ["draft", "sent", "paid", "overdue", "void"]);
+export const orderStatus = pgEnum("order_status", [
+  "draft",
+  "confirmed",
+  "fulfilled",
+  "pending",
+  "processing",
+  "shipped",
+  "completed",
+  "cancelled"
+]);
+export const invoiceStatus = pgEnum("invoice_status", [
+  "draft",
+  "sent",
+  "paid",
+  "overdue",
+  "void",
+  "unpaid"
+]);
 export const paymentStatus = pgEnum("payment_status", ["pending", "completed", "failed", "refunded"]);
 export const paymentMethod = pgEnum("payment_method", ["bank_transfer", "cash", "card", "crypto"]);
 
@@ -88,40 +104,42 @@ export const salesDeals = pgTable(
 export const orders = pgTable(
   "orders",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: serial("id").primaryKey(),
+    orderNumber: text("order_number").notNull().unique(),
     quoteId: integer("quote_id").references(() => quotes.id, { onDelete: "set null" }),
-    accountId: uuid("account_id")
-      .notNull()
-      .references(() => accounts.id, { onDelete: "cascade" }),
-    dealId: uuid("deal_id").references(() => salesDeals.id, { onDelete: "set null" }),
-    ownerId: uuid("owner_id").references(() => users.id, { onDelete: "set null" }),
-    status: orderStatus("status").default("draft").notNull(),
-    currency: text("currency").default("USD").notNull(),
-    totalAmount: numeric("total_amount", { precision: 14, scale: 2 }).default("0").notNull(),
+    companyId: uuid("company_id").references(() => accounts.id, { onDelete: "set null" }),
+    contactId: uuid("contact_id").references(() => accountContacts.id, { onDelete: "set null" }),
+    orderDate: date("order_date").defaultNow(),
+    expectedDelivery: date("expected_delivery"),
+    currency: text("currency").default("EUR").notNull(),
+    subtotal: numeric("subtotal", { precision: 14, scale: 2 }).default("0").notNull(),
+    tax: numeric("tax", { precision: 14, scale: 2 }).default("0").notNull(),
+    total: numeric("total", { precision: 14, scale: 2 }).default("0").notNull(),
+    status: text("status").default("pending").notNull(),
     notes: text("notes"),
-    orderedAt: timestamp("ordered_at", { withTimezone: true }).defaultNow().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
   },
   (table) => ({
-    accountIdx: index("orders_account_idx").on(table.accountId),
+    companyIdx: index("orders_company_idx").on(table.companyId),
     statusIdx: index("orders_status_idx").on(table.status),
-    quoteIdx: index("orders_quote_idx").on(table.quoteId)
+    dateIdx: index("orders_date_idx").on(table.orderDate)
   })
 );
 
 export const orderItems = pgTable(
   "order_items",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
-    orderId: uuid("order_id")
+    id: serial("id").primaryKey(),
+    orderId: integer("order_id")
       .notNull()
       .references(() => orders.id, { onDelete: "cascade" }),
-    productId: uuid("product_id")
-      .notNull()
-      .references(() => products.id, { onDelete: "restrict" }),
-    quantity: numeric("quantity", { precision: 10, scale: 2 }).default("1").notNull(),
-    unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).default("0").notNull(),
-    discount: numeric("discount", { precision: 5, scale: 2 }).default("0").notNull()
+    productId: uuid("product_id").references(() => products.id, { onDelete: "set null" }),
+    description: text("description"),
+    quantity: integer("quantity").default(1).notNull(),
+    unitPrice: numeric("unit_price", { precision: 14, scale: 2 }).default("0").notNull(),
+    total: numeric("total", { precision: 14, scale: 2 }).default("0").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
   },
   (table) => ({
     orderIdx: index("order_items_order_idx").on(table.orderId)
@@ -132,18 +150,61 @@ export const invoices = pgTable(
   "invoices",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    orderId: uuid("order_id")
+    orderId: integer("order_id").references(() => orders.id, { onDelete: "cascade" }),
+    invoiceNumber: text("invoice_number").notNull().unique(),
+    customerId: uuid("customer_id")
       .notNull()
-      .references(() => orders.id, { onDelete: "cascade" }),
+      .references(() => accounts.id, { onDelete: "restrict" }),
+    customerName: text("customer_name").notNull(),
+    customerEmail: text("customer_email"),
+    billingAddress: text("billing_address"),
     status: invoiceStatus("status").default("draft").notNull(),
-    dueDate: timestamp("due_date", { withTimezone: true }),
     issuedAt: timestamp("issued_at", { withTimezone: true }).defaultNow().notNull(),
+    dueDate: timestamp("due_date", { withTimezone: true }),
+    amountBeforeDiscount: numeric("amount_before_discount", { precision: 14, scale: 2 })
+      .default("0")
+      .notNull(),
+    discountTotal: numeric("discount_total", { precision: 14, scale: 2 }).default("0").notNull(),
+    subtotal: numeric("subtotal", { precision: 14, scale: 2 }).default("0").notNull(),
+    totalVat: numeric("total_vat", { precision: 14, scale: 2 }).default("0").notNull(),
     total: numeric("total", { precision: 14, scale: 2 }).default("0").notNull(),
-    balance: numeric("balance", { precision: 14, scale: 2 }).default("0").notNull()
+    amountPaid: numeric("amount_paid", { precision: 14, scale: 2 }).default("0").notNull(),
+    balance: numeric("balance", { precision: 14, scale: 2 }).default("0").notNull(),
+    currency: text("currency").default("EUR").notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
   },
   (table) => ({
     orderIdx: uniqueIndex("invoices_order_key").on(table.orderId),
-    statusIdx: index("invoices_status_idx").on(table.status)
+    customerIdx: index("invoices_customer_idx").on(table.customerId),
+    statusIdx: index("invoices_status_idx").on(table.status),
+    issuedAtIdx: index("invoices_issued_at_idx").on(table.issuedAt),
+    customerStatusIdx: index("invoices_customer_status_idx").on(table.customerId, table.status),
+    statusIssuedAtIdx: index("invoices_status_issued_at_idx").on(table.status, table.issuedAt)
+  })
+);
+
+export const invoiceItems = pgTable(
+  "invoice_items",
+  {
+    id: serial("id").primaryKey(),
+    invoiceId: uuid("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "cascade" }),
+    description: text("description"),
+    quantity: numeric("quantity", { precision: 14, scale: 2 }).default("1").notNull(),
+    unit: text("unit").default("pcs").notNull(),
+    unitPrice: numeric("unit_price", { precision: 14, scale: 2 }).default("0").notNull(),
+    discountRate: numeric("discount_rate", { precision: 6, scale: 2 }).default("0").notNull(),
+    vatRate: numeric("vat_rate", { precision: 6, scale: 2 }).default("20").notNull(),
+    totalExclVat: numeric("total_excl_vat", { precision: 14, scale: 2 }).default("0").notNull(),
+    vatAmount: numeric("vat_amount", { precision: 14, scale: 2 }).default("0").notNull(),
+    totalInclVat: numeric("total_incl_vat", { precision: 14, scale: 2 }).default("0").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
+  },
+  (table) => ({
+    invoiceIdx: index("invoice_items_invoice_idx").on(table.invoiceId)
   })
 );
 
@@ -213,23 +274,16 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
     fields: [orders.quoteId],
     references: [quotes.id]
   }),
-  account: one(accounts, {
-    fields: [orders.accountId],
+  company: one(accounts, {
+    fields: [orders.companyId],
     references: [accounts.id]
   }),
-  deal: one(salesDeals, {
-    fields: [orders.dealId],
-    references: [salesDeals.id]
-  }),
-  owner: one(users, {
-    fields: [orders.ownerId],
-    references: [users.id]
+  contact: one(accountContacts, {
+    fields: [orders.contactId],
+    references: [accountContacts.id]
   }),
   items: many(orderItems),
-  invoice: one(invoices, {
-    fields: [orders.id],
-    references: [invoices.orderId]
-  })
+  invoices: many(invoices)
 }));
 
 export const orderItemsRelations = relations(orderItems, ({ one }) => ({
@@ -248,7 +302,19 @@ export const invoicesRelations = relations(invoices, ({ one, many }) => ({
     fields: [invoices.orderId],
     references: [orders.id]
   }),
+  customer: one(accounts, {
+    fields: [invoices.customerId],
+    references: [accounts.id]
+  }),
+  items: many(invoiceItems),
   payments: many(payments)
+}));
+
+export const invoiceItemsRelations = relations(invoiceItems, ({ one }) => ({
+  invoice: one(invoices, {
+    fields: [invoiceItems.invoiceId],
+    references: [invoices.id]
+  })
 }));
 
 export const paymentsRelations = relations(payments, ({ one }) => ({
