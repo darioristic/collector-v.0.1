@@ -1,8 +1,8 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { and, desc, eq, ilike, or } from "drizzle-orm";
 
-import { createHttpError } from "../../lib/errors";
 import { teamMembers } from "../../db/schema/settings.schema";
+import { createHttpError } from "../../lib/errors";
 import {
   type CreateTeamMemberInput,
   type ListTeamMembersQuery,
@@ -14,6 +14,15 @@ import {
 type TeamMemberParams = {
   id: string;
 };
+
+type PgError = Error & {
+  code?: string;
+  detail?: string;
+  constraint?: string;
+};
+
+const isUniqueViolation = (error: unknown): error is PgError =>
+  Boolean(error) && typeof error === "object" && "code" in (error as PgError) && (error as PgError).code === "23505";
 
 const serializeTeamMember = (member: typeof teamMembers.$inferSelect): SettingsTeamMember => ({
   id: member.id,
@@ -85,6 +94,12 @@ export const createTeamMember = async (
 
     return reply.status(201).send({ data: serializeTeamMember(member) });
   } catch (error) {
+    if (isUniqueViolation(error)) {
+      return reply
+        .status(409)
+        .send(createHttpError(409, "A team member with this email already exists.", { error: "Conflict" }));
+    }
+
     request.log.error({ err: error, email: payload.email }, "Failed to create team member");
     return reply
       .status(500)
@@ -99,11 +114,32 @@ export const updateTeamMember = async (
   const { id } = request.params;
   const payload = request.body;
 
+  const updates: Partial<typeof teamMembers.$inferInsert> = {};
+
+  if (payload.firstName !== undefined) {
+    updates.firstName = payload.firstName;
+  }
+  if (payload.lastName !== undefined) {
+    updates.lastName = payload.lastName;
+  }
+  if (payload.email !== undefined) {
+    updates.email = payload.email;
+  }
+  if (payload.role !== undefined) {
+    updates.role = payload.role;
+  }
+  if (payload.status !== undefined) {
+    updates.status = payload.status;
+  }
+  if (payload.avatarUrl !== undefined) {
+    updates.avatarUrl = payload.avatarUrl ?? null;
+  }
+
   try {
     const [member] = await request.db
       .update(teamMembers)
       .set({
-        ...payload,
+        ...updates,
         updatedAt: new Date()
       })
       .where(eq(teamMembers.id, id))
@@ -117,6 +153,12 @@ export const updateTeamMember = async (
 
     return reply.status(200).send({ data: serializeTeamMember(member) });
   } catch (error) {
+    if (isUniqueViolation(error)) {
+      return reply
+        .status(409)
+        .send(createHttpError(409, "A team member with this email already exists.", { error: "Conflict" }));
+    }
+
     request.log.error({ err: error, id }, "Failed to update team member");
     return reply
       .status(500)

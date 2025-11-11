@@ -48,6 +48,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { settingsSchema, type SettingsFormValues } from "@/lib/validations/settings";
 import { cn } from "@/lib/utils";
+import TeamsTab from "./teams/teams-tab";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -845,8 +846,12 @@ export default function SettingsPage(): JSX.Element {
           </Card>
         </TabsContent>
 
+        <TabsContent value="teams" className="mt-0">
+          <TeamsTab />
+        </TabsContent>
+
         {tabs
-          .filter((tab) => tab.value !== "profile" && tab.value !== "notifications")
+          .filter((tab) => tab.value !== "profile" && tab.value !== "notifications" && tab.value !== "teams")
           .map((tab) => {
             const Icon = tab.icon;
             return (

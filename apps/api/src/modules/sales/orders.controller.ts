@@ -32,12 +32,12 @@ type DeleteRequest = FastifyRequest<{
 }>;
 
 export const listOrdersHandler = async (request: ListRequest, reply: FastifyReply) => {
-  const service = new OrdersService(request.db);
+  const service = new OrdersService(request.db, request.cache);
   const filters = {
     companyId: request.query.companyId,
     contactId: request.query.contactId,
     quoteId: request.query.quoteId ? Number.parseInt(request.query.quoteId, 10) : undefined,
-    status: request.query.status,
+    status: request.query.status as any,
     search: request.query.search,
     limit: request.query.limit ? Number.parseInt(request.query.limit, 10) : undefined,
     offset: request.query.offset ? Number.parseInt(request.query.offset, 10) : undefined
@@ -54,7 +54,7 @@ export const listOrdersHandler = async (request: ListRequest, reply: FastifyRepl
 };
 
 export const getOrderHandler = async (request: GetRequest, reply: FastifyReply) => {
-  const service = new OrdersService(request.db);
+  const service = new OrdersService(request.db, request.cache);
   const id = Number.parseInt(request.params.id, 10);
 
   if (Number.isNaN(id)) {
@@ -71,13 +71,13 @@ export const getOrderHandler = async (request: GetRequest, reply: FastifyReply) 
 };
 
 export const createOrderHandler = async (request: CreateRequest, reply: FastifyReply) => {
-  const service = new OrdersService(request.db);
+  const service = new OrdersService(request.db, request.cache);
   const order = await service.create(request.body);
   await reply.status(201).send({ data: order });
 };
 
 export const updateOrderHandler = async (request: UpdateRequest, reply: FastifyReply) => {
-  const service = new OrdersService(request.db);
+  const service = new OrdersService(request.db, request.cache);
   const id = Number.parseInt(request.params.id, 10);
 
   if (Number.isNaN(id)) {
@@ -94,7 +94,7 @@ export const updateOrderHandler = async (request: UpdateRequest, reply: FastifyR
 };
 
 export const deleteOrderHandler = async (request: DeleteRequest, reply: FastifyReply) => {
-  const service = new OrdersService(request.db);
+  const service = new OrdersService(request.db, request.cache);
   const id = Number.parseInt(request.params.id, 10);
 
   if (Number.isNaN(id)) {

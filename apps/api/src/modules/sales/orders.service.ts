@@ -9,10 +9,17 @@ import type {
   OrderItemCreateInput,
   OrderUpdateInput
 } from "@crm/types";
+import type { CacheService } from "../../lib/cache.service";
 
 export class OrdersService {
-  constructor(private database: AppDatabase) {}
+  constructor(
+    private database: AppDatabase,
+    private cache?: CacheService
+  ) {}
 
+  /**
+   * OPTIMIZED: Window function for count + caching
+   */
   async list(filters?: {
     companyId?: string;
     contactId?: string;
@@ -24,6 +31,17 @@ export class OrdersService {
   }): Promise<{ data: Order[]; total: number }> {
     const limit = filters?.limit ?? 50;
     const offset = filters?.offset ?? 0;
+
+    // Create cache key from filters
+    const cacheKey = `orders:list:${JSON.stringify(filters || {})}`;
+
+    // Try cache first
+    if (this.cache) {
+      const cached = await this.cache.get<{ data: Order[]; total: number }>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
 
     const conditions = [];
     if (filters?.companyId) {
@@ -49,147 +67,250 @@ export class OrdersService {
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const [data, countResult] = await Promise.all([
-      this.database
-        .select()
-        .from(orders)
-        .where(whereClause)
-        .orderBy(desc(orders.createdAt))
-        .limit(limit)
-        .offset(offset),
-      this.database
-        .select({ count: sql<number>`count(*)` })
-        .from(orders)
-        .where(whereClause)
-    ]);
-
-    return {
-      data: data.map((o) => this.mapOrderFromDb(o)),
-      total: Number(countResult[0]?.count ?? 0)
-    };
-  }
-
-  async getById(id: number): Promise<Order | null> {
-    const [order] = await this.database.select().from(orders).where(eq(orders.id, id)).limit(1);
-
-    if (!order) {
-      return null;
-    }
-
-    // Fetch items
-    const items = await this.database
-      .select()
-      .from(orderItems)
-      .where(eq(orderItems.orderId, id))
-      .orderBy(orderItems.id);
-
-    return {
-      ...this.mapOrderFromDb(order),
-      items: items.map((item) => this.mapOrderItemFromDb(item))
-    };
-  }
-
-  async create(input: OrderCreateInput): Promise<Order> {
-    // Calculate totals from items
-    const { subtotal, tax, total } = this.calculateTotals(input.items);
-
-    // Create order
-    const [newOrder] = await this.database
-      .insert(orders)
-      .values({
-        orderNumber: input.orderNumber,
-        quoteId: input.quoteId || null,
-        companyId: input.companyId || null,
-        contactId: input.contactId || null,
-        orderDate: input.orderDate || new Date().toISOString().split("T")[0],
-        expectedDelivery: input.expectedDelivery || null,
-        currency: input.currency || "EUR",
-        subtotal: subtotal.toString(),
-        tax: tax.toString(),
-        total: total.toString(),
-        status: input.status || "pending",
-        notes: input.notes || null
+    // OPTIMIZATION: Use window function instead of 2 queries
+    const data = await this.database
+      .select({
+        id: orders.id,
+        orderNumber: orders.orderNumber,
+        quoteId: orders.quoteId,
+        companyId: orders.companyId,
+        contactId: orders.contactId,
+        orderDate: orders.orderDate,
+        expectedDelivery: orders.expectedDelivery,
+        currency: orders.currency,
+        subtotal: orders.subtotal,
+        tax: orders.tax,
+        total: orders.total,
+        status: orders.status,
+        notes: orders.notes,
+        createdAt: orders.createdAt,
+        updatedAt: orders.updatedAt,
+        totalCount: sql<number>`count(*) over()`
       })
-      .returning();
+      .from(orders)
+      .where(whereClause)
+      .orderBy(desc(orders.createdAt))
+      .limit(limit)
+      .offset(offset);
 
-    // Create order items
-    if (input.items.length > 0) {
-      await this.database.insert(orderItems).values(
-        input.items.map((item) => ({
-          orderId: newOrder.id,
-          productId: item.productId || null,
-          description: item.description || null,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice.toString(),
-          total: new Decimal(item.quantity).times(item.unitPrice).toString()
-        }))
-      );
+    const total = data.length > 0 ? Number(data[0].totalCount) : 0;
+
+    const result = {
+      data: data.map((o) => this.mapOrderFromDb(o)),
+      total
+    };
+
+    // Cache for 5 minutes
+    if (this.cache) {
+      await this.cache.set(cacheKey, result, { ttl: 300 });
     }
 
-    return this.getById(newOrder.id) as Promise<Order>;
+    return result;
   }
 
-  async update(id: number, input: OrderUpdateInput): Promise<Order | null> {
-    const existing = await this.getById(id);
-    if (!existing) {
-      return null;
-    }
+  /**
+   * OPTIMIZED: Single JOIN query instead of N+1 + caching
+   */
+  async getById(id: number): Promise<Order | null> {
+    const cacheKey = `orders:${id}`;
 
-    // If items are provided, recalculate totals
-    let subtotal: Decimal | undefined;
-    let tax: Decimal | undefined;
-    let total: Decimal | undefined;
-
-    if (input.items) {
-      const calculated = this.calculateTotals(input.items);
-      subtotal = calculated.subtotal;
-      tax = calculated.tax;
-      total = calculated.total;
-    }
-
-    // Update order
-    const updateData: any = {};
-    if (input.quoteId !== undefined) updateData.quoteId = input.quoteId || null;
-    if (input.companyId !== undefined) updateData.companyId = input.companyId || null;
-    if (input.contactId !== undefined) updateData.contactId = input.contactId || null;
-    if (input.orderDate !== undefined) updateData.orderDate = input.orderDate;
-    if (input.expectedDelivery !== undefined) updateData.expectedDelivery = input.expectedDelivery;
-    if (input.currency !== undefined) updateData.currency = input.currency;
-    if (input.status !== undefined) updateData.status = input.status;
-    if (input.notes !== undefined) updateData.notes = input.notes;
-    if (subtotal !== undefined) updateData.subtotal = subtotal.toString();
-    if (tax !== undefined) updateData.tax = tax.toString();
-    if (total !== undefined) updateData.total = total.toString();
-    updateData.updatedAt = new Date();
-
-    await this.database.update(orders).set(updateData).where(eq(orders.id, id));
-
-    // Update items if provided
-    if (input.items) {
-      // Delete existing items
-      await this.database.delete(orderItems).where(eq(orderItems.orderId, id));
-
-      // Insert new items
-      if (input.items.length > 0) {
-        await this.database.insert(orderItems).values(
-          input.items.map((item) => ({
-            orderId: id,
-            productId: item.productId || null,
-            description: item.description || null,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice.toString(),
-            total: new Decimal(item.quantity).times(item.unitPrice).toString()
-          }))
-        );
+    // Try cache first
+    if (this.cache) {
+      const cached = await this.cache.get<Order>(cacheKey);
+      if (cached) {
+        return cached;
       }
     }
 
-    return this.getById(id);
+    // FIX N+1: Use JOIN to fetch order and items in one query
+    const result = await this.database
+      .select({
+        order: orders,
+        item: orderItems
+      })
+      .from(orders)
+      .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
+      .where(eq(orders.id, id));
+
+    if (result.length === 0) {
+      return null;
+    }
+
+    // Group items by order
+    const orderData = result[0].order;
+    const items = result
+      .filter(row => row.item !== null)
+      .map(row => this.mapOrderItemFromDb(row.item!));
+
+    const order: Order = {
+      ...this.mapOrderFromDb(orderData),
+      items
+    };
+
+    // Cache for 10 minutes
+    if (this.cache) {
+      await this.cache.set(cacheKey, order, { ttl: 600 });
+    }
+
+    return order;
   }
 
+  /**
+   * OPTIMIZED: Use transaction to ensure atomicity
+   */
+  async create(input: OrderCreateInput): Promise<Order> {
+    try {
+      // Calculate totals from items
+      const { subtotal, tax, total } = this.calculateTotals(input.items);
+
+      // Use transaction to ensure atomicity
+      const result = await this.database.transaction(async (tx) => {
+        // Create order
+        const [newOrder] = await tx
+          .insert(orders)
+          .values({
+            orderNumber: input.orderNumber,
+            quoteId: input.quoteId || null,
+            companyId: input.companyId || null,
+            contactId: input.contactId || null,
+            orderDate: input.orderDate || new Date().toISOString().split("T")[0],
+            expectedDelivery: input.expectedDelivery || null,
+            currency: input.currency || "EUR",
+            subtotal: subtotal.toString(),
+            tax: tax.toString(),
+            total: total.toString(),
+            status: (input.status || "pending") as typeof orders.$inferSelect.status,
+            notes: input.notes || null
+          })
+          .returning();
+
+        // Create order items
+        if (input.items.length > 0) {
+          await tx.insert(orderItems).values(
+            input.items.map((item) => ({
+              orderId: newOrder.id,
+              productId: item.productId || null,
+              description: item.description || null,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice.toString(),
+              total: new Decimal(item.quantity).times(item.unitPrice).toString()
+            }))
+          );
+        }
+
+        return newOrder;
+      });
+
+      // Invalidate list cache
+      if (this.cache) {
+        await this.cache.deletePattern('orders:list:*');
+      }
+
+      // Get full order with items
+      const order = await this.getById(result.id);
+      if (!order) {
+        throw new Error('Failed to retrieve created order');
+      }
+
+      return order;
+
+    } catch (error) {
+      throw new Error(`Failed to create order: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * OPTIMIZED: Use transaction + cache invalidation
+   */
+  async update(id: number, input: OrderUpdateInput): Promise<Order | null> {
+    try {
+      const existing = await this.getById(id);
+      if (!existing) {
+        return null;
+      }
+
+      // If items are provided, recalculate totals
+      let subtotal: Decimal | undefined;
+      let tax: Decimal | undefined;
+      let total: Decimal | undefined;
+
+      if (input.items) {
+        const calculated = this.calculateTotals(input.items);
+        subtotal = calculated.subtotal;
+        tax = calculated.tax;
+        total = calculated.total;
+      }
+
+      // Use transaction
+      await this.database.transaction(async (tx) => {
+        // Update order
+        const updateData: any = {};
+        if (input.quoteId !== undefined) updateData.quoteId = input.quoteId || null;
+        if (input.companyId !== undefined) updateData.companyId = input.companyId || null;
+        if (input.contactId !== undefined) updateData.contactId = input.contactId || null;
+        if (input.orderDate !== undefined) updateData.orderDate = input.orderDate;
+        if (input.expectedDelivery !== undefined) updateData.expectedDelivery = input.expectedDelivery;
+        if (input.currency !== undefined) updateData.currency = input.currency;
+        if (input.status !== undefined) updateData.status = input.status as typeof orders.$inferSelect.status;
+        if (input.notes !== undefined) updateData.notes = input.notes;
+        if (subtotal !== undefined) updateData.subtotal = subtotal.toString();
+        if (tax !== undefined) updateData.tax = tax.toString();
+        if (total !== undefined) updateData.total = total.toString();
+        updateData.updatedAt = new Date();
+
+        await tx.update(orders).set(updateData).where(eq(orders.id, id));
+
+        // Update items if provided
+        if (input.items) {
+          // Delete existing items
+          await tx.delete(orderItems).where(eq(orderItems.orderId, id));
+
+          // Insert new items
+          if (input.items.length > 0) {
+            await tx.insert(orderItems).values(
+              input.items.map((item) => ({
+                orderId: id,
+                productId: item.productId || null,
+                description: item.description || null,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice.toString(),
+                total: new Decimal(item.quantity).times(item.unitPrice).toString()
+              }))
+            );
+          }
+        }
+      });
+
+      // Invalidate caches
+      if (this.cache) {
+        await this.cache.delete(`orders:${id}`);
+        await this.cache.deletePattern('orders:list:*');
+      }
+
+      return this.getById(id);
+
+    } catch (error) {
+      throw new Error(`Failed to update order: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * OPTIMIZED: Cache invalidation on delete
+   */
   async delete(id: number): Promise<boolean> {
-    const deleted = await this.database.delete(orders).where(eq(orders.id, id)).returning();
-    return deleted.length > 0;
+    try {
+      const deleted = await this.database.delete(orders).where(eq(orders.id, id)).returning();
+
+      if (deleted.length > 0 && this.cache) {
+        await this.cache.delete(`orders:${id}`);
+        await this.cache.deletePattern('orders:list:*');
+      }
+
+      return deleted.length > 0;
+
+    } catch (error) {
+      throw new Error(`Failed to delete order: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   private calculateTotals(items: OrderItemCreateInput[]): {

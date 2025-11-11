@@ -8,6 +8,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { db, type AppDatabase } from "./db/index.js";
 import corsPlugin from "./plugins/cors";
+import { cachePlugin } from "./lib/cache.service";
 import errorHandlerPlugin from "./plugins/error-handler";
 import openApiPlugin from "./plugins/openapi";
 import healthRoutes from "./routes/health";
@@ -145,6 +146,7 @@ export const buildServer = async () => {
 	}
 
 	await app.register(corsPlugin);
+	await app.register(cachePlugin);
 	await app.register(errorHandlerPlugin);
 	await app.register(openApiPlugin);
 	await registerHealthcheck(app);
