@@ -10,9 +10,7 @@ import type {
   InvoiceUpdateInput
 } from "@crm/types";
 import type { CacheService } from "../../lib/cache.service";
-
-type InvoiceRow = typeof invoices.$inferSelect;
-type InvoiceItemRow = typeof invoiceItems.$inferSelect;
+import { TAX_CONFIG } from "../../config/tax.config.js";
 
 export class InvoicesService {
   constructor(
@@ -208,7 +206,7 @@ export class InvoicesService {
                 unit: item.unit || "pcs",
                 unitPrice: item.unitPrice.toString(),
                 discountRate: (item.discountRate || 0).toString(),
-                vatRate: (item.vatRate || 20).toString(),
+                vatRate: (item.vatRate || TAX_CONFIG.DEFAULT_RATE_PERCENTAGE).toString(),
                 totalExclVat: itemCalc.totalExclVat.toString(),
                 vatAmount: itemCalc.vatAmount.toString(),
                 totalInclVat: itemCalc.totalInclVat.toString()
@@ -222,7 +220,7 @@ export class InvoicesService {
 
       // Invalidate list cache
       if (this.cache) {
-        await this.cache.deletePattern("invoices:list:*");
+        await this.cache.deletePattern('invoices:list:*');
       }
 
       // Get full invoice with items
@@ -309,7 +307,7 @@ export class InvoicesService {
                   unit: item.unit || "pcs",
                   unitPrice: item.unitPrice.toString(),
                   discountRate: (item.discountRate || 0).toString(),
-                  vatRate: (item.vatRate || 20).toString(),
+                  vatRate: (item.vatRate || TAX_CONFIG.DEFAULT_RATE_PERCENTAGE).toString(),
                   totalExclVat: itemCalc.totalExclVat.toString(),
                   vatAmount: itemCalc.vatAmount.toString(),
                   totalInclVat: itemCalc.totalInclVat.toString()
@@ -323,7 +321,7 @@ export class InvoicesService {
       // Invalidate caches
       if (this.cache) {
         await this.cache.delete(`invoices:${id}`);
-        await this.cache.deletePattern("invoices:list:*");
+        await this.cache.deletePattern('invoices:list:*');
       }
 
       return this.getById(id);
@@ -342,7 +340,7 @@ export class InvoicesService {
 
       if (deleted.length > 0 && this.cache) {
         await this.cache.delete(`invoices:${id}`);
-        await this.cache.deletePattern("invoices:list:*");
+        await this.cache.deletePattern('invoices:list:*');
       }
 
       return deleted.length > 0;
@@ -362,7 +360,7 @@ export class InvoicesService {
     const quantity = new Decimal(item.quantity);
     const unitPrice = new Decimal(item.unitPrice);
     const discountRate = new Decimal(item.discountRate || 0);
-    const vatRate = new Decimal(item.vatRate || 20);
+    const vatRate = new Decimal(item.vatRate || TAX_CONFIG.DEFAULT_RATE_PERCENTAGE);
 
     // Calculate amounts
     const amountBeforeDiscount = quantity.times(unitPrice);
@@ -411,7 +409,7 @@ export class InvoicesService {
     };
   }
 
-  private mapInvoiceFromDb(dbInvoice: InvoiceRow): Invoice {
+  private mapInvoiceFromDb(dbInvoice: any): Invoice {
     return {
       id: dbInvoice.id,
       orderId: dbInvoice.orderId,
@@ -437,7 +435,7 @@ export class InvoicesService {
     };
   }
 
-  private mapInvoiceItemFromDb(dbItem: InvoiceItemRow): InvoiceItem {
+  private mapInvoiceItemFromDb(dbItem: any): InvoiceItem {
     return {
       id: dbItem.id,
       invoiceId: dbItem.invoiceId,

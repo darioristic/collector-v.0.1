@@ -13,9 +13,6 @@ import type {
 } from "@crm/types";
 import type { CacheService } from "../../lib/cache.service";
 
-type QuoteRow = typeof quotes.$inferSelect;
-type QuoteItemRow = typeof quoteItems.$inferSelect;
-
 export class QuotesService {
   constructor(
     private database: AppDatabase,
@@ -199,7 +196,7 @@ export class QuotesService {
       });
 
       if (this.cache) {
-        await this.cache.deletePattern("quotes:list:*");
+        await this.cache.deletePattern('quotes:list:*');
       }
 
       const quote = await this.getById(result.id);
@@ -263,7 +260,7 @@ export class QuotesService {
 
       if (this.cache) {
         await this.cache.delete(`quotes:${id}`);
-        await this.cache.deletePattern("quotes:list:*");
+        await this.cache.deletePattern('quotes:list:*');
       }
 
       return this.getById(id);
@@ -306,7 +303,7 @@ export class QuotesService {
   }
 
   private mapQuoteFromDb(
-    dbQuote: QuoteRow,
+    dbQuote: typeof quotes.$inferSelect,
     extras: { companyName?: string | null; contactName?: string | null } = {}
   ): Quote {
     return {
@@ -329,7 +326,7 @@ export class QuotesService {
     };
   }
 
-  private mapQuoteItemFromDb(dbItem: QuoteItemRow): QuoteItem {
+  private mapQuoteItemFromDb(dbItem: any): QuoteItem {
     return {
       id: dbItem.id,
       quoteId: dbItem.quoteId,
