@@ -10,6 +10,7 @@ import {
   taskStatus
 } from "../../db/schema/projects.schema";
 import { users } from "../../db/schema/settings.schema";
+import type { CacheService } from "../../lib/cache.service";
 import type {
   AddTeamMemberInput,
   CreateBudgetCategoryInput,
@@ -135,9 +136,21 @@ const mapOwner = (
 };
 
 export class ProjectsService {
-  constructor(private readonly database: AppDatabase = defaultDb) {}
+  constructor(
+    private readonly database: AppDatabase = defaultDb,
+    private readonly cache?: CacheService
+  ) {}
 
   async list(): Promise<ProjectSummary[]> {
+    const cacheKey = "projects:list";
+
+    if (this.cache) {
+      const cached = await this.cache.get<ProjectSummary[]>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
     const [projectRows, taskStats] = await Promise.all([
       this.database
         .select({
@@ -165,9 +178,15 @@ export class ProjectsService {
       });
     }
 
-    return projectRows.map(({ project, owner }) =>
+    const summaries = projectRows.map(({ project, owner }) =>
       this.mapProjectSummary(project, owner ?? undefined, statsMap.get(project.id))
     );
+
+    if (this.cache) {
+      await this.cache.set(cacheKey, summaries, { ttl: 300 });
+    }
+
+    return summaries;
   }
 
   async projectExists(id: string): Promise<boolean> {
@@ -203,6 +222,8 @@ export class ProjectsService {
     if (!row) {
       throw new Error("Failed to create project");
     }
+
+    await this.invalidateProjectCaches();
 
     return this.getProjectDetails(row.id) as Promise<ProjectDetails>;
   }
@@ -251,6 +272,8 @@ export class ProjectsService {
 
     await this.database.update(projects).set(payload).where(eq(projects.id, id));
 
+    await this.invalidateProjectCaches(id);
+
     return this.getProjectDetails(id);
   }
 
@@ -263,12 +286,27 @@ export class ProjectsService {
       .delete(projects)
       .where(eq(projects.id, id))
       .returning();
-    return deleted.length > 0;
+    const success = deleted.length > 0;
+
+    if (success) {
+      await this.invalidateProjectCaches(id);
+    }
+
+    return success;
   }
 
   async getProjectDetails(id: string): Promise<ProjectDetails | null> {
     if (!isUuid(id)) {
       return null;
+    }
+
+    const cacheKey = `projects:details:${id}`;
+
+    if (this.cache) {
+      const cached = await this.cache.get<ProjectDetails>(cacheKey);
+      if (cached) {
+        return cached;
+      }
     }
 
     const [projectRow] = await this.database
@@ -304,7 +342,7 @@ export class ProjectsService {
 
     const budget = this.composeBudgetSummary(projectRow.project, budgetCategories);
 
-    return {
+    const details: ProjectDetails = {
       ...summary,
       progress,
       totalTasks,
@@ -321,6 +359,12 @@ export class ProjectsService {
         remainingDays: summary.remainingDays
       }
     };
+
+    if (this.cache) {
+      await this.cache.set(cacheKey, details, { ttl: 600 });
+    }
+
+    return details;
   }
 
   async listTasks(projectId: string): Promise<ProjectTask[]> {
@@ -342,6 +386,8 @@ export class ProjectsService {
     if (!row) {
       throw new Error("Failed to create task");
     }
+
+    await this.invalidateProjectCaches(projectId);
 
     const created = await this.getTaskById(row.id);
 
@@ -371,6 +417,8 @@ export class ProjectsService {
 
     await this.database.update(projectTasks).set(payload).where(eq(projectTasks.id, taskId));
 
+    await this.invalidateProjectCaches(projectId);
+
     return this.getTaskById(taskId);
   }
 
@@ -380,7 +428,13 @@ export class ProjectsService {
       .where(and(eq(projectTasks.id, taskId), eq(projectTasks.projectId, projectId)))
       .returning();
 
-    return deleted.length > 0;
+    const success = deleted.length > 0;
+
+    if (success) {
+      await this.invalidateProjectCaches(projectId);
+    }
+
+    return success;
   }
 
   async listTimeline(projectId: string): Promise<ProjectTimelineEvent[]> {
@@ -660,6 +714,18 @@ export class ProjectsService {
       remaining: Math.max(total - spent, 0),
       categories
     };
+  }
+
+  private async invalidateProjectCaches(projectId?: string): Promise<void> {
+    if (!this.cache) {
+      return;
+    }
+
+    if (projectId) {
+      await this.cache.delete(`projects:details:${projectId}`);
+    }
+
+    await this.cache.deletePattern("projects:list*");
   }
 
   private async fetchProjectTasks(projectId: string): Promise<ProjectTask[]> {

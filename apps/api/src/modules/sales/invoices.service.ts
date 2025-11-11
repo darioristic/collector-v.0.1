@@ -9,10 +9,20 @@ import type {
   InvoiceItemCreateInput,
   InvoiceUpdateInput
 } from "@crm/types";
+import type { CacheService } from "../../lib/cache.service";
+
+type InvoiceRow = typeof invoices.$inferSelect;
+type InvoiceItemRow = typeof invoiceItems.$inferSelect;
 
 export class InvoicesService {
-  constructor(private database: AppDatabase) {}
+  constructor(
+    private database: AppDatabase,
+    private cache?: CacheService
+  ) {}
 
+  /**
+   * OPTIMIZED: Window function for count + caching
+   */
   async list(filters?: {
     customerId?: string;
     orderId?: number;
@@ -23,6 +33,16 @@ export class InvoicesService {
   }): Promise<{ data: Invoice[]; total: number }> {
     const limit = filters?.limit ?? 50;
     const offset = filters?.offset ?? 0;
+
+    const cacheKey = `invoices:list:${JSON.stringify(filters || {})}`;
+
+    // Try cache first
+    if (this.cache) {
+      const cached = await this.cache.get<{ data: Invoice[]; total: number }>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
 
     const conditions = [];
     if (filters?.customerId) {
@@ -47,184 +67,289 @@ export class InvoicesService {
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const [data, countResult] = await Promise.all([
-      this.database
-        .select()
-        .from(invoices)
-        .where(whereClause)
-        .orderBy(desc(invoices.createdAt))
-        .limit(limit)
-        .offset(offset),
-      this.database
-        .select({ count: sql<number>`count(*)` })
-        .from(invoices)
-        .where(whereClause)
-    ]);
-
-    return {
-      data: data.map((inv) => this.mapInvoiceFromDb(inv)),
-      total: Number(countResult[0]?.count ?? 0)
-    };
-  }
-
-  async getById(id: string): Promise<Invoice | null> {
-    const [invoice] = await this.database
-      .select()
-      .from(invoices)
-      .where(eq(invoices.id, id))
-      .limit(1);
-
-    if (!invoice) {
-      return null;
-    }
-
-    // Fetch items
-    const items = await this.database
-      .select()
-      .from(invoiceItems)
-      .where(eq(invoiceItems.invoiceId, id))
-      .orderBy(invoiceItems.id);
-
-    return {
-      ...this.mapInvoiceFromDb(invoice),
-      items: items.map((item) => this.mapInvoiceItemFromDb(item))
-    };
-  }
-
-  async create(input: InvoiceCreateInput): Promise<Invoice> {
-    // Calculate totals from items
-    const calculated = this.calculateTotals(input.items);
-
-    // Create invoice
-    const [newInvoice] = await this.database
-      .insert(invoices)
-      .values({
-        invoiceNumber: input.invoiceNumber,
-        orderId: input.orderId || null,
-        customerId: input.customerId,
-        customerName: input.customerName,
-        customerEmail: input.customerEmail || null,
-        billingAddress: input.billingAddress || null,
-        issuedAt: input.issuedAt ? new Date(input.issuedAt) : new Date(),
-        dueDate: input.dueDate ? new Date(input.dueDate) : null,
-        currency: input.currency || "EUR",
-        amountBeforeDiscount: calculated.amountBeforeDiscount.toString(),
-        discountTotal: calculated.discountTotal.toString(),
-        subtotal: calculated.subtotal.toString(),
-        totalVat: calculated.totalVat.toString(),
-        total: calculated.total.toString(),
-        amountPaid: "0",
-        balance: calculated.total.toString(),
-        status: input.status || "draft",
-        notes: input.notes || null
+    // OPTIMIZATION: Use window function instead of 2 queries
+    const data = await this.database
+      .select({
+        id: invoices.id,
+        orderId: invoices.orderId,
+        invoiceNumber: invoices.invoiceNumber,
+        customerId: invoices.customerId,
+        customerName: invoices.customerName,
+        customerEmail: invoices.customerEmail,
+        billingAddress: invoices.billingAddress,
+        status: invoices.status,
+        issuedAt: invoices.issuedAt,
+        dueDate: invoices.dueDate,
+        amountBeforeDiscount: invoices.amountBeforeDiscount,
+        discountTotal: invoices.discountTotal,
+        subtotal: invoices.subtotal,
+        totalVat: invoices.totalVat,
+        total: invoices.total,
+        amountPaid: invoices.amountPaid,
+        balance: invoices.balance,
+        currency: invoices.currency,
+        notes: invoices.notes,
+        createdAt: invoices.createdAt,
+        updatedAt: invoices.updatedAt,
+        totalCount: sql<number>`count(*) over()`
       })
-      .returning();
+      .from(invoices)
+      .where(whereClause)
+      .orderBy(desc(invoices.createdAt))
+      .limit(limit)
+      .offset(offset);
 
-    // Create invoice items
-    if (input.items.length > 0) {
-      await this.database.insert(invoiceItems).values(
-        input.items.map((item) => {
-          const itemCalc = this.calculateItemTotals(item);
-          return {
-            invoiceId: newInvoice.id,
-            description: item.description || null,
-            quantity: item.quantity.toString(),
-            unit: item.unit || "pcs",
-            unitPrice: item.unitPrice.toString(),
-            discountRate: (item.discountRate || 0).toString(),
-            vatRate: (item.vatRate || 20).toString(),
-            totalExclVat: itemCalc.totalExclVat.toString(),
-            vatAmount: itemCalc.vatAmount.toString(),
-            totalInclVat: itemCalc.totalInclVat.toString()
-          };
-        })
-      );
+    const total = data.length > 0 ? Number(data[0].totalCount) : 0;
+
+    const result = {
+      data: data.map((inv) => this.mapInvoiceFromDb(inv)),
+      total
+    };
+
+    // Cache for 10 minutes
+    if (this.cache) {
+      await this.cache.set(cacheKey, result, { ttl: 600 });
     }
 
-    return this.getById(newInvoice.id) as Promise<Invoice>;
+    return result;
   }
 
-  async update(id: string, input: InvoiceUpdateInput): Promise<Invoice | null> {
-    const existing = await this.getById(id);
-    if (!existing) {
-      return null;
-    }
+  /**
+   * OPTIMIZED: Single JOIN query instead of N+1 + caching
+   */
+  async getById(id: string): Promise<Invoice | null> {
+    const cacheKey = `invoices:${id}`;
 
-    // If items are provided, recalculate totals
-    let calculated:
-      | {
-          amountBeforeDiscount: Decimal;
-          discountTotal: Decimal;
-          subtotal: Decimal;
-          totalVat: Decimal;
-          total: Decimal;
-        }
-      | undefined;
-
-    if (input.items) {
-      calculated = this.calculateTotals(input.items);
-    }
-
-    // Update invoice
-    const updateData: any = {};
-    if (input.orderId !== undefined) updateData.orderId = input.orderId || null;
-    if (input.customerName !== undefined) updateData.customerName = input.customerName;
-    if (input.customerEmail !== undefined) updateData.customerEmail = input.customerEmail || null;
-    if (input.billingAddress !== undefined) updateData.billingAddress = input.billingAddress || null;
-    if (input.issuedAt !== undefined) updateData.issuedAt = new Date(input.issuedAt);
-    if (input.dueDate !== undefined) updateData.dueDate = input.dueDate ? new Date(input.dueDate) : null;
-    if (input.currency !== undefined) updateData.currency = input.currency;
-    if (input.status !== undefined) updateData.status = input.status;
-    if (input.notes !== undefined) updateData.notes = input.notes;
-
-    if (calculated) {
-      updateData.amountBeforeDiscount = calculated.amountBeforeDiscount.toString();
-      updateData.discountTotal = calculated.discountTotal.toString();
-      updateData.subtotal = calculated.subtotal.toString();
-      updateData.totalVat = calculated.totalVat.toString();
-      updateData.total = calculated.total.toString();
-      // Recalculate balance based on new total and existing amountPaid
-      const amountPaid = new Decimal(existing.amountPaid);
-      updateData.balance = calculated.total.minus(amountPaid).toString();
-    }
-
-    updateData.updatedAt = new Date();
-
-    await this.database.update(invoices).set(updateData).where(eq(invoices.id, id));
-
-    // Update items if provided
-    if (input.items) {
-      // Delete existing items
-      await this.database.delete(invoiceItems).where(eq(invoiceItems.invoiceId, id));
-
-      // Insert new items
-      if (input.items.length > 0) {
-        await this.database.insert(invoiceItems).values(
-          input.items.map((item) => {
-            const itemCalc = this.calculateItemTotals(item);
-            return {
-              invoiceId: id,
-              description: item.description || null,
-              quantity: item.quantity.toString(),
-              unit: item.unit || "pcs",
-              unitPrice: item.unitPrice.toString(),
-              discountRate: (item.discountRate || 0).toString(),
-              vatRate: (item.vatRate || 20).toString(),
-              totalExclVat: itemCalc.totalExclVat.toString(),
-              vatAmount: itemCalc.vatAmount.toString(),
-              totalInclVat: itemCalc.totalInclVat.toString()
-            };
-          })
-        );
+    // Try cache first
+    if (this.cache) {
+      const cached = await this.cache.get<Invoice>(cacheKey);
+      if (cached) {
+        return cached;
       }
     }
 
-    return this.getById(id);
+    // FIX N+1: Use JOIN to fetch invoice and items in one query
+    const result = await this.database
+      .select({
+        invoice: invoices,
+        item: invoiceItems
+      })
+      .from(invoices)
+      .leftJoin(invoiceItems, eq(invoiceItems.invoiceId, invoices.id))
+      .where(eq(invoices.id, id));
+
+    if (result.length === 0) {
+      return null;
+    }
+
+    // Group items by invoice
+    const invoiceData = result[0].invoice;
+    const items = result
+      .filter(row => row.item !== null)
+      .map(row => this.mapInvoiceItemFromDb(row.item!));
+
+    const invoice: Invoice = {
+      ...this.mapInvoiceFromDb(invoiceData),
+      items
+    };
+
+    // Cache for 15 minutes
+    if (this.cache) {
+      await this.cache.set(cacheKey, invoice, { ttl: 900 });
+    }
+
+    return invoice;
   }
 
+  /**
+   * OPTIMIZED: Use transaction to ensure atomicity + cache invalidation
+   */
+  async create(input: InvoiceCreateInput): Promise<Invoice> {
+    try {
+      // Calculate totals from items
+      const calculated = this.calculateTotals(input.items);
+
+      // Use transaction to ensure atomicity
+      const result = await this.database.transaction(async (tx) => {
+        // Create invoice
+        const [newInvoice] = await tx
+          .insert(invoices)
+          .values({
+            invoiceNumber: input.invoiceNumber,
+            orderId: input.orderId || null,
+            customerId: input.customerId,
+            customerName: input.customerName,
+            customerEmail: input.customerEmail || null,
+            billingAddress: input.billingAddress || null,
+            issuedAt: input.issuedAt ? new Date(input.issuedAt) : new Date(),
+            dueDate: input.dueDate ? new Date(input.dueDate) : null,
+            currency: input.currency || "EUR",
+            amountBeforeDiscount: calculated.amountBeforeDiscount.toString(),
+            discountTotal: calculated.discountTotal.toString(),
+            subtotal: calculated.subtotal.toString(),
+            totalVat: calculated.totalVat.toString(),
+            total: calculated.total.toString(),
+            amountPaid: "0",
+            balance: calculated.total.toString(),
+            status: input.status || "draft",
+            notes: input.notes || null
+          })
+          .returning();
+
+        // Create invoice items
+        if (input.items.length > 0) {
+          await tx.insert(invoiceItems).values(
+            input.items.map((item) => {
+              const itemCalc = this.calculateItemTotals(item);
+              return {
+                invoiceId: newInvoice.id,
+                description: item.description || null,
+                quantity: item.quantity.toString(),
+                unit: item.unit || "pcs",
+                unitPrice: item.unitPrice.toString(),
+                discountRate: (item.discountRate || 0).toString(),
+                vatRate: (item.vatRate || 20).toString(),
+                totalExclVat: itemCalc.totalExclVat.toString(),
+                vatAmount: itemCalc.vatAmount.toString(),
+                totalInclVat: itemCalc.totalInclVat.toString()
+              };
+            })
+          );
+        }
+
+        return newInvoice;
+      });
+
+      // Invalidate list cache
+      if (this.cache) {
+        await this.cache.deletePattern("invoices:list:*");
+      }
+
+      // Get full invoice with items
+      const invoice = await this.getById(result.id);
+      if (!invoice) {
+        throw new Error('Failed to retrieve created invoice');
+      }
+
+      return invoice;
+
+    } catch (error) {
+      throw new Error(`Failed to create invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * OPTIMIZED: Use transaction + cache invalidation
+   */
+  async update(id: string, input: InvoiceUpdateInput): Promise<Invoice | null> {
+    try {
+      const existing = await this.getById(id);
+      if (!existing) {
+        return null;
+      }
+
+      // If items are provided, recalculate totals
+      let calculated:
+        | {
+            amountBeforeDiscount: Decimal;
+            discountTotal: Decimal;
+            subtotal: Decimal;
+            totalVat: Decimal;
+            total: Decimal;
+          }
+        | undefined;
+
+      if (input.items) {
+        calculated = this.calculateTotals(input.items);
+      }
+
+      // Use transaction
+      await this.database.transaction(async (tx) => {
+        // Update invoice
+        const updateData: any = {};
+        if (input.orderId !== undefined) updateData.orderId = input.orderId || null;
+        if (input.customerName !== undefined) updateData.customerName = input.customerName;
+        if (input.customerEmail !== undefined) updateData.customerEmail = input.customerEmail || null;
+        if (input.billingAddress !== undefined) updateData.billingAddress = input.billingAddress || null;
+        if (input.issuedAt !== undefined) updateData.issuedAt = new Date(input.issuedAt);
+        if (input.dueDate !== undefined) updateData.dueDate = input.dueDate ? new Date(input.dueDate) : null;
+        if (input.currency !== undefined) updateData.currency = input.currency;
+        if (input.status !== undefined) updateData.status = input.status;
+        if (input.notes !== undefined) updateData.notes = input.notes;
+
+        if (calculated) {
+          updateData.amountBeforeDiscount = calculated.amountBeforeDiscount.toString();
+          updateData.discountTotal = calculated.discountTotal.toString();
+          updateData.subtotal = calculated.subtotal.toString();
+          updateData.totalVat = calculated.totalVat.toString();
+          updateData.total = calculated.total.toString();
+          // Recalculate balance based on new total and existing amountPaid
+          const amountPaid = new Decimal(existing.amountPaid);
+          updateData.balance = calculated.total.minus(amountPaid).toString();
+        }
+
+        updateData.updatedAt = new Date();
+
+        await tx.update(invoices).set(updateData).where(eq(invoices.id, id));
+
+        // Update items if provided
+        if (input.items) {
+          // Delete existing items
+          await tx.delete(invoiceItems).where(eq(invoiceItems.invoiceId, id));
+
+          // Insert new items
+          if (input.items.length > 0) {
+            await tx.insert(invoiceItems).values(
+              input.items.map((item) => {
+                const itemCalc = this.calculateItemTotals(item);
+                return {
+                  invoiceId: id,
+                  description: item.description || null,
+                  quantity: item.quantity.toString(),
+                  unit: item.unit || "pcs",
+                  unitPrice: item.unitPrice.toString(),
+                  discountRate: (item.discountRate || 0).toString(),
+                  vatRate: (item.vatRate || 20).toString(),
+                  totalExclVat: itemCalc.totalExclVat.toString(),
+                  vatAmount: itemCalc.vatAmount.toString(),
+                  totalInclVat: itemCalc.totalInclVat.toString()
+                };
+              })
+            );
+          }
+        }
+      });
+
+      // Invalidate caches
+      if (this.cache) {
+        await this.cache.delete(`invoices:${id}`);
+        await this.cache.deletePattern("invoices:list:*");
+      }
+
+      return this.getById(id);
+
+    } catch (error) {
+      throw new Error(`Failed to update invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * OPTIMIZED: Cache invalidation on delete
+   */
   async delete(id: string): Promise<boolean> {
-    const deleted = await this.database.delete(invoices).where(eq(invoices.id, id)).returning();
-    return deleted.length > 0;
+    try {
+      const deleted = await this.database.delete(invoices).where(eq(invoices.id, id)).returning();
+
+      if (deleted.length > 0 && this.cache) {
+        await this.cache.delete(`invoices:${id}`);
+        await this.cache.deletePattern("invoices:list:*");
+      }
+
+      return deleted.length > 0;
+
+    } catch (error) {
+      throw new Error(`Failed to delete invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   private calculateItemTotals(item: InvoiceItemCreateInput): {
@@ -286,7 +411,7 @@ export class InvoicesService {
     };
   }
 
-  private mapInvoiceFromDb(dbInvoice: any): Invoice {
+  private mapInvoiceFromDb(dbInvoice: InvoiceRow): Invoice {
     return {
       id: dbInvoice.id,
       orderId: dbInvoice.orderId,
@@ -312,7 +437,7 @@ export class InvoicesService {
     };
   }
 
-  private mapInvoiceItemFromDb(dbItem: any): InvoiceItem {
+  private mapInvoiceItemFromDb(dbItem: InvoiceItemRow): InvoiceItem {
     return {
       id: dbItem.id,
       invoiceId: dbItem.invoiceId,

@@ -11,6 +11,9 @@ import type {
 } from "@crm/types";
 import type { CacheService } from "../../lib/cache.service";
 
+type OrderRow = typeof orders.$inferSelect;
+type OrderItemRow = typeof orderItems.$inferSelect;
+
 export class OrdersService {
   constructor(
     private database: AppDatabase,
@@ -203,7 +206,7 @@ export class OrdersService {
 
       // Invalidate list cache
       if (this.cache) {
-        await this.cache.deletePattern('orders:list:*');
+        await this.cache.deletePattern("orders:list:*");
       }
 
       // Get full order with items
@@ -284,7 +287,7 @@ export class OrdersService {
       // Invalidate caches
       if (this.cache) {
         await this.cache.delete(`orders:${id}`);
-        await this.cache.deletePattern('orders:list:*');
+        await this.cache.deletePattern("orders:list:*");
       }
 
       return this.getById(id);
@@ -330,7 +333,7 @@ export class OrdersService {
     return { subtotal, tax, total };
   }
 
-  private mapOrderFromDb(dbOrder: any): Order {
+  private mapOrderFromDb(dbOrder: OrderRow): Order {
     return {
       id: dbOrder.id,
       orderNumber: dbOrder.orderNumber,
@@ -350,7 +353,7 @@ export class OrdersService {
     };
   }
 
-  private mapOrderItemFromDb(dbItem: any): OrderItem {
+  private mapOrderItemFromDb(dbItem: OrderItemRow): OrderItem {
     return {
       id: dbItem.id,
       orderId: dbItem.orderId,

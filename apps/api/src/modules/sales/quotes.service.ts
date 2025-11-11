@@ -9,13 +9,22 @@ import type {
   QuoteItem,
   QuoteItemCreateInput,
   QuoteSortField,
-  QuoteStatus,
   QuoteUpdateInput
 } from "@crm/types";
+import type { CacheService } from "../../lib/cache.service";
+
+type QuoteRow = typeof quotes.$inferSelect;
+type QuoteItemRow = typeof quoteItems.$inferSelect;
 
 export class QuotesService {
-  constructor(private database: AppDatabase) {}
+  constructor(
+    private database: AppDatabase,
+    private cache?: CacheService
+  ) {}
 
+  /**
+   * OPTIMIZED: Window function for count + caching + JOINs
+   */
   async list(filters?: {
     companyId?: string;
     contactId?: string;
@@ -30,6 +39,13 @@ export class QuotesService {
     const offset = filters?.offset ?? 0;
     const sortField = filters?.sortField ?? "createdAt";
     const sortOrder = filters?.sortOrder ?? "desc";
+
+    const cacheKey = `quotes:list:${JSON.stringify(filters || {})}`;
+
+    if (this.cache) {
+      const cached = await this.cache.get<{ data: Quote[]; total: number }>(cacheKey);
+      if (cached) return cached;
+    }
 
     const conditions = [];
     if (filters?.companyId) {
@@ -63,169 +79,214 @@ export class QuotesService {
     const orderColumn = sortColumnMap[sortField] ?? quotes.createdAt;
     const orderClause = sortOrder === "asc" ? asc(orderColumn) : desc(orderColumn);
 
-    const [data, countResult] = await Promise.all([
-      this.database
-        .select({
-          quote: quotes,
-          companyName: accounts.name,
-          contactName: accountContacts.fullName
-        })
-        .from(quotes)
-        .leftJoin(accounts, eq(quotes.companyId, accounts.id))
-        .leftJoin(accountContacts, eq(quotes.contactId, accountContacts.id))
-        .where(whereClause)
-        .orderBy(orderClause)
-        .limit(limit)
-        .offset(offset),
-      this.database
-        .select({ count: sql<number>`count(*)` })
-        .from(quotes)
-        .where(whereClause)
-    ]);
+    // OPTIMIZATION: Window function
+    const data = await this.database
+      .select({
+        quote: quotes,
+        companyName: accounts.name,
+        contactName: accountContacts.fullName,
+        totalCount: sql<number>`count(*) over()`
+      })
+      .from(quotes)
+      .leftJoin(accounts, eq(quotes.companyId, accounts.id))
+      .leftJoin(accountContacts, eq(quotes.contactId, accountContacts.id))
+      .where(whereClause)
+      .orderBy(orderClause)
+      .limit(limit)
+      .offset(offset);
 
-    return {
+    const total = data.length > 0 ? Number(data[0].totalCount) : 0;
+
+    const result = {
       data: data.map((row) =>
         this.mapQuoteFromDb(row.quote, {
           companyName: row.companyName,
           contactName: row.contactName
         })
       ),
-      total: Number(countResult[0]?.count ?? 0)
+      total
     };
+
+    if (this.cache) {
+      await this.cache.set(cacheKey, result, { ttl: 600 });
+    }
+
+    return result;
   }
 
+  /**
+   * OPTIMIZED: Single JOIN query + caching
+   */
   async getById(id: number): Promise<Quote | null> {
-    const [quote] = await this.database
+    const cacheKey = `quotes:${id}`;
+
+    if (this.cache) {
+      const cached = await this.cache.get<Quote>(cacheKey);
+      if (cached) return cached;
+    }
+
+    // FIX N+1
+    const result = await this.database
       .select({
         quote: quotes,
+        item: quoteItems,
         companyName: accounts.name,
         contactName: accountContacts.fullName
       })
       .from(quotes)
+      .leftJoin(quoteItems, eq(quoteItems.quoteId, quotes.id))
       .leftJoin(accounts, eq(quotes.companyId, accounts.id))
       .leftJoin(accountContacts, eq(quotes.contactId, accountContacts.id))
-      .where(eq(quotes.id, id))
-      .limit(1);
+      .where(eq(quotes.id, id));
 
-    if (!quote) {
-      return null;
+    if (result.length === 0) return null;
+
+    const quoteData = result[0].quote;
+    const companyName = result[0].companyName;
+    const contactName = result[0].contactName;
+    const items = result
+      .filter(row => row.item !== null)
+      .map(row => this.mapQuoteItemFromDb(row.item!));
+
+    const quote: Quote = {
+      ...this.mapQuoteFromDb(quoteData, { companyName, contactName }),
+      items
+    };
+
+    if (this.cache) {
+      await this.cache.set(cacheKey, quote, { ttl: 900 });
     }
 
-    // Fetch items
-    const items = await this.database
-      .select()
-      .from(quoteItems)
-      .where(eq(quoteItems.quoteId, id))
-      .orderBy(quoteItems.id);
-
-    return {
-      ...this.mapQuoteFromDb(quote.quote, {
-        companyName: quote.companyName,
-        contactName: quote.contactName
-      }),
-      items: items.map((item) => this.mapQuoteItemFromDb(item))
-    };
+    return quote;
   }
 
   async create(input: QuoteCreateInput): Promise<Quote> {
-    // Calculate totals from items
-    const { subtotal, tax, total } = this.calculateTotals(input.items);
+    try {
+      const { subtotal, tax, total } = this.calculateTotals(input.items);
 
-    // Create quote
-    const [newQuote] = await this.database
-      .insert(quotes)
-      .values({
-        quoteNumber: input.quoteNumber,
-        companyId: input.companyId || null,
-        contactId: input.contactId || null,
-        issueDate: input.issueDate || new Date().toISOString().split("T")[0],
-        expiryDate: input.expiryDate || null,
-        currency: input.currency || "EUR",
-        subtotal: subtotal.toString(),
-        tax: tax.toString(),
-        total: total.toString(),
-        status: input.status || "draft",
-        notes: input.notes || null
-      })
-      .returning();
+      const result = await this.database.transaction(async (tx) => {
+        const [newQuote] = await tx
+          .insert(quotes)
+          .values({
+            quoteNumber: input.quoteNumber,
+            companyId: input.companyId || null,
+            contactId: input.contactId || null,
+            issueDate: input.issueDate || new Date().toISOString().split("T")[0],
+            expiryDate: input.expiryDate || null,
+            currency: input.currency || "EUR",
+            subtotal: subtotal.toString(),
+            tax: tax.toString(),
+            total: total.toString(),
+            status: (input.status || "draft") as typeof quotes.$inferSelect.status,
+            notes: input.notes || null
+          })
+          .returning();
 
-    // Create quote items
-    if (input.items.length > 0) {
-      await this.database.insert(quoteItems).values(
-        input.items.map((item) => ({
-          quoteId: newQuote.id,
-          productId: item.productId || null,
-          description: item.description || null,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice.toString(),
-          total: new Decimal(item.quantity).times(item.unitPrice).toString()
-        }))
-      );
+        if (input.items.length > 0) {
+          await tx.insert(quoteItems).values(
+            input.items.map((item) => ({
+              quoteId: newQuote.id,
+              productId: item.productId || null,
+              description: item.description || null,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice.toString(),
+              total: new Decimal(item.quantity).times(item.unitPrice).toString()
+            }))
+          );
+        }
+
+        return newQuote;
+      });
+
+      if (this.cache) {
+        await this.cache.deletePattern("quotes:list:*");
+      }
+
+      const quote = await this.getById(result.id);
+      if (!quote) throw new Error('Failed to retrieve created quote');
+      return quote;
+
+    } catch (error) {
+      throw new Error(`Failed to create quote: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-
-    return this.getById(newQuote.id) as Promise<Quote>;
   }
 
   async update(id: number, input: QuoteUpdateInput): Promise<Quote | null> {
-    const existing = await this.getById(id);
-    if (!existing) {
-      return null;
-    }
+    try {
+      const existing = await this.getById(id);
+      if (!existing) return null;
 
-    // If items are provided, recalculate totals
-    let subtotal: Decimal | undefined;
-    let tax: Decimal | undefined;
-    let total: Decimal | undefined;
+      let subtotal: Decimal | undefined;
+      let tax: Decimal | undefined;
+      let total: Decimal | undefined;
 
-    if (input.items) {
-      const calculated = this.calculateTotals(input.items);
-      subtotal = calculated.subtotal;
-      tax = calculated.tax;
-      total = calculated.total;
-    }
-
-    // Update quote
-    const updateData: any = {};
-    if (input.companyId !== undefined) updateData.companyId = input.companyId || null;
-    if (input.contactId !== undefined) updateData.contactId = input.contactId || null;
-    if (input.issueDate !== undefined) updateData.issueDate = input.issueDate;
-    if (input.expiryDate !== undefined) updateData.expiryDate = input.expiryDate;
-    if (input.currency !== undefined) updateData.currency = input.currency;
-    if (input.status !== undefined) updateData.status = input.status;
-    if (input.notes !== undefined) updateData.notes = input.notes;
-    if (subtotal !== undefined) updateData.subtotal = subtotal.toString();
-    if (tax !== undefined) updateData.tax = tax.toString();
-    if (total !== undefined) updateData.total = total.toString();
-    updateData.updatedAt = new Date();
-
-    await this.database.update(quotes).set(updateData).where(eq(quotes.id, id));
-
-    // Update items if provided
-    if (input.items) {
-      // Delete existing items
-      await this.database.delete(quoteItems).where(eq(quoteItems.quoteId, id));
-
-      // Insert new items
-      if (input.items.length > 0) {
-        await this.database.insert(quoteItems).values(
-          input.items.map((item) => ({
-            quoteId: id,
-            productId: item.productId || null,
-            description: item.description || null,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice.toString(),
-            total: new Decimal(item.quantity).times(item.unitPrice).toString()
-          }))
-        );
+      if (input.items) {
+        const calculated = this.calculateTotals(input.items);
+        subtotal = calculated.subtotal;
+        tax = calculated.tax;
+        total = calculated.total;
       }
-    }
 
-    return this.getById(id);
+      await this.database.transaction(async (tx) => {
+        const updateData: any = {};
+        if (input.companyId !== undefined) updateData.companyId = input.companyId || null;
+        if (input.contactId !== undefined) updateData.contactId = input.contactId || null;
+        if (input.issueDate !== undefined) updateData.issueDate = input.issueDate;
+        if (input.expiryDate !== undefined) updateData.expiryDate = input.expiryDate;
+        if (input.currency !== undefined) updateData.currency = input.currency;
+        if (input.status !== undefined) updateData.status = input.status as typeof quotes.$inferSelect.status;
+        if (input.notes !== undefined) updateData.notes = input.notes;
+        if (subtotal !== undefined) updateData.subtotal = subtotal.toString();
+        if (tax !== undefined) updateData.tax = tax.toString();
+        if (total !== undefined) updateData.total = total.toString();
+        updateData.updatedAt = new Date();
+
+        await tx.update(quotes).set(updateData).where(eq(quotes.id, id));
+
+        if (input.items) {
+          await tx.delete(quoteItems).where(eq(quoteItems.quoteId, id));
+
+          if (input.items.length > 0) {
+            await tx.insert(quoteItems).values(
+              input.items.map((item) => ({
+                quoteId: id,
+                productId: item.productId || null,
+                description: item.description || null,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice.toString(),
+                total: new Decimal(item.quantity).times(item.unitPrice).toString()
+              }))
+            );
+          }
+        }
+      });
+
+      if (this.cache) {
+        await this.cache.delete(`quotes:${id}`);
+        await this.cache.deletePattern("quotes:list:*");
+      }
+
+      return this.getById(id);
+
+    } catch (error) {
+      throw new Error(`Failed to update quote: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async delete(id: number): Promise<boolean> {
-    const deleted = await this.database.delete(quotes).where(eq(quotes.id, id)).returning();
-    return deleted.length > 0;
+    try {
+      const deleted = await this.database.delete(quotes).where(eq(quotes.id, id)).returning();
+
+      if (deleted.length > 0 && this.cache) {
+        await this.cache.delete(`quotes:${id}`);
+        await this.cache.deletePattern('quotes:list:*');
+      }
+
+      return deleted.length > 0;
+
+    } catch (error) {
+      throw new Error(`Failed to delete quote: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   private calculateTotals(items: QuoteItemCreateInput[]): {
@@ -238,7 +299,6 @@ export class QuotesService {
       return acc.plus(itemTotal);
     }, new Decimal(0));
 
-    // Tax is 20% of subtotal
     const tax = subtotal.times(0.2);
     const total = subtotal.plus(tax);
 
@@ -246,7 +306,7 @@ export class QuotesService {
   }
 
   private mapQuoteFromDb(
-    dbQuote: typeof quotes.$inferSelect,
+    dbQuote: QuoteRow,
     extras: { companyName?: string | null; contactName?: string | null } = {}
   ): Quote {
     return {
@@ -269,7 +329,7 @@ export class QuotesService {
     };
   }
 
-  private mapQuoteItemFromDb(dbItem: any): QuoteItem {
+  private mapQuoteItemFromDb(dbItem: QuoteItemRow): QuoteItem {
     return {
       id: dbItem.id,
       quoteId: dbItem.quoteId,

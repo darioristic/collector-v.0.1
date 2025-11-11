@@ -33,11 +33,11 @@ type DeleteRequest = FastifyRequest<{
 }>;
 
 export const listQuotesHandler = async (request: ListRequest, reply: FastifyReply) => {
-  const service = new QuotesService(request.db);
+  const service = new QuotesService(request.db, request.cache);
   const filters = {
     companyId: request.query.companyId,
     contactId: request.query.contactId,
-    status: request.query.status,
+    status: request.query.status as any,
     search: request.query.search,
     limit: request.query.limit ? Number.parseInt(request.query.limit, 10) : undefined,
     offset: request.query.offset ? Number.parseInt(request.query.offset, 10) : undefined,
@@ -56,7 +56,7 @@ export const listQuotesHandler = async (request: ListRequest, reply: FastifyRepl
 };
 
 export const getQuoteHandler = async (request: GetRequest, reply: FastifyReply) => {
-  const service = new QuotesService(request.db);
+  const service = new QuotesService(request.db, request.cache);
   const id = Number.parseInt(request.params.id, 10);
 
   if (Number.isNaN(id)) {
@@ -73,13 +73,13 @@ export const getQuoteHandler = async (request: GetRequest, reply: FastifyReply) 
 };
 
 export const createQuoteHandler = async (request: CreateRequest, reply: FastifyReply) => {
-  const service = new QuotesService(request.db);
+  const service = new QuotesService(request.db, request.cache);
   const quote = await service.create(request.body);
   await reply.status(201).send({ data: quote });
 };
 
 export const updateQuoteHandler = async (request: UpdateRequest, reply: FastifyReply) => {
-  const service = new QuotesService(request.db);
+  const service = new QuotesService(request.db, request.cache);
   const id = Number.parseInt(request.params.id, 10);
 
   if (Number.isNaN(id)) {
@@ -96,7 +96,7 @@ export const updateQuoteHandler = async (request: UpdateRequest, reply: FastifyR
 };
 
 export const deleteQuoteHandler = async (request: DeleteRequest, reply: FastifyReply) => {
-  const service = new QuotesService(request.db);
+  const service = new QuotesService(request.db, request.cache);
   const id = Number.parseInt(request.params.id, 10);
 
   if (Number.isNaN(id)) {
