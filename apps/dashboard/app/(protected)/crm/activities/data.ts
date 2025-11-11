@@ -110,7 +110,7 @@ export async function fetchClientActivities(filters: ClientActivityFilters = {})
   const endpoint = query ? `${ACTIVITIES_ENDPOINT}?${query}` : ACTIVITIES_ENDPOINT;
 
   const response = await ensureResponse(
-    await fetch(getApiUrl(endpoint), {
+    fetch(getApiUrl(endpoint), {
       method: "GET",
       headers: jsonHeaders,
       cache: "no-store",
@@ -124,7 +124,7 @@ export async function fetchClientActivities(filters: ClientActivityFilters = {})
 export async function fetchClientActivityMetadata(): Promise<ClientActivityMetadata> {
   const [clientsResponse, usersResponse] = await Promise.all([
     ensureResponse(
-      await fetch(getApiUrl(ACCOUNTS_ENDPOINT), {
+      fetch(getApiUrl(ACCOUNTS_ENDPOINT), {
         method: "GET",
         headers: jsonHeaders,
         cache: "no-store",
@@ -132,7 +132,7 @@ export async function fetchClientActivityMetadata(): Promise<ClientActivityMetad
       })
     ),
     ensureResponse(
-      await fetch(getApiUrl(USERS_ENDPOINT), {
+      fetch(getApiUrl(USERS_ENDPOINT), {
         method: "GET",
         headers: jsonHeaders,
         cache: "no-store",
@@ -163,7 +163,7 @@ export async function fetchClientActivityMetadata(): Promise<ClientActivityMetad
 
 export async function createClientActivity(input: ActivityCreateInput): Promise<Activity> {
   const response = await ensureResponse(
-    await fetch(getApiUrl(ACTIVITIES_ENDPOINT), {
+    fetch(getApiUrl(ACTIVITIES_ENDPOINT), {
       method: "POST",
       headers: jsonHeaders,
       body: JSON.stringify(input)
@@ -186,7 +186,7 @@ export async function updateClientActivity(
   }
 
   const response = await ensureResponse(
-    await fetch(getApiUrl(`${ACTIVITIES_ENDPOINT}/${id}`), {
+    fetch(getApiUrl(`${ACTIVITIES_ENDPOINT}/${id}`), {
       method: "PATCH",
       headers: jsonHeaders,
       body: JSON.stringify(input)
@@ -206,7 +206,7 @@ export async function deleteClientActivity(id: string): Promise<void> {
   }
 
   await ensureResponse(
-    await fetch(getApiUrl(`${ACTIVITIES_ENDPOINT}/${id}`), {
+    fetch(getApiUrl(`${ACTIVITIES_ENDPOINT}/${id}`), {
       method: "DELETE",
       headers: jsonHeaders
     })

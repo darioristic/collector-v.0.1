@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -13,7 +12,6 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -22,9 +20,10 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { useOrders } from "@/src/hooks/useOrders";
-import { Plus, Search } from "lucide-react";
+import { Plus } from "lucide-react";
 import type { OrderStatus } from "@crm/types";
 import { ORDER_STATUSES } from "@crm/types";
+import { TableToolbar } from "@/components/table-toolbar";
 
 const statusVariants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   pending: "secondary",
@@ -39,23 +38,27 @@ type OrderListProps = {
   contactId?: string;
   onOrderClick?: (orderId: number) => void;
   onCreateOrder?: () => void;
+  toolbarActions?: ReactNode | null;
+  showCreateAction?: boolean;
 };
 
 export function OrderList({
   companyId,
   contactId,
   onOrderClick,
-  onCreateOrder
+  onCreateOrder,
+  toolbarActions: toolbarActionsProp,
+  showCreateAction = true
 }: OrderListProps) {
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const [page, setPage] = useState(0);
   const limit = 10;
 
   const { data: ordersResponse, isLoading } = useOrders({
     companyId,
     contactId,
-    status: statusFilter !== "all" ? statusFilter : undefined,
+    status: statusFilter,
     search: search || undefined,
     limit,
     offset: page * limit
@@ -65,48 +68,51 @@ export function OrderList({
   const total = ordersResponse?.total || 0;
   const totalPages = Math.ceil(total / limit);
 
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Orders</CardTitle>
-            <CardDescription>Manage and track your orders</CardDescription>
-          </div>
-          {onCreateOrder && (
-            <Button onClick={onCreateOrder} size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              New Order
-            </Button>
-          )}
-        </div>
+  const hasActiveFilters = useMemo(
+    () => search.trim().length > 0 || Boolean(statusFilter),
+    [search, statusFilter]
+  );
 
-        {/* Filters */}
-        <div className="flex gap-4 mt-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search orders..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(0);
-              }}
-              className="pl-8"
-            />
-          </div>
+  const toolbarActions =
+    toolbarActionsProp !== undefined
+      ? toolbarActionsProp
+      : onCreateOrder && showCreateAction
+        ? (
+          <Button type="button" onClick={onCreateOrder} className="gap-2 md:order-2">
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            New Order
+          </Button>
+        )
+        : null;
+
+  return (
+    <div className="space-y-6">
+      <h2 className="sr-only">Orders</h2>
+
+      <TableToolbar
+        search={{
+          value: search,
+          onChange: (value) => {
+            setSearch(value);
+            setPage(0);
+          },
+          placeholder: "Search orders...",
+          ariaLabel: "Search orders"
+        }}
+        filters={
           <Select
-            value={statusFilter}
+            value={statusFilter ?? "all"}
             onValueChange={(value) => {
-              setStatusFilter(value);
+              const normalized = value === "all" ? undefined : value;
+              setStatusFilter(normalized);
               setPage(0);
             }}
           >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by status" />
+            <SelectTrigger className="md:w-44" aria-label="Filter by status">
+              <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="all">All statuses</SelectItem>
               {ORDER_STATUSES.map((status) => (
                 <SelectItem key={status} value={status}>
                   {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -114,10 +120,19 @@ export function OrderList({
               ))}
             </SelectContent>
           </Select>
-        </div>
-      </CardHeader>
+        }
+        reset={{
+          onReset: () => {
+            setSearch("");
+            setStatusFilter(undefined);
+            setPage(0);
+          },
+          disabled: !hasActiveFilters
+        }}
+        actions={toolbarActions}
+      />
 
-      <CardContent>
+      <div className="bg-background overflow-hidden rounded-xl border shadow-sm">
         {isLoading ? (
           <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
             Loading orders...
@@ -125,16 +140,16 @@ export function OrderList({
         ) : orders.length === 0 ? (
           <div className="flex h-32 flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
             <p>No orders found</p>
-            {onCreateOrder && (
+            {onCreateOrder && showCreateAction && (
               <Button onClick={onCreateOrder} variant="outline" size="sm">
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
                 Create First Order
               </Button>
             )}
           </div>
         ) : (
           <>
-            <div className="rounded-md border">
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -151,14 +166,11 @@ export function OrderList({
                     <TableRow
                       key={order.id}
                       className={onOrderClick ? "cursor-pointer" : ""}
-                      onClick={() => onOrderClick?.(order.id)}
-                    >
+                      onClick={() => onOrderClick?.(order.id)}>
                       <TableCell className="font-medium">{order.orderNumber}</TableCell>
                       <TableCell>{order.orderDate}</TableCell>
                       <TableCell>{order.expectedDelivery || "—"}</TableCell>
-                      <TableCell>
-                        {formatCurrency(order.total, order.currency)}
-                      </TableCell>
+                      <TableCell>{formatCurrency(order.total, order.currency)}</TableCell>
                       <TableCell>
                         <Badge variant={statusVariants[order.status]}>
                           {order.status}
@@ -171,8 +183,7 @@ export function OrderList({
                           onClick={(e) => {
                             e.stopPropagation();
                             onOrderClick?.(order.id);
-                          }}
-                        >
+                          }}>
                           View
                         </Button>
                       </TableCell>
@@ -182,28 +193,24 @@ export function OrderList({
               </Table>
             </div>
 
-            {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between px-2 py-4">
-                <div className="text-sm text-muted-foreground">
-                  Showing {page * limit + 1} to {Math.min((page + 1) * limit, total)} of {total}{" "}
-                  orders
+              <div className="flex items-center justify-between border-t px-4 py-4 text-sm text-muted-foreground">
+                <div>
+                  Showing {page * limit + 1} to {Math.min((page + 1) * limit, total)} of {total} orders
                 </div>
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setPage(page - 1)}
-                    disabled={page === 0}
-                  >
+                    disabled={page === 0}>
                     Previous
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setPage(page + 1)}
-                    disabled={page >= totalPages - 1}
-                  >
+                    disabled={page >= totalPages - 1}>
                     Next
                   </Button>
                 </div>
@@ -211,7 +218,7 @@ export function OrderList({
             )}
           </>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

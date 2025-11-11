@@ -19,9 +19,14 @@ type DatabaseGlobals = {
   _usingInMemoryDb?: boolean;
 };
 
+const environment = process.env.NODE_ENV ?? "development";
 const connectionString = process.env.DATABASE_URL;
+const forceInMemory = process.env.USE_IN_MEMORY_DB === "true";
 const shouldUseInMemoryDb =
-  process.env.NODE_ENV === "test" || connectionString === "pg-mem";
+  forceInMemory ||
+  environment === "test" ||
+  connectionString === "pg-mem" ||
+  !connectionString;
 const globalForDb = globalThis as DatabaseGlobals;
 
 const createPgMemDatabase = (): { client: Pool; db: NodePgDatabase<Record<string, never>> } => {
@@ -65,8 +70,16 @@ if (!connectionString && !shouldUseInMemoryDb) {
   throw new Error("DATABASE_URL environment variable is not defined");
 }
 
+if (!connectionString && shouldUseInMemoryDb && environment === "production") {
+  console.warn(
+    "[database] DATABASE_URL is missing. Falling back to the in-memory pg-mem instance. Configure DATABASE_URL to connect to PostgreSQL."
+  );
+}
+
+const ensureDatabase = () => {
 const hasMismatchedDriver =
-  typeof globalForDb._usingInMemoryDb === "boolean" && globalForDb._usingInMemoryDb !== shouldUseInMemoryDb;
+    typeof globalForDb._usingInMemoryDb === "boolean" &&
+    globalForDb._usingInMemoryDb !== shouldUseInMemoryDb;
 
 if (!globalForDb._drizzle || hasMismatchedDriver) {
   const { client, db } = shouldUseInMemoryDb
@@ -77,6 +90,10 @@ if (!globalForDb._drizzle || hasMismatchedDriver) {
   globalForDb._drizzle = db;
   globalForDb._usingInMemoryDb = shouldUseInMemoryDb;
 }
+};
 
-export const db = globalForDb._drizzle as DatabaseInstance;
+export async function getDb(): Promise<DatabaseInstance> {
+  ensureDatabase();
+  return globalForDb._drizzle as DatabaseInstance;
+}
 

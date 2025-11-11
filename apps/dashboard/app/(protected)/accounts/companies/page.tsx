@@ -1,10 +1,10 @@
 import type { Account, AccountContact } from "@crm/types";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { generateMeta } from "@/lib/utils";
 import { ensureResponse, getApiUrl } from "@/src/lib/fetch-utils";
 
-import CompaniesDataTable, { type CompanyRow } from "./data-table";
+import type { CompanyRow } from "./data-table";
+import CompaniesPageClient from "./companies-page-client";
 
 export async function generateMetadata() {
   return generateMeta({
@@ -17,7 +17,7 @@ export async function generateMetadata() {
 
 async function getContacts(): Promise<AccountContact[]> {
   const response = await ensureResponse(
-    await fetch(getApiUrl("accounts/contacts"), {
+    fetch(getApiUrl("accounts/contacts"), {
       cache: "no-store",
       headers: {
         Accept: "application/json"
@@ -31,11 +31,11 @@ async function getContacts(): Promise<AccountContact[]> {
 async function getCompanies(): Promise<CompanyRow[]> {
   const [accounts, contacts] = await Promise.all([
     ensureResponse(
-      await fetch(getApiUrl("accounts"), {
-    cache: "no-store",
-    headers: {
-      Accept: "application/json"
-    }
+      fetch(getApiUrl("accounts"), {
+        cache: "no-store",
+        headers: {
+          Accept: "application/json"
+        }
       })
     ).then((response) => response.json() as Promise<Account[]>),
     getContacts()
@@ -90,27 +90,5 @@ export default async function Page() {
     error = err instanceof Error ? err.message : "Unable to load companies.";
   }
 
-    return (
-    <>
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Companies</h1>
-          <p className="text-muted-foreground text-base">
-            Manage company accounts, validate primary contact details, and keep business records up to date.
-          </p>
-        </div>
-      </div>
-
-      {error ? (
-      <Alert variant="destructive" className="mt-4">
-          <AlertTitle>Failed to load data</AlertTitle>
-        <AlertDescription>{error}</AlertDescription>
-      </Alert>
-      ) : (
-        <CompaniesDataTable data={companies} />
-      )}
-    </>
-    );
+  return <CompaniesPageClient data={companies} error={error} />;
 }
-
-

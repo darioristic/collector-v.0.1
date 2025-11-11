@@ -10,13 +10,40 @@ const dataEnvelope = (schema: object) =>
     additionalProperties: false
   }) as const;
 
+const httpErrorSchema = {
+  type: "object",
+  properties: {
+    statusCode: { type: "number" },
+    error: { type: "string" },
+    message: { type: "string" },
+    details: {}
+  },
+  required: ["statusCode", "error", "message"],
+  additionalProperties: true
+} as const;
+
+const defaultErrorResponses = {
+  400: httpErrorSchema,
+  500: httpErrorSchema
+} as const;
+
+const notFoundErrorResponse = {
+  ...defaultErrorResponses,
+  404: httpErrorSchema
+} as const;
+
 const nullableString = { anyOf: [{ type: "string" }, { type: "null" }] } as const;
 const nullableNumber = { anyOf: [{ type: "number" }, { type: "null" }] } as const;
+
+const uuidSchema = {
+  type: "string",
+  pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+} as const;
 
 const projectParams = {
   type: "object",
   properties: {
-    id: { type: "string", minLength: 1 }
+    id: uuidSchema
   },
   required: ["id"],
   additionalProperties: false
@@ -25,8 +52,8 @@ const projectParams = {
 const taskParams = {
   type: "object",
   properties: {
-    id: { type: "string", minLength: 1 },
-    taskId: { type: "string", minLength: 1 }
+    id: uuidSchema,
+    taskId: uuidSchema
   },
   required: ["id", "taskId"],
   additionalProperties: false
@@ -35,8 +62,8 @@ const taskParams = {
 const timelineParams = {
   type: "object",
   properties: {
-    id: { type: "string", minLength: 1 },
-    eventId: { type: "string", minLength: 1 }
+    id: uuidSchema,
+    eventId: uuidSchema
   },
   required: ["id", "eventId"],
   additionalProperties: false
@@ -45,8 +72,8 @@ const timelineParams = {
 const teamParams = {
   type: "object",
   properties: {
-    id: { type: "string", minLength: 1 },
-    userId: { type: "string", minLength: 1 }
+    id: uuidSchema,
+    userId: uuidSchema
   },
   required: ["id", "userId"],
   additionalProperties: false
@@ -55,8 +82,8 @@ const teamParams = {
 const categoryParams = {
   type: "object",
   properties: {
-    id: { type: "string", minLength: 1 },
-    categoryId: { type: "string", minLength: 1 }
+    id: uuidSchema,
+    categoryId: uuidSchema
   },
   required: ["id", "categoryId"],
   additionalProperties: false
@@ -315,7 +342,8 @@ export const listProjectsSchema: FastifySchema = {
     200: dataEnvelope({
       type: "array",
       items: projectSummarySchema
-    })
+    }),
+    ...defaultErrorResponses
   }
 };
 
@@ -327,14 +355,16 @@ export const createProjectSchema: FastifySchema = {
     additionalProperties: false
   },
   response: {
-    201: dataEnvelope(projectDetailsSchema)
+    201: dataEnvelope(projectDetailsSchema),
+    ...defaultErrorResponses
   }
 };
 
 export const getProjectSchema: FastifySchema = {
   params: projectParams,
   response: {
-    200: dataEnvelope(projectDetailsSchema)
+    200: dataEnvelope(projectDetailsSchema),
+    ...notFoundErrorResponse
   }
 };
 
@@ -346,14 +376,16 @@ export const updateProjectSchema: FastifySchema = {
     additionalProperties: false
   },
   response: {
-    200: dataEnvelope(projectDetailsSchema)
+    200: dataEnvelope(projectDetailsSchema),
+    ...notFoundErrorResponse
   }
 };
 
 export const deleteProjectSchema: FastifySchema = {
   params: projectParams,
   response: {
-    204: { type: "null" }
+    204: { type: "null" },
+    ...notFoundErrorResponse
   }
 };
 
@@ -363,7 +395,8 @@ export const listTasksSchema: FastifySchema = {
     200: dataEnvelope({
       type: "array",
       items: taskSchema
-    })
+    }),
+    ...defaultErrorResponses
   }
 };
 
@@ -376,7 +409,8 @@ export const createTaskSchema: FastifySchema = {
     additionalProperties: false
   },
   response: {
-    201: dataEnvelope(taskSchema)
+    201: dataEnvelope(taskSchema),
+    ...notFoundErrorResponse
   }
 };
 
@@ -388,14 +422,16 @@ export const updateTaskSchema: FastifySchema = {
     additionalProperties: false
   },
   response: {
-    200: dataEnvelope(taskSchema)
+    200: dataEnvelope(taskSchema),
+    ...notFoundErrorResponse
   }
 };
 
 export const deleteTaskSchema: FastifySchema = {
   params: taskParams,
   response: {
-    204: { type: "null" }
+    204: { type: "null" },
+    ...notFoundErrorResponse
   }
 };
 
@@ -405,7 +441,8 @@ export const listTimelineSchema: FastifySchema = {
     200: dataEnvelope({
       type: "array",
       items: timelineEventSchema
-    })
+    }),
+    ...defaultErrorResponses
   }
 };
 
@@ -418,7 +455,8 @@ export const createTimelineSchema: FastifySchema = {
     additionalProperties: false
   },
   response: {
-    201: dataEnvelope(timelineEventSchema)
+    201: dataEnvelope(timelineEventSchema),
+    ...notFoundErrorResponse
   }
 };
 
@@ -430,14 +468,16 @@ export const updateTimelineSchema: FastifySchema = {
     additionalProperties: false
   },
   response: {
-    200: dataEnvelope(timelineEventSchema)
+    200: dataEnvelope(timelineEventSchema),
+    ...notFoundErrorResponse
   }
 };
 
 export const deleteTimelineSchema: FastifySchema = {
   params: timelineParams,
   response: {
-    204: { type: "null" }
+    204: { type: "null" },
+    ...notFoundErrorResponse
   }
 };
 
@@ -447,7 +487,8 @@ export const listTeamSchema: FastifySchema = {
     200: dataEnvelope({
       type: "array",
       items: teamMemberSchema
-    })
+    }),
+    ...defaultErrorResponses
   }
 };
 
@@ -460,21 +501,24 @@ export const addTeamMemberSchema: FastifySchema = {
     additionalProperties: false
   },
   response: {
-    201: dataEnvelope(teamMemberSchema)
+    201: dataEnvelope(teamMemberSchema),
+    ...notFoundErrorResponse
   }
 };
 
 export const removeTeamMemberSchema: FastifySchema = {
   params: teamParams,
   response: {
-    204: { type: "null" }
+    204: { type: "null" },
+    ...notFoundErrorResponse
   }
 };
 
 export const getBudgetSchema: FastifySchema = {
   params: projectParams,
   response: {
-    200: dataEnvelope(budgetSummarySchema)
+    200: dataEnvelope(budgetSummarySchema),
+    ...defaultErrorResponses
   }
 };
 
@@ -486,7 +530,8 @@ export const updateBudgetSchema: FastifySchema = {
     additionalProperties: false
   },
   response: {
-    200: dataEnvelope(budgetSummarySchema)
+    200: dataEnvelope(budgetSummarySchema),
+    ...notFoundErrorResponse
   }
 };
 
@@ -499,7 +544,8 @@ export const createBudgetCategorySchema: FastifySchema = {
     additionalProperties: false
   },
   response: {
-    201: dataEnvelope(budgetCategorySchema)
+    201: dataEnvelope(budgetCategorySchema),
+    ...notFoundErrorResponse
   }
 };
 
@@ -511,13 +557,15 @@ export const updateBudgetCategorySchema: FastifySchema = {
     additionalProperties: false
   },
   response: {
-    200: dataEnvelope(budgetCategorySchema)
+    200: dataEnvelope(budgetCategorySchema),
+    ...notFoundErrorResponse
   }
 };
 
 export const deleteBudgetCategorySchema: FastifySchema = {
   params: categoryParams,
   response: {
-    204: { type: "null" }
+    204: { type: "null" },
+    ...notFoundErrorResponse
   }
 };

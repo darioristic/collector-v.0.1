@@ -231,6 +231,8 @@ export type Quote = {
   quoteNumber: string;
   companyId?: string | null;
   contactId?: string | null;
+  companyName?: string | null;
+  contactName?: string | null;
   issueDate: string;
   expiryDate?: string | null;
   currency: string;
@@ -243,6 +245,8 @@ export type Quote = {
   updatedAt: string;
   items?: QuoteItem[];
 };
+
+export type QuoteSortField = "issueDate" | "expiryDate" | "total" | "quoteNumber" | "createdAt";
 
 export type QuoteItemCreateInput = {
   productId?: string;

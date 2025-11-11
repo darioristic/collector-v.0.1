@@ -10,7 +10,13 @@ import type {
   ActivityType
 } from "@crm/types";
 import { endOfDay, format, startOfDay } from "date-fns";
-import { Filter, Plus } from "lucide-react";
+import {
+  CalendarDays,
+  Filter,
+  LayoutList,
+  Plus,
+  Table as TableIcon
+} from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
@@ -21,7 +27,6 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -37,9 +42,16 @@ import {
   SheetHeader,
   SheetTitle
 } from "@/components/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { Calendar } from "@/components/ui/calendar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TableToolbar } from "@/components/table-toolbar";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 import {
@@ -61,7 +73,7 @@ import { ActivityForm } from "./components/activity-form";
 import { CalendarView } from "./components/calendar-view";
 import { CompactView } from "./components/compact-view";
 import { ListView } from "./components/list-view";
-import { useActivitiesStore, type ActivityModalMode } from "./store";
+import { useActivitiesStore, type ActivityModalMode, type ActivityView } from "./store";
 
 type Option = {
   id: string;
@@ -74,6 +86,30 @@ interface ClientActivitiesPageClientProps {
   clients: Option[];
   assignees: Option[];
 }
+
+const ALL_FILTER_VALUE = "__all__";
+
+const viewOptions: Array<{
+  value: ActivityView;
+  label: string;
+  icon: React.ReactNode;
+}> = [
+  {
+    value: "list",
+    label: "List View",
+    icon: <TableIcon className="h-4 w-4" aria-hidden="true" />
+  },
+  {
+    value: "calendar",
+    label: "Calendar View",
+    icon: <CalendarDays className="h-4 w-4" aria-hidden="true" />
+  },
+  {
+    value: "compact",
+    label: "Compact View",
+    icon: <LayoutList className="h-4 w-4" aria-hidden="true" />
+  }
+];
 
 const toIso = (date: Date | undefined | null) => (date ? date.toISOString() : undefined);
 
@@ -199,6 +235,22 @@ export function ClientActivitiesPageClient({
     return new Date(selectedDateIso);
   }, [selectedDateIso]);
 
+  const [listPageSize, setListPageSize] = React.useState(20);
+  const [listPage, setListPage] = React.useState(1);
+  const [compactPageSize, setCompactPageSize] = React.useState(12);
+  const [compactPage, setCompactPage] = React.useState(1);
+
+  React.useEffect(() => {
+    setListPage(1);
+    setCompactPage(1);
+  }, [filteredActivities.length, filters.search, filters.status, filters.priority, filters.type]);
+
+  const paginatedCompactActivities = React.useMemo(() => {
+    const startIndex = (compactPage - 1) * compactPageSize;
+    const endIndex = startIndex + compactPageSize;
+    return filteredActivities.slice(startIndex, endIndex);
+  }, [filteredActivities, compactPage, compactPageSize]);
+
   const handleOpenCreateModal = (mode: ActivityModalMode, dueDate?: Date | null, activityId?: string | null) => {
     if (dueDate) {
       setSelectedDate(startOfDay(dueDate).toISOString());
@@ -235,6 +287,33 @@ export function ClientActivitiesPageClient({
         console.error(error);
         toast({
           title: "Unable to update activity",
+          description: "Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setSubmitting(false);
+      }
+    });
+  };
+
+  const handleReschedule = (activity: Activity, start: Date) => {
+    startTransition(async () => {
+      try {
+        setSubmitting(true);
+        const updated = await updateClientActivity(activity.id, { dueDate: start.toISOString() });
+
+        if (updated) {
+          updateActivity(updated);
+          setSelectedDate(startOfDay(new Date(updated.dueDate)).toISOString());
+          toast({
+            title: "Activity rescheduled",
+            description: `${activity.title} moved to ${format(new Date(updated.dueDate), "MMM dd, yyyy 'at' HH:mm")}.`
+          });
+        }
+      } catch (error) {
+        console.error(error);
+        toast({
+          title: "Unable to reschedule activity",
           description: "Please try again.",
           variant: "destructive"
         });
@@ -309,10 +388,6 @@ export function ClientActivitiesPageClient({
     });
   };
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setFilters({ search: event.target.value });
-  };
-
   const applyDateRangeFilter = (range: DateRange | undefined) => {
     setDateRangeDraft(range);
     const normalized = normalizeRange(range);
@@ -321,6 +396,28 @@ export function ClientActivitiesPageClient({
       dateTo: normalized.to
     });
   };
+
+  const hasToolbarFilters =
+    (filters.search?.trim().length ?? 0) > 0 ||
+    Boolean(filters.clientId) ||
+    Boolean(filters.assignedTo) ||
+    Boolean(filters.status) ||
+    Boolean(filters.priority) ||
+    Boolean(filters.type) ||
+    Boolean(filters.dateFrom) ||
+    Boolean(filters.dateTo);
+
+  const handleResetToolbar = () => {
+    resetFilters();
+    setDateRangeDraft(undefined);
+  };
+
+  const statusFilterValue = filters.status ?? ALL_FILTER_VALUE;
+  const priorityFilterValue = filters.priority ?? ALL_FILTER_VALUE;
+  const typeFilterValue = filters.type ?? ALL_FILTER_VALUE;
+
+  const currentViewOption =
+    viewOptions.find((option) => option.value === view) ?? viewOptions[0];
 
   const handleRefresh = () => {
     startTransition(async () => {
@@ -372,63 +469,173 @@ export function ClientActivitiesPageClient({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 border-b pb-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold leading-tight">Client Activities</h1>
-          <p className="text-sm text-muted-foreground">
-            Track all your scheduled tasks, meetings, and follow-ups across clients.
+    <div className="space-y-8">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight">Client Activities</h1>
+          <p className="text-muted-foreground text-sm">
+            Track scheduled tasks, meetings, and follow-ups across every client.
           </p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <Input
-            placeholder="Search activities..."
-            value={filters.search}
-            onChange={handleSearchChange}
-            className="w-full min-w-[240px] lg:w-64"
-          />
-          <Button variant="outline" onClick={() => setFilterSheetOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" aria-hidden />
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={() => setFilterSheetOpen(true)} className="gap-2">
+            <Filter className="h-4 w-4" aria-hidden="true" />
             Filters
           </Button>
-          <Button onClick={handleCreateClick}>
-            <Plus className="mr-2 h-4 w-4" aria-hidden />
+          <Button onClick={handleCreateClick} className="gap-2">
+            <Plus className="h-4 w-4" aria-hidden="true" />
             Add Activity
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Tabs value={view} onValueChange={(value) => setView(value as typeof view)} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 sm:w-auto">
-            <TabsTrigger value="calendar">Calendar View</TabsTrigger>
-            <TabsTrigger value="list">List View</TabsTrigger>
-            <TabsTrigger value="compact">Compact View</TabsTrigger>
-          </TabsList>
-          <TabsContent value="calendar" className="mt-6">
-            <CalendarView
-              onCreate={handleCreateFromCalendar}
-              onEdit={handleEdit}
-              onStatusChange={handleStatusChange}
-            />
-          </TabsContent>
-          <TabsContent value="list" className="mt-6">
-            <ListView
-              activities={filteredActivities}
-              onEdit={handleEdit}
-              onStatusChange={handleStatusChange}
-              onDelete={handleDelete}
-            />
-          </TabsContent>
-          <TabsContent value="compact" className="mt-6">
-            <CompactView
-              activities={filteredActivities}
-              onEdit={handleEdit}
-              onStatusChange={handleStatusChange}
-            />
-          </TabsContent>
-        </Tabs>
-      </div>
+      <TableToolbar
+        search={{
+          value: filters.search,
+          onChange: (value) => setFilters({ search: value }),
+          placeholder: "Search activities...",
+          ariaLabel: "Search activities",
+          inputProps: {
+            className: "min-w-[200px]"
+          }
+        }}
+        filters={
+          <div className="flex flex-wrap items-center gap-3">
+            <Select
+              value={statusFilterValue}
+              onValueChange={(value) =>
+                setFilters({
+                  status: value === ALL_FILTER_VALUE ? undefined : (value as ActivityStatus)
+                })
+              }
+            >
+              <SelectTrigger className="h-9 w-[160px]" aria-label="Filter by status">
+                <SelectValue placeholder="All statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_FILTER_VALUE}>All statuses</SelectItem>
+                {ACTIVITY_STATUS_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {ACTIVITY_STATUS_LABEL[option.value]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={priorityFilterValue}
+              onValueChange={(value) =>
+                setFilters({
+                  priority: value === ALL_FILTER_VALUE ? undefined : (value as ActivityPriority)
+                })
+              }
+            >
+              <SelectTrigger className="h-9 w-[160px]" aria-label="Filter by priority">
+                <SelectValue placeholder="All priorities" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_FILTER_VALUE}>All priorities</SelectItem>
+                {ACTIVITY_PRIORITY_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {ACTIVITY_PRIORITY_LABEL[option.value]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={typeFilterValue}
+              onValueChange={(value) =>
+                setFilters({
+                  type: value === ALL_FILTER_VALUE ? undefined : (value as ActivityType)
+                })
+              }
+            >
+              <SelectTrigger className="h-9 w-[180px]" aria-label="Filter by type">
+                <SelectValue placeholder="All activity types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_FILTER_VALUE}>All types</SelectItem>
+                {ACTIVITY_TYPE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {ACTIVITY_TYPE_LABEL[option.value]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        }
+        reset={{
+          onReset: handleResetToolbar,
+          disabled: !hasToolbarFilters,
+          hideUntilActive: true
+        }}
+        actions={
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="outline" className="gap-2">
+                {currentViewOption.icon}
+                {currentViewOption.label}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {viewOptions.map((option) => (
+                <DropdownMenuItem
+                  key={option.value}
+                  onSelect={() => setView(option.value)}
+                  className={cn(option.value === view ? "font-semibold text-primary" : "")}
+                >
+                  <div className="flex items-center gap-2">
+                    {option.icon}
+                    <span>{option.label}</span>
+                  </div>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
+      />
+
+      {view === "calendar" ? (
+        <div className="mt-4">
+          <CalendarView
+            onCreate={handleCreateFromCalendar}
+            onEdit={handleEdit}
+            onStatusChange={handleStatusChange}
+            onReschedule={(activity, start) => handleReschedule(activity, start)}
+            onDelete={handleDelete}
+          />
+        </div>
+      ) : null}
+
+      {view === "list" ? (
+        <div className="mt-4">
+          <ListView
+            activities={filteredActivities}
+            total={filteredActivities.length}
+            pageSize={listPageSize}
+            currentPage={listPage}
+            onPageChange={setListPage}
+            onPageSizeChange={setListPageSize}
+            onEdit={handleEdit}
+            onStatusChange={handleStatusChange}
+            onDelete={handleDelete}
+          />
+        </div>
+      ) : null}
+
+      {view === "compact" ? (
+        <div className="mt-4">
+          <CompactView
+            activities={paginatedCompactActivities}
+            total={filteredActivities.length}
+            pageSize={compactPageSize}
+            currentPage={compactPage}
+            onPageChange={setCompactPage}
+            onPageSizeChange={setCompactPageSize}
+            onEdit={handleEdit}
+            onStatusChange={handleStatusChange}
+          />
+        </div>
+      ) : null}
 
       <Sheet open={isFilterSheetOpen} onOpenChange={setFilterSheetOpen}>
         <SheetContent className="w-full sm:max-w-xl">
@@ -441,13 +648,15 @@ export function ClientActivitiesPageClient({
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Client</label>
                 <Select
-                  value={filters.clientId ?? ""}
-                  onValueChange={(value) => setFilters({ clientId: value || undefined })}>
+                  value={filters.clientId ?? ALL_FILTER_VALUE}
+                  onValueChange={(value) =>
+                    setFilters({ clientId: value === ALL_FILTER_VALUE ? undefined : value })
+                  }>
                   <SelectTrigger>
                     <SelectValue placeholder="All clients" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All clients</SelectItem>
+                    <SelectItem value={ALL_FILTER_VALUE}>All clients</SelectItem>
                     {clientOptions.map((client) => (
                       <SelectItem key={client.id} value={client.id}>
                         {client.name}
@@ -459,13 +668,15 @@ export function ClientActivitiesPageClient({
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Assigned To</label>
                 <Select
-                  value={filters.assignedTo ?? ""}
-                  onValueChange={(value) => setFilters({ assignedTo: value || undefined })}>
+                  value={filters.assignedTo ?? ALL_FILTER_VALUE}
+                  onValueChange={(value) =>
+                    setFilters({ assignedTo: value === ALL_FILTER_VALUE ? undefined : value })
+                  }>
                   <SelectTrigger>
                     <SelectValue placeholder="All team members" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All team members</SelectItem>
+                    <SelectItem value={ALL_FILTER_VALUE}>All team members</SelectItem>
                     {assigneeOptions.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
                         {user.name}
@@ -477,13 +688,17 @@ export function ClientActivitiesPageClient({
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Status</label>
                 <Select
-                  value={filters.status ?? ""}
-                  onValueChange={(value) => setFilters({ status: (value as ActivityStatus) || undefined })}>
+                  value={filters.status ?? ALL_FILTER_VALUE}
+                  onValueChange={(value) =>
+                    setFilters({
+                      status: value === ALL_FILTER_VALUE ? undefined : (value as ActivityStatus)
+                    })
+                  }>
                   <SelectTrigger>
                     <SelectValue placeholder="All statuses" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All statuses</SelectItem>
+                    <SelectItem value={ALL_FILTER_VALUE}>All statuses</SelectItem>
                     {ACTIVITY_STATUS_OPTIONS.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {ACTIVITY_STATUS_LABEL[option.value]}
@@ -495,13 +710,17 @@ export function ClientActivitiesPageClient({
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Priority</label>
                 <Select
-                  value={filters.priority ?? ""}
-                  onValueChange={(value) => setFilters({ priority: (value as ActivityPriority) || undefined })}>
+                  value={filters.priority ?? ALL_FILTER_VALUE}
+                  onValueChange={(value) =>
+                    setFilters({
+                      priority: value === ALL_FILTER_VALUE ? undefined : (value as ActivityPriority)
+                    })
+                  }>
                   <SelectTrigger>
                     <SelectValue placeholder="All priorities" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All priorities</SelectItem>
+                    <SelectItem value={ALL_FILTER_VALUE}>All priorities</SelectItem>
                     {ACTIVITY_PRIORITY_OPTIONS.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {ACTIVITY_PRIORITY_LABEL[option.value]}
@@ -513,13 +732,17 @@ export function ClientActivitiesPageClient({
               <div className="space-y-1.5 md:col-span-2">
                 <label className="text-sm font-medium">Activity Type</label>
                 <Select
-                  value={filters.type ?? ""}
-                  onValueChange={(value) => setFilters({ type: (value as ActivityType) || undefined })}>
+                  value={filters.type ?? ALL_FILTER_VALUE}
+                  onValueChange={(value) =>
+                    setFilters({
+                      type: value === ALL_FILTER_VALUE ? undefined : (value as ActivityType)
+                    })
+                  }>
                   <SelectTrigger>
                     <SelectValue placeholder="All activity types" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All types</SelectItem>
+                    <SelectItem value={ALL_FILTER_VALUE}>All types</SelectItem>
                     {ACTIVITY_TYPE_OPTIONS.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {ACTIVITY_TYPE_LABEL[option.value]}
@@ -592,19 +815,9 @@ export function ClientActivitiesPageClient({
         </DialogContent>
       </Dialog>
 
-      <div className="flex items-center justify-between border-t pt-4 text-xs text-muted-foreground">
-        <span>
-          Showing <strong>{filteredActivities.length}</strong> of{" "}
-          <strong>{activities.length}</strong> activities
-        </span>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => handleOpenCreateModal("create", new Date())}>
-            Quick add
-          </Button>
-          <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={isRefreshing || isPending}>
-            {isRefreshing ? <Skeleton className="h-4 w-24" /> : "Refresh"}
-          </Button>
-        </div>
+      <div className="text-xs text-muted-foreground">
+        Showing <strong>{filteredActivities.length}</strong> of{" "}
+        <strong>{activities.length}</strong> activities
       </div>
     </div>
   );

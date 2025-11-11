@@ -1,15 +1,5 @@
-import CustomDateRangePicker from "@/components/custom-date-range-picker";
-import { Button } from "@/components/ui/button";
 import { generateMeta } from "@/lib/utils";
-import {
-  SalesPipeline,
-  LeadsCard,
-  TargetCard,
-  TotalCustomersCard,
-  TotalDeals,
-  TotalRevenueCard,
-  RecentTasks
-} from "@/app/(protected)/crm/components";
+import CRMOverviewPage from "@/app/(protected)/crm/overview-page-client";
 
 export async function generateMetadata() {
   return generateMeta({
@@ -21,28 +11,5 @@ export async function generateMetadata() {
 }
 
 export default function Page() {
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-row items-center justify-between">
-        <h1 className="text-xl font-bold tracking-tight lg:text-2xl">CRM Dashboard</h1>
-        <div className="flex items-center space-x-2">
-          <CustomDateRangePicker />
-          <Button>Download</Button>
-        </div>
-      </div>
-      <div className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <TargetCard />
-          <TotalCustomersCard />
-          <TotalDeals />
-          <TotalRevenueCard />
-        </div>
-        <div className="grid gap-4 xl:grid-cols-2">
-          <RecentTasks />
-          <SalesPipeline />
-        </div>
-        <LeadsCard />
-      </div>
-    </div>
-  );
+  return <CRMOverviewPage />;
 }

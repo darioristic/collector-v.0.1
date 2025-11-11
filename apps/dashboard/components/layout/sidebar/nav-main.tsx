@@ -17,7 +17,6 @@ import {
   ArchiveRestoreIcon,
   BadgeDollarSignIcon,
   BrainCircuitIcon,
-  CalendarIcon,
   ChartBarDecreasingIcon,
   ChartPieIcon,
   ChevronRight,
@@ -29,9 +28,8 @@ import {
   MailIcon,
   MessageSquareIcon,
   SettingsIcon,
+  SlidersHorizontalIcon,
   ShoppingBagIcon,
-  SquareCheckIcon,
-  SquareKanbanIcon,
   UserIcon,
   UsersIcon,
   WalletMinimalIcon,
@@ -122,7 +120,7 @@ export const navItems: NavGroup[] = [
           { title: "Overview", href: "/crm" },
           { title: "Leads", href: "/crm/leads" },
           { title: "Deals", href: "/crm/deals" },
-          { title: "Activities", href: "/crm?tab=activities" },
+          { title: "Activities", href: "/crm/activities" },
           { title: "Reports", href: "/crm?tab=reports" }
         ]
       },
@@ -146,9 +144,6 @@ export const navItems: NavGroup[] = [
         href: "/project-management",
         icon: FolderDotIcon,
         items: [
-          { title: "Calendar", href: "/apps/calendar" },
-          { title: "Kanban", href: "/apps/kanban" },
-          { title: "Todo List App", href: "/apps/todo-list-app" },
           { title: "Dashboard", href: "/project-management" },
           { title: "Project List", href: "/project-list" }
         ]
@@ -186,8 +181,13 @@ export const navItems: NavGroup[] = [
       },
       {
         title: "Settings",
+        href: "/settings",
+        icon: SettingsIcon
+      },
+      {
+        title: "Legacy Settings",
         href: "/pages/settings",
-        icon: SettingsIcon,
+        icon: SlidersHorizontalIcon,
         items: [
           { title: "Profile", href: "/pages/settings" },
           { title: "Account", href: "/pages/settings/account" },

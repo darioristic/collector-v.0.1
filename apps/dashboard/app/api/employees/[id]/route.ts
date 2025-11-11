@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { employees, type NewEmployee } from "@/lib/db/schema/employees";
 import {
   employeeIdSchema,
@@ -31,6 +31,7 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
   }
 
   const { id } = parsedId.data;
+  const db = await getDb();
 
   const [employee] = await db.select().from(employees).where(eq(employees.id, id)).limit(1);
 
@@ -92,6 +93,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 
   const { id } = parsedId.data;
+  const db = await getDb();
 
   const updatePayload: Partial<NewEmployee> = {
     updatedAt: new Date()
@@ -180,6 +182,7 @@ export async function DELETE(_: NextRequest, { params }: { params: { id: string 
   }
 
   const { id } = parsedId.data;
+  const db = await getDb();
 
   const result = await db.delete(employees).where(eq(employees.id, id)).returning({ id: employees.id });
 

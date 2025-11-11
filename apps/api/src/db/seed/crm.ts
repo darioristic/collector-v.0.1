@@ -4,7 +4,7 @@ import { sql } from "drizzle-orm";
 
 import { db as defaultDb } from "../index";
 import { accounts } from "../schema/accounts.schema";
-import { clientActivities, leads } from "../schema/crm.schema";
+import { clientActivities, deals, leads } from "../schema/crm.schema";
 import { users } from "../schema/settings.schema";
 
 const formatSeedUuid = (value: number) =>
@@ -179,10 +179,128 @@ const buildActivitySeeds = (
 	});
 };
 
+type DealSeedEntry = {
+	id: string;
+	title: string;
+	company: string;
+	owner: string;
+	stage: "Lead" | "Qualified" | "Proposal" | "Negotiation" | "Closed Won" | "Closed Lost";
+	value: number;
+	closeDate: Date;
+	notes: string | null;
+	createdAt: Date;
+	updatedAt: Date;
+};
+
+const DEAL_STAGES: DealSeedEntry["stage"][] = [
+	"Lead",
+	"Qualified",
+	"Proposal",
+	"Negotiation",
+	"Closed Won",
+	"Closed Lost",
+];
+
+const buildDealSeeds = (
+	accountsData: Array<{ id: string; name: string }>,
+	owners: Array<{ name: string | null }>,
+): DealSeedEntry[] => {
+	const baseDate = new Date(2025, 2, 1, 10, 0, 0);
+
+	return Array.from({ length: 50 }, (_value, index) => {
+		const account = accountsData[index % accountsData.length];
+		const ownerRecord = owners.length > 0 ? owners[index % owners.length] : null;
+		const ownerName =
+			ownerRecord?.name ??
+			faker.helpers.arrayElement([
+				"Milica Petrović",
+				"Vladimir Ilić",
+				"Maja Obradović",
+				"Filip Ristić",
+			]);
+
+		const stage = DEAL_STAGES[index % DEAL_STAGES.length];
+		const valueBase = 15000 + index * 750 + faker.number.int({ min: 0, max: 5000 });
+		const createdAt = new Date(baseDate);
+		createdAt.setDate(baseDate.getDate() - index);
+		createdAt.setHours(9 + (index % 5), (index % 3) * 20, 0, 0);
+
+		const closeDate = new Date(createdAt);
+		closeDate.setDate(closeDate.getDate() + 30 + (index % 12));
+		closeDate.setHours(15, (index % 4) * 10, 0, 0);
+
+		const updatedAt = new Date(closeDate);
+		updatedAt.setDate(updatedAt.getDate() - (index % 10));
+		updatedAt.setHours(11 + (index % 4), (index % 6) * 5, 0, 0);
+
+		return {
+			id: formatSeedUuid(8000 + index),
+			title: `${account.name} - strateški ugovor #${index + 1}`,
+			company: account.name,
+			owner: ownerName,
+			stage,
+			value: Number(valueBase.toFixed(2)),
+			closeDate,
+			notes:
+				index % 4 === 0
+					? null
+					: faker.helpers.arrayElement([
+							"Potrebno dostaviti finalnu ponudu.",
+							"Kupac traži dodatnu prezentaciju rešenja.",
+							"Pregovaramo o roku implementacije.",
+							"Čeka se potvrda budžeta od finansija.",
+					  ]),
+			createdAt,
+			updatedAt,
+		};
+	});
+};
+
 export const seedCrm = async (database = defaultDb) => {
+	await database.execute(sql`
+		DO $$
+		BEGIN
+			CREATE TYPE "deal_stage" AS ENUM (
+				'Lead',
+				'Qualified',
+				'Proposal',
+				'Negotiation',
+				'Closed Won',
+				'Closed Lost'
+			);
+		EXCEPTION
+			WHEN duplicate_object THEN NULL;
+		END $$;
+	`);
+
+	await database.execute(sql`
+		CREATE TABLE IF NOT EXISTS "deals" (
+			"id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+			"title" text NOT NULL,
+			"company" text NOT NULL,
+			"owner" text NOT NULL,
+			"stage" "deal_stage" NOT NULL,
+			"value" double precision NOT NULL DEFAULT 0,
+			"close_date" timestamptz,
+			"notes" text,
+			"created_at" timestamptz NOT NULL DEFAULT now(),
+			"updated_at" timestamptz NOT NULL DEFAULT now()
+		);
+	`);
+
+	await database.execute(sql`
+		CREATE INDEX IF NOT EXISTS "deals_stage_idx" ON "deals" ("stage");
+	`);
+	await database.execute(sql`
+		CREATE INDEX IF NOT EXISTS "deals_owner_idx" ON "deals" ("owner");
+	`);
+	await database.execute(sql`
+		CREATE INDEX IF NOT EXISTS "deals_created_idx" ON "deals" ("created_at");
+	`);
+
 	await database.transaction(async (tx) => {
 		const existingAccounts = await tx
-			.select({ id: accounts.id })
+			.select({ id: accounts.id, name: accounts.name })
 			.from(accounts);
 
 		if (existingAccounts.length === 0) {
@@ -214,6 +332,7 @@ export const seedCrm = async (database = defaultDb) => {
 		const userIds = existingUsers.map((record) => record.id);
 		const leadsSeedData = buildLeadSeeds(accountIds);
 		const activitiesSeedData = buildActivitySeeds(accountIds, userIds);
+		const dealsSeedData = buildDealSeeds(existingAccounts, existingUsers);
 
 		await Promise.all(
 			leadsSeedData.map((entry) =>
@@ -244,9 +363,42 @@ export const seedCrm = async (database = defaultDb) => {
 		);
 
 		await tx.delete(clientActivities);
+		await tx.delete(deals);
 
 		if (activitiesSeedData.length > 0) {
 			await tx.insert(clientActivities).values(activitiesSeedData);
+		}
+
+		if (dealsSeedData.length > 0) {
+			await tx
+				.insert(deals)
+				.values(
+					dealsSeedData.map((entry) => ({
+						id: entry.id,
+						title: entry.title,
+						company: entry.company,
+						owner: entry.owner,
+						stage: entry.stage,
+						value: entry.value,
+						closeDate: entry.closeDate,
+						notes: entry.notes,
+						createdAt: entry.createdAt,
+						updatedAt: entry.updatedAt,
+					})),
+				)
+				.onConflictDoUpdate({
+					target: deals.id,
+					set: {
+						title: sql`excluded.title`,
+						company: sql`excluded.company`,
+						owner: sql`excluded.owner`,
+						stage: sql`excluded.stage`,
+						value: sql`excluded.value`,
+						close_date: sql`excluded.close_date`,
+						notes: sql`excluded.notes`,
+						updated_at: sql`NOW()`,
+					},
+				});
 		}
 	});
 };

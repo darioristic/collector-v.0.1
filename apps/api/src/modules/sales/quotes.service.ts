@@ -1,12 +1,14 @@
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import Decimal from "decimal.js";
 import type { AppDatabase } from "../../db";
+import { accounts, accountContacts } from "../../db/schema/accounts.schema.js";
 import { quotes, quoteItems } from "../../db/schema/sales.schema.js";
 import type {
   Quote,
   QuoteCreateInput,
   QuoteItem,
   QuoteItemCreateInput,
+  QuoteSortField,
   QuoteStatus,
   QuoteUpdateInput
 } from "@crm/types";
@@ -21,9 +23,13 @@ export class QuotesService {
     search?: string;
     limit?: number;
     offset?: number;
+    sortField?: QuoteSortField;
+    sortOrder?: "asc" | "desc";
   }): Promise<{ data: Quote[]; total: number }> {
     const limit = filters?.limit ?? 50;
     const offset = filters?.offset ?? 0;
+    const sortField = filters?.sortField ?? "createdAt";
+    const sortOrder = filters?.sortOrder ?? "desc";
 
     const conditions = [];
     if (filters?.companyId) {
@@ -46,12 +52,29 @@ export class QuotesService {
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
+    const sortColumnMap: Record<QuoteSortField, any> = {
+      issueDate: quotes.issueDate,
+      expiryDate: quotes.expiryDate,
+      total: quotes.total,
+      quoteNumber: quotes.quoteNumber,
+      createdAt: quotes.createdAt
+    };
+
+    const orderColumn = sortColumnMap[sortField] ?? quotes.createdAt;
+    const orderClause = sortOrder === "asc" ? asc(orderColumn) : desc(orderColumn);
+
     const [data, countResult] = await Promise.all([
       this.database
-        .select()
+        .select({
+          quote: quotes,
+          companyName: accounts.name,
+          contactName: accountContacts.fullName
+        })
         .from(quotes)
+        .leftJoin(accounts, eq(quotes.companyId, accounts.id))
+        .leftJoin(accountContacts, eq(quotes.contactId, accountContacts.id))
         .where(whereClause)
-        .orderBy(desc(quotes.createdAt))
+        .orderBy(orderClause)
         .limit(limit)
         .offset(offset),
       this.database
@@ -61,13 +84,28 @@ export class QuotesService {
     ]);
 
     return {
-      data: data.map((q) => this.mapQuoteFromDb(q)),
+      data: data.map((row) =>
+        this.mapQuoteFromDb(row.quote, {
+          companyName: row.companyName,
+          contactName: row.contactName
+        })
+      ),
       total: Number(countResult[0]?.count ?? 0)
     };
   }
 
   async getById(id: number): Promise<Quote | null> {
-    const [quote] = await this.database.select().from(quotes).where(eq(quotes.id, id)).limit(1);
+    const [quote] = await this.database
+      .select({
+        quote: quotes,
+        companyName: accounts.name,
+        contactName: accountContacts.fullName
+      })
+      .from(quotes)
+      .leftJoin(accounts, eq(quotes.companyId, accounts.id))
+      .leftJoin(accountContacts, eq(quotes.contactId, accountContacts.id))
+      .where(eq(quotes.id, id))
+      .limit(1);
 
     if (!quote) {
       return null;
@@ -81,7 +119,10 @@ export class QuotesService {
       .orderBy(quoteItems.id);
 
     return {
-      ...this.mapQuoteFromDb(quote),
+      ...this.mapQuoteFromDb(quote.quote, {
+        companyName: quote.companyName,
+        contactName: quote.contactName
+      }),
       items: items.map((item) => this.mapQuoteItemFromDb(item))
     };
   }
@@ -204,12 +245,17 @@ export class QuotesService {
     return { subtotal, tax, total };
   }
 
-  private mapQuoteFromDb(dbQuote: any): Quote {
+  private mapQuoteFromDb(
+    dbQuote: typeof quotes.$inferSelect,
+    extras: { companyName?: string | null; contactName?: string | null } = {}
+  ): Quote {
     return {
       id: dbQuote.id,
       quoteNumber: dbQuote.quoteNumber,
       companyId: dbQuote.companyId,
       contactId: dbQuote.contactId,
+      companyName: extras.companyName ?? null,
+      contactName: extras.contactName ?? null,
       issueDate: dbQuote.issueDate,
       expiryDate: dbQuote.expiryDate,
       currency: dbQuote.currency,

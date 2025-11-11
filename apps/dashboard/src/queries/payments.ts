@@ -34,20 +34,20 @@ export async function fetchPayments(filters?: {
     ? `sales/payments?${params.toString()}`
     : "sales/payments";
 
-  const response = await ensureResponse(await fetch(getApiUrl(endpoint)));
+  const response = await ensureResponse(fetch(getApiUrl(endpoint)));
   const payload = (await response.json()) as PaymentsListResponse;
   return payload;
 }
 
 export async function fetchPayment(id: string): Promise<Payment> {
-  const response = await ensureResponse(await fetch(getApiUrl(`sales/payments/${id}`)));
+  const response = await ensureResponse(fetch(getApiUrl(`sales/payments/${id}`)));
   const payload = (await response.json()) as { data: Payment };
   return payload.data;
 }
 
 export async function createPayment(input: PaymentCreateInput): Promise<Payment> {
   const response = await ensureResponse(
-    await fetch(getApiUrl("sales/payments"), {
+    fetch(getApiUrl("sales/payments"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input)
@@ -59,7 +59,7 @@ export async function createPayment(input: PaymentCreateInput): Promise<Payment>
 
 export async function deletePayment(id: string): Promise<void> {
   await ensureResponse(
-    await fetch(getApiUrl(`sales/payments/${id}`), {
+    fetch(getApiUrl(`sales/payments/${id}`), {
       method: "DELETE"
     })
   );

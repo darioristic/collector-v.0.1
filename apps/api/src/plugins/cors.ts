@@ -1,12 +1,21 @@
-import type { FastifyPluginAsync, FastifyReply } from "fastify";
+import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from "fastify";
+import fp from "fastify-plugin";
 
-const defaultOrigins = new Set([
+const STATIC_ALLOWED_ORIGINS = new Set([
 	"http://localhost:3000",
 	"http://localhost:3001",
+	"https://localhost:3000",
+	"https://localhost:3001",
 	"http://127.0.0.1:3000",
 	"http://127.0.0.1:3001",
+	"https://127.0.0.1:3000",
+	"https://127.0.0.1:3001",
 	"http://0.0.0.0:3000",
 	"http://0.0.0.0:3001",
+	"https://0.0.0.0:3000",
+	"https://0.0.0.0:3001",
+	"http://192.168.0.3:3000",
+	"https://192.168.0.3:3000",
 ]);
 
 const envOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? "")
@@ -14,65 +23,64 @@ const envOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? "")
 	.map((value) => value.trim())
 	.filter(Boolean);
 
-const allowedOrigins = new Set([...defaultOrigins, ...envOrigins]);
+for (const origin of envOrigins) {
+	STATIC_ALLOWED_ORIGINS.add(origin);
+}
 
-const isOriginAllowed = (origin: string): boolean => {
-	if (allowedOrigins.has(origin)) {
-		return true;
+const isDevelopment = process.env.NODE_ENV !== "production";
+
+const isLocalhostLike = (origin: string) => {
+	try {
+		const url = new URL(origin);
+		return ["localhost", "127.0.0.1", "0.0.0.0"].includes(url.hostname);
+	} catch {
+		return false;
 	}
-
-	if (process.env.NODE_ENV !== "production") {
-		try {
-			const parsed = new URL(origin);
-
-			if (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1") {
-				return true;
-			}
-		} catch {
-			return false;
-		}
-	}
-
-	return false;
 };
 
 const ALLOWED_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"];
-const ALLOWED_HEADERS = ["Content-Type", "Authorization"];
+const ALLOWED_HEADERS = [
+	"Accept",
+	"Accept-Language",
+	"Content-Type",
+	"Authorization",
+	"X-Requested-With",
+	"X-CSRF-Token",
+];
+const EXPOSED_HEADERS = ["Content-Disposition"];
 
-const applyCorsHeaders = (reply: FastifyReply, origin: string) => {
-	reply.header("Access-Control-Allow-Origin", origin);
-	reply.header("Access-Control-Allow-Credentials", "true");
-	reply.header("Access-Control-Allow-Methods", ALLOWED_METHODS.join(","));
-	reply.header("Access-Control-Allow-Headers", ALLOWED_HEADERS.join(","));
-	reply.header("Vary", "Origin");
+const isOriginAllowed = (origin: string | undefined): boolean => {
+	if (!origin) return true;
+	if (STATIC_ALLOWED_ORIGINS.has(origin)) return true;
+	if (isDevelopment && isLocalhostLike(origin)) return true;
+	return false;
 };
 
 const corsPlugin: FastifyPluginAsync = async (fastify) => {
-	fastify.addHook("onRequest", (request, reply, done) => {
-		const originHeader = request.headers.origin;
+	// Add CORS headers to all requests
+	fastify.addHook('onRequest', (request: FastifyRequest, reply: FastifyReply, done) => {
+		const origin = request.headers.origin;
 
-		if (!originHeader) {
-			fastify.log.trace("CORS: no origin header present");
+		// Always add CORS headers for allowed origins
+		if (origin && isOriginAllowed(origin)) {
+			reply.header('Access-Control-Allow-Origin', origin);
+			reply.header('Access-Control-Allow-Credentials', 'true');
+			reply.header('Access-Control-Expose-Headers', EXPOSED_HEADERS.join(', '));
+		}
+
+		// Handle preflight OPTIONS requests
+		if (request.method === 'OPTIONS') {
+			reply.header('Access-Control-Allow-Methods', ALLOWED_METHODS.join(', '));
+			reply.header('Access-Control-Allow-Headers', ALLOWED_HEADERS.join(', '));
+			reply.header('Access-Control-Max-Age', '3600');
+			reply.code(204).send();
+		} else {
 			done();
-			return;
 		}
-
-		if (!isOriginAllowed(originHeader)) {
-			fastify.log.warn({ origin: originHeader }, "Blocked CORS request");
-			done();
-			return;
-		}
-
-		fastify.log.debug({ origin: originHeader }, "CORS: applying headers");
-		applyCorsHeaders(reply, originHeader);
-
-		if (request.method === "OPTIONS") {
-			reply.code(204).header("Content-Length", "0").send();
-			return;
-		}
-
-		done();
 	});
 };
 
-export default corsPlugin;
+export default fp(corsPlugin, {
+	name: 'cors-plugin',
+	fastify: '4.x'
+});

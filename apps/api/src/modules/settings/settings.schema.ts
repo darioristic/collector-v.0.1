@@ -47,6 +47,77 @@ const integrationProperties = {
   connectedAt: { type: "string", format: "date-time" }
 } as const;
 
+const teamMemberStatusValues = ["online", "offline", "idle", "invited"] as const;
+
+const teamMemberProperties = {
+  id: { type: "string", minLength: 1 },
+  firstName: { type: "string", minLength: 1 },
+  lastName: { type: "string", minLength: 1 },
+  email: { type: "string", format: "email" },
+  role: { type: "string", minLength: 1 },
+  status: {
+    type: "string",
+    enum: teamMemberStatusValues
+  },
+  avatarUrl: {
+    anyOf: [
+      { type: "string", minLength: 1 },
+      { type: "null" }
+    ]
+  },
+  createdAt: { type: "string", format: "date-time" },
+  updatedAt: { type: "string", format: "date-time" }
+} as const;
+
+const teamMemberListQuery = {
+  type: "object",
+  properties: {
+    search: { type: "string", minLength: 1 },
+    status: {
+      type: "string",
+      enum: teamMemberStatusValues
+    }
+  },
+  additionalProperties: false
+} as const;
+
+const teamMemberCreateBody = {
+  type: "object",
+  properties: {
+    firstName: teamMemberProperties.firstName,
+    lastName: teamMemberProperties.lastName,
+    email: teamMemberProperties.email,
+    role: teamMemberProperties.role,
+    status: teamMemberProperties.status,
+    avatarUrl: teamMemberProperties.avatarUrl
+  },
+  required: ["firstName", "lastName", "email", "role"],
+  additionalProperties: false
+} as const;
+
+const teamMemberUpdateBody = {
+  type: "object",
+  properties: {
+    firstName: teamMemberProperties.firstName,
+    lastName: teamMemberProperties.lastName,
+    email: teamMemberProperties.email,
+    role: teamMemberProperties.role,
+    status: teamMemberProperties.status,
+    avatarUrl: teamMemberProperties.avatarUrl
+  },
+  additionalProperties: false,
+  minProperties: 1
+} as const;
+
+const teamMemberParams = {
+  type: "object",
+  properties: {
+    id: { type: "string", minLength: 1 }
+  },
+  required: ["id"],
+  additionalProperties: false
+} as const;
+
 export const userListSchema: FastifySchema = {
   response: {
     200: dataEnvelope({
@@ -55,6 +126,21 @@ export const userListSchema: FastifySchema = {
         type: "object",
         properties: userProperties,
         required: ["id", "username", "email", "role", "active"],
+        additionalProperties: false
+      }
+    })
+  }
+};
+
+export const teamMemberListSchema: FastifySchema = {
+  querystring: teamMemberListQuery,
+  response: {
+    200: dataEnvelope({
+      type: "array",
+      items: {
+        type: "object",
+        properties: teamMemberProperties,
+        required: ["id", "firstName", "lastName", "email", "role", "status", "createdAt", "updatedAt"],
         additionalProperties: false
       }
     })
@@ -101,6 +187,46 @@ export const integrationListSchema: FastifySchema = {
   }
 };
 
+export const teamMemberCreateSchema: FastifySchema = {
+  body: teamMemberCreateBody,
+  response: {
+    201: dataEnvelope({
+      type: "object",
+      properties: teamMemberProperties,
+      required: ["id", "firstName", "lastName", "email", "role", "status", "createdAt", "updatedAt"],
+      additionalProperties: false
+    })
+  }
+};
+
+export const teamMemberUpdateSchema: FastifySchema = {
+  params: teamMemberParams,
+  body: teamMemberUpdateBody,
+  response: {
+    200: dataEnvelope({
+      type: "object",
+      properties: teamMemberProperties,
+      required: ["id", "firstName", "lastName", "email", "role", "status", "createdAt", "updatedAt"],
+      additionalProperties: false
+    })
+  }
+};
+
+export const teamMemberDeleteSchema: FastifySchema = {
+  params: teamMemberParams,
+  response: {
+    204: { type: "null" },
+    404: {
+      type: "object",
+      properties: {
+        error: { type: "string" }
+      },
+      required: ["error"],
+      additionalProperties: false
+    }
+  }
+};
+
 export type SettingsUser = {
   id: string;
   username: string;
@@ -130,6 +256,37 @@ export type SettingsIntegration = {
   status: "connected" | "disconnected" | "error";
   connectedAt: string;
 };
+
+export type TeamMemberStatus = (typeof teamMemberStatusValues)[number];
+
+export type SettingsTeamMember = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  status: TeamMemberStatus;
+  avatarUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ListTeamMembersQuery = {
+  search?: string;
+  status?: TeamMemberStatus;
+};
+
+export type CreateTeamMemberInput = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  status?: TeamMemberStatus;
+  avatarUrl?: string | null;
+};
+
+export type UpdateTeamMemberInput = Partial<CreateTeamMemberInput>;
+
 
 export const mockUsers: SettingsUser[] = [
   {

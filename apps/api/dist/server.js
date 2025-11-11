@@ -1,7 +1,7 @@
 import Fastify from "fastify";
 import { readdir } from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { db } from "./db";
+import { db } from "./db/index.js";
 import corsPlugin from "./plugins/cors";
 import errorHandlerPlugin from "./plugins/error-handler";
 import openApiPlugin from "./plugins/openapi";

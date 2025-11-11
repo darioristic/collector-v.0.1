@@ -76,6 +76,7 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
+import { TableToolbar } from "@/components/table-toolbar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -122,9 +123,15 @@ const SortIcon = ({ direction }: { direction: false | "asc" | "desc" }) => {
 
 interface ContactsDataTableProps {
   data: Contact[];
+  showAddActionInToolbar?: boolean;
 }
 
-export default function ContactsDataTable({ data }: ContactsDataTableProps) {
+export type ContactsDataTableHandle = {
+  openAddDialog: () => void;
+};
+
+const ContactsDataTable = React.forwardRef<ContactsDataTableHandle, ContactsDataTableProps>(
+  ({ data, showAddActionInToolbar = true }, ref) => {
   const { toast } = useToast();
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
@@ -614,84 +621,108 @@ export default function ContactsDataTable({ data }: ContactsDataTableProps) {
         ? "Showing 0-0 of 0 contacts"
         : `Showing ${numberFormatter.format(pageStart)}-${numberFormatter.format(pageEnd)} of ${numberFormatter.format(filteredRowCount)} contacts`;
 
+  const hasToolbarFilters = globalFilter.trim().length > 0 || activeQuickFilter !== "custom";
+
+  const handleResetToolbar = () => {
+    setGlobalFilter("");
+    setActiveQuickFilter("custom");
+  };
+
   let ellipsisCounter = 0;
 
-  return (
-    <>
-      <div className="space-y-6">
-        <div className="space-y-3">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center">
-            <Input
-              placeholder="Search contacts by name, email, or company"
-              value={globalFilter}
-              onChange={(event) => {
-                const value = event.target.value;
-                setGlobalFilter(value);
-                setActiveQuickFilter(value === "" ? "custom" : "custom");
-              }}
-              className="w-full md:w-[360px] md:min-w-[280px] md:flex-1"
-            />
-            <div className="flex flex-wrap items-center gap-2 md:ml-auto md:justify-end">
-              {selectionCount > 0 ? (
+    React.useImperativeHandle(
+      ref,
+      () => ({
+        openAddDialog
+      }),
+      [openAddDialog]
+    );
+
+    const toolbarActions = (
+      <div className="flex flex-wrap items-center gap-2 md:order-2 md:justify-end">
+        {selectionCount > 0 ? (
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            className="min-w-[150px]"
+            onClick={handleBulkDelete}
+            disabled={isProcessingDelete}>
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+            Delete Selected
+          </Button>
+        ) : null}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="min-w-[140px]"
+          onClick={exportContacts}>
+          <Download className="h-4 w-4" aria-hidden="true" />
+          Export CSV
+        </Button>
+        {showAddActionInToolbar ? (
+          <Button type="button" size="sm" className="min-w-[140px]" onClick={openAddDialog}>
+            Add New Contact
+          </Button>
+        ) : null}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-2">
+              <ColumnsIcon className="h-4 w-4" />
+              Columns
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            {table
+              .getAllLeafColumns()
+              .filter((column) => column.getCanHide())
+              .map((column) => (
+                <DropdownMenuCheckboxItem
+                  key={column.id}
+                  className="capitalize"
+                  checked={column.getIsVisible()}
+                  onCheckedChange={(value) => column.toggleVisibility(Boolean(value))}>
+                  {column.id}
+                </DropdownMenuCheckboxItem>
+              ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    );
+
+    return (
+      <>
+        <div className="space-y-6">
+          <TableToolbar
+          search={{
+            value: globalFilter,
+            onChange: (value) => {
+              setGlobalFilter(value);
+              setActiveQuickFilter("custom");
+            },
+            placeholder: "Search contacts by name, email, or company",
+            ariaLabel: "Search contacts"
+          }}
+          filters={
+            <div className="flex flex-wrap items-center gap-2 md:justify-end">
+              {QUICK_FILTERS.map((filter) => (
                 <Button
-                  type="button"
-                  variant="destructive"
+                  key={filter.id}
                   size="sm"
-                  className="min-w-[150px]"
-                  onClick={handleBulkDelete}
-                  disabled={isProcessingDelete}>
-                  <Trash2 className="h-4 w-4" aria-hidden="true" />
-                  Delete Selected
+                  variant={activeQuickFilter === filter.id ? "default" : "secondary"}
+                  onClick={() => handleQuickFilter(filter.id, filter.query)}>
+                  {filter.label}
                 </Button>
-              ) : null}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="min-w-[140px]"
-                onClick={exportContacts}>
-                <Download className="h-4 w-4" aria-hidden="true" />
-                Export CSV
-              </Button>
-              <Button type="button" size="sm" className="min-w-[140px]" onClick={openAddDialog}>
-                Add New Contact
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <ColumnsIcon className="h-4 w-4" />
-                    Columns
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  {table
-                    .getAllLeafColumns()
-                    .filter((column) => column.getCanHide())
-                    .map((column) => (
-                      <DropdownMenuCheckboxItem
-                        key={column.id}
-                        className="capitalize"
-                        checked={column.getIsVisible()}
-                        onCheckedChange={(value) => column.toggleVisibility(Boolean(value))}>
-                        {column.id}
-                      </DropdownMenuCheckboxItem>
-                    ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              ))}
             </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {QUICK_FILTERS.map((filter) => (
-              <Button
-                key={filter.id}
-                size="sm"
-                variant={activeQuickFilter === filter.id ? "default" : "secondary"}
-                onClick={() => handleQuickFilter(filter.id, filter.query)}>
-                {filter.label}
-              </Button>
-            ))}
-          </div>
-        </div>
+          }
+          reset={{
+            onReset: handleResetToolbar,
+            disabled: !hasToolbarFilters
+          }}
+            actions={toolbarActions}
+          />
 
         <div className="bg-background overflow-hidden rounded-xl border shadow-sm">
           <Table>
@@ -1371,6 +1402,11 @@ export default function ContactsDataTable({ data }: ContactsDataTableProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
-  );
-}
+      </>
+    );
+  }
+);
+
+ContactsDataTable.displayName = "ContactsDataTable";
+
+export default ContactsDataTable;

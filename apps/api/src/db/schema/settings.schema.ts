@@ -24,6 +24,7 @@ export const integrationProvider = pgEnum("integration_provider", [
   "google"
 ]);
 export const integrationStatus = pgEnum("integration_status", ["connected", "disconnected", "error"]);
+export const teamMemberStatus = pgEnum("team_member_status", ["online", "offline", "idle", "invited"]);
 
 export const users = pgTable(
   "users",
@@ -99,6 +100,25 @@ export const integrations = pgTable(
   },
   (table) => ({
     providerStatusIdx: index("integrations_provider_status_idx").on(table.provider, table.status)
+  })
+);
+
+export const teamMembers = pgTable(
+  "team_members",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    firstName: text("first_name").notNull(),
+    lastName: text("last_name").notNull(),
+    email: text("email").notNull(),
+    role: text("role").notNull(),
+    status: teamMemberStatus("status").default("offline").notNull(),
+    avatarUrl: text("avatar_url"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
+  },
+  (table) => ({
+    emailUnique: uniqueIndex("team_members_email_key").on(table.email),
+    statusIdx: index("team_members_status_idx").on(table.status)
   })
 );
 

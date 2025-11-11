@@ -1,14 +1,32 @@
-#!/usr/bin/env bun
+#!/usr/bin/env -S bun --smol
 
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { dirname, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, URL } from "node:url";
+
+import { config as loadEnv } from "dotenv";
 
 const rootDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const apiDir = join(rootDir, "apps", "api");
 const dashboardDir = join(rootDir, "apps", "dashboard");
+
+function loadEnvFiles() {
+	const candidateFiles = [
+		join(rootDir, ".env.local"),
+		join(rootDir, ".env"),
+		join(apiDir, ".env.local"),
+		join(apiDir, ".env"),
+		join(apiDir, ".env.test"),
+	];
+
+	for (const filePath of candidateFiles) {
+		loadEnv({ path: filePath, override: false });
+	}
+}
+
+loadEnvFiles();
 
 const trackedChildren = new Set<import("node:child_process").ChildProcess>();
 const args = process.argv.slice(2);
@@ -203,15 +221,93 @@ async function runCommand(
 	});
 }
 
+function resolveDatabaseUrl(): string {
+	const envUrl = process.env.DATABASE_URL;
+
+	if (envUrl && envUrl !== "pg-mem") {
+		return envUrl;
+	}
+
+	const fallback = "postgres://postgres:postgres@localhost:5432/collector_dashboard";
+	process.env.DATABASE_URL = fallback;
+	return fallback;
+}
+
+function parseDatabaseUrl(connectionString: string) {
+	const parsed = new URL(connectionString);
+	const database = parsed.pathname?.replace(/^\//, "") ?? "";
+
+	if (!database) {
+		throw new Error("DATABASE_URL mora sadržati naziv baze (pathname).");
+	}
+
+	const adminUrl = new URL(parsed);
+	adminUrl.pathname = "/postgres";
+
+	return {
+		database,
+		adminConnectionString: adminUrl.toString(),
+	};
+}
+
+async function ensureDatabaseExists(connectionString: string) {
+	const { database, adminConnectionString } = parseDatabaseUrl(connectionString);
+
+	const sanitizedName = database.replace(/"/g, '""');
+	const checkQuery = `SELECT 1 FROM pg_database WHERE datname='${sanitizedName.replace(/'/g, "''")}'`;
+
+	let exists = false;
+	try {
+		const result = await runCommand(
+			"psql",
+			["--dbname", adminConnectionString, "-tAc", checkQuery],
+			rootDir,
+			{ print: false },
+		);
+		exists = result.stdout.trim() === "1";
+	} catch (error) {
+		throw new Error(
+			`Ne mogu da proverim postojanje baze. Proveri kredencijale za ${adminConnectionString}.\n${
+				error instanceof Error ? error.message : String(error)
+			}`,
+		);
+	}
+
+	if (exists) {
+		return;
+	}
+
+	console.log(`[setup] Kreiram bazu ${database}...`);
+	try {
+		await runCommand(
+			"psql",
+			[
+				"--dbname",
+				adminConnectionString,
+				"-c",
+				`CREATE DATABASE "${sanitizedName}" WITH ENCODING='UTF8'`,
+			],
+			rootDir,
+		);
+	} catch (error) {
+		throw new Error(
+			`Ne mogu da kreiram bazu ${database}. Uveri se da korisnik ima dozvolu.\n${
+				error instanceof Error ? error.message : String(error)
+			}`,
+		);
+	}
+}
+
 function spawnDevProcess(
 	name: string,
 	command: string,
 	args: string[],
 	cwd: string,
+	envOverrides: NodeJS.ProcessEnv = {},
 ) {
 	const child = spawn(command, args, {
 		cwd,
-		env: { ...process.env },
+		env: { ...process.env, ...envOverrides },
 		stdio: ["inherit", "pipe", "pipe"],
 	});
 
@@ -370,9 +466,25 @@ async function runDockerWorkflow() {
 }
 
 async function runLocalWorkflow() {
+	const connectionString = resolveDatabaseUrl();
+
+	await ensureDatabaseExists(connectionString);
+
+	const apiPort = Number(process.env.API_PORT ?? 4000);
+	let webPort = Number(process.env.WEB_PORT ?? process.env.PORT ?? 3000);
+
+	if (apiPort === webPort) {
+		const fallbackWebPort = apiPort === 3000 ? 3001 : 3000;
+		console.warn(
+			`[setup] API i Frontend dele isti port ${apiPort}. Frontend prebacujem na ${fallbackWebPort}.`,
+		);
+		webPort = fallbackWebPort;
+		process.env.WEB_PORT = String(fallbackWebPort);
+	}
+
 	console.log("[setup] Proveravam portove...");
-	await ensurePortFree(4000, "API (Fastify)");
-	await ensurePortFree(3000, "Frontend (Next.js)");
+	await ensurePortFree(apiPort, "API (Fastify)");
+	await ensurePortFree(webPort, "Frontend (Next.js)");
 
 	console.log("[setup] Pokrećem migracije...");
 	await runCommand("bun", ["run", "db:migrate"], apiDir);
@@ -381,8 +493,14 @@ async function runLocalWorkflow() {
 	await runCommand("bun", ["run", "db:seed"], apiDir);
 
 	console.log("[setup] Startujem API i Dashboard...");
-	spawnDevProcess("api", "bun", ["run", "dev"], apiDir);
-	spawnDevProcess("web", "bun", ["run", "dev"], dashboardDir);
+	spawnDevProcess("api", "bun", ["run", "dev"], apiDir, {
+		PORT: String(apiPort),
+		API_PORT: String(apiPort),
+	});
+	spawnDevProcess("web", "bun", ["run", "dev"], dashboardDir, {
+		PORT: String(webPort),
+		WEB_PORT: String(webPort),
+	});
 
 	console.log(`
 Sve spremno!

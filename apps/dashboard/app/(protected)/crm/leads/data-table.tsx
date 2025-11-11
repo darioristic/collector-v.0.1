@@ -76,6 +76,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { cn, generateAvatarFallback } from "@/lib/utils";
+import { TableToolbar } from "@/components/table-toolbar";
 
 const formatLeadDate = (value: string | null | undefined) => {
   if (!value) {
@@ -126,11 +127,17 @@ const leadSearch = (lead: Lead) =>
 
 type LeadsDataTableProps = {
   data: Lead[];
+  showAddActionInToolbar?: boolean;
 };
 
 type StatusFilterValue = (typeof statusFilters)[number]["id"];
 
-export function LeadsDataTable({ data }: LeadsDataTableProps) {
+export type LeadsDataTableHandle = {
+  openAddDialog: () => void;
+};
+
+export const LeadsDataTable = React.forwardRef<LeadsDataTableHandle, LeadsDataTableProps>(
+  ({ data, showAddActionInToolbar = true }, ref) => {
   const { toast } = useToast();
 
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -502,6 +509,14 @@ export function LeadsDataTable({ data }: LeadsDataTableProps) {
     setIsAddDialogOpen(true);
   }, []);
 
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      openAddDialog
+    }),
+    [openAddDialog]
+  );
+
   const handleEditSubmit = React.useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -630,25 +645,49 @@ export function LeadsDataTable({ data }: LeadsDataTableProps) {
         ? "Showing 0-0 of 0 leads"
         : `Showing ${numberFormatter.format(pageStart)}-${numberFormatter.format(pageEnd)} of ${numberFormatter.format(filteredRowCount)} leads`;
 
+  const hasToolbarFilters =
+    globalFilter.trim().length > 0 ||
+    activeStatusFilter !== "all" ||
+    selectedSource !== "all" ||
+    columnFilters.length > 0;
+
+  const handleResetToolbar = () => {
+    setGlobalFilter("");
+    handleStatusFilter("all");
+    handleSourceFilter("all");
+  };
+
   let ellipsisCounter = 0;
 
   return (
     <>
       <div className="space-y-6">
-        <div className="space-y-3">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center">
-            <Input
-              placeholder="Search leads by name, email, or source"
-              value={globalFilter}
-              onChange={(event) => {
-                const value = event.target.value;
-                setGlobalFilter(value);
-              }}
-              className="w-full md:w-[360px] md:min-w-[280px] md:flex-1"
-            />
-            <div className="flex flex-wrap items-center gap-2 md:ml-auto md:justify-end">
+        <TableToolbar
+          search={{
+            value: globalFilter,
+            onChange: (value) => setGlobalFilter(value),
+            placeholder: "Search leads by name, email, or source",
+            ariaLabel: "Search leads"
+          }}
+          filters={
+            <div className="flex flex-wrap items-center gap-3">
+              <Select
+                value={activeStatusFilter}
+                onValueChange={(value: StatusFilterValue) => handleStatusFilter(value)}
+              >
+                <SelectTrigger className="h-9 w-[180px]" aria-label="Filter by status">
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusFilters.map((filter) => (
+                    <SelectItem key={filter.id} value={filter.id}>
+                      {filter.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Select value={selectedSource} onValueChange={handleSourceFilter}>
-                <SelectTrigger className="h-9 w-[180px]">
+                <SelectTrigger className="h-9 w-[180px]" aria-label="Filter by source">
                   <SelectValue placeholder="All sources" />
                 </SelectTrigger>
                 <SelectContent>
@@ -660,6 +699,14 @@ export function LeadsDataTable({ data }: LeadsDataTableProps) {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          }
+          reset={{
+            onReset: handleResetToolbar,
+            disabled: !hasToolbarFilters
+          }}
+          actions={
+            <div className="flex flex-wrap items-center gap-2 md:order-2 md:justify-end">
               {selectionCount > 0 ? (
                 <Button
                   type="button"
@@ -681,10 +728,12 @@ export function LeadsDataTable({ data }: LeadsDataTableProps) {
                 <Download className="h-4 w-4" aria-hidden="true" />
                 Export CSV
               </Button>
+              {showAddActionInToolbar ? (
               <Button type="button" size="sm" className="min-w-[140px]" onClick={openAddDialog}>
                 <Sparkles className="h-4 w-4" aria-hidden="true" />
                 New lead
               </Button>
+              ) : null}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="flex items-center gap-2">
@@ -708,19 +757,8 @@ export function LeadsDataTable({ data }: LeadsDataTableProps) {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {statusFilters.map((filter) => (
-              <Button
-                key={filter.id}
-                size="sm"
-                variant={activeStatusFilter === filter.id ? "default" : "secondary"}
-                onClick={() => handleStatusFilter(filter.id)}>
-                {filter.label}
-              </Button>
-            ))}
-          </div>
-        </div>
+          }
+        />
 
         <div className="bg-background overflow-hidden rounded-xl border shadow-sm">
           <Table>
@@ -1270,7 +1308,9 @@ export function LeadsDataTable({ data }: LeadsDataTableProps) {
       </Dialog>
     </>
   );
-}
+});
+
+LeadsDataTable.displayName = "LeadsDataTable";
 
 type SortIconProps = {
   direction: false | "asc" | "desc";

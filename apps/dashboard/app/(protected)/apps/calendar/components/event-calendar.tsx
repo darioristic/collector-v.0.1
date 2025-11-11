@@ -48,6 +48,9 @@ export interface EventCalendarProps {
   onEventDelete?: (eventId: string) => void;
   className?: string;
   initialView?: CalendarView;
+  disableEventDialog?: boolean;
+  onEventSelectRequest?: (event: CalendarEvent) => void;
+  onEventCreateRequest?: (startTime: Date) => void;
 }
 
 export function EventCalendar({
@@ -56,7 +59,10 @@ export function EventCalendar({
   onEventUpdate,
   onEventDelete,
   className,
-  initialView = "month"
+  initialView = "month",
+  disableEventDialog = false,
+  onEventSelectRequest,
+  onEventCreateRequest
 }: EventCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalendarView>(initialView);
@@ -132,12 +138,20 @@ export function EventCalendar({
 
   const handleEventSelect = (event: CalendarEvent) => {
     console.log("Event selected:", event); // Debug log
+    if (disableEventDialog) {
+      onEventSelectRequest?.(event);
+      return;
+    }
     setSelectedEvent(event);
     setIsEventDialogOpen(true);
   };
 
   const handleEventCreate = (startTime: Date) => {
     console.log("Creating new event at:", startTime); // Debug log
+    if (disableEventDialog) {
+      onEventCreateRequest?.(startTime);
+      return;
+    }
 
     // Snap to 15-minute intervals
     const minutes = startTime.getMinutes();
@@ -315,8 +329,12 @@ export function EventCalendar({
               className="max-[479px]:aspect-square max-[479px]:p-0!"
               size="sm"
               onClick={() => {
+            if (disableEventDialog) {
+              onEventCreateRequest?.(currentDate);
+            } else {
                 setSelectedEvent(null); // Ensure we're creating a new event
                 setIsEventDialogOpen(true);
+            }
               }}>
               <PlusIcon className="opacity-60 sm:-ms-1" size={16} aria-hidden="true" />
               <span className="max-sm:sr-only">New event</span>
@@ -358,6 +376,7 @@ export function EventCalendar({
           )}
         </div>
 
+        {!disableEventDialog ? (
         <EventDialog
           event={selectedEvent}
           isOpen={isEventDialogOpen}
@@ -368,6 +387,7 @@ export function EventCalendar({
           onSave={handleEventSave}
           onDelete={handleEventDelete}
         />
+        ) : null}
       </CalendarDndProvider>
     </div>
   );

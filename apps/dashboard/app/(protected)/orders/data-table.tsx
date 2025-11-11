@@ -36,7 +36,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -45,6 +44,7 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
+import { TableToolbar } from "@/components/table-toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -252,6 +252,14 @@ export default function OrdersDataTable({ data }: { data: Order[] }) {
     }
   });
 
+  const searchValue = (table.getColumn("product_name")?.getFilterValue() as string) ?? "";
+  const hasToolbarFilters = searchValue.trim().length > 0 || columnFilters.length > 0;
+
+  const handleResetToolbar = () => {
+    table.resetColumnFilters();
+    table.getColumn("product_name")?.setFilterValue("");
+  };
+
   const statuses = [
     {
       value: "pending",
@@ -363,17 +371,18 @@ export default function OrdersDataTable({ data }: { data: Order[] }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-3">
-        <Input
-          placeholder="Search orders..."
-          value={(table.getColumn("product_name")?.getFilterValue() as string) ?? ""}
-          onChange={(event) => table.getColumn("product_name")?.setFilterValue(event.target.value)}
-          className="md:max-w-sm"
-        />
+      <TableToolbar
+        search={{
+          value: searchValue,
+          onChange: (value) => table.getColumn("product_name")?.setFilterValue(value),
+          placeholder: "Search orders...",
+          ariaLabel: "Search orders"
+        }}
+        filters={
+          <div className="flex items-center gap-2">
         <div className="hidden gap-2 md:flex">
           <Filters />
         </div>
-        {/*filter for mobile*/}
         <div className="inline md:hidden">
           <Popover>
             <PopoverTrigger asChild>
@@ -388,10 +397,16 @@ export default function OrdersDataTable({ data }: { data: Order[] }) {
             </PopoverContent>
           </Popover>
         </div>
-        <div className="ms-auto">
+          </div>
+        }
+        reset={{
+          onReset: handleResetToolbar,
+          disabled: !hasToolbarFilters
+        }}
+        actions={
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline">
+              <Button variant="outline" className="md:order-2">
                 <span className="hidden lg:inline">Columns</span> <Columns />
               </Button>
             </DropdownMenuTrigger>
@@ -412,8 +427,8 @@ export default function OrdersDataTable({ data }: { data: Order[] }) {
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
-      </div>
+        }
+      />
       <div className="space-y-4">
         <div className="rounded-md border">
           <Table>

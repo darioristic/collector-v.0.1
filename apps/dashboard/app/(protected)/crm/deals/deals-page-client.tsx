@@ -8,7 +8,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { DEAL_STAGE_BADGE_CLASSNAME, DEAL_STAGE_DESCRIPTIONS, DEAL_STAGES, type DealStage, type DealView } from "./constants";
@@ -21,6 +20,7 @@ import DealModal from "./components/deal-modal";
 import { useDealsStore } from "./store";
 import type { DealFiltersState, ModalMode } from "./store";
 import type { DealFormValues } from "./schemas";
+import { TableToolbar } from "@/components/table-toolbar";
 
 interface DealsPageClientProps {
   initialDeals: Deal[];
@@ -281,25 +281,37 @@ export default function DealsPageClient({
   }, [deals.length, stageStats, stageSummary]);
 
   const currentView = viewOptions.find((option) => option.value === view) ?? viewOptions[0];
+  const hasToolbarFilters =
+    (filters.search?.trim().length ?? 0) > 0 || Boolean(filters.stage) || Boolean(filters.owner);
+
+  const handleResetToolbar = React.useCallback(() => {
+    resetFilters();
+  }, [resetFilters]);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Deals</h1>
-          <p className="text-muted-foreground text-base">
-            Manage your sales pipeline and track deal progress.
-          </p>
+      <div className="space-y-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold tracking-tight">Deals</h1>
+            <p className="text-muted-foreground text-sm">
+              Manage your sales pipeline and track deal progress.
+            </p>
+          </div>
+          <Button type="button" onClick={() => handleOpenModal("create")} className="gap-2 sm:w-auto">
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Add Deal
+          </Button>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="flex items-center gap-2">
-            <Input
-              placeholder="Search deals..."
-              className="h-9 w-full sm:w-64"
-              value={filters.search ?? ""}
-              onChange={(event) => setFilters({ search: event.target.value })}
-            />
+        <TableToolbar
+          search={{
+            value: filters.search ?? "",
+            onChange: (value) => setFilters({ search: value }),
+            placeholder: "Search deals...",
+            ariaLabel: "Search deals"
+          }}
+          filters={
             <Button
               type="button"
               variant="outline"
@@ -309,32 +321,34 @@ export default function DealsPageClient({
               <Filter className="h-4 w-4" aria-hidden="true" />
               Filter
             </Button>
-          </div>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button type="button" variant="outline" className="gap-2">
-                {currentView.icon}
-                Switch View
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {viewOptions.map((option) => (
-                <DropdownMenuItem key={option.value} onSelect={() => setView(option.value)}>
-                  <div className="flex items-center gap-2">
-                    {option.icon}
-                    <span>{option.label}</span>
-                  </div>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <Button type="button" onClick={() => handleOpenModal("create")} className="gap-2">
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Add Deal
-          </Button>
-        </div>
+          }
+          reset={{
+            onReset: handleResetToolbar,
+            disabled: !hasToolbarFilters
+          }}
+          actions={
+            <div className="flex flex-wrap items-center gap-2 md:order-2 md:justify-end">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button type="button" variant="outline" className="gap-2">
+                    {currentView.icon}
+                    Switch View
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {viewOptions.map((option) => (
+                    <DropdownMenuItem key={option.value} onSelect={() => setView(option.value)}>
+                      <div className="flex items-center gap-2">
+                        {option.icon}
+                        <span>{option.label}</span>
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          }
+        />
       </div>
 
       {error ? (
@@ -344,34 +358,8 @@ export default function DealsPageClient({
         </Alert>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {latestStageStats.map((item) => (
-          <div
-            key={item.stage}
-            className="rounded-lg border bg-card p-4 shadow-sm transition hover:border-primary/70"
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">{item.stage}</p>
-                <h3 className="mt-1 text-2xl font-semibold tracking-tight">
-                  {statsFormatter.format(item.count)}
-                </h3>
-                <p className="text-muted-foreground mt-2 text-xs leading-5">
-                  {DEAL_STAGE_DESCRIPTIONS[item.stage]}
-                </p>
-              </div>
-              <Badge className={DEAL_STAGE_BADGE_CLASSNAME[item.stage]}>
-                <BarChart2 className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
-                {item.count === 1 ? "Deal" : "Deals"}
-              </Badge>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <Separator />
-
-      <div className="relative">
+      <div className="relative mt-6">
+        <Separator className="mb-6" />
         {isPending ? (
           <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/60 backdrop-blur">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-hidden="true" />

@@ -53,7 +53,7 @@ const initialFilters: ActivityFiltersState = {
 
 export const useActivitiesStore = create<ActivitiesStoreState>((set) => ({
   activities: [],
-  view: "calendar",
+  view: "list",
   filters: initialFilters,
   isModalOpen: false,
   modalMode: "create",

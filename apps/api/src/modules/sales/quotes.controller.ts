@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { QuotesService } from "./quotes.service.js";
-import type { QuoteCreateInput, QuoteUpdateInput } from "@crm/types";
+import type { QuoteCreateInput, QuoteSortField, QuoteUpdateInput } from "@crm/types";
 
 type ListRequest = FastifyRequest<{
   Querystring: {
@@ -10,6 +10,8 @@ type ListRequest = FastifyRequest<{
     search?: string;
     limit?: string;
     offset?: string;
+    sortField?: QuoteSortField;
+    sortOrder?: "asc" | "desc";
   };
 }>;
 
@@ -38,7 +40,9 @@ export const listQuotesHandler = async (request: ListRequest, reply: FastifyRepl
     status: request.query.status,
     search: request.query.search,
     limit: request.query.limit ? Number.parseInt(request.query.limit, 10) : undefined,
-    offset: request.query.offset ? Number.parseInt(request.query.offset, 10) : undefined
+    offset: request.query.offset ? Number.parseInt(request.query.offset, 10) : undefined,
+    sortField: request.query.sortField,
+    sortOrder: request.query.sortOrder
   };
 
   const result = await service.list(filters);

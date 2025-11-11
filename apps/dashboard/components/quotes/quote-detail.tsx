@@ -39,7 +39,7 @@ type QuoteDetailProps = {
 
 async function fetchAccount(accountId: string): Promise<Account> {
   const response = await ensureResponse(
-    await fetch(`/api/accounts/${accountId}`, {
+    fetch(`/api/accounts/${accountId}`, {
       cache: "no-store",
       headers: {
         Accept: "application/json"

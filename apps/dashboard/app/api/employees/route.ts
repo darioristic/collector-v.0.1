@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { employees } from "@/lib/db/schema/employees";
 import {
   ListEmployeesQuery,
@@ -202,6 +202,7 @@ const withNoStore = (response: NextResponse) => {
 };
 
 export async function GET(request: NextRequest) {
+  const db = await getDb();
   const rawParams = Object.fromEntries(request.nextUrl.searchParams.entries());
   const parsedQuery = listEmployeesQuerySchema.safeParse(rawParams);
 
@@ -300,6 +301,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const db = await getDb();
   const json = await request.json().catch(() => null);
 
   const parsed = employeeFormSchema.safeParse(json);

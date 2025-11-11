@@ -42,20 +42,20 @@ export async function fetchOrders(filters?: {
     ? `sales/orders?${params.toString()}`
     : "sales/orders";
 
-  const response = await ensureResponse(await fetch(getApiUrl(endpoint)));
+  const response = await ensureResponse(fetch(getApiUrl(endpoint)));
   const payload = (await response.json()) as OrdersListResponse;
   return payload;
 }
 
 export async function fetchOrder(id: number): Promise<Order> {
-  const response = await ensureResponse(await fetch(getApiUrl(`sales/orders/${id}`)));
+  const response = await ensureResponse(fetch(getApiUrl(`sales/orders/${id}`)));
   const payload = (await response.json()) as { data: Order };
   return payload.data;
 }
 
 export async function createOrder(input: OrderCreateInput): Promise<Order> {
   const response = await ensureResponse(
-    await fetch(getApiUrl("sales/orders"), {
+    fetch(getApiUrl("sales/orders"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input)
@@ -67,7 +67,7 @@ export async function createOrder(input: OrderCreateInput): Promise<Order> {
 
 export async function updateOrder(id: number, input: OrderUpdateInput): Promise<Order> {
   const response = await ensureResponse(
-    await fetch(getApiUrl(`sales/orders/${id}`), {
+    fetch(getApiUrl(`sales/orders/${id}`), {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input)
@@ -79,7 +79,7 @@ export async function updateOrder(id: number, input: OrderUpdateInput): Promise<
 
 export async function deleteOrder(id: number): Promise<void> {
   await ensureResponse(
-    await fetch(getApiUrl(`sales/orders/${id}`), {
+    fetch(getApiUrl(`sales/orders/${id}`), {
       method: "DELETE"
     })
   );

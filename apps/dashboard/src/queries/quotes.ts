@@ -1,5 +1,5 @@
-import type { Quote, QuoteCreateInput, QuoteUpdateInput } from "@crm/types";
-import { ensureResponse } from "@/src/lib/fetch-utils";
+import type { Quote, QuoteCreateInput, QuoteSortField, QuoteUpdateInput } from "@crm/types";
+import { ensureResponse, getApiUrl } from "@/src/lib/fetch-utils";
 
 export const quoteKeys = {
   all: ["quotes"] as const,
@@ -26,6 +26,8 @@ export async function fetchQuotes(filters?: {
   search?: string;
   limit?: number;
   offset?: number;
+  sortField?: QuoteSortField;
+  sortOrder?: "asc" | "desc";
 }): Promise<QuotesListResponse> {
   const params = new URLSearchParams();
   if (filters?.companyId) params.append("companyId", filters.companyId);
@@ -34,44 +36,29 @@ export async function fetchQuotes(filters?: {
   if (filters?.search) params.append("search", filters.search);
   if (filters?.limit) params.append("limit", filters.limit.toString());
   if (filters?.offset) params.append("offset", filters.offset.toString());
+  if (filters?.sortField) params.append("sortField", filters.sortField);
+  if (filters?.sortOrder) params.append("sortOrder", filters.sortOrder);
 
-  const endpoint = params.toString() ? `/api/quotes?${params.toString()}` : "/api/quotes";
+  const endpoint = params.toString()
+    ? `sales/quotes?${params.toString()}`
+    : "sales/quotes";
 
-  console.log("[fetchQuotes] Calling API:", { endpoint });
-  const response = await ensureResponse(
-    await fetch(endpoint, {
-      cache: "no-store",
-      headers: {
-        Accept: "application/json"
-      }
-    })
-  );
+  const response = await ensureResponse(fetch(getApiUrl(endpoint)));
   const payload = (await response.json()) as QuotesListResponse;
-  console.log("[fetchQuotes] Response:", { total: payload.total, dataLength: payload.data?.length });
   return payload;
 }
 
 export async function fetchQuote(id: number): Promise<Quote> {
-  const response = await ensureResponse(
-    await fetch(`/api/quotes/${id}`, {
-      cache: "no-store",
-      headers: {
-        Accept: "application/json"
-      }
-    })
-  );
+  const response = await ensureResponse(fetch(getApiUrl(`sales/quotes/${id}`)));
   const payload = (await response.json()) as { data: Quote };
   return payload.data;
 }
 
 export async function createQuote(input: QuoteCreateInput): Promise<Quote> {
   const response = await ensureResponse(
-    await fetch("/api/quotes", {
+    fetch(getApiUrl("sales/quotes"), {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input)
     })
   );
@@ -81,12 +68,9 @@ export async function createQuote(input: QuoteCreateInput): Promise<Quote> {
 
 export async function updateQuote(id: number, input: QuoteUpdateInput): Promise<Quote> {
   const response = await ensureResponse(
-    await fetch(`/api/quotes/${id}`, {
+    fetch(getApiUrl(`sales/quotes/${id}`), {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input)
     })
   );
@@ -96,7 +80,7 @@ export async function updateQuote(id: number, input: QuoteUpdateInput): Promise<
 
 export async function deleteQuote(id: number): Promise<void> {
   await ensureResponse(
-    await fetch(`/api/quotes/${id}`, {
+    fetch(getApiUrl(`sales/quotes/${id}`), {
       method: "DELETE"
     })
   );

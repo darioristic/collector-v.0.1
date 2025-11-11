@@ -16,6 +16,13 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +38,11 @@ import {
 
 interface CompactViewProps {
   activities: Activity[];
+  total: number;
+  pageSize: number;
+  currentPage: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
   onEdit: (activity: Activity) => void;
   onStatusChange: (activity: Activity, status: ActivityStatus) => void;
   onView?: (activity: Activity) => void;
@@ -49,7 +61,17 @@ const getAvatarFallback = (activity: Activity) => {
   return activity.clientName.charAt(0).toUpperCase();
 };
 
-export function CompactView({ activities, onEdit, onStatusChange, onView }: CompactViewProps) {
+export function CompactView({
+  activities,
+  total,
+  pageSize,
+  currentPage,
+  onPageChange,
+  onPageSizeChange,
+  onEdit,
+  onStatusChange,
+  onView
+}: CompactViewProps) {
   if (activities.length === 0) {
     return (
       <Card className="border-dashed">
@@ -66,9 +88,12 @@ export function CompactView({ activities, onEdit, onStatusChange, onView }: Comp
     );
   }
 
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {activities.map((activity) => {
+    <div className="space-y-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {activities.map((activity) => {
         const ActivityIcon = ACTIVITY_TYPE_ICONS[activity.type];
         const dueDate = new Date(activity.dueDate);
 
@@ -174,7 +199,50 @@ export function CompactView({ activities, onEdit, onStatusChange, onView }: Comp
             </CardFooter>
           </Card>
         );
-      })}
+        })}
+      </div>
+
+      <div className="flex flex-col gap-3 border-t pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <span>Rows per page</span>
+          <Select
+            value={String(pageSize)}
+            onValueChange={(value) => onPageSizeChange(Number(value))}
+          >
+            <SelectTrigger className="h-8 w-[80px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[6, 12, 24, 48].map((size) => (
+                <SelectItem key={size} value={String(size)}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage <= 1}
+          >
+            Previous
+          </Button>
+          <span>
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage >= totalPages}
+          >
+            Next
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

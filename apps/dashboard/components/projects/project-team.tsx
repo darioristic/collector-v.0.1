@@ -42,7 +42,7 @@ type ProjectTeamProps = {
 
 const fetchUsers = async (): Promise<DirectoryUser[]> => {
   const response = await ensureResponse(
-    await fetch(getApiUrl("settings/users"), {
+    fetch(getApiUrl("settings/users"), {
       method: "GET",
       headers: {
         Accept: "application/json"

@@ -1,9 +1,9 @@
 import type { AccountContact } from "@crm/types";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { generateMeta } from "@/lib/utils";
 
-import ContactsDataTable from "./data-table";
+import ContactsPageClient from "./contacts-page-client";
+import type { Contact } from "./data-table";
 
 export async function generateMetadata() {
   return generateMeta({
@@ -14,14 +14,12 @@ export async function generateMetadata() {
   });
 }
 
-const apiBaseUrl = process.env.COLLECTOR_API_URL;
-
 async function getContacts(): Promise<AccountContact[]> {
-  if (!apiBaseUrl) {
+  if (!process.env.COLLECTOR_API_URL) {
     throw new Error("Environment variable COLLECTOR_API_URL is not defined.");
   }
 
-  const response = await fetch(`${apiBaseUrl}/api/accounts/contacts`, {
+  const response = await fetch(`${process.env.COLLECTOR_API_URL}/api/accounts/contacts`, {
     cache: "no-store",
     headers: {
       Accept: "application/json"
@@ -36,7 +34,7 @@ async function getContacts(): Promise<AccountContact[]> {
 }
 
 export default async function Page() {
-  let contacts: AccountContact[] = [];
+  let contacts: Contact[] = [];
   let error: string | null = null;
 
   try {
@@ -45,27 +43,5 @@ export default async function Page() {
     error = err instanceof Error ? err.message : "Unable to load contacts.";
   }
 
-  return (
-    <>
-      <div className="flex flex-col gap-6">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Contacts</h1>
-          <p className="text-muted-foreground text-base">
-            Browse account contacts and quickly find the people you collaborate with.
-            <br />
-            <br />
-          </p>
-        </div>
-      </div>
-
-      {error ? (
-        <Alert variant="destructive" className="mt-4">
-          <AlertTitle>Loading failed</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      ) : (
-        <ContactsDataTable data={contacts} />
-      )}
-    </>
-  );
+  return <ContactsPageClient data={contacts} error={error} />;
 }

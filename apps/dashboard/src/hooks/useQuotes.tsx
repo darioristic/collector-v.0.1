@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Quote, QuoteCreateInput, QuoteUpdateInput } from "@crm/types";
+import type { Quote, QuoteCreateInput, QuoteSortField, QuoteUpdateInput } from "@crm/types";
 
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -20,6 +20,8 @@ type UseQuotesOptions = {
   search?: string;
   limit?: number;
   offset?: number;
+  sortField?: QuoteSortField;
+  sortOrder?: "asc" | "desc";
 };
 
 export function useQuotes(options: UseQuotesOptions = {}) {

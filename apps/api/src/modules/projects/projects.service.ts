@@ -41,6 +41,11 @@ type UserRow = typeof users.$inferSelect;
 const DAY_IN_MS = 86_400_000;
 const DEFAULT_CURRENCY = "EUR";
 
+const uuidRegex =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const isUuid = (value: unknown): value is string =>
+  typeof value === "string" && uuidRegex.test(value);
+
 const statusLabelMap: Record<(typeof projectStatus.enumValues)[number], string> = {
   planned: "Pending",
   active: "Active",
@@ -166,7 +171,15 @@ export class ProjectsService {
   }
 
   async projectExists(id: string): Promise<boolean> {
-    const [row] = await this.database.select({ id: projects.id }).from(projects).where(eq(projects.id, id)).limit(1);
+    if (!isUuid(id)) {
+      return false;
+    }
+
+    const [row] = await this.database
+      .select({ id: projects.id })
+      .from(projects)
+      .where(eq(projects.id, id))
+      .limit(1);
     return Boolean(row);
   }
 
@@ -195,6 +208,10 @@ export class ProjectsService {
   }
 
   async updateProject(id: string, input: ProjectUpdateInput): Promise<ProjectDetails | null> {
+    if (!isUuid(id)) {
+      return null;
+    }
+
     const existing = await this.getProjectDetails(id);
 
     if (!existing) {
@@ -238,11 +255,22 @@ export class ProjectsService {
   }
 
   async deleteProject(id: string): Promise<boolean> {
-    const deleted = await this.database.delete(projects).where(eq(projects.id, id)).returning();
+    if (!isUuid(id)) {
+      return false;
+    }
+
+    const deleted = await this.database
+      .delete(projects)
+      .where(eq(projects.id, id))
+      .returning();
     return deleted.length > 0;
   }
 
   async getProjectDetails(id: string): Promise<ProjectDetails | null> {
+    if (!isUuid(id)) {
+      return null;
+    }
+
     const [projectRow] = await this.database
       .select({
         project: projects,
@@ -635,6 +663,10 @@ export class ProjectsService {
   }
 
   private async fetchProjectTasks(projectId: string): Promise<ProjectTask[]> {
+    if (!isUuid(projectId)) {
+      return [];
+    }
+
     const rows = await this.database
       .select({
         task: projectTasks,
@@ -653,6 +685,10 @@ export class ProjectsService {
   }
 
   private async getTaskById(taskId: string): Promise<ProjectTask | null> {
+    if (!isUuid(taskId)) {
+      return null;
+    }
+
     const [row] = await this.database
       .select({
         task: projectTasks,
@@ -685,6 +721,10 @@ export class ProjectsService {
   }
 
   private async fetchProjectTimeline(projectId: string): Promise<ProjectTimelineEvent[]> {
+    if (!isUuid(projectId)) {
+      return [];
+    }
+
     const rows = await this.database
       .select()
       .from(projectMilestones)
@@ -695,6 +735,10 @@ export class ProjectsService {
   }
 
   private async getTimelineEventById(eventId: string): Promise<ProjectTimelineEvent | null> {
+    if (!isUuid(eventId)) {
+      return null;
+    }
+
     const [row] = await this.database
       .select()
       .from(projectMilestones)
@@ -721,6 +765,10 @@ export class ProjectsService {
   }
 
   private async fetchProjectTeam(projectId: string): Promise<ProjectTeamMember[]> {
+    if (!isUuid(projectId)) {
+      return [];
+    }
+
     const rows = await this.database
       .select({
         membership: projectMembers,
@@ -742,6 +790,10 @@ export class ProjectsService {
   }
 
   private async fetchBudgetCategories(projectId: string): Promise<ProjectBudgetCategory[]> {
+    if (!isUuid(projectId)) {
+      return [];
+    }
+
     const rows = await this.database
       .select()
       .from(projectBudgetCategories)

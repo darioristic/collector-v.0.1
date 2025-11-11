@@ -19,7 +19,26 @@ export function getApiUrl(endpoint: string): string {
 /**
  * Ensures the fetch response is successful, otherwise throws an error
  */
-export async function ensureResponse(response: Response): Promise<Response> {
+export async function ensureResponse(request: Promise<Response>): Promise<Response> {
+  let response: Response;
+
+  try {
+    response = await request;
+  } catch (error) {
+    const connectionErrorMessage =
+      "Ne mogu da uspostavim vezu sa backend API-jem. Proveri da li je server pokrenut i da li je promenljiva NEXT_PUBLIC_API_URL ispravno podešena.";
+
+    if (error instanceof TypeError) {
+      throw new Error(connectionErrorMessage);
+    }
+
+    if (error instanceof Error) {
+      throw new Error(error.message || connectionErrorMessage);
+    }
+
+    throw new Error(connectionErrorMessage);
+  }
+
   if (!response.ok) {
     let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
 

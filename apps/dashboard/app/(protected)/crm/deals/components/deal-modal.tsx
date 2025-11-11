@@ -148,7 +148,9 @@ export default function DealModal({
                         </SelectTrigger>
                         <SelectContent>
                           {owners.length === 0 ? (
-                            <SelectItem value="">No owners available</SelectItem>
+                            <SelectItem value="__no_owner__" disabled>
+                              No owners available
+                            </SelectItem>
                           ) : null}
                           {owners.map((owner) => (
                             <SelectItem key={owner} value={owner}>

@@ -1,6 +1,6 @@
 "use server";
 
-import { db } from "@/lib/db";
+import { getDb } from "@/lib/db";
 import { deals, type Deal } from "@/lib/db/schema/deals";
 import { and, count, desc, eq, ilike, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -27,7 +27,10 @@ export type DealFilters = DealFiltersValues;
 
 const revalidateDeals = () => revalidatePath("/crm/deals");
 
+const dbPromise = getDb();
+
 export async function fetchDeals(params?: DealFilters) {
+  const db = await dbPromise;
   const filters = dealFiltersSchema.parse(params);
 
   const conditions = [];
@@ -59,6 +62,7 @@ export async function fetchDeals(params?: DealFilters) {
 }
 
 export async function fetchDealMetadata() {
+  const db = await dbPromise;
   const ownersPromise = db
     .select({ owner: deals.owner })
     .from(deals)
@@ -97,6 +101,7 @@ export async function fetchDealMetadata() {
 }
 
 export async function createDeal(input: DealFormValues) {
+  const db = await dbPromise;
   const data = dealFormSchema.parse(input);
 
   const [deal] = await db
@@ -118,6 +123,7 @@ export async function createDeal(input: DealFormValues) {
 }
 
 export async function updateDeal(id: string, input: Record<string, unknown>) {
+  const db = await dbPromise;
   if (!id) {
     throw new Error("Deal id is required.");
   }
@@ -145,6 +151,7 @@ export async function updateDeal(id: string, input: Record<string, unknown>) {
 }
 
 export async function deleteDeal(id: string) {
+  const db = await dbPromise;
   if (!id) {
     throw new Error("Deal id is required.");
   }
@@ -155,6 +162,7 @@ export async function deleteDeal(id: string) {
 }
 
 export async function updateDealStage(args: Record<string, unknown>) {
+  const db = await dbPromise;
   const payload = stageUpdateSchema.parse(args);
 
   const [deal] = await db
@@ -169,6 +177,7 @@ export async function updateDealStage(args: Record<string, unknown>) {
 }
 
 export async function bulkUpdateDealStages(updates: Array<Record<string, unknown>>) {
+  const db = await dbPromise;
   if (updates.length === 0) {
     return [];
   }

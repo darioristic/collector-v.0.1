@@ -15,7 +15,8 @@
 		"db:seed": "bun run --filter ./apps/api db:seed"
 	},
 	"dependencies": {
-		"@tiptap/core": "^2.27.1"
+		"@tiptap/core": "^2.27.1",
+		"dotenv": "^16.4.5"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.9.0",

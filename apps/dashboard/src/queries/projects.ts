@@ -50,7 +50,7 @@ const projectsEndpoint = "projects";
 
 export async function fetchProjects(): Promise<ProjectSummary[]> {
   const response = await ensureResponse(
-    await fetch(getApiUrl(projectsEndpoint), {
+    fetch(getApiUrl(projectsEndpoint), {
       method: "GET",
       headers: jsonHeaders,
       cache: "no-store"
@@ -63,7 +63,7 @@ export async function fetchProjects(): Promise<ProjectSummary[]> {
 
 export async function fetchProject(id: string): Promise<ProjectDetails> {
   const response = await ensureResponse(
-    await fetch(getApiUrl(`${projectsEndpoint}/${id}`), {
+    fetch(getApiUrl(`${projectsEndpoint}/${id}`), {
       method: "GET",
       headers: jsonHeaders,
       cache: "no-store"
@@ -76,7 +76,7 @@ export async function fetchProject(id: string): Promise<ProjectDetails> {
 
 export async function createProject(input: ProjectUpdatePayload): Promise<ProjectDetails> {
   const response = await ensureResponse(
-    await fetch(getApiUrl(projectsEndpoint), {
+    fetch(getApiUrl(projectsEndpoint), {
       method: "POST",
       headers: jsonHeaders,
       body: JSON.stringify(input)
@@ -89,7 +89,7 @@ export async function createProject(input: ProjectUpdatePayload): Promise<Projec
 
 export async function updateProject(id: string, input: ProjectUpdatePayload): Promise<ProjectDetails> {
   const response = await ensureResponse(
-    await fetch(getApiUrl(`${projectsEndpoint}/${id}`), {
+    fetch(getApiUrl(`${projectsEndpoint}/${id}`), {
       method: "PATCH",
       headers: jsonHeaders,
       body: JSON.stringify(input)
@@ -102,7 +102,7 @@ export async function updateProject(id: string, input: ProjectUpdatePayload): Pr
 
 export async function deleteProject(id: string): Promise<void> {
   await ensureResponse(
-    await fetch(getApiUrl(`${projectsEndpoint}/${id}`), {
+    fetch(getApiUrl(`${projectsEndpoint}/${id}`), {
       method: "DELETE",
       headers: jsonHeaders
     })
@@ -111,7 +111,7 @@ export async function deleteProject(id: string): Promise<void> {
 
 export async function fetchProjectTasks(projectId: string): Promise<ProjectTask[]> {
   const response = await ensureResponse(
-    await fetch(getApiUrl(`${projectsEndpoint}/${projectId}/tasks`), {
+    fetch(getApiUrl(`${projectsEndpoint}/${projectId}/tasks`), {
       method: "GET",
       headers: jsonHeaders,
       cache: "no-store"
@@ -127,7 +127,7 @@ export async function createProjectTask(
   input: CreateTaskPayload
 ): Promise<ProjectTask> {
   const response = await ensureResponse(
-    await fetch(getApiUrl(`${projectsEndpoint}/${projectId}/tasks`), {
+    fetch(getApiUrl(`${projectsEndpoint}/${projectId}/tasks`), {
       method: "POST",
       headers: jsonHeaders,
       body: JSON.stringify(input)
@@ -144,7 +144,7 @@ export async function updateProjectTask(
   input: UpdateTaskPayload
 ): Promise<ProjectTask> {
   const response = await ensureResponse(
-    await fetch(getApiUrl(`${projectsEndpoint}/${projectId}/tasks/${taskId}`), {
+    fetch(getApiUrl(`${projectsEndpoint}/${projectId}/tasks/${taskId}`), {
       method: "PATCH",
       headers: jsonHeaders,
       body: JSON.stringify(input)
@@ -157,7 +157,7 @@ export async function updateProjectTask(
 
 export async function deleteProjectTask(projectId: string, taskId: string): Promise<void> {
   await ensureResponse(
-    await fetch(getApiUrl(`${projectsEndpoint}/${projectId}/tasks/${taskId}`), {
+    fetch(getApiUrl(`${projectsEndpoint}/${projectId}/tasks/${taskId}`), {
       method: "DELETE",
       headers: jsonHeaders
     })
@@ -166,7 +166,7 @@ export async function deleteProjectTask(projectId: string, taskId: string): Prom
 
 export async function fetchProjectTimeline(projectId: string): Promise<ProjectTimelineEvent[]> {
   const response = await ensureResponse(
-    await fetch(getApiUrl(`${projectsEndpoint}/${projectId}/timeline`), {
+    fetch(getApiUrl(`${projectsEndpoint}/${projectId}/timeline`), {
       method: "GET",
       headers: jsonHeaders,
       cache: "no-store"
@@ -182,7 +182,7 @@ export async function createTimelineEvent(
   input: CreateTimelinePayload
 ): Promise<ProjectTimelineEvent> {
   const response = await ensureResponse(
-    await fetch(getApiUrl(`${projectsEndpoint}/${projectId}/timeline`), {
+    fetch(getApiUrl(`${projectsEndpoint}/${projectId}/timeline`), {
       method: "POST",
       headers: jsonHeaders,
       body: JSON.stringify(input)
@@ -199,7 +199,7 @@ export async function updateTimelineEvent(
   input: UpdateTimelinePayload
 ): Promise<ProjectTimelineEvent> {
   const response = await ensureResponse(
-    await fetch(getApiUrl(`${projectsEndpoint}/${projectId}/timeline/${eventId}`), {
+    fetch(getApiUrl(`${projectsEndpoint}/${projectId}/timeline/${eventId}`), {
       method: "PATCH",
       headers: jsonHeaders,
       body: JSON.stringify(input)
@@ -212,7 +212,7 @@ export async function updateTimelineEvent(
 
 export async function deleteTimelineEvent(projectId: string, eventId: string): Promise<void> {
   await ensureResponse(
-    await fetch(getApiUrl(`${projectsEndpoint}/${projectId}/timeline/${eventId}`), {
+    fetch(getApiUrl(`${projectsEndpoint}/${projectId}/timeline/${eventId}`), {
       method: "DELETE",
       headers: jsonHeaders
     })
@@ -221,7 +221,7 @@ export async function deleteTimelineEvent(projectId: string, eventId: string): P
 
 export async function fetchProjectTeam(projectId: string): Promise<ProjectTeamMember[]> {
   const response = await ensureResponse(
-    await fetch(getApiUrl(`${projectsEndpoint}/${projectId}/team`), {
+    fetch(getApiUrl(`${projectsEndpoint}/${projectId}/team`), {
       method: "GET",
       headers: jsonHeaders,
       cache: "no-store"
@@ -237,7 +237,7 @@ export async function addTeamMember(
   input: AddTeamMemberPayload
 ): Promise<ProjectTeamMember> {
   const response = await ensureResponse(
-    await fetch(getApiUrl(`${projectsEndpoint}/${projectId}/team`), {
+    fetch(getApiUrl(`${projectsEndpoint}/${projectId}/team`), {
       method: "POST",
       headers: jsonHeaders,
       body: JSON.stringify(input)
@@ -250,7 +250,7 @@ export async function addTeamMember(
 
 export async function removeTeamMember(projectId: string, userId: string): Promise<void> {
   await ensureResponse(
-    await fetch(getApiUrl(`${projectsEndpoint}/${projectId}/team/${userId}`), {
+    fetch(getApiUrl(`${projectsEndpoint}/${projectId}/team/${userId}`), {
       method: "DELETE",
       headers: jsonHeaders
     })
@@ -259,7 +259,7 @@ export async function removeTeamMember(projectId: string, userId: string): Promi
 
 export async function fetchProjectBudget(projectId: string): Promise<ProjectBudgetSummary> {
   const response = await ensureResponse(
-    await fetch(getApiUrl(`${projectsEndpoint}/${projectId}/budget`), {
+    fetch(getApiUrl(`${projectsEndpoint}/${projectId}/budget`), {
       method: "GET",
       headers: jsonHeaders,
       cache: "no-store"
@@ -275,7 +275,7 @@ export async function updateProjectBudget(
   input: UpdateBudgetPayload
 ): Promise<ProjectBudgetSummary> {
   const response = await ensureResponse(
-    await fetch(getApiUrl(`${projectsEndpoint}/${projectId}/budget`), {
+    fetch(getApiUrl(`${projectsEndpoint}/${projectId}/budget`), {
       method: "PATCH",
       headers: jsonHeaders,
       body: JSON.stringify(input)
@@ -291,7 +291,7 @@ export async function createBudgetCategory(
   input: CreateBudgetCategoryPayload
 ): Promise<ProjectBudgetCategory> {
   const response = await ensureResponse(
-    await fetch(getApiUrl(`${projectsEndpoint}/${projectId}/budget/categories`), {
+    fetch(getApiUrl(`${projectsEndpoint}/${projectId}/budget/categories`), {
       method: "POST",
       headers: jsonHeaders,
       body: JSON.stringify(input)
@@ -308,7 +308,7 @@ export async function updateBudgetCategory(
   input: UpdateBudgetCategoryPayload
 ): Promise<ProjectBudgetCategory> {
   const response = await ensureResponse(
-    await fetch(getApiUrl(`${projectsEndpoint}/${projectId}/budget/categories/${categoryId}`), {
+    fetch(getApiUrl(`${projectsEndpoint}/${projectId}/budget/categories/${categoryId}`), {
       method: "PATCH",
       headers: jsonHeaders,
       body: JSON.stringify(input)
@@ -324,7 +324,7 @@ export async function deleteBudgetCategory(
   categoryId: string
 ): Promise<void> {
   await ensureResponse(
-    await fetch(getApiUrl(`${projectsEndpoint}/${projectId}/budget/categories/${categoryId}`), {
+    fetch(getApiUrl(`${projectsEndpoint}/${projectId}/budget/categories/${categoryId}`), {
       method: "DELETE",
       headers: jsonHeaders
     })

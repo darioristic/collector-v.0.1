@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -12,9 +11,18 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
 import { useQuotes } from "@/src/hooks/useQuotes";
-import { Plus, Search } from "lucide-react";
+import type { QuoteSortField } from "@crm/types";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { TableToolbar } from "@/components/table-toolbar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import { QUOTE_STATUSES } from "@crm/types";
 
 const statusVariants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -24,24 +32,38 @@ const statusVariants: Record<string, "default" | "secondary" | "destructive" | "
   rejected: "destructive"
 };
 
-const STATUS_FILTERS = [
-  { value: "all", label: "All Quotes" },
-  ...QUOTE_STATUSES.map((status) => ({
-    value: status,
-    label: status.charAt(0).toUpperCase() + status.slice(1)
-  }))
-] as const;
+const SORT_OPTIONS: Array<{ value: QuoteSortField; label: string }> = [
+  { value: "issueDate", label: "Issue date" },
+  { value: "expiryDate", label: "Expiry date" },
+  { value: "total", label: "Amount" },
+  { value: "quoteNumber", label: "Quote #" },
+  { value: "createdAt", label: "Created" }
+];
+
+const DEFAULT_SORT_FIELD: QuoteSortField = "createdAt";
+const DEFAULT_SORT_ORDER: "asc" | "desc" = "desc";
 
 type QuoteListProps = {
   companyId?: string;
   contactId?: string;
   onQuoteClick?: (quoteId: number) => void;
   onCreateQuote?: () => void;
+  toolbarActions?: ReactNode | null;
+  showCreateAction?: boolean;
 };
 
-export function QuoteList({ companyId, contactId, onQuoteClick, onCreateQuote }: QuoteListProps) {
+export function QuoteList({
+  companyId,
+  contactId,
+  onQuoteClick,
+  onCreateQuote,
+  toolbarActions: toolbarActionsProp,
+  showCreateAction = true
+}: QuoteListProps) {
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
+  const [sortField, setSortField] = useState<QuoteSortField>(DEFAULT_SORT_FIELD);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">(DEFAULT_SORT_ORDER);
   const [page, setPage] = useState(0);
   const limit = 10;
 
@@ -55,57 +77,109 @@ export function QuoteList({ companyId, contactId, onQuoteClick, onCreateQuote }:
   } = useQuotes({
     companyId,
     contactId,
-    status: statusFilter !== "all" ? statusFilter : undefined,
+    status: statusFilter,
     search: search || undefined,
     limit,
-    offset: page * limit
+    offset: page * limit,
+    sortField,
+    sortOrder
   });
 
   const quotes = quotesResponse?.data || [];
   const total = quotesResponse?.total || 0;
   const totalPages = Math.ceil(total / limit);
 
+  const hasActiveFilters = useMemo(() => {
+    return (
+      search.trim().length > 0 ||
+      Boolean(statusFilter) ||
+      sortField !== DEFAULT_SORT_FIELD ||
+      sortOrder !== DEFAULT_SORT_ORDER
+    );
+  }, [search, statusFilter, sortField, sortOrder]);
+
+  const handleResetFilters = () => {
+    setSearch("");
+    setStatusFilter(undefined);
+    setSortField(DEFAULT_SORT_FIELD);
+    setSortOrder(DEFAULT_SORT_ORDER);
+    setPage(0);
+  };
+
+  const toolbarActions =
+    toolbarActionsProp !== undefined ? (
+      toolbarActionsProp
+    ) : onCreateQuote && showCreateAction ? (
+      <Button
+        type="button"
+        onClick={onCreateQuote}
+        disabled={isFetching && !quotes.length}
+        className="gap-2 md:order-2">
+        <Plus className="size-4" aria-hidden="true" />
+        New Quote
+      </Button>
+    ) : null;
+
   return (
     <div className="space-y-6">
-      <div className="space-y-3">
-        <h2 className="sr-only">Quotes</h2>
-        <div className="flex flex-col gap-3 md:flex-row md:items-center">
-          <div className="relative w-full md:w-[360px] md:min-w-[280px] md:flex-1">
-            <Search className="text-muted-foreground absolute top-2.5 left-2 h-4 w-4" />
-            <Input
-              placeholder="Search quotes by number, company, or contact"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(0);
-              }}
-              className="pl-8"
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2 md:ml-auto md:justify-end">
-            {onCreateQuote && (
-              <Button onClick={onCreateQuote} size="sm" className="min-w-[140px]">
-                <Plus className="mr-2 h-4 w-4" />
-                New Quote
-              </Button>
-            )}
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {STATUS_FILTERS.map((filter) => (
-            <Button
-              key={filter.value}
-              size="sm"
-              variant={statusFilter === filter.value ? "default" : "secondary"}
-              onClick={() => {
-                setStatusFilter(filter.value);
-                setPage(0);
-              }}>
-              {filter.label}
-            </Button>
-          ))}
-        </div>
-      </div>
+      <h2 className="sr-only">Quotes</h2>
+
+      <TableToolbar
+        search={{
+          value: search,
+          onChange: (value) => {
+            setSearch(value);
+            setPage(0);
+          },
+          placeholder: "Search by quote number, client, or contact",
+          ariaLabel: "Search quotes",
+          isDisabled: isFetching && !quotes.length
+        }}
+        filters={
+          <Select
+            value={statusFilter ?? "__all__"}
+            onValueChange={(value) => {
+              setStatusFilter(value === "__all__" ? undefined : value);
+              setPage(0);
+            }}
+            disabled={isFetching && !quotes.length}>
+            <SelectTrigger className="md:w-44" aria-label="Filter by status">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All statuses</SelectItem>
+              {QUOTE_STATUSES.map((status) => (
+                <SelectItem key={status} value={status}>
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        }
+        sort={{
+          value: sortField,
+          options: SORT_OPTIONS,
+          onChange: (value) => {
+            setSortField(value as QuoteSortField);
+            setPage(0);
+          },
+          order: sortOrder,
+          onOrderToggle: () => {
+            setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+            setPage(0);
+          },
+          disabled: isFetching && !quotes.length,
+          placeholder: "Sort by",
+          ariaLabel: "Sort quotes",
+          ascLabel: "Sort descending",
+          descLabel: "Sort ascending"
+        }}
+        reset={{
+          onReset: handleResetFilters,
+          disabled: !hasActiveFilters
+        }}
+        actions={toolbarActions}
+      />
 
       <div className="bg-background overflow-hidden rounded-xl border shadow-sm">
         {isError ? (
@@ -139,6 +213,7 @@ export function QuoteList({ companyId, contactId, onQuoteClick, onCreateQuote }:
                 <TableHeader>
                   <TableRow>
                     <TableHead>Quote #</TableHead>
+                    <TableHead>Client</TableHead>
                     <TableHead>Issue Date</TableHead>
                     <TableHead>Expiry Date</TableHead>
                     <TableHead>Amount</TableHead>
@@ -153,6 +228,7 @@ export function QuoteList({ companyId, contactId, onQuoteClick, onCreateQuote }:
                       className={onQuoteClick ? "cursor-pointer" : ""}
                       onClick={() => onQuoteClick?.(quote.id)}>
                       <TableCell className="font-medium">{quote.quoteNumber}</TableCell>
+                      <TableCell>{quote.companyName || "—"}</TableCell>
                       <TableCell>{quote.issueDate}</TableCell>
                       <TableCell>{quote.expiryDate || "—"}</TableCell>
                       <TableCell>{formatCurrency(quote.total, quote.currency)}</TableCell>

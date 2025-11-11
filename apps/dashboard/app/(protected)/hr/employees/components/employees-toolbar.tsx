@@ -20,6 +20,8 @@ import {
 } from "../constants";
 import type { EmployeesQueryState } from "../types";
 
+const ALL_FILTER_VALUE = "__all__";
+
 interface EmployeesToolbarProps {
   searchValue: string;
   onSearchChange: (value: string) => void;
@@ -71,15 +73,17 @@ export default function EmployeesToolbar({
 
         <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
           <Select
-            value={filters.status ?? ""}
-            onValueChange={(value) => onFiltersChange({ status: value || undefined })}
+            value={filters.status ?? ALL_FILTER_VALUE}
+            onValueChange={(value) =>
+              onFiltersChange({ status: value === ALL_FILTER_VALUE ? undefined : value })
+            }
             disabled={isDisabled}
           >
             <SelectTrigger className="sm:w-40" aria-label="Filter by status">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All statuses</SelectItem>
+              <SelectItem value={ALL_FILTER_VALUE}>All statuses</SelectItem>
               {EMPLOYMENT_STATUS_OPTIONS.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
@@ -89,15 +93,17 @@ export default function EmployeesToolbar({
           </Select>
 
           <Select
-            value={filters.employmentType ?? ""}
-            onValueChange={(value) => onFiltersChange({ employmentType: value || undefined })}
+            value={filters.employmentType ?? ALL_FILTER_VALUE}
+            onValueChange={(value) =>
+              onFiltersChange({ employmentType: value === ALL_FILTER_VALUE ? undefined : value })
+            }
             disabled={isDisabled}
           >
             <SelectTrigger className="sm:w-40" aria-label="Filter by employment type">
               <SelectValue placeholder="Employment type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All types</SelectItem>
+              <SelectItem value={ALL_FILTER_VALUE}>All types</SelectItem>
               {EMPLOYMENT_TYPE_OPTIONS.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
@@ -107,15 +113,17 @@ export default function EmployeesToolbar({
           </Select>
 
           <Select
-            value={filters.department ?? ""}
-            onValueChange={(value) => onFiltersChange({ department: value || undefined })}
+            value={filters.department ?? ALL_FILTER_VALUE}
+            onValueChange={(value) =>
+              onFiltersChange({ department: value === ALL_FILTER_VALUE ? undefined : value })
+            }
             disabled={isDisabled}
           >
             <SelectTrigger className="sm:w-40" aria-label="Filter by department">
               <SelectValue placeholder="Department" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All departments</SelectItem>
+              <SelectItem value={ALL_FILTER_VALUE}>All departments</SelectItem>
               {availableDepartments.map((department) => (
                 <SelectItem key={department} value={department}>
                   {department}

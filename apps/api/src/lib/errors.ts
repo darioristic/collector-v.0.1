@@ -10,6 +10,9 @@ export type HttpErrorPayload = {
 export type ApiReply<T> = T | HttpErrorPayload;
 export type ApiDataReply<T> = { data: T } | HttpErrorPayload;
 export type ApiListReply<T> = { data: T[] } | HttpErrorPayload;
+export type ApiListReplyWithMeta<T> =
+  | { data: T[]; meta: { total: number; limit?: number; offset?: number } }
+  | HttpErrorPayload;
 
 const DEFAULT_ERROR = "Error";
 
