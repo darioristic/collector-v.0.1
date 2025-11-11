@@ -1,165 +1,180 @@
-import Fastify, { type FastifyInstance, type FastifyPluginAsync, type FastifyLoggerOptions } from "fastify";
+import Fastify, {
+	type FastifyInstance,
+	type FastifyPluginAsync,
+	type FastifyLoggerOptions,
+} from "fastify";
 import { readdir } from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { db, type AppDatabase } from "./db";
+import { db, type AppDatabase } from "./db/index.js";
 import corsPlugin from "./plugins/cors";
 import errorHandlerPlugin from "./plugins/error-handler";
 import openApiPlugin from "./plugins/openapi";
 import healthRoutes from "./routes/health";
 
 type PrettyLoggerOptions = FastifyLoggerOptions & {
-  transport: {
-    target: string;
-    options?: Record<string, unknown>;
-  };
+	transport: {
+		target: string;
+		options?: Record<string, unknown>;
+	};
 };
 
 const createLogger = (): FastifyLoggerOptions => {
-  const baseLevel = process.env.LOG_LEVEL ?? (process.env.NODE_ENV === "production" ? "info" : "debug");
+	const baseLevel =
+		process.env.LOG_LEVEL ??
+		(process.env.NODE_ENV === "production" ? "info" : "debug");
 
-  if (process.env.NODE_ENV === "production") {
-    return {
-      level: baseLevel
-    };
-  }
+	if (process.env.NODE_ENV === "production") {
+		return {
+			level: baseLevel,
+		};
+	}
 
-  const devLogger: PrettyLoggerOptions = {
-    level: baseLevel,
-    transport: {
-      target: "pino-pretty",
-      options: {
-        colorize: true,
-        singleLine: false,
-        translateTime: "SYS:standard"
-      }
-    }
-  };
+	const devLogger: PrettyLoggerOptions = {
+		level: baseLevel,
+		transport: {
+			target: "pino-pretty",
+			options: {
+				colorize: true,
+				singleLine: false,
+				translateTime: "SYS:standard",
+			},
+		},
+	};
 
-  return devLogger;
+	return devLogger;
 };
 
 const registerHealthcheck = (app: FastifyInstance) =>
-  app.register(healthRoutes, { prefix: "/api" });
+	app.register(healthRoutes, { prefix: "/api" });
 
 const modulesBaseUrl = new URL("./modules/", import.meta.url);
 const modulesPath = fileURLToPath(modulesBaseUrl);
 
 const loadModule = async (
-  app: FastifyInstance,
-  moduleName: string
+	app: FastifyInstance,
+	moduleName: string,
 ): Promise<FastifyPluginAsync | undefined> => {
-  const candidates = [`./${moduleName}/index.ts`, `./${moduleName}/index.js`];
+	const candidates = [`./${moduleName}/index.ts`, `./${moduleName}/index.js`];
 
-  for (const candidate of candidates) {
-    const moduleUrl = new URL(candidate, modulesBaseUrl);
+	for (const candidate of candidates) {
+		const moduleUrl = new URL(candidate, modulesBaseUrl);
 
-    try {
-      const importedModule = await import(moduleUrl.href);
+		try {
+			const importedModule = await import(moduleUrl.href);
 
-      if (typeof importedModule.default === "function") {
-        return importedModule.default as FastifyPluginAsync;
-      }
-    } catch (error) {
-      const nodeError = error as NodeJS.ErrnoException;
+			if (typeof importedModule.default === "function") {
+				return importedModule.default as FastifyPluginAsync;
+			}
+		} catch (error) {
+			const nodeError = error as NodeJS.ErrnoException;
 
-      if (
-        nodeError?.code === "ERR_MODULE_NOT_FOUND" ||
-        nodeError?.code === "MODULE_NOT_FOUND" ||
-        (nodeError instanceof Error && nodeError.message.includes("Cannot find module"))
-      ) {
-        continue;
-      }
+			if (
+				nodeError?.code === "ERR_MODULE_NOT_FOUND" ||
+				nodeError?.code === "MODULE_NOT_FOUND" ||
+				(nodeError instanceof Error &&
+					nodeError.message.includes("Cannot find module"))
+			) {
+				continue;
+			}
 
-      app.log.error({ err: error, module: moduleName }, "Failed to import module");
-      return undefined;
-    }
-  }
+			app.log.error(
+				{ err: error, module: moduleName },
+				"Failed to import module",
+			);
+			return undefined;
+		}
+	}
 
-  return undefined;
+	return undefined;
 };
 
 const registerModules = async (app: FastifyInstance) => {
-  let entries: Array<{ name: string; isDirectory(): boolean }>;
+	let entries: Array<{ name: string; isDirectory(): boolean }>;
 
-  try {
-    entries = await readdir(modulesPath, { withFileTypes: true });
-  } catch (error) {
-    const nodeError = error as NodeJS.ErrnoException;
+	try {
+		entries = await readdir(modulesPath, { withFileTypes: true });
+	} catch (error) {
+		const nodeError = error as NodeJS.ErrnoException;
 
-    if (nodeError?.code === "ENOENT") {
-      app.log.warn("No modules directory found, skipping module registration");
-      return;
-    }
+		if (nodeError?.code === "ENOENT") {
+			app.log.warn("No modules directory found, skipping module registration");
+			return;
+		}
 
-    throw error;
-  }
+		throw error;
+	}
 
-  for (const entry of entries) {
-    if (!entry.isDirectory()) {
-      continue;
-    }
+	for (const entry of entries) {
+		if (!entry.isDirectory()) {
+			continue;
+		}
 
-    const modulePlugin = await loadModule(app, entry.name);
+		const modulePlugin = await loadModule(app, entry.name);
 
-    if (!modulePlugin) {
-      throw new Error(`Module "${entry.name}" failed to load or is missing a default export.`);
-    }
+		if (!modulePlugin) {
+			throw new Error(
+				`Module "${entry.name}" failed to load or is missing a default export.`,
+			);
+		}
 
-    try {
-      await app.register(modulePlugin, { prefix: "/api" });
-      app.log.info({ module: entry.name }, "Module registered");
-    } catch (error) {
-      app.log.error({ err: error, module: entry.name }, "Failed to register module");
-      throw error;
-    }
-  }
+		try {
+			await app.register(modulePlugin, { prefix: "/api" });
+			app.log.info({ module: entry.name }, "Module registered");
+		} catch (error) {
+			app.log.error(
+				{ err: error, module: entry.name },
+				"Failed to register module",
+			);
+			throw error;
+		}
+	}
 };
 
 export const buildServer = async () => {
-  const logger = createLogger();
-  const app = Fastify({ logger });
-  const database: AppDatabase = db;
+	const logger = createLogger();
+	const app = Fastify({ logger });
+	const database: AppDatabase = db;
 
-  if (!app.hasDecorator("db")) {
-    app.decorate("db", { getter: () => database });
-  }
+	if (!app.hasDecorator("db")) {
+		app.decorate("db", { getter: () => database });
+	}
 
-  if (!app.hasRequestDecorator("db")) {
-    app.decorateRequest("db", { getter: () => database });
-  }
+	if (!app.hasRequestDecorator("db")) {
+		app.decorateRequest("db", { getter: () => database });
+	}
 
-  await app.register(corsPlugin);
-  await app.register(errorHandlerPlugin);
-  await app.register(openApiPlugin);
-  await registerHealthcheck(app);
-  await registerModules(app);
+	await app.register(corsPlugin);
+	await app.register(errorHandlerPlugin);
+	await app.register(openApiPlugin);
+	await registerHealthcheck(app);
+	await registerModules(app);
 
-  return app;
+	return app;
 };
 
 const fastify = await buildServer();
 
 const start = async () => {
-  try {
-    await fastify.listen({
-      port: Number(process.env.PORT ?? 4000),
-      host: process.env.HOST ?? "0.0.0.0"
-    });
+	try {
+		await fastify.listen({
+			port: Number(process.env.PORT ?? 4000),
+			host: process.env.HOST ?? "0.0.0.0",
+		});
 
-    fastify.log.info("API server is listening");
-  } catch (error) {
-    fastify.log.error(error);
-    process.exit(1);
-  }
+		fastify.log.info("API server is listening");
+	} catch (error) {
+		fastify.log.error(error);
+		process.exit(1);
+	}
 };
 
 const isMain =
-  typeof process.argv[1] === "string" && import.meta.url === pathToFileURL(process.argv[1]).href;
+	typeof process.argv[1] === "string" &&
+	import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isMain) {
-  void start();
+	void start();
 }
 
 export default fastify;
-

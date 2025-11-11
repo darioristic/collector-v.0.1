@@ -1,3 +1,5 @@
+"use client";
+
 import { useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { format, parseISO } from "date-fns";

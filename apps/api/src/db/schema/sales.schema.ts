@@ -53,7 +53,7 @@ export const quotes = pgTable(
     subtotal: numeric("subtotal", { precision: 14, scale: 2 }).default("0").notNull(),
     tax: numeric("tax", { precision: 14, scale: 2 }).default("0").notNull(),
     total: numeric("total", { precision: 14, scale: 2 }).default("0").notNull(),
-    status: text("status").default("draft").notNull(),
+    status: quoteStatus("status").default("draft").notNull(),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
@@ -115,7 +115,7 @@ export const orders = pgTable(
     subtotal: numeric("subtotal", { precision: 14, scale: 2 }).default("0").notNull(),
     tax: numeric("tax", { precision: 14, scale: 2 }).default("0").notNull(),
     total: numeric("total", { precision: 14, scale: 2 }).default("0").notNull(),
-    status: text("status").default("pending").notNull(),
+    status: orderStatus("status").default("pending").notNull(),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
