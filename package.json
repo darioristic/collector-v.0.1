@@ -1,25 +1,28 @@
 {
-  "name": "collector-dashboard-monorepo",
-  "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
-  "scripts": {
-    "dev": "bun scripts/dev.ts",
-    "dev:raw": "bun run --filter ./apps/dashboard dev & bun run --filter api dev",
-    "build": "bun run --filter ./apps/dashboard build && bun run --filter api build && bun run --filter @crm/ui build && bun run --filter @crm/types build && bun run --filter config build",
-    "lint": "bunx eslint --config packages/config/eslint.config.js \"apps/**/*.{ts,tsx,js,jsx}\" \"packages/**/*.{ts,tsx,js,jsx}\""
-  },
-  "dependencies": {
-    "@tiptap/core": "^2.27.1"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.9.0",
-    "@types/node": "^20.16.5",
-    "eslint": "^9.29.0",
-    "typescript": "^5.8.3",
-    "typescript-eslint": "^8.14.0"
-  }
+	"name": "collector-dashboard-monorepo",
+	"private": true,
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
+	"scripts": {
+		"dev": "bun scripts/dev.ts",
+		"dev:raw": "bun run --filter ./apps/dashboard dev & bun run --filter api dev",
+		"build": "bun run --filter ./apps/dashboard build && bun run --filter api build && bun run --filter @crm/ui build && bun run --filter @crm/types build && bun run --filter config build",
+		"lint": "bunx eslint --config packages/config/eslint.config.js \"apps/**/*.{ts,tsx,js,jsx}\" \"packages/**/*.{ts,tsx,js,jsx}\"",
+		"test": "bun run --filter ./apps/api test && bun run --filter ./apps/dashboard test",
+		"db:migrate": "bun run --filter ./apps/api db:migrate",
+		"db:seed": "bun run --filter ./apps/api db:seed"
+	},
+	"dependencies": {
+		"@tiptap/core": "^2.27.1"
+	},
+	"devDependencies": {
+		"@eslint/js": "^9.9.0",
+		"@types/node": "^20.16.5",
+		"eslint": "^9.29.0",
+		"typescript": "^5.8.3",
+		"typescript-eslint": "^8.14.0",
+		"vitest": "^2.1.3"
+	}
 }
-

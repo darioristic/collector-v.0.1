@@ -1,7 +1,7 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TYPE "user_status" AS ENUM ('active', 'inactive', 'invited');
-CREATE TYPE "account_type" AS ENUM ('company', 'individual');
+CREATE TYPE "account_type" AS ENUM ('customer', 'partner', 'vendor');
 
 CREATE TABLE IF NOT EXISTS "users" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -17,7 +17,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS "users_email_key" ON "users" ("email");
 CREATE TABLE IF NOT EXISTS "accounts" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "name" text NOT NULL,
-  "type" "account_type" NOT NULL DEFAULT 'company',
+  "type" "account_type" NOT NULL DEFAULT 'customer',
   "email" text NOT NULL,
   "phone" text,
   "website" text,

@@ -18,21 +18,54 @@ This repository is organised as a Bun workspace that contains the existing Next.
    bun install
    ```
 
-2. **Run the apps in development**
+2. **Pokreni razvojno okruženje jednom skriptom**
 
    ```sh
+   bun scripts/dev.ts
+   ```
+
+   Podrazumevano se koristi lokalni (Bun) režim:
+   - proverava da li su portovi `4000` (API) i `3000` (Next.js) slobodni i po potrebi gasi procese koji ih drže;
+   - izvršava Drizzle migracije i seed (`bun run db:migrate`, `bun run db:seed` u `apps/api`);
+   - startuje API (`bun run dev` u `apps/api`) i dashboard (`bun run dev` u `apps/dashboard`) uz stream oznake `[api]` i `[web]` u konzoli;
+   - bezbedno gasi sve procese na `Ctrl+C`.
+
+   **Docker režim (deterministična infrastruktura):**
+
+   ```sh
+   bun scripts/dev.ts --docker
+   ```
+
+   Skripta tada:
+   - proverava dostupnost Docker Compose-a;
+   - pokreće `postgres` i `redis` servise (`docker compose up -d postgres redis`), čeka da pređu u `running/healthy` stanje i ispisuje logove ako se neki servis ugasi;
+   - gradi produkcijsku API sliku iz `apps/api/Dockerfile.prod` i podiže `api` servis (`docker compose up -d api`), što automatski pokreće migracije (`node dist/db/migrate.js`) pre starta servera;
+   - prati logove svih servisa (`docker compose logs -f postgres redis api`) dok ne prekineš proces;
+   - na `Ctrl+C` radi `docker compose down --remove-orphans` i zatvara sve kreirane procese.
+
+   Opcija `--local` forsira lokalni režim čak i ako proslediš `--docker` (korisno kada želiš samo da startuješ procese bez gašenja infrastrukture).
+
+3. **Ručno pokretanje (opciono)**
+
+   Ako ti iz nekog razloga više odgovara ručna kontrola:
+
+   ```sh
+   docker compose up -d
    bun run dev
    ```
 
-   This starts the dashboard and the API in parallel.
+   Docker Compose pokreće:
+   - `postgres:17.2-alpine` na portu `5432` (korisnik/lozinka/baza: `collector / collector / collector`);
+   - `redis:7-alpine` na portu `6379`;
+   - API kontejner koji sluša na `4000`, izvršava migracije pri startu i koristi prethodne servise.
 
-3. **Build all workspaces**
+4. **Build all workspaces**
 
    ```sh
    bun run build
    ```
 
-4. **Lint using the shared configuration**
+5. **Lint using the shared configuration**
 
    ```sh
    bun run lint
@@ -52,9 +85,10 @@ The API server loads variables from `.env` / `.env.local` at the repository root
 # apps/api
 HOST=0.0.0.0
 PORT=4000
-DATABASE_URL=postgresql://collector:collector@localhost:5432/collector_dashboard
+DATABASE_URL=postgresql://collector:collector@localhost:5432/collector
 DB_MAX_CONNECTIONS=10
 DB_SSL=false
+REDIS_URL=redis://localhost:6379
 
 # apps/dashboard
 NEXT_PUBLIC_API_BASE_URL=http://localhost:4000/api
@@ -68,11 +102,14 @@ Copy the snippet above into `.env.local` (in the repo root) or into the respecti
 Additional helper scripts are available from the workspace root:
 
 ```sh
-# Generate SQL migrations from schema changes
-bun run db:generate
-
 # Apply migrations to the configured database
 bun run db:migrate
+
+# Seed development data (optional)
+bun run db:seed
+
+# Generate SQL migrations from schema changes (advanced)
+bun run --filter ./apps/api db:generate
 ```
 
 ## Deploying with Tekton on OpenShift

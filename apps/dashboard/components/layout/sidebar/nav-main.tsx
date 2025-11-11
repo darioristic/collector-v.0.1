@@ -96,9 +96,10 @@ export const navItems: NavGroup[] = [
     items: [
       {
         title: "Accounts",
-        href: "/accounts/contacts",
+        href: "/accounts/companies",
         icon: UsersIcon,
         items: [
+          { title: "Companies", href: "/accounts/companies" },
           { title: "Contacts", href: "/accounts/contacts" }
         ]
       },
@@ -118,8 +119,9 @@ export const navItems: NavGroup[] = [
         href: "/crm",
         icon: ChartBarDecreasingIcon,
         items: [
-          { title: "Leads", href: "/crm?tab=leads" },
-          { title: "Deals", href: "/crm?tab=deals" },
+          { title: "Overview", href: "/crm" },
+          { title: "Leads", href: "/crm/leads" },
+          { title: "Deals", href: "/crm/deals" },
           { title: "Activities", href: "/crm?tab=activities" },
           { title: "Reports", href: "/crm?tab=reports" }
         ]
@@ -153,10 +155,11 @@ export const navItems: NavGroup[] = [
       },
       {
         title: "HR",
-        href: "/employee-dashboard",
+        href: "/hr/employees",
         icon: UsersIcon,
         items: [
-          { title: "Employees", href: "/employee-dashboard" },
+          { title: "Employees", href: "/hr/employees" },
+          { title: "Dashboard", href: "/employee-dashboard" },
           { title: "Departments", href: "/employee-dashboard?tab=departments" },
           { title: "Payroll", href: "/employee-dashboard?tab=payroll" }
         ]

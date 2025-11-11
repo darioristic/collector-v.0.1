@@ -32,7 +32,7 @@ Glavne sekcije su fokusirane na domen aplikacije:
 - **Sales** – prodajni KPI, nalozi, fakture i plaćanja.
 - **CRM** – accounts, leads i sales pipeline.
 - **Projects** – portfelj projekata i radni board.
-- **People** – HR pregled i planiranje prisutnosti.
+- **People / HR** – nova stranica `HR › Employees` za kompletno upravljanje zaposlenima (liste, filteri, drawer, modal) + legacy HR pregled i planiranje prisutnosti.
 - **Settings** – podešavanja radnog prostora i profil korisnika.
 
 Sekundarne demonstracione stranice iz originalnog template-a više nisu prikazane u glavnom meniju, ali su i dalje dostupne direktno ukoliko zatrebaju tokom razvoja.
@@ -51,33 +51,29 @@ Logotip i meta podaci su prilagođeni Collector brendu (`Collector Dashboard`), 
 
 Za deljeni kod koristimo `packages/ui` i `packages/types` pakete iz monorepa.
 
-## Accounts stranica
+## HR Employees stranica
 
-- Nova stranica se nalazi na `app/(protected)/accounts/page.tsx`.
-- Fetch se izvršava serverski (`COLLECTOR_API_URL + /api/accounts`) i koristi deljene tipove iz `@crm/types`.
-- Tabela je izgrađena preko shadcn/ui komponenti i prikazuje osnovne informacije (naziv, tip, email, telefon, datumi).
-- U slučaju greške API-ja, korisnik dobija destruktivni alert i može ručno da pokuša ponovo.
-
-Test pokriva renderovanje tabele i empty state-a (`apps/dashboard/__tests__/accounts-table.test.tsx`) koristeći Vitest i React Testing Library:
-
-```sh
-bun run test
-```
+- Server komponenta živi na `app/(protected)/hr/employees/page.tsx` i prosleđuje inicijalni query klijentskom delu (`employees-page-client.tsx`).
+- Klijentska logika koristi React Query (`useInfiniteQuery`) za cursor-based paginaciju i optimistične mutacije (`create/update/delete`).
+- UI je podeljen u module (`components/` folder) – toolbar sa pretragom/filterima, TanStack tabela, responsive kartice za mobile, side drawer sa framer-motion animacijama, modal (react-hook-form + zod), delete alert.
+- API rute (`app/api/employees/`) rade CRUD operacije (Next.js route handlers + Drizzle ORM), a testski fajl (`__tests__/employees-api.test.ts`) mockuje data sloj da bismo validirali happy/invalid tokove bez pravog DB-a.
+- UI test (`__tests__/employees-ui.test.tsx`) pokriva modal validaciju, empty state i paginaciju ("Load more" dugme).
+- Navigacija/sidebar imaju novu stavku `HR › Employees`.
 
 ## E2E tok (lokalno)
 
-1. U `apps/api` izvršite:
+1. In `apps/api` run:
    ```sh
    bun install
    bun run db:migrate
    bun run db:seed
    bun run dev
    ```
-2. U `apps/dashboard` podesite `.env.local` sa `COLLECTOR_API_URL=http://localhost:4000` i startujte frontend:
+2. In `apps/dashboard` create `.env.local` with `COLLECTOR_API_URL=http://localhost:4000` and launch the frontend:
    ```sh
    bun install
    bun run dev
    ```
-3. Otvorite `http://localhost:3000/accounts/contacts` i proverite da li su se prikazala seedovana dva naloga.
+3. Open `http://localhost:3000/accounts/companies` and confirm that 50 seeded companies (each with two related contacts) are listed. Optionally visit `http://localhost:3000/accounts/contacts` to review all 100 contacts.
 
-Seed podaci služe kao mock scenario za demo i QA, pa se lako mogu proširiti ili osvežiti ponovnim pokretanjem `bun run db:seed`.
+Seed data acts as a mock scenario for demos and QA, and you can refresh it at any time by running `bun run db:seed` again.

@@ -10,7 +10,10 @@ const dataEnvelope = (schema: object) =>
     additionalProperties: false
   }) as const;
 
-const idParams = {
+const nullableString = { anyOf: [{ type: "string" }, { type: "null" }] } as const;
+const nullableNumber = { anyOf: [{ type: "number" }, { type: "null" }] } as const;
+
+const projectParams = {
   type: "object",
   properties: {
     id: { type: "string", minLength: 1 }
@@ -19,78 +22,299 @@ const idParams = {
   additionalProperties: false
 } as const;
 
-const projectProperties = {
-  id: { type: "string", minLength: 1 },
-  name: { type: "string", minLength: 1 },
-  accountId: { type: "string", minLength: 1 },
-  status: {
-    type: "string",
-    enum: ["draft", "inProgress", "completed", "onHold", "cancelled"]
+const taskParams = {
+  type: "object",
+  properties: {
+    id: { type: "string", minLength: 1 },
+    taskId: { type: "string", minLength: 1 }
   },
-  startDate: { type: "string", format: "date" },
-  endDate: { type: "string", format: "date" }
+  required: ["id", "taskId"],
+  additionalProperties: false
 } as const;
 
-const taskProperties = {
-  id: { type: "string", minLength: 1 },
-  projectId: { type: "string", minLength: 1 },
-  title: { type: "string", minLength: 1 },
-  assignee: { type: "string", minLength: 1 },
-  dueDate: { type: "string", format: "date" },
+const timelineParams = {
+  type: "object",
+  properties: {
+    id: { type: "string", minLength: 1 },
+    eventId: { type: "string", minLength: 1 }
+  },
+  required: ["id", "eventId"],
+  additionalProperties: false
+} as const;
+
+const teamParams = {
+  type: "object",
+  properties: {
+    id: { type: "string", minLength: 1 },
+    userId: { type: "string", minLength: 1 }
+  },
+  required: ["id", "userId"],
+  additionalProperties: false
+} as const;
+
+const categoryParams = {
+  type: "object",
+  properties: {
+    id: { type: "string", minLength: 1 },
+    categoryId: { type: "string", minLength: 1 }
+  },
+  required: ["id", "categoryId"],
+  additionalProperties: false
+} as const;
+
+const ownerSchema = {
+  anyOf: [
+    {
+      type: "object",
+      properties: {
+        id: nullableString,
+        name: nullableString,
+        email: nullableString
+      },
+      required: ["id", "name", "email"],
+      additionalProperties: false
+    },
+    { type: "null" }
+  ]
+} as const;
+
+const projectSummarySchema = {
+  type: "object",
+  properties: {
+    id: { type: "string", minLength: 1 },
+    name: { type: "string", minLength: 1 },
+    description: nullableString,
+    customer: nullableString,
+    status: {
+      type: "string",
+      enum: ["planned", "active", "on_hold", "completed"]
+    },
+    statusLabel: { type: "string" },
+    startDate: nullableString,
+    dueDate: nullableString,
+    progress: { type: "number" },
+    totalTasks: { type: "number" },
+    completedTasks: { type: "number" },
+    remainingDays: nullableNumber,
+    owner: ownerSchema
+  },
+  required: [
+    "id",
+    "name",
+    "description",
+    "customer",
+    "status",
+    "statusLabel",
+    "startDate",
+    "dueDate",
+    "progress",
+    "totalTasks",
+    "completedTasks",
+    "remainingDays",
+    "owner"
+  ],
+  additionalProperties: false
+} as const;
+
+const taskSchema = {
+  type: "object",
+  properties: {
+    id: { type: "string", minLength: 1 },
+    projectId: { type: "string", minLength: 1 },
+    title: { type: "string", minLength: 1 },
+    description: nullableString,
+    status: {
+      type: "string",
+      enum: ["todo", "in_progress", "blocked", "done"]
+    },
+    dueDate: nullableString,
+    assignee: ownerSchema,
+    createdAt: { type: "string" },
+    updatedAt: { type: "string" }
+  },
+  required: [
+    "id",
+    "projectId",
+    "title",
+    "description",
+    "status",
+    "dueDate",
+    "assignee",
+    "createdAt",
+    "updatedAt"
+  ],
+  additionalProperties: false
+} as const;
+
+const timelineEventSchema = {
+  type: "object",
+  properties: {
+    id: { type: "string", minLength: 1 },
+    projectId: { type: "string", minLength: 1 },
+    title: { type: "string", minLength: 1 },
+    description: nullableString,
+    date: nullableString,
+    status: {
+      type: "string",
+      enum: ["completed", "in_progress", "upcoming"]
+    },
+    createdAt: { type: "string" }
+  },
+  required: ["id", "projectId", "title", "description", "date", "status", "createdAt"],
+  additionalProperties: false
+} as const;
+
+const teamMemberSchema = {
+  type: "object",
+  properties: {
+    projectId: { type: "string", minLength: 1 },
+    userId: { type: "string", minLength: 1 },
+    role: { type: "string" },
+    name: nullableString,
+    email: nullableString,
+    addedAt: { type: "string" }
+  },
+  required: ["projectId", "userId", "role", "name", "email", "addedAt"],
+  additionalProperties: false
+} as const;
+
+const budgetCategorySchema = {
+  type: "object",
+  properties: {
+    id: { type: "string", minLength: 1 },
+    projectId: { type: "string", minLength: 1 },
+    category: { type: "string", minLength: 1 },
+    allocated: { type: "number" },
+    spent: { type: "number" },
+    createdAt: { type: "string" },
+    updatedAt: { type: "string" }
+  },
+  required: ["id", "projectId", "category", "allocated", "spent", "createdAt", "updatedAt"],
+  additionalProperties: false
+} as const;
+
+const budgetSummarySchema = {
+  type: "object",
+  properties: {
+    currency: { type: "string" },
+    total: { type: "number" },
+    spent: { type: "number" },
+    remaining: { type: "number" },
+    categories: {
+      type: "array",
+      items: budgetCategorySchema
+    }
+  },
+  required: ["currency", "total", "spent", "remaining", "categories"],
+  additionalProperties: false
+} as const;
+
+const projectDetailsSchema = {
+  type: "object",
+  properties: {
+    ...projectSummarySchema.properties,
+    budget: budgetSummarySchema,
+    tasks: {
+      type: "array",
+      items: taskSchema
+    },
+    timeline: {
+      type: "array",
+      items: timelineEventSchema
+    },
+    team: {
+      type: "array",
+      items: teamMemberSchema
+    },
+    quickStats: {
+      type: "object",
+      properties: {
+        totalTasks: { type: "number" },
+        completedTasks: { type: "number" },
+        remainingTasks: { type: "number" },
+        remainingDays: nullableNumber
+      },
+      required: ["totalTasks", "completedTasks", "remainingTasks", "remainingDays"],
+      additionalProperties: false
+    }
+  },
+  required: [
+    ...projectSummarySchema.required,
+    "budget",
+    "tasks",
+    "timeline",
+    "team",
+    "quickStats"
+  ],
+  additionalProperties: false
+} as const;
+
+const projectPayloadProperties = {
+  name: { type: "string", minLength: 1 },
+  description: nullableString,
+  customer: nullableString,
   status: {
     type: "string",
-    enum: ["todo", "inProgress", "done", "blocked"]
+    enum: ["planned", "active", "on_hold", "completed"]
+  },
+  startDate: nullableString,
+  dueDate: nullableString,
+  ownerId: nullableString,
+  accountId: nullableString,
+  budget: {
+    type: "object",
+    properties: {
+      total: nullableNumber,
+      spent: nullableNumber,
+      currency: nullableString
+    },
+    additionalProperties: false
   }
 } as const;
 
-const milestoneProperties = {
-  id: { type: "string", minLength: 1 },
-  projectId: { type: "string", minLength: 1 },
+const taskPayloadProperties = {
   title: { type: "string", minLength: 1 },
-  targetDate: { type: "string", format: "date" },
-  completed: { type: "boolean" }
+  description: nullableString,
+  status: {
+    type: "string",
+    enum: ["todo", "in_progress", "blocked", "done"]
+  },
+  assigneeId: nullableString,
+  dueDate: nullableString
 } as const;
 
-export type Project = {
-  id: string;
-  name: string;
-  accountId: string;
-  status: "draft" | "inProgress" | "completed" | "onHold" | "cancelled";
-  startDate: string;
-  endDate: string;
-};
+const timelinePayloadProperties = {
+  title: { type: "string", minLength: 1 },
+  description: nullableString,
+  status: {
+    type: "string",
+    enum: ["completed", "in_progress", "upcoming"]
+  },
+  date: nullableString
+} as const;
 
-export type Task = {
-  id: string;
-  projectId: string;
-  title: string;
-  assignee: string;
-  dueDate: string;
-  status: "todo" | "inProgress" | "done" | "blocked";
-};
+const teamPayloadProperties = {
+  userId: { type: "string", minLength: 1 },
+  role: nullableString
+} as const;
 
-export type Milestone = {
-  id: string;
-  projectId: string;
-  title: string;
-  targetDate: string;
-  completed: boolean;
-};
+const budgetPayloadProperties = {
+  total: nullableNumber,
+  spent: nullableNumber,
+  currency: nullableString
+} as const;
 
-export type CreateProjectBody = Pick<Project, "name" | "accountId" | "status" | "startDate" | "endDate">;
-export type CreateTaskBody = Pick<Task, "title" | "assignee" | "dueDate" | "status">;
-export type CreateMilestoneBody = Pick<Milestone, "title" | "targetDate" | "completed">;
+const budgetCategoryPayloadProperties = {
+  category: { type: "string", minLength: 1 },
+  allocated: nullableNumber,
+  spent: nullableNumber
+} as const;
 
 export const listProjectsSchema: FastifySchema = {
   response: {
     200: dataEnvelope({
       type: "array",
-      items: {
-        type: "object",
-        properties: projectProperties,
-        required: Object.keys(projectProperties),
-        additionalProperties: false
-      }
+      items: projectSummarySchema
     })
   }
 };
@@ -98,99 +322,202 @@ export const listProjectsSchema: FastifySchema = {
 export const createProjectSchema: FastifySchema = {
   body: {
     type: "object",
-    properties: {
-      name: projectProperties.name,
-      accountId: projectProperties.accountId,
-      status: projectProperties.status,
-      startDate: projectProperties.startDate,
-      endDate: projectProperties.endDate
-    },
-    required: ["name", "accountId", "status", "startDate", "endDate"],
+    properties: projectPayloadProperties,
+    required: ["name"],
     additionalProperties: false
   },
   response: {
-    201: dataEnvelope({
-      type: "object",
-      properties: projectProperties,
-      required: Object.keys(projectProperties),
-      additionalProperties: false
-    })
+    201: dataEnvelope(projectDetailsSchema)
+  }
+};
+
+export const getProjectSchema: FastifySchema = {
+  params: projectParams,
+  response: {
+    200: dataEnvelope(projectDetailsSchema)
+  }
+};
+
+export const updateProjectSchema: FastifySchema = {
+  params: projectParams,
+  body: {
+    type: "object",
+    properties: projectPayloadProperties,
+    additionalProperties: false
+  },
+  response: {
+    200: dataEnvelope(projectDetailsSchema)
+  }
+};
+
+export const deleteProjectSchema: FastifySchema = {
+  params: projectParams,
+  response: {
+    204: { type: "null" }
   }
 };
 
 export const listTasksSchema: FastifySchema = {
-  params: idParams,
+  params: projectParams,
   response: {
     200: dataEnvelope({
       type: "array",
-      items: {
-        type: "object",
-        properties: taskProperties,
-        required: Object.keys(taskProperties),
-        additionalProperties: false
-      }
+      items: taskSchema
     })
   }
 };
 
 export const createTaskSchema: FastifySchema = {
-  params: idParams,
+  params: projectParams,
   body: {
     type: "object",
-    properties: {
-      title: taskProperties.title,
-      assignee: taskProperties.assignee,
-      dueDate: taskProperties.dueDate,
-      status: taskProperties.status
-    },
-    required: ["title", "assignee", "dueDate", "status"],
+    properties: taskPayloadProperties,
+    required: ["title"],
     additionalProperties: false
   },
   response: {
-    201: dataEnvelope({
-      type: "object",
-      properties: taskProperties,
-      required: Object.keys(taskProperties),
-      additionalProperties: false
-    })
+    201: dataEnvelope(taskSchema)
   }
 };
 
-export const listMilestonesSchema: FastifySchema = {
-  params: idParams,
+export const updateTaskSchema: FastifySchema = {
+  params: taskParams,
+  body: {
+    type: "object",
+    properties: taskPayloadProperties,
+    additionalProperties: false
+  },
+  response: {
+    200: dataEnvelope(taskSchema)
+  }
+};
+
+export const deleteTaskSchema: FastifySchema = {
+  params: taskParams,
+  response: {
+    204: { type: "null" }
+  }
+};
+
+export const listTimelineSchema: FastifySchema = {
+  params: projectParams,
   response: {
     200: dataEnvelope({
       type: "array",
-      items: {
-        type: "object",
-        properties: milestoneProperties,
-        required: Object.keys(milestoneProperties),
-        additionalProperties: false
-      }
+      items: timelineEventSchema
     })
   }
 };
 
-export const createMilestoneSchema: FastifySchema = {
-  params: idParams,
+export const createTimelineSchema: FastifySchema = {
+  params: projectParams,
   body: {
     type: "object",
-    properties: {
-      title: milestoneProperties.title,
-      targetDate: milestoneProperties.targetDate,
-      completed: milestoneProperties.completed
-    },
-    required: ["title", "targetDate", "completed"],
+    properties: timelinePayloadProperties,
+    required: ["title"],
     additionalProperties: false
   },
   response: {
-    201: dataEnvelope({
-      type: "object",
-      properties: milestoneProperties,
-      required: Object.keys(milestoneProperties),
-      additionalProperties: false
+    201: dataEnvelope(timelineEventSchema)
+  }
+};
+
+export const updateTimelineSchema: FastifySchema = {
+  params: timelineParams,
+  body: {
+    type: "object",
+    properties: timelinePayloadProperties,
+    additionalProperties: false
+  },
+  response: {
+    200: dataEnvelope(timelineEventSchema)
+  }
+};
+
+export const deleteTimelineSchema: FastifySchema = {
+  params: timelineParams,
+  response: {
+    204: { type: "null" }
+  }
+};
+
+export const listTeamSchema: FastifySchema = {
+  params: projectParams,
+  response: {
+    200: dataEnvelope({
+      type: "array",
+      items: teamMemberSchema
     })
   }
 };
 
+export const addTeamMemberSchema: FastifySchema = {
+  params: projectParams,
+  body: {
+    type: "object",
+    properties: teamPayloadProperties,
+    required: ["userId"],
+    additionalProperties: false
+  },
+  response: {
+    201: dataEnvelope(teamMemberSchema)
+  }
+};
 
+export const removeTeamMemberSchema: FastifySchema = {
+  params: teamParams,
+  response: {
+    204: { type: "null" }
+  }
+};
+
+export const getBudgetSchema: FastifySchema = {
+  params: projectParams,
+  response: {
+    200: dataEnvelope(budgetSummarySchema)
+  }
+};
+
+export const updateBudgetSchema: FastifySchema = {
+  params: projectParams,
+  body: {
+    type: "object",
+    properties: budgetPayloadProperties,
+    additionalProperties: false
+  },
+  response: {
+    200: dataEnvelope(budgetSummarySchema)
+  }
+};
+
+export const createBudgetCategorySchema: FastifySchema = {
+  params: projectParams,
+  body: {
+    type: "object",
+    properties: budgetCategoryPayloadProperties,
+    required: ["category"],
+    additionalProperties: false
+  },
+  response: {
+    201: dataEnvelope(budgetCategorySchema)
+  }
+};
+
+export const updateBudgetCategorySchema: FastifySchema = {
+  params: categoryParams,
+  body: {
+    type: "object",
+    properties: budgetCategoryPayloadProperties,
+    additionalProperties: false
+  },
+  response: {
+    200: dataEnvelope(budgetCategorySchema)
+  }
+};
+
+export const deleteBudgetCategorySchema: FastifySchema = {
+  params: categoryParams,
+  response: {
+    204: { type: "null" }
+  }
+};

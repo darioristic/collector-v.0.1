@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
 import { useState } from "react";
 
-import { OrderList } from "@/components/orders/order-list";
 import { OrderDetail } from "@/components/orders/order-detail";
+import { OrderList } from "@/components/orders/order-list";
 import { useDeleteOrder } from "@/src/hooks/useOrders";
 
 export default function OrdersPage() {

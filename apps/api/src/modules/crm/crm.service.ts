@@ -4,12 +4,16 @@ import { desc, eq } from "drizzle-orm";
 
 import { db } from "../../db";
 import {
-  activities,
-  activityTypeEnum,
+  accounts,
+  clientActivities,
+  clientActivityPriorityEnum,
+  clientActivityStatusEnum,
+  clientActivityTypeEnum,
   leadStatusEnum,
   leads,
   opportunityStageEnum,
-  opportunities
+  opportunities,
+  users
 } from "../../db/schema";
 import type {
   Activity,
@@ -79,14 +83,27 @@ const mapOpportunityRow = (row: typeof opportunities.$inferSelect): Opportunity 
   updatedAt: toIsoString(row.updatedAt)
 });
 
-const mapActivityRow = (row: typeof activities.$inferSelect): Activity => ({
-  id: row.id,
-  type: ensureEnumValue(row.type, activityTypeEnum.enumValues),
-  subject: row.subject,
-  date: toIsoString(row.date) ?? new Date().toISOString(),
-  relatedTo: row.relatedTo,
-  createdAt: toIsoString(row.createdAt) ?? new Date().toISOString(),
-  updatedAt: toIsoString(row.updatedAt)
+type ClientActivityRow = {
+  activity: typeof clientActivities.$inferSelect;
+  account: typeof accounts.$inferSelect | null;
+  assignee: typeof users.$inferSelect | null;
+};
+
+const mapClientActivityRow = (row: ClientActivityRow): Activity => ({
+  id: row.activity.id,
+  title: row.activity.title,
+  clientId: row.activity.clientId,
+  clientName: row.account?.name ?? "Unknown Client",
+  assignedTo: row.activity.assignedTo ?? null,
+  assignedToName: row.assignee?.name ?? null,
+  assignedToEmail: row.assignee?.email ?? null,
+  type: ensureEnumValue(row.activity.type, clientActivityTypeEnum.enumValues),
+  dueDate: toIsoString(row.activity.dueDate) ?? new Date().toISOString(),
+  status: ensureEnumValue(row.activity.status, clientActivityStatusEnum.enumValues),
+  priority: ensureEnumValue(row.activity.priority, clientActivityPriorityEnum.enumValues),
+  notes: row.activity.notes ?? null,
+  createdAt: toIsoString(row.activity.createdAt) ?? new Date().toISOString(),
+  updatedAt: toIsoString(row.activity.updatedAt) ?? new Date().toISOString()
 });
 
 class DrizzleCRMService implements CRMService {
@@ -153,10 +170,7 @@ class DrizzleCRMService implements CRMService {
   }
 
   async deleteLead(id: string): Promise<boolean> {
-    const deleted = await this.database
-      .delete(leads)
-      .where(eq(leads.id, id))
-      .returning({ id: leads.id });
+    const deleted = await this.database.delete(leads).where(eq(leads.id, id)).returning();
 
     return deleted.length > 0;
   }
@@ -240,80 +254,125 @@ class DrizzleCRMService implements CRMService {
   }
 
   async deleteOpportunity(id: string): Promise<boolean> {
-    const deleted = await this.database
-      .delete(opportunities)
-      .where(eq(opportunities.id, id))
-      .returning({ id: opportunities.id });
+    const deleted = await this.database.delete(opportunities).where(eq(opportunities.id, id)).returning();
 
     return deleted.length > 0;
   }
 
   async listActivities(): Promise<Activity[]> {
-    const rows = await this.database.select().from(activities).orderBy(desc(activities.date));
-    return rows.map(mapActivityRow);
+    const rows = await this.database
+      .select({
+        activity: clientActivities,
+        account: accounts,
+        assignee: users
+      })
+      .from(clientActivities)
+      .leftJoin(accounts, eq(clientActivities.clientId, accounts.id))
+      .leftJoin(users, eq(clientActivities.assignedTo, users.id))
+      .orderBy(desc(clientActivities.dueDate), desc(clientActivities.createdAt));
+
+    return rows.map(mapClientActivityRow);
   }
 
   async getActivity(id: string): Promise<Activity | undefined> {
-    const [row] = await this.database.select().from(activities).where(eq(activities.id, id)).limit(1);
-    return row ? mapActivityRow(row) : undefined;
+    const [row] = await this.database
+      .select({
+        activity: clientActivities,
+        account: accounts,
+        assignee: users
+      })
+      .from(clientActivities)
+      .leftJoin(accounts, eq(clientActivities.clientId, accounts.id))
+      .leftJoin(users, eq(clientActivities.assignedTo, users.id))
+      .where(eq(clientActivities.id, id))
+      .limit(1);
+
+    return row ? mapClientActivityRow(row) : undefined;
   }
 
   async createActivity(input: ActivityCreateInput): Promise<Activity> {
-    const createdAt = new Date();
-    const date = input.date ? new Date(input.date) : createdAt;
-    const updatedAt = input.updatedAt ? new Date(input.updatedAt) : createdAt;
+    const now = new Date();
+    const dueDate = new Date(input.dueDate);
 
     const [created] = await this.database
-      .insert(activities)
+      .insert(clientActivities)
       .values({
         id: randomUUID(),
-        type: input.type ?? activityTypeEnum.enumValues[0],
-        subject: input.subject,
-        relatedTo: input.relatedTo,
-        date,
-        createdAt,
-        updatedAt
+        title: input.title,
+        clientId: input.clientId,
+        assignedTo: input.assignedTo ?? null,
+        type: input.type ?? clientActivityTypeEnum.enumValues[0],
+        dueDate,
+        status: input.status ?? clientActivityStatusEnum.enumValues[0],
+        priority: input.priority ?? clientActivityPriorityEnum.enumValues[1],
+        notes: input.notes ?? null,
+        createdAt: now,
+        updatedAt: now
       })
       .returning();
 
-    return mapActivityRow(created);
+    const createdId = created.id;
+    return this.getActivity(createdId).then((activity) => {
+      if (!activity) {
+        throw new Error("Failed to create activity");
+      }
+
+      return activity;
+    });
   }
 
   async updateActivity(id: string, input: ActivityUpdateInput): Promise<Activity | undefined> {
-    const payload: Partial<typeof activities.$inferInsert> = {
-      updatedAt: input.updatedAt ? new Date(input.updatedAt) : new Date()
+    const payload: Partial<typeof clientActivities.$inferInsert> = {
+      updatedAt: new Date()
     };
+
+    if (typeof input.title !== "undefined") {
+      payload.title = input.title;
+    }
+
+    if (typeof input.clientId !== "undefined") {
+      payload.clientId = input.clientId;
+    }
+
+    if (typeof input.assignedTo !== "undefined") {
+      payload.assignedTo = input.assignedTo;
+    }
 
     if (typeof input.type !== "undefined") {
       payload.type = input.type;
     }
 
-    if (typeof input.subject !== "undefined") {
-      payload.subject = input.subject;
+    if (typeof input.dueDate !== "undefined") {
+      payload.dueDate = new Date(input.dueDate);
     }
 
-    if (typeof input.date !== "undefined" && input.date) {
-      payload.date = new Date(input.date);
+    if (typeof input.status !== "undefined") {
+      payload.status = input.status;
     }
 
-    if (typeof input.relatedTo !== "undefined") {
-      payload.relatedTo = input.relatedTo;
+    if (typeof input.priority !== "undefined") {
+      payload.priority = input.priority;
+    }
+
+    if (typeof input.notes !== "undefined") {
+      payload.notes = input.notes ?? null;
     }
 
     const [updated] = await this.database
-      .update(activities)
+      .update(clientActivities)
       .set(payload)
-      .where(eq(activities.id, id))
+      .where(eq(clientActivities.id, id))
       .returning();
 
-    return updated ? mapActivityRow(updated) : undefined;
+    if (!updated) {
+      return undefined;
+    }
+
+    return this.getActivity(updated.id);
   }
 
   async deleteActivity(id: string): Promise<boolean> {
-    const deleted = await this.database
-      .delete(activities)
-      .where(eq(activities.id, id))
-      .returning({ id: activities.id });
+    const deleted = await this.database.delete(clientActivities).where(eq(clientActivities.id, id)).returning();
 
     return deleted.length > 0;
   }

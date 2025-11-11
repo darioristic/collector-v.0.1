@@ -2,11 +2,23 @@ import type { RouteHandler } from "fastify";
 
 import { createHttpError, type ApiDataReply, type ApiReply } from "../../lib/errors";
 
-import type { Activity, ActivityCreateInput, ActivityType, ActivityUpdateInput } from "@crm/types";
+import type {
+  Activity,
+  ActivityCreateInput,
+  ActivityPriority,
+  ActivityStatus,
+  ActivityType,
+  ActivityUpdateInput
+} from "@crm/types";
 
 export type ListActivitiesQuery = {
   type?: ActivityType;
-  relatedTo?: string;
+  clientId?: string;
+  assignedTo?: string;
+  status?: ActivityStatus;
+  priority?: ActivityPriority;
+  dateFrom?: string;
+  dateTo?: string;
   limit?: number;
   offset?: number;
 };
@@ -31,8 +43,34 @@ export const listActivities: RouteHandler<{
       return false;
     }
 
-    if (request.query.relatedTo && activity.relatedTo !== request.query.relatedTo) {
+    if (request.query.clientId && activity.clientId !== request.query.clientId) {
       return false;
+    }
+
+    if (request.query.assignedTo && activity.assignedTo !== request.query.assignedTo) {
+      return false;
+    }
+
+    if (request.query.status && activity.status !== request.query.status) {
+      return false;
+    }
+
+    if (request.query.priority && activity.priority !== request.query.priority) {
+      return false;
+    }
+
+    if (request.query.dateFrom) {
+      const dueDate = new Date(activity.dueDate);
+      if (Number.isNaN(dueDate.getTime()) || dueDate < new Date(request.query.dateFrom)) {
+        return false;
+      }
+    }
+
+    if (request.query.dateTo) {
+      const dueDate = new Date(activity.dueDate);
+      if (Number.isNaN(dueDate.getTime()) || dueDate > new Date(request.query.dateTo)) {
+        return false;
+      }
     }
 
     return true;

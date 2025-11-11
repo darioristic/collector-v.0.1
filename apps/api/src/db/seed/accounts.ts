@@ -3,69 +3,62 @@ import { sql } from "drizzle-orm";
 import { db as defaultDb } from "../index";
 import { accountContacts, accounts } from "../schema/accounts.schema";
 
-const accountsSeedData = [
-  {
-    id: "00000000-0000-0000-0000-000000000001",
-    name: "Acme Manufacturing",
-    type: "company",
-    email: "contact@acme.example",
-    phone: "+1-555-0101",
-    website: null,
-    taxId: "RS0000001",
-    country: "RS",
-    ownerId: null
-  },
-  {
-    id: "00000000-0000-0000-0000-000000000002",
-    name: "Jane Doe",
-    type: "individual",
-    email: "jane.doe@example.com",
-    phone: "+1-555-0123",
-    website: null,
-    taxId: "RS0000002",
-    country: "RS",
-    ownerId: null
-  }
-];
+const COMPANY_COUNT = 50;
+const COMPANY_ID_OFFSET = 1;
+const CONTACT_ID_OFFSET = 201;
+const ACCOUNT_TAGS = ["customer", "partner", "vendor"] as const;
 
-const contactsSeedData = [
+const formatSeedUuid = (value: number) => `00000000-0000-0000-0000-${String(value).padStart(12, "0")}`;
+
+const accountsSeedData = Array.from({ length: COMPANY_COUNT }, (_value, index) => {
+  const sequence = COMPANY_ID_OFFSET + index;
+  const companyId = formatSeedUuid(sequence);
+  const label = String(sequence).padStart(2, "0");
+
+  return {
+    id: companyId,
+    name: `Company ${label}`,
+    type: ACCOUNT_TAGS[index % ACCOUNT_TAGS.length],
+    email: `company${sequence}@example.com`,
+    phone: `+381-60-${String(1000 + sequence).padStart(4, "0")}`,
+    website: null,
+    taxId: `RS${String(1000000 + sequence).padStart(7, "0")}`,
+    country: "RS",
+    ownerId: null
+  };
+});
+
+const contactsSeedData = accountsSeedData.flatMap((company, index) => {
+  const primarySequence = CONTACT_ID_OFFSET + index * 2;
+  const secondarySequence = primarySequence + 1;
+
+  return [
   {
-    id: "00000000-0000-0000-0000-000000000201",
-    accountId: "00000000-0000-0000-0000-000000000001",
-    name: "Stern Thireau",
-    firstName: "Stern",
-    lastName: "Thireau",
-    fullName: "Stern Thireau",
-    title: "Operations Manager",
-    email: "sthireau@acme.example",
-    phone: "+1-555-1001",
+      id: formatSeedUuid(primarySequence),
+      accountId: company.id,
+      name: `Primary Contact ${index + 1}`,
+      firstName: `Primary${index + 1}`,
+      lastName: "Contact",
+      fullName: `Primary${index + 1} Contact`,
+      title: "Account Manager",
+      email: `primary${index + 1}@company${index + 1}.example`,
+      phone: `+381-61-${String(2000 + index).padStart(4, "0")}`,
     ownerId: null
   },
   {
-    id: "00000000-0000-0000-0000-000000000202",
-    accountId: "00000000-0000-0000-0000-000000000001",
-    name: "Durward Guenther",
-    firstName: "Durward",
-    lastName: "Guenther",
-    fullName: "Durward Guenther",
-    title: "Electrical Supervisor",
-    email: "dguenther@acme.example",
-    phone: "+1-555-1002",
-    ownerId: null
-  },
-  {
-    id: "00000000-0000-0000-0000-000000000203",
-    accountId: "00000000-0000-0000-0000-000000000002",
-    name: "Ford McKibbin",
-    firstName: "Ford",
-    lastName: "McKibbin",
-    fullName: "Ford McKibbin",
-    title: "Project Manager",
-    email: "fmckibbin@collector.example",
-    phone: "+1-555-1003",
+      id: formatSeedUuid(secondarySequence),
+      accountId: company.id,
+      name: `Secondary Contact ${index + 1}`,
+      firstName: `Secondary${index + 1}`,
+      lastName: "Contact",
+      fullName: `Secondary${index + 1} Contact`,
+      title: "Operations Lead",
+      email: `secondary${index + 1}@company${index + 1}.example`,
+      phone: `+381-62-${String(2000 + index).padStart(4, "0")}`,
     ownerId: null
   }
 ];
+});
 
 export const seedAccounts = async (database = defaultDb) => {
   await database.transaction(async (tx) => {

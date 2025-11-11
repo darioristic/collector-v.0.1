@@ -7,7 +7,7 @@ const accountsModule: FastifyPluginAsync = async (app) => {
   const repository =
     process.env.ACCOUNTS_REPOSITORY?.toLowerCase() === "memory"
       ? createInMemoryAccountsRepository()
-      : createDrizzleAccountsRepository();
+      : createDrizzleAccountsRepository(app.db);
 
   if (!app.hasDecorator("accountsRepository")) {
     app.decorate("accountsRepository", repository);

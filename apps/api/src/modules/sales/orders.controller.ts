@@ -1,9 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { db } from "../../db/index.js";
 import { OrdersService } from "./orders.service.js";
 import type { OrderCreateInput, OrderUpdateInput } from "@crm/types";
-
-const service = new OrdersService(db);
 
 type ListRequest = FastifyRequest<{
   Querystring: {
@@ -35,6 +32,7 @@ type DeleteRequest = FastifyRequest<{
 }>;
 
 export const listOrdersHandler = async (request: ListRequest, reply: FastifyReply) => {
+  const service = new OrdersService(request.db);
   const filters = {
     companyId: request.query.companyId,
     contactId: request.query.contactId,
@@ -56,6 +54,7 @@ export const listOrdersHandler = async (request: ListRequest, reply: FastifyRepl
 };
 
 export const getOrderHandler = async (request: GetRequest, reply: FastifyReply) => {
+  const service = new OrdersService(request.db);
   const id = Number.parseInt(request.params.id, 10);
 
   if (Number.isNaN(id)) {
@@ -72,11 +71,13 @@ export const getOrderHandler = async (request: GetRequest, reply: FastifyReply) 
 };
 
 export const createOrderHandler = async (request: CreateRequest, reply: FastifyReply) => {
+  const service = new OrdersService(request.db);
   const order = await service.create(request.body);
   await reply.status(201).send({ data: order });
 };
 
 export const updateOrderHandler = async (request: UpdateRequest, reply: FastifyReply) => {
+  const service = new OrdersService(request.db);
   const id = Number.parseInt(request.params.id, 10);
 
   if (Number.isNaN(id)) {
@@ -93,6 +94,7 @@ export const updateOrderHandler = async (request: UpdateRequest, reply: FastifyR
 };
 
 export const deleteOrderHandler = async (request: DeleteRequest, reply: FastifyReply) => {
+  const service = new OrdersService(request.db);
   const id = Number.parseInt(request.params.id, 10);
 
   if (Number.isNaN(id)) {

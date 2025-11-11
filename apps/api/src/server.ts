@@ -1,17 +1,21 @@
-import Fastify, {
-  type FastifyInstance,
-  type FastifyPluginAsync,
-  type FastifyLoggerOptions
-} from "fastify";
+import Fastify, { type FastifyInstance, type FastifyPluginAsync, type FastifyLoggerOptions } from "fastify";
 import { readdir } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { db, type AppDatabase } from "./db";
+import corsPlugin from "./plugins/cors";
 import errorHandlerPlugin from "./plugins/error-handler";
 import openApiPlugin from "./plugins/openapi";
 import healthRoutes from "./routes/health";
 
-const createLoggerOptions = (): FastifyLoggerOptions => {
+type PrettyLoggerOptions = FastifyLoggerOptions & {
+  transport: {
+    target: string;
+    options?: Record<string, unknown>;
+  };
+};
+
+const createLogger = (): FastifyLoggerOptions => {
   const baseLevel = process.env.LOG_LEVEL ?? (process.env.NODE_ENV === "production" ? "info" : "debug");
 
   if (process.env.NODE_ENV === "production") {
@@ -20,7 +24,7 @@ const createLoggerOptions = (): FastifyLoggerOptions => {
     };
   }
 
-  return {
+  const devLogger: PrettyLoggerOptions = {
     level: baseLevel,
     transport: {
       target: "pino-pretty",
@@ -31,6 +35,8 @@ const createLoggerOptions = (): FastifyLoggerOptions => {
       }
     }
   };
+
+  return devLogger;
 };
 
 const registerHealthcheck = (app: FastifyInstance) =>
@@ -97,18 +103,33 @@ const registerModules = async (app: FastifyInstance) => {
     const modulePlugin = await loadModule(app, entry.name);
 
     if (!modulePlugin) {
-      app.log.warn({ module: entry.name }, "Module export missing or failed to load");
-      continue;
+      throw new Error(`Module "${entry.name}" failed to load or is missing a default export.`);
     }
 
-    await app.register(modulePlugin, { prefix: "/api" });
-    app.log.info({ module: entry.name }, "Module registered");
+    try {
+      await app.register(modulePlugin, { prefix: "/api" });
+      app.log.info({ module: entry.name }, "Module registered");
+    } catch (error) {
+      app.log.error({ err: error, module: entry.name }, "Failed to register module");
+      throw error;
+    }
   }
 };
 
 export const buildServer = async () => {
-  const app = Fastify({ logger: createLoggerOptions() });
+  const logger = createLogger();
+  const app = Fastify({ logger });
+  const database: AppDatabase = db;
 
+  if (!app.hasDecorator("db")) {
+    app.decorate("db", { getter: () => database });
+  }
+
+  if (!app.hasRequestDecorator("db")) {
+    app.decorateRequest("db", { getter: () => database });
+  }
+
+  await app.register(corsPlugin);
   await app.register(errorHandlerPlugin);
   await app.register(openApiPlugin);
   await registerHealthcheck(app);

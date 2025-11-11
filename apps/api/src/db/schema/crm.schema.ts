@@ -1,13 +1,14 @@
 import { relations } from "drizzle-orm";
 import {
+  doublePrecision,
   index,
   numeric,
   pgEnum,
   pgTable,
   text,
   timestamp,
-  uuid,
-  uniqueIndex
+  uniqueIndex,
+  uuid
 } from "drizzle-orm/pg-core";
 
 import { accounts } from "./accounts.schema";
@@ -23,6 +24,38 @@ export const opportunityStageEnum = pgEnum("opportunity_stage", [
   "closedLost"
 ]);
 export const activityTypeEnum = pgEnum("activity_type", ["call", "email", "meeting", "task"]);
+export const clientActivityTypeEnum = pgEnum("client_activity_type", ["call", "meeting", "task", "follow_up"]);
+export const clientActivityStatusEnum = pgEnum("client_activity_status", ["scheduled", "in_progress", "completed", "missed"]);
+export const clientActivityPriorityEnum = pgEnum("client_activity_priority", ["high", "medium", "low"]);
+export const dealStageEnum = pgEnum("deal_stage", [
+  "Lead",
+  "Qualified",
+  "Proposal",
+  "Negotiation",
+  "Closed Won",
+  "Closed Lost"
+]);
+
+export const deals = pgTable(
+  "deals",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    title: text("title").notNull(),
+    company: text("company").notNull(),
+    owner: text("owner").notNull(),
+    stage: dealStageEnum("stage").notNull(),
+    value: doublePrecision("value").default(0).notNull(),
+    closeDate: timestamp("close_date", { withTimezone: true }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
+  },
+  (table) => ({
+    stageIdx: index("deals_stage_idx").on(table.stage),
+    ownerIdx: index("deals_owner_idx").on(table.owner),
+    createdIdx: index("deals_created_idx").on(table.createdAt)
+  })
+);
 
 export const leads = pgTable(
   "leads",
@@ -103,6 +136,31 @@ export const crmNotes = pgTable(
   })
 );
 
+export const clientActivities = pgTable(
+  "client_activities",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    title: text("title").notNull(),
+    clientId: uuid("client_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    assignedTo: uuid("assigned_to").references(() => users.id, { onDelete: "set null" }),
+    type: clientActivityTypeEnum("type").notNull(),
+    dueDate: timestamp("due_date", { withTimezone: true }).notNull(),
+    status: clientActivityStatusEnum("status").default("scheduled").notNull(),
+    priority: clientActivityPriorityEnum("priority").default("medium").notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
+  },
+  (table) => ({
+    clientIdx: index("client_activities_client_idx").on(table.clientId),
+    assignedIdx: index("client_activities_assigned_idx").on(table.assignedTo),
+    statusIdx: index("client_activities_status_idx").on(table.status),
+    dueIdx: index("client_activities_due_idx").on(table.dueDate)
+  })
+);
+
 export const leadsRelations = relations(leads, ({ many, one }) => ({
   account: one(accounts, {
     fields: [leads.accountId],
@@ -153,6 +211,17 @@ export const crmNotesRelations = relations(crmNotes, ({ one }) => ({
   opportunity: one(opportunities, {
     fields: [crmNotes.opportunityId],
     references: [opportunities.id]
+  })
+}));
+
+export const clientActivitiesRelations = relations(clientActivities, ({ one }) => ({
+  client: one(accounts, {
+    fields: [clientActivities.clientId],
+    references: [accounts.id]
+  }),
+  assignee: one(users, {
+    fields: [clientActivities.assignedTo],
+    references: [users.id]
   })
 }));
 

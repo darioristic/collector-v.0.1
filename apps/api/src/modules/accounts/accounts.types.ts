@@ -8,5 +8,5 @@ import type {
 
 export type { Account, AccountContact, AccountCreateInput, AccountType, AccountUpdateInput };
 
-export const ACCOUNT_TYPES = ["company", "individual"] as const;
+export const ACCOUNT_TYPES = ["customer", "partner", "vendor"] as const;
 

@@ -1,9 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { db } from "../../db/index.js";
 import { InvoicesService } from "./invoices.service.js";
-import type { InvoiceCreateInput, InvoiceUpdateInput } from "@crm/types";
-
-const service = new InvoicesService(db);
+import { INVOICE_STATUSES, type InvoiceCreateInput, type InvoiceUpdateInput, type InvoiceStatus } from "@crm/types";
 
 type ListRequest = FastifyRequest<{
   Querystring: {
@@ -34,10 +31,16 @@ type DeleteRequest = FastifyRequest<{
 }>;
 
 export const listInvoicesHandler = async (request: ListRequest, reply: FastifyReply) => {
+  const service = new InvoicesService(request.db);
+  const status =
+    request.query.status && (INVOICE_STATUSES as readonly string[]).includes(request.query.status as InvoiceStatus)
+      ? (request.query.status as InvoiceStatus)
+      : undefined;
+
   const filters = {
     customerId: request.query.customerId,
     orderId: request.query.orderId ? Number.parseInt(request.query.orderId, 10) : undefined,
-    status: request.query.status,
+    status,
     search: request.query.search,
     limit: request.query.limit ? Number.parseInt(request.query.limit, 10) : undefined,
     offset: request.query.offset ? Number.parseInt(request.query.offset, 10) : undefined
@@ -54,6 +57,7 @@ export const listInvoicesHandler = async (request: ListRequest, reply: FastifyRe
 };
 
 export const getInvoiceHandler = async (request: GetRequest, reply: FastifyReply) => {
+  const service = new InvoicesService(request.db);
   const { id } = request.params;
 
   const invoice = await service.getById(id);
@@ -66,11 +70,13 @@ export const getInvoiceHandler = async (request: GetRequest, reply: FastifyReply
 };
 
 export const createInvoiceHandler = async (request: CreateRequest, reply: FastifyReply) => {
+  const service = new InvoicesService(request.db);
   const invoice = await service.create(request.body);
   await reply.status(201).send({ data: invoice });
 };
 
 export const updateInvoiceHandler = async (request: UpdateRequest, reply: FastifyReply) => {
+  const service = new InvoicesService(request.db);
   const { id } = request.params;
 
   const invoice = await service.update(id, request.body);
@@ -83,6 +89,7 @@ export const updateInvoiceHandler = async (request: UpdateRequest, reply: Fastif
 };
 
 export const deleteInvoiceHandler = async (request: DeleteRequest, reply: FastifyReply) => {
+  const service = new InvoicesService(request.db);
   const { id } = request.params;
 
   const deleted = await service.delete(id);

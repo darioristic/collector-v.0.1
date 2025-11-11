@@ -37,6 +37,7 @@ import {
   TableRow
 } from "@/components/ui/table";
 import { ChevronDownIcon, ChevronsUpDown, Ellipsis } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const data: Payment[] = [
   {
@@ -166,7 +167,11 @@ export const columns: ColumnDef<Payment>[] = [
   }
 ];
 
-export function LeadsCard() {
+type LeadsCardProps = {
+  className?: string;
+};
+
+export function LeadsCard({ className }: LeadsCardProps) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
@@ -192,7 +197,7 @@ export function LeadsCard() {
   });
 
   return (
-    <Card className="col-span-2">
+    <Card className={cn("col-span-2", className)}>
       <CardHeader className="flex flex-row justify-between">
         <CardTitle>Leads</CardTitle>
       </CardHeader>

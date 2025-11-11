@@ -1,8 +1,6 @@
-import Link from "next/link";
 import type { AccountContact } from "@crm/types";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import { generateMeta } from "@/lib/utils";
 
 import ContactsDataTable from "./data-table";
@@ -49,7 +47,7 @@ export default async function Page() {
 
   return (
     <>
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-6">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Contacts</h1>
           <p className="text-muted-foreground text-base">
@@ -58,11 +56,6 @@ export default async function Page() {
             <br />
           </p>
         </div>
-        <Button asChild>
-          <Link href="#">
-            <span className="flex items-center gap-2">Add New Contact</span>
-          </Link>
-        </Button>
       </div>
 
       {error ? (

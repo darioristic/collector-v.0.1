@@ -1,57 +1,81 @@
-import { randomUUID } from "node:crypto";
-
 import type { RouteHandler } from "fastify";
 
-import type { CreateProjectBody, Project } from "./projects.schema";
+import { createHttpError, type ApiDataReply } from "../../lib/errors";
+import type {
+  ProjectCreateInput,
+  ProjectDetails,
+  ProjectSummary,
+  ProjectUpdateInput
+} from "./projects.types";
 
-export type ListProjectsReply = { data: Project[] };
-export type CreateProjectReply = { data: Project };
+export type ListProjectsReply = ApiDataReply<ProjectSummary[]>;
+export type CreateProjectReply = ApiDataReply<ProjectDetails>;
+export type GetProjectReply = ApiDataReply<ProjectDetails>;
+export type UpdateProjectReply = ApiDataReply<ProjectDetails>;
 
-const today = () => new Date().toISOString().slice(0, 10);
-const addDays = (days: number) =>
-  new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
+type ProjectParams = { id: string };
 
-const projectsStore: Project[] = [
-  {
-    id: "proj_001",
-    name: "Global Expansion Rollout",
-    accountId: "acc_enterprise_01",
-    status: "inProgress",
-    startDate: addDays(-30),
-    endDate: addDays(90)
-  },
-  {
-    id: "proj_002",
-    name: "Customer Insights Platform",
-    accountId: "acc_fintech_02",
-    status: "draft",
-    startDate: today(),
-    endDate: addDays(120)
-  }
-];
-
-export const projectsMockStore = projectsStore;
-
-export const listProjectsHandler: RouteHandler<{ Reply: ListProjectsReply }> = async () => {
-  return { data: projectsStore };
+export const listProjectsHandler: RouteHandler<{ Reply: ListProjectsReply }> = async (request, reply) => {
+  const data = await request.projectsService.list();
+  return reply.status(200).send({ data });
 };
 
 export const createProjectHandler: RouteHandler<{
-  Body: CreateProjectBody;
+  Body: ProjectCreateInput;
   Reply: CreateProjectReply;
 }> = async (request, reply) => {
-  const newProject: Project = {
-    id: randomUUID(),
-    ...request.body
-  };
-
-  projectsStore.push(newProject);
-
-  reply.code(201);
-  return { data: newProject };
+  try {
+    const project = await request.projectsService.createProject(request.body);
+    return reply.status(201).send({ data: project });
+  } catch (error) {
+    request.log.error({ err: error }, "Failed to create project");
+    return reply
+      .status(500)
+      .send(createHttpError(500, "Failed to create project", { error: "Internal Server Error" }));
+  }
 };
 
-export const findProjectById = (id: string) =>
-  projectsStore.find((project) => project.id === id) ?? null;
+export const getProjectHandler: RouteHandler<{
+  Params: ProjectParams;
+  Reply: GetProjectReply;
+}> = async (request, reply) => {
+  const project = await request.projectsService.getProjectDetails(request.params.id);
 
+  if (!project) {
+    return reply
+      .status(404)
+      .send(createHttpError(404, `Project ${request.params.id} not found`, { error: "Not Found" }));
+  }
 
+  return reply.status(200).send({ data: project });
+};
+
+export const updateProjectHandler: RouteHandler<{
+  Params: ProjectParams;
+  Body: ProjectUpdateInput;
+  Reply: UpdateProjectReply;
+}> = async (request, reply) => {
+  const project = await request.projectsService.updateProject(request.params.id, request.body);
+
+  if (!project) {
+    return reply
+      .status(404)
+      .send(createHttpError(404, `Project ${request.params.id} not found`, { error: "Not Found" }));
+  }
+
+  return reply.status(200).send({ data: project });
+};
+
+export const deleteProjectHandler: RouteHandler<{
+  Params: ProjectParams;
+}> = async (request, reply) => {
+  const deleted = await request.projectsService.deleteProject(request.params.id);
+
+  if (!deleted) {
+    return reply
+      .status(404)
+      .send(createHttpError(404, `Project ${request.params.id} not found`, { error: "Not Found" }));
+  }
+
+  return reply.status(204).send();
+};

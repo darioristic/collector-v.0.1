@@ -45,7 +45,6 @@ export default function CalendarDateRangePicker({
   className
 }: React.HTMLAttributes<HTMLDivElement>) {
   const isMobile = useIsMobile();
-  const popoverContentId = React.useId();
   const today = new Date();
   const twentyEightDaysAgo = startOfDay(subDays(today, 27));
 
@@ -109,15 +108,11 @@ export default function CalendarDateRangePicker({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
-                      id="date"
                       variant={"outline"}
                       className={cn(
                         "justify-start text-left font-normal",
                         !date && "text-muted-foreground"
-                      )}
-                      aria-controls={popoverContentId}
-                      aria-expanded={open}
-                      aria-haspopup="dialog">
+                      )}>
                       <CalendarIcon />
                     </Button>
                   </TooltipTrigger>
@@ -139,15 +134,11 @@ export default function CalendarDateRangePicker({
             </div>
           ) : (
             <Button
-              id="date"
               variant={"outline"}
               className={cn(
                 "justify-start text-left font-normal",
                 !date && "text-muted-foreground"
-              )}
-              aria-controls={popoverContentId}
-              aria-expanded={open}
-              aria-haspopup="dialog">
+              )}>
               <CalendarIcon />
               {date?.from ? (
                 date.to ? (
@@ -163,7 +154,7 @@ export default function CalendarDateRangePicker({
             </Button>
           )}
         </PopoverTrigger>
-        <PopoverContent id={popoverContentId} className="w-auto" align="end">
+        <PopoverContent className="w-auto" align="end">
           <div className="flex flex-col lg:flex-row">
             <div className="me-0 lg:me-4">
               <ToggleGroup

@@ -1,14 +1,5 @@
 import { relations } from "drizzle-orm";
-import {
-  index,
-  integer,
-  pgEnum,
-  pgTable,
-  text,
-  timestamp,
-  uuid,
-  uniqueIndex
-} from "drizzle-orm/pg-core";
+import { index, integer, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { roles, users } from "./settings.schema";
 

@@ -51,7 +51,14 @@ export function QuoteList({
   const [page, setPage] = useState(0);
   const limit = 10;
 
-  const { data: quotesResponse, isLoading } = useQuotes({
+  const {
+    data: quotesResponse,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isFetching
+  } = useQuotes({
     companyId,
     contactId,
     status: statusFilter !== "all" ? statusFilter : undefined,
@@ -117,7 +124,17 @@ export function QuoteList({
       </CardHeader>
 
       <CardContent>
-        {isLoading ? (
+        {isError ? (
+          <div className="flex h-32 flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
+            <p>Failed to load quotes.</p>
+            <p className="text-xs text-destructive">
+              {error instanceof Error ? error.message : "An unexpected error occurred."}
+            </p>
+            <Button onClick={() => refetch()} size="sm" disabled={isFetching}>
+              Retry
+            </Button>
+          </div>
+        ) : isLoading ? (
           <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
             Loading quotes...
           </div>

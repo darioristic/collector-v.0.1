@@ -159,9 +159,7 @@ class DrizzleAccountsRepository implements AccountsRepository {
   }
 
   async delete(id: string): Promise<boolean> {
-    const deleted = await this.database.delete(accountsTable).where(eq(accountsTable.id, id)).returning({
-      id: accountsTable.id
-    });
+    const deleted = await this.database.delete(accountsTable).where(eq(accountsTable.id, id)).returning();
 
     return deleted.length > 0;
   }
@@ -177,18 +175,22 @@ const inMemoryAccountsSeed = (): Account[] => {
     {
       id: "acc_0001",
       name: "Acme Manufacturing",
-      type: "company",
+      type: "customer",
       email: "contact@acme.example",
       phone: "+1-555-0101",
+      taxId: "ACME-0001",
+      country: "US",
       createdAt: now,
       updatedAt: now
     },
     {
       id: "acc_0002",
       name: "Jane Doe",
-      type: "individual",
+      type: "vendor",
       email: "jane.doe@example.com",
       phone: "+1-555-0123",
+      taxId: "DOE-0002",
+      country: "US",
       createdAt: now,
       updatedAt: now
     }

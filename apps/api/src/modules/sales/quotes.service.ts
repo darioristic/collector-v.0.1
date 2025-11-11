@@ -1,6 +1,6 @@
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import Decimal from "decimal.js";
+import type { AppDatabase } from "../../db";
 import { quotes, quoteItems } from "../../db/schema/sales.schema.js";
 import type {
   Quote,
@@ -12,12 +12,12 @@ import type {
 } from "@crm/types";
 
 export class QuotesService {
-  constructor(private database: PostgresJsDatabase<Record<string, never>>) {}
+  constructor(private database: AppDatabase) {}
 
   async list(filters?: {
     companyId?: string;
     contactId?: string;
-    status?: string;
+    status?: typeof quotes.$inferSelect.status;
     search?: string;
     limit?: number;
     offset?: number;
@@ -183,8 +183,8 @@ export class QuotesService {
   }
 
   async delete(id: number): Promise<boolean> {
-    const result = await this.database.delete(quotes).where(eq(quotes.id, id));
-    return result.rowCount ? result.rowCount > 0 : false;
+    const deleted = await this.database.delete(quotes).where(eq(quotes.id, id)).returning();
+    return deleted.length > 0;
   }
 
   private calculateTotals(items: QuoteItemCreateInput[]): {

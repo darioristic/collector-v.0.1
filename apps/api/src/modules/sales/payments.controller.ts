@@ -1,10 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-
-import { db } from "../../db/index.js";
 import { PaymentsService } from "./payments.service.js";
 import type { PaymentCreateBody, PaymentIdParams } from "./payments.schema.js";
-
-const service = new PaymentsService(db);
 
 type ListRequest = FastifyRequest<{
   Querystring: {
@@ -19,6 +15,7 @@ type CreateRequest = FastifyRequest<{ Body: PaymentCreateBody }>;
 type DeleteRequest = FastifyRequest<{ Params: PaymentIdParams }>;
 
 export const listPaymentsHandler = async (request: ListRequest, reply: FastifyReply) => {
+  const service = new PaymentsService(request.db);
   const filters = {
     invoiceId: request.query.invoiceId,
     status: request.query.status as any,
@@ -36,6 +33,7 @@ export const listPaymentsHandler = async (request: ListRequest, reply: FastifyRe
 };
 
 export const getPaymentHandler = async (request: GetRequest, reply: FastifyReply) => {
+  const service = new PaymentsService(request.db);
   const payment = await service.getById(request.params.id);
 
   if (!payment) {
@@ -49,6 +47,7 @@ export const getPaymentHandler = async (request: GetRequest, reply: FastifyReply
 };
 
 export const createPaymentHandler = async (request: CreateRequest, reply: FastifyReply) => {
+  const service = new PaymentsService(request.db);
   try {
     const payment = await service.create(request.body);
     await reply.status(201).send({ data: payment });
@@ -60,6 +59,7 @@ export const createPaymentHandler = async (request: CreateRequest, reply: Fastif
 };
 
 export const deletePaymentHandler = async (request: DeleteRequest, reply: FastifyReply) => {
+  const service = new PaymentsService(request.db);
   try {
     await service.delete(request.params.id);
     await reply.status(204).send();

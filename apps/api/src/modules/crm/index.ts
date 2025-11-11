@@ -4,7 +4,7 @@ import crmRoutes from "./crm.routes";
 import { createCRMService } from "./crm.service";
 
 const crmModule: FastifyPluginAsync = async (fastify) => {
-  const service = createCRMService();
+  const service = createCRMService(fastify.db);
 
   if (!fastify.hasDecorator("crmService")) {
     fastify.decorate("crmService", service);

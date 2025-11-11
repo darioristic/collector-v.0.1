@@ -1,13 +1,13 @@
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { and, desc, eq, sql } from "drizzle-orm";
 
+import type { AppDatabase } from "../../db";
 import { payments, invoices } from "../../db/schema/sales.schema.js";
 import type { Payment, PaymentCreateInput, PaymentStatus } from "@crm/types";
 
 type PaymentEntity = typeof payments.$inferSelect;
 
 export class PaymentsService {
-  constructor(private database: PostgresJsDatabase<Record<string, never>>) {}
+  constructor(private database: AppDatabase) {}
 
   private mapPayment(payment: PaymentEntity): Payment {
     return {

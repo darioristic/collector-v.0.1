@@ -100,7 +100,9 @@
     "uuid": "^11.1.0",
     "vaul": "^1.1.2",
     "zod": "^3.25.67",
-    "zustand": "^5.0.5"
+    "zustand": "^5.0.5",
+    "drizzle-orm": "^0.44.7",
+    "postgres": "^3.4.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.10",
@@ -112,6 +114,7 @@
     "eslint-config-next": "^16.0.1",
     "eslint-plugin-readable-tailwind": "^3.0.0",
     "jsdom": "^25.0.1",
+    "pg-mem": "^3.0.5",
     "prettier": "^3.6.0",
     "prettier-plugin-tailwindcss": "^0.6.13",
     "tailwindcss": "^4.1.10",

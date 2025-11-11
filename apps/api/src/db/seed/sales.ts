@@ -23,7 +23,11 @@ const addDays = (date: Date, days: number): Date => {
 
 const formatDate = (date: Date): string => date.toISOString().substring(0, 10);
 
-const categorySeeds = [
+const categorySeeds: Array<{
+  id: string;
+  name: string;
+  description: string;
+}> = [
   {
     id: "00000000-0000-0000-0000-000000010001",
     name: "Construction Services",
@@ -49,9 +53,16 @@ const categorySeeds = [
     name: "Energy Solutions",
     description: "Power management, renewable energy and grid maintenance"
   }
-] as const;
+] ;
 
-const productSeeds = [
+const productSeeds: Array<{
+  id: string;
+  sku: string;
+  name: string;
+  description: string;
+  categoryId: string;
+  unitPrice: number;
+}> = [
   {
     id: "00000000-0000-0000-0000-000000020001",
     sku: "PROD-001",
@@ -132,7 +143,7 @@ const productSeeds = [
     categoryId: categorySeeds[0].id,
     unitPrice: 15200
   }
-] as const;
+] ;
 
 const orderStatuses = ["pending", "processing", "shipped", "completed", "cancelled"] as const;
 const invoiceStatuses = ["draft", "sent", "paid", "overdue", "unpaid"] as const;
@@ -280,7 +291,7 @@ export const seedSales = async (database = defaultDb) => {
           status: quoteStatus,
           notes: `Automatski generisana ponuda za ${account.name}`
         })
-        .returning({ id: quotes.id });
+        .returning();
 
       const quoteId = quoteRow.id;
 
@@ -319,7 +330,7 @@ export const seedSales = async (database = defaultDb) => {
           status: orderStatusValue,
           notes: `Automatski generisana porudžbina #${index + 1}`
         })
-        .returning({ id: orders.id });
+        .returning();
 
       const orderId = orderRow.id;
 
@@ -439,7 +450,7 @@ export const seedSales = async (database = defaultDb) => {
           currency,
           notes: `Automatski generisana faktura za porudžbinu ${index + 1}`
         })
-        .returning({ id: invoices.id });
+        .returning();
 
       const invoiceId = invoiceRow.id;
 

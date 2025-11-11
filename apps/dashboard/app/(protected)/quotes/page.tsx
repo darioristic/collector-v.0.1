@@ -29,8 +29,8 @@ export default function QuotesPage() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div>
+    <div className="space-y-6 py-4 lg:py-6">
+      <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">Quotes</h1>
         <p className="text-muted-foreground">Manage and track your sales quotes</p>
       </div>
@@ -49,10 +49,7 @@ export default function QuotesPage() {
         )}
       </div>
 
-      <CreateQuoteDialog
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-      />
+      <CreateQuoteDialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} />
     </div>
   );
 }

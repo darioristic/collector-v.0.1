@@ -1,98 +1,102 @@
-import { randomUUID } from "node:crypto";
-
 import type { RouteHandler } from "fastify";
 
 import { createHttpError, type ApiDataReply } from "../../lib/errors";
 
-import type { CreateTaskBody, Task } from "./projects.schema";
-import { findProjectById } from "./projects.controller";
+import type { CreateTaskInput, ProjectTask, UpdateTaskInput } from "./projects.types";
 
 export type ProjectParams = { id: string };
-export type ListTasksReply = ApiDataReply<Task[]>;
-export type CreateTaskReply = ApiDataReply<Task>;
-
-const addDays = (days: number) =>
-  new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
-
-const tasksStore: Task[] = [
-  {
-    id: "task_001",
-    projectId: "proj_001",
-    title: "Regional launch readiness",
-    assignee: "alice@collector.io",
-    dueDate: addDays(14),
-    status: "inProgress"
-  },
-  {
-    id: "task_002",
-    projectId: "proj_001",
-    title: "Localization review",
-    assignee: "bob@collector.io",
-    dueDate: addDays(7),
-    status: "todo"
-  },
-  {
-    id: "task_003",
-    projectId: "proj_002",
-    title: "Define analytics KPIs",
-    assignee: "carla@collector.io",
-    dueDate: addDays(21),
-    status: "todo"
-  }
-];
-
-export const tasksMockStore = tasksStore;
-
-const ensureProjectExists = (projectId: string) => {
-  const project = findProjectById(projectId);
-
-  if (!project) {
-    return null;
-  }
-
-  return project;
-};
+export type TaskParams = { id: string; taskId: string };
+export type ListTasksReply = ApiDataReply<ProjectTask[]>;
+export type CreateTaskReply = ApiDataReply<ProjectTask>;
+export type UpdateTaskReply = ApiDataReply<ProjectTask>;
 
 export const listProjectTasksHandler: RouteHandler<{
   Params: ProjectParams;
   Reply: ListTasksReply;
 }> = async (request, reply) => {
-  const project = ensureProjectExists(request.params.id);
+  const exists = await request.projectsService.projectExists(request.params.id);
 
-  if (!project) {
+  if (!exists) {
     return reply
       .status(404)
       .send(createHttpError(404, `Project ${request.params.id} not found`, { error: "Not Found" }));
   }
 
-  const tasks = tasksStore.filter((task) => task.projectId === project.id);
+  const tasks = await request.projectsService.listTasks(request.params.id);
 
-  return { data: tasks };
+  return reply.status(200).send({ data: tasks });
 };
 
 export const createProjectTaskHandler: RouteHandler<{
   Params: ProjectParams;
-  Body: CreateTaskBody;
+  Body: CreateTaskInput;
   Reply: CreateTaskReply;
 }> = async (request, reply) => {
-  const project = ensureProjectExists(request.params.id);
+  const exists = await request.projectsService.projectExists(request.params.id);
 
-  if (!project) {
+  if (!exists) {
     return reply
       .status(404)
       .send(createHttpError(404, `Project ${request.params.id} not found`, { error: "Not Found" }));
   }
 
-  const newTask: Task = {
-    id: randomUUID(),
-    projectId: project.id,
-    ...request.body
-  };
-
-  tasksStore.push(newTask);
-
-  reply.code(201);
-  return { data: newTask };
+  try {
+    const task = await request.projectsService.createTask(request.params.id, request.body);
+    return reply.status(201).send({ data: task });
+  } catch (error) {
+    request.log.error({ err: error }, "Failed to create project task");
+    return reply
+      .status(500)
+      .send(createHttpError(500, "Failed to create task", { error: "Internal Server Error" }));
+  }
 };
 
+export const updateProjectTaskHandler: RouteHandler<{
+  Params: TaskParams;
+  Body: UpdateTaskInput;
+  Reply: UpdateTaskReply;
+}> = async (request, reply) => {
+  const exists = await request.projectsService.projectExists(request.params.id);
 
+  if (!exists) {
+    return reply
+      .status(404)
+      .send(createHttpError(404, `Project ${request.params.id} not found`, { error: "Not Found" }));
+  }
+
+  const task = await request.projectsService.updateTask(
+    request.params.id,
+    request.params.taskId,
+    request.body
+  );
+
+  if (!task) {
+    return reply
+      .status(404)
+      .send(createHttpError(404, `Task ${request.params.taskId} not found`, { error: "Not Found" }));
+  }
+
+  return reply.status(200).send({ data: task });
+};
+
+export const deleteProjectTaskHandler: RouteHandler<{
+  Params: TaskParams;
+}> = async (request, reply) => {
+  const exists = await request.projectsService.projectExists(request.params.id);
+
+  if (!exists) {
+    return reply
+      .status(404)
+      .send(createHttpError(404, `Project ${request.params.id} not found`, { error: "Not Found" }));
+  }
+
+  const deleted = await request.projectsService.deleteTask(request.params.id, request.params.taskId);
+
+  if (!deleted) {
+    return reply
+      .status(404)
+      .send(createHttpError(404, `Task ${request.params.taskId} not found`, { error: "Not Found" }));
+  }
+
+  return reply.status(204).send();
+};

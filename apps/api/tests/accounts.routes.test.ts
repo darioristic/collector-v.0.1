@@ -43,7 +43,7 @@ describe("Accounts API routes", () => {
     expect(payload[0]).toMatchObject({
       id: seededAccountIds[0],
       name: "Acme Manufacturing",
-      type: "company"
+      type: "customer"
     });
   });
 
@@ -62,7 +62,7 @@ describe("Accounts API routes", () => {
     expect(payload).toMatchObject({
       id: accountId,
       name: "Acme Manufacturing",
-      type: "company"
+      type: "customer"
     });
   });
 
@@ -72,9 +72,11 @@ describe("Accounts API routes", () => {
       url: "/api/accounts",
       payload: {
         name: "New Horizon LLC",
-        type: "company",
+        type: "partner",
         email: "hello@newhorizon.example",
-        phone: "+1-555-0150"
+        phone: "+1-555-0150",
+        taxId: "NH-001",
+        country: "US"
       }
     });
 
@@ -85,7 +87,7 @@ describe("Accounts API routes", () => {
     expect(created.id).toMatch(/^[0-9a-fA-F-]{36}$/);
     expect(created).toMatchObject({
       name: "New Horizon LLC",
-      type: "company",
+      type: "partner",
       email: "hello@newhorizon.example"
     });
 
@@ -103,8 +105,10 @@ describe("Accounts API routes", () => {
   it("should prevent creating duplicate accounts by email", async () => {
     const payload = {
       name: "Duplicate Test",
-      type: "individual" as const,
-      email: "duplicate@example.com"
+      type: "vendor" as const,
+      email: "duplicate@example.com",
+      taxId: "DUP-001",
+      country: "US"
     };
 
     const firstResponse = await app.inject({
@@ -136,9 +140,11 @@ describe("Accounts API routes", () => {
       url: `/api/accounts/${accountId}`,
       payload: {
         name: "Acme Manufacturing International",
-        type: "company",
+        type: "customer",
         email: "contact@acme.example",
-        phone: "+1-555-0102"
+        phone: "+1-555-0102",
+        taxId: "ACME-0001",
+        country: "US"
       }
     });
 
@@ -159,8 +165,10 @@ describe("Accounts API routes", () => {
       url: "/api/accounts",
       payload: {
         name: "Temp Account",
-        type: "company",
-        email: "temp@example.com"
+        type: "customer",
+        email: "temp@example.com",
+        taxId: "TEMP-001",
+        country: "US"
       }
     });
 

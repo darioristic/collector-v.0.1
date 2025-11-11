@@ -1,6 +1,6 @@
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import Decimal from "decimal.js";
+import type { AppDatabase } from "../../db";
 import { orders, orderItems } from "../../db/schema/sales.schema.js";
 import type {
   Order,
@@ -11,13 +11,13 @@ import type {
 } from "@crm/types";
 
 export class OrdersService {
-  constructor(private database: PostgresJsDatabase<Record<string, never>>) {}
+  constructor(private database: AppDatabase) {}
 
   async list(filters?: {
     companyId?: string;
     contactId?: string;
     quoteId?: number;
-    status?: string;
+    status?: typeof orders.$inferSelect.status;
     search?: string;
     limit?: number;
     offset?: number;
@@ -188,8 +188,8 @@ export class OrdersService {
   }
 
   async delete(id: number): Promise<boolean> {
-    const result = await this.database.delete(orders).where(eq(orders.id, id));
-    return result.rowCount ? result.rowCount > 0 : false;
+    const deleted = await this.database.delete(orders).where(eq(orders.id, id)).returning();
+    return deleted.length > 0;
   }
 
   private calculateTotals(items: OrderItemCreateInput[]): {

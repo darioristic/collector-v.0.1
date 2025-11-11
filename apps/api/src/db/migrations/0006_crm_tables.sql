@@ -1,0 +1,116 @@
+DO $$
+BEGIN
+    CREATE TYPE lead_status AS ENUM ('new', 'contacted', 'qualified', 'won', 'lost');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+    CREATE TYPE opportunity_stage AS ENUM ('prospecting', 'qualification', 'proposal', 'negotiation', 'closedWon', 'closedLost');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+    CREATE TYPE activity_type AS ENUM ('call', 'email', 'meeting', 'task');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+    CREATE TYPE client_activity_type AS ENUM ('call', 'meeting', 'task', 'follow_up');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+    CREATE TYPE client_activity_status AS ENUM ('scheduled', 'in_progress', 'completed', 'missed');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+    CREATE TYPE client_activity_priority AS ENUM ('high', 'medium', 'low');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS leads (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    account_id uuid REFERENCES accounts(id) ON DELETE SET NULL,
+    owner_id uuid REFERENCES users(id) ON DELETE SET NULL,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    status lead_status NOT NULL DEFAULT 'new',
+    source TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS leads_email_key ON leads(email);
+CREATE INDEX IF NOT EXISTS leads_account_idx ON leads(account_id);
+CREATE INDEX IF NOT EXISTS leads_owner_idx ON leads(owner_id);
+
+CREATE TABLE IF NOT EXISTS opportunities (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    account_id uuid NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    lead_id uuid REFERENCES leads(id) ON DELETE SET NULL,
+    owner_id uuid REFERENCES users(id) ON DELETE SET NULL,
+    title TEXT NOT NULL,
+    stage opportunity_stage NOT NULL DEFAULT 'qualification',
+    value NUMERIC(12, 2) NOT NULL DEFAULT 0,
+    probability NUMERIC(5, 2) NOT NULL DEFAULT 0,
+    close_date TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS opportunities_account_idx ON opportunities(account_id);
+CREATE INDEX IF NOT EXISTS opportunities_owner_idx ON opportunities(owner_id);
+CREATE INDEX IF NOT EXISTS opportunities_stage_idx ON opportunities(stage);
+
+CREATE TABLE IF NOT EXISTS activities (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    type activity_type NOT NULL DEFAULT 'call',
+    subject TEXT NOT NULL,
+    notes TEXT,
+    date TIMESTAMPTZ NOT NULL,
+    owner_id uuid REFERENCES users(id) ON DELETE SET NULL,
+    related_to TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS activities_owner_idx ON activities(owner_id);
+CREATE INDEX IF NOT EXISTS activities_related_idx ON activities(related_to);
+
+CREATE TABLE IF NOT EXISTS crm_notes (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    lead_id uuid REFERENCES leads(id) ON DELETE CASCADE,
+    opportunity_id uuid REFERENCES opportunities(id) ON DELETE CASCADE,
+    author_id uuid REFERENCES users(id) ON DELETE SET NULL,
+    body TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS crm_notes_lead_idx ON crm_notes(lead_id);
+CREATE INDEX IF NOT EXISTS crm_notes_opportunity_idx ON crm_notes(opportunity_id);
+
+CREATE TABLE IF NOT EXISTS client_activities (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    client_id uuid NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    assigned_to uuid REFERENCES users(id) ON DELETE SET NULL,
+    type client_activity_type NOT NULL,
+    due_date TIMESTAMPTZ NOT NULL,
+    status client_activity_status NOT NULL DEFAULT 'scheduled',
+    priority client_activity_priority NOT NULL DEFAULT 'medium',
+    notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS client_activities_client_idx ON client_activities(client_id);
+CREATE INDEX IF NOT EXISTS client_activities_assigned_idx ON client_activities(assigned_to);
+CREATE INDEX IF NOT EXISTS client_activities_status_idx ON client_activities(status);
+CREATE INDEX IF NOT EXISTS client_activities_due_idx ON client_activities(due_date);

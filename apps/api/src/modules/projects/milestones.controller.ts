@@ -1,95 +1,114 @@
-import { randomUUID } from "node:crypto";
-
 import type { RouteHandler } from "fastify";
 
 import { createHttpError, type ApiDataReply } from "../../lib/errors";
 
-import type { CreateMilestoneBody, Milestone } from "./projects.schema";
-import { findProjectById } from "./projects.controller";
+import type {
+  CreateTimelineEventInput,
+  ProjectTimelineEvent,
+  UpdateTimelineEventInput
+} from "./projects.types";
 
 export type ProjectParams = { id: string };
-export type ListMilestonesReply = ApiDataReply<Milestone[]>;
-export type CreateMilestoneReply = ApiDataReply<Milestone>;
-
-const addDays = (days: number) =>
-  new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
-
-const milestonesStore: Milestone[] = [
-  {
-    id: "milestone_001",
-    projectId: "proj_001",
-    title: "Complete pilot rollout",
-    targetDate: addDays(30),
-    completed: false
-  },
-  {
-    id: "milestone_002",
-    projectId: "proj_001",
-    title: "Executive go-live approval",
-    targetDate: addDays(60),
-    completed: false
-  },
-  {
-    id: "milestone_003",
-    projectId: "proj_002",
-    title: "MVP definition signed off",
-    targetDate: addDays(45),
-    completed: true
-  }
-];
-
-export const milestonesMockStore = milestonesStore;
-
-const ensureProjectExists = (projectId: string) => {
-  const project = findProjectById(projectId);
-
-  if (!project) {
-    return null;
-  }
-
-  return project;
-};
+export type TimelineParams = { id: string; eventId: string };
+export type ListMilestonesReply = ApiDataReply<ProjectTimelineEvent[]>;
+export type CreateMilestoneReply = ApiDataReply<ProjectTimelineEvent>;
+export type UpdateMilestoneReply = ApiDataReply<ProjectTimelineEvent>;
 
 export const listProjectMilestonesHandler: RouteHandler<{
   Params: ProjectParams;
   Reply: ListMilestonesReply;
 }> = async (request, reply) => {
-  const project = ensureProjectExists(request.params.id);
+  const exists = await request.projectsService.projectExists(request.params.id);
 
-  if (!project) {
+  if (!exists) {
     return reply
       .status(404)
       .send(createHttpError(404, `Project ${request.params.id} not found`, { error: "Not Found" }));
   }
 
-  const milestones = milestonesStore.filter((milestone) => milestone.projectId === project.id);
+  const timeline = await request.projectsService.listTimeline(request.params.id);
 
-  return { data: milestones };
+  return reply.status(200).send({ data: timeline });
 };
 
 export const createProjectMilestoneHandler: RouteHandler<{
   Params: ProjectParams;
-  Body: CreateMilestoneBody;
+  Body: CreateTimelineEventInput;
   Reply: CreateMilestoneReply;
 }> = async (request, reply) => {
-  const project = ensureProjectExists(request.params.id);
+  const exists = await request.projectsService.projectExists(request.params.id);
 
-  if (!project) {
+  if (!exists) {
     return reply
       .status(404)
       .send(createHttpError(404, `Project ${request.params.id} not found`, { error: "Not Found" }));
   }
 
-  const newMilestone: Milestone = {
-    id: randomUUID(),
-    projectId: project.id,
-    ...request.body
-  };
-
-  milestonesStore.push(newMilestone);
-
-  reply.code(201);
-  return { data: newMilestone };
+  try {
+    const event = await request.projectsService.createTimelineEvent(request.params.id, request.body);
+    return reply.status(201).send({ data: event });
+  } catch (error) {
+    request.log.error({ err: error }, "Failed to create timeline event");
+    return reply
+      .status(500)
+      .send(createHttpError(500, "Failed to create timeline event", { error: "Internal Server Error" }));
+  }
 };
 
+export const updateProjectMilestoneHandler: RouteHandler<{
+  Params: TimelineParams;
+  Body: UpdateTimelineEventInput;
+  Reply: UpdateMilestoneReply;
+}> = async (request, reply) => {
+  const exists = await request.projectsService.projectExists(request.params.id);
+
+  if (!exists) {
+    return reply
+      .status(404)
+      .send(createHttpError(404, `Project ${request.params.id} not found`, { error: "Not Found" }));
+  }
+
+  const event = await request.projectsService.updateTimelineEvent(
+    request.params.id,
+    request.params.eventId,
+    request.body
+  );
+
+  if (!event) {
+    return reply
+      .status(404)
+      .send(
+        createHttpError(404, `Timeline event ${request.params.eventId} not found`, { error: "Not Found" })
+      );
+  }
+
+  return reply.status(200).send({ data: event });
+};
+
+export const deleteProjectMilestoneHandler: RouteHandler<{
+  Params: TimelineParams;
+}> = async (request, reply) => {
+  const exists = await request.projectsService.projectExists(request.params.id);
+
+  if (!exists) {
+    return reply
+      .status(404)
+      .send(createHttpError(404, `Project ${request.params.id} not found`, { error: "Not Found" }));
+  }
+
+  const deleted = await request.projectsService.deleteTimelineEvent(
+    request.params.id,
+    request.params.eventId
+  );
+
+  if (!deleted) {
+    return reply
+      .status(404)
+      .send(
+        createHttpError(404, `Timeline event ${request.params.eventId} not found`, { error: "Not Found" })
+      );
+  }
+
+  return reply.status(204).send();
+};
 

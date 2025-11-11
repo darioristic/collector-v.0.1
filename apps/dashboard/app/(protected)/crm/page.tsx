@@ -2,7 +2,6 @@ import CustomDateRangePicker from "@/components/custom-date-range-picker";
 import { Button } from "@/components/ui/button";
 import { generateMeta } from "@/lib/utils";
 import {
-  LeadBySourceCard,
   SalesPipeline,
   LeadsCard,
   TargetCard,
@@ -38,8 +37,7 @@ export default function Page() {
           <TotalDeals />
           <TotalRevenueCard />
         </div>
-        <div className="grid gap-4 xl:grid-cols-3">
-          <LeadBySourceCard />
+        <div className="grid gap-4 xl:grid-cols-2">
           <RecentTasks />
           <SalesPipeline />
         </div>

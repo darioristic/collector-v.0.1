@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import type { AccountContact } from "@crm/types";
 import type { ColumnDef, SortingState, VisibilityState } from "@tanstack/react-table";
 import {
   flexRender,
@@ -17,19 +17,32 @@ import {
   Building2,
   CalendarClock,
   Columns as ColumnsIcon,
+  Download,
   Eye,
   FolderOpen,
+  Loader2,
   Mail,
   Pencil,
   Phone,
   StickyNote,
   Trash2
 } from "lucide-react";
-import type { AccountContact } from "@crm/types";
+import Link from "next/link";
+import * as React from "react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -44,6 +57,8 @@ import {
   EmptyTitle
 } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -51,6 +66,8 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import {
   Table,
   TableBody,
@@ -59,15 +76,10 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { generateAvatarFallback } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import Link from "next/link";
 
 export type Contact = AccountContact;
 
@@ -120,6 +132,33 @@ export default function ContactsDataTable({ data }: ContactsDataTableProps) {
   const [globalFilter, setGlobalFilter] = React.useState("");
   const [activeQuickFilter, setActiveQuickFilter] = React.useState<string>("custom");
   const [activeContact, setActiveContact] = React.useState<Contact | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = React.useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+  const [isProcessingEdit, setIsProcessingEdit] = React.useState(false);
+  const [isProcessingAdd, setIsProcessingAdd] = React.useState(false);
+  const [isProcessingDelete, setIsProcessingDelete] = React.useState(false);
+  const [editFormState, setEditFormState] = React.useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    notes: ""
+  });
+  const [addFormState, setAddFormState] = React.useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    notes: ""
+  });
+  const [editTarget, setEditTarget] = React.useState<Contact | null>(null);
+  const [deleteTargets, setDeleteTargets] = React.useState<Contact[]>([]);
+  const editFormId = React.useId();
+  const addFormId = React.useId();
+  const editDialogId = React.useId();
+  const addDialogId = React.useId();
+  const deleteDialogId = React.useId();
   const openSidebar = React.useCallback((contact: Contact) => {
     setActiveContact(contact);
   }, []);
@@ -135,25 +174,22 @@ export default function ContactsDataTable({ data }: ContactsDataTableProps) {
     [openSidebar]
   );
 
-  const handleEdit = React.useCallback(
-    (contact: Contact) => {
-      toast({
-        title: "Edit contact is not available",
-        description: `Editing ${contact.name} will be enabled soon.`
-      });
-    },
-    [toast]
-  );
+  const handleEdit = React.useCallback((contact: Contact) => {
+    setEditTarget(contact);
+    setEditFormState({
+      firstName: contact.firstName ?? "",
+      lastName: contact.lastName ?? "",
+      email: contact.email ?? "",
+      phone: contact.phone ?? "",
+      notes: ""
+    });
+    setIsEditDialogOpen(true);
+  }, []);
 
-  const handleDelete = React.useCallback(
-    (contact: Contact) => {
-      toast({
-        title: "Delete contact is not available",
-        description: `The delete action for ${contact.name} will be enabled soon.`
-      });
-    },
-    [toast]
-  );
+  const handleDelete = React.useCallback((contact: Contact) => {
+    setDeleteTargets([contact]);
+    setIsDeleteDialogOpen(true);
+  }, []);
 
   const getDisplayName = React.useCallback(
     (contact: Contact) =>
@@ -294,6 +330,7 @@ export default function ContactsDataTable({ data }: ContactsDataTableProps) {
                 size="icon"
                 className="size-8"
                 onClick={() => handleEdit(contact)}
+                disabled={isProcessingEdit}
                 aria-label={`Edit contact ${contact.name}`}>
                 <Pencil className="h-4 w-4" aria-hidden="true" />
                 <span className="sr-only">Edit</span>
@@ -304,6 +341,7 @@ export default function ContactsDataTable({ data }: ContactsDataTableProps) {
                 size="icon"
                 className="size-8"
                 onClick={() => handleDelete(contact)}
+                disabled={isProcessingDelete}
                 aria-label={`Delete contact ${contact.name}`}>
                 <Trash2 className="h-4 w-4" aria-hidden="true" />
                 <span className="sr-only">Delete</span>
@@ -323,7 +361,15 @@ export default function ContactsDataTable({ data }: ContactsDataTableProps) {
         }
       }
     ],
-    [getDisplayName, getInitialsSource, handleDelete, handleEdit, handleView]
+    [
+      getDisplayName,
+      getInitialsSource,
+      handleDelete,
+      handleEdit,
+      handleView,
+      isProcessingDelete,
+      isProcessingEdit
+    ]
   );
 
   const table = useReactTable({
@@ -369,6 +415,153 @@ export default function ContactsDataTable({ data }: ContactsDataTableProps) {
   const visibleColumnCount = table.getVisibleLeafColumns().length;
 
   const numberFormatter = React.useMemo(() => new Intl.NumberFormat("en-US"), []);
+
+  const handleQuickFilter = (filterId: string, query: string) => {
+    setActiveQuickFilter(filterId);
+    setGlobalFilter(query);
+  };
+
+  const exportContacts = React.useCallback(() => {
+    if (data.length === 0) {
+      toast({
+        title: "No contacts to export",
+        description: "Once contacts are available, you can export them as CSV."
+      });
+      return;
+    }
+
+    const headers = ["Name", "Email", "Phone", "Account", "Title", "Created At", "Updated At"];
+
+    const escapeCsv = (value: string | null | undefined) =>
+      `"${String(value ?? "").replace(/"/g, '""')}"`;
+
+    const rows = data.map((contact) => [
+      escapeCsv(getDisplayName(contact)),
+      escapeCsv(contact.email),
+      escapeCsv(contact.phone),
+      escapeCsv(contact.accountName),
+      escapeCsv(contact.title),
+      escapeCsv(contact.createdAt),
+      escapeCsv(contact.updatedAt)
+    ]);
+
+    const csvContent = [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "contacts.csv");
+    link.click();
+    URL.revokeObjectURL(url);
+    toast({
+      title: "Export started",
+      description: "Your CSV download should begin shortly."
+    });
+  }, [data, getDisplayName, toast]);
+
+  const openAddDialog = React.useCallback(() => {
+    setAddFormState({
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      notes: ""
+    });
+    setIsAddDialogOpen(true);
+  }, []);
+
+  const handleBulkDelete = React.useCallback(() => {
+    const selected = table.getSelectedRowModel().rows.map((row) => row.original);
+    if (selected.length === 0) {
+      toast({
+        title: "No contacts selected",
+        description: "Select at least one contact to delete."
+      });
+      return;
+    }
+
+    setDeleteTargets(selected);
+    setIsDeleteDialogOpen(true);
+  }, [table, toast]);
+
+  const handleEditSubmit = React.useCallback(
+    async (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (!editTarget) {
+        return;
+      }
+
+      setIsProcessingEdit(true);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        toast({
+          title: "Contact updated",
+          description: `${getDisplayName(editTarget)} has been updated.`
+        });
+        setIsEditDialogOpen(false);
+        setEditTarget(null);
+      } finally {
+        setIsProcessingEdit(false);
+      }
+    },
+    [editTarget, getDisplayName, toast]
+  );
+
+  const handleAddSubmit = React.useCallback(
+    async (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      setIsProcessingAdd(true);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+        toast({
+          title: "Contact added",
+          description: `${addFormState.firstName || "New"} contact has been added.`
+        });
+        setIsAddDialogOpen(false);
+        setAddFormState({
+          firstName: "",
+          lastName: "",
+          email: "",
+          phone: "",
+          notes: ""
+        });
+      } finally {
+        setIsProcessingAdd(false);
+      }
+    },
+    [addFormState.firstName, toast]
+  );
+
+  const handleDeleteConfirm = React.useCallback(async () => {
+    if (deleteTargets.length === 0) {
+      return;
+    }
+
+    setIsProcessingDelete(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      toast({
+        title: "Contacts deleted",
+        description: `${
+          deleteTargets.length === 1
+            ? getDisplayName(deleteTargets[0])
+            : `${numberFormatter.format(deleteTargets.length)} contacts`
+        } will be removed once deletion is supported.`
+      });
+      setIsDeleteDialogOpen(false);
+      setDeleteTargets([]);
+      if (selectionCount > 0) {
+        table.resetRowSelection();
+      }
+    } finally {
+      setIsProcessingDelete(false);
+    }
+  }, [deleteTargets, getDisplayName, numberFormatter, selectionCount, table, toast]);
+
+  const deleteTargetNames = React.useMemo(
+    () => deleteTargets.map((contact) => getDisplayName(contact)),
+    [deleteTargets, getDisplayName]
+  );
 
   const paginationItems = React.useMemo(() => {
     if (pageCount <= 0) {
@@ -421,18 +614,13 @@ export default function ContactsDataTable({ data }: ContactsDataTableProps) {
         ? "Showing 0-0 of 0 contacts"
         : `Showing ${numberFormatter.format(pageStart)}-${numberFormatter.format(pageEnd)} of ${numberFormatter.format(filteredRowCount)} contacts`;
 
-  const handleQuickFilter = (filterId: string, query: string) => {
-    setActiveQuickFilter(filterId);
-    setGlobalFilter(query);
-  };
-
   let ellipsisCounter = 0;
 
   return (
     <>
       <div className="space-y-6">
         <div className="space-y-3">
-          <div className="grid gap-3 md:grid-cols-[minmax(0,360px)_auto] md:items-center">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
             <Input
               placeholder="Search contacts by name, email, or company"
               value={globalFilter}
@@ -441,32 +629,57 @@ export default function ContactsDataTable({ data }: ContactsDataTableProps) {
                 setGlobalFilter(value);
                 setActiveQuickFilter(value === "" ? "custom" : "custom");
               }}
-              className="w-full"
+              className="w-full md:w-[360px] md:min-w-[280px] md:flex-1"
             />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
-                  <ColumnsIcon className="h-4 w-4" />
-                  Columns
+            <div className="flex flex-wrap items-center gap-2 md:ml-auto md:justify-end">
+              {selectionCount > 0 ? (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  className="min-w-[150px]"
+                  onClick={handleBulkDelete}
+                  disabled={isProcessingDelete}>
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  Delete Selected
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                {table
-                  .getAllLeafColumns()
-                  .filter((column) => column.getCanHide())
-                  .map((column) => (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) => column.toggleVisibility(Boolean(value))}>
-                      {column.id}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+              ) : null}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="min-w-[140px]"
+                onClick={exportContacts}>
+                <Download className="h-4 w-4" aria-hidden="true" />
+                Export CSV
+              </Button>
+              <Button type="button" size="sm" className="min-w-[140px]" onClick={openAddDialog}>
+                Add New Contact
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <ColumnsIcon className="h-4 w-4" />
+                    Columns
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  {table
+                    .getAllLeafColumns()
+                    .filter((column) => column.getCanHide())
+                    .map((column) => (
+                      <DropdownMenuCheckboxItem
+                        key={column.id}
+                        className="capitalize"
+                        checked={column.getIsVisible()}
+                        onCheckedChange={(value) => column.toggleVisibility(Boolean(value))}>
+                        {column.id}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
-
           <div className="flex flex-wrap gap-2">
             {QUICK_FILTERS.map((filter) => (
               <Button
@@ -820,6 +1033,344 @@ export default function ContactsDataTable({ data }: ContactsDataTableProps) {
           ) : null}
         </SheetContent>
       </Sheet>
+
+      <Dialog
+        open={isEditDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
+          if (!open) {
+            setEditTarget(null);
+          }
+        }}>
+        <DialogContent
+          aria-labelledby={`${editDialogId}-title`}
+          aria-describedby={`${editDialogId}-description`}
+          className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle id={`${editDialogId}-title`}>Edit contact</DialogTitle>
+            <DialogDescription id={`${editDialogId}-description`}>
+              {editTarget
+                ? `Update the details for ${getDisplayName(editTarget)}.`
+                : "Update the selected contact."}
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={handleEditSubmit}
+            className="space-y-5"
+            aria-live="polite"
+            aria-busy={isProcessingEdit}>
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor={`${editFormId}-first-name`}>First name</Label>
+                <Input
+                  id={`${editFormId}-first-name`}
+                  value={editFormState.firstName}
+                  onChange={(event) =>
+                    setEditFormState((previous) => ({
+                      ...previous,
+                      firstName: event.target.value
+                    }))
+                  }
+                  placeholder="Jane"
+                  required
+                  autoFocus
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor={`${editFormId}-last-name`}>Last name</Label>
+                <Input
+                  id={`${editFormId}-last-name`}
+                  value={editFormState.lastName}
+                  onChange={(event) =>
+                    setEditFormState((previous) => ({
+                      ...previous,
+                      lastName: event.target.value
+                    }))
+                  }
+                  placeholder="Doe"
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor={`${editFormId}-email`}>Email</Label>
+                <Input
+                  id={`${editFormId}-email`}
+                  type="email"
+                  value={editFormState.email}
+                  onChange={(event) =>
+                    setEditFormState((previous) => ({
+                      ...previous,
+                      email: event.target.value
+                    }))
+                  }
+                  placeholder="jane@example.com"
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor={`${editFormId}-phone`}>Phone</Label>
+                <Input
+                  id={`${editFormId}-phone`}
+                  value={editFormState.phone}
+                  onChange={(event) =>
+                    setEditFormState((previous) => ({
+                      ...previous,
+                      phone: event.target.value
+                    }))
+                  }
+                  placeholder="+1 (555) 123-4567"
+                  inputMode="tel"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor={`${editFormId}-notes`}>Internal notes</Label>
+                <Textarea
+                  id={`${editFormId}-notes`}
+                  value={editFormState.notes}
+                  onChange={(event) =>
+                    setEditFormState((previous) => ({
+                      ...previous,
+                      notes: event.target.value
+                    }))
+                  }
+                  placeholder="Add internal notes for your teammates."
+                  rows={4}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsEditDialogOpen(false);
+                  setEditTarget(null);
+                }}
+                disabled={isProcessingEdit}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isProcessingEdit} aria-live="assertive">
+                {isProcessingEdit ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                    Saving…
+                  </>
+                ) : (
+                  "Save changes"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isAddDialogOpen}
+        onOpenChange={(open) => {
+          setIsAddDialogOpen(open);
+          if (!open) {
+            setAddFormState({
+              firstName: "",
+              lastName: "",
+              email: "",
+              phone: "",
+              notes: ""
+            });
+          }
+        }}>
+        <DialogContent
+          aria-labelledby={`${addDialogId}-title`}
+          aria-describedby={`${addDialogId}-description`}
+          className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle id={`${addDialogId}-title`}>Add new contact</DialogTitle>
+            <DialogDescription id={`${addDialogId}-description`}>
+              Provide the basic details to create a new contact record.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={handleAddSubmit}
+            className="space-y-5"
+            aria-live="polite"
+            aria-busy={isProcessingAdd}>
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor={`${addFormId}-first-name`}>First name</Label>
+                <Input
+                  id={`${addFormId}-first-name`}
+                  value={addFormState.firstName}
+                  onChange={(event) =>
+                    setAddFormState((previous) => ({
+                      ...previous,
+                      firstName: event.target.value
+                    }))
+                  }
+                  placeholder="Alex"
+                  required
+                  autoFocus
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor={`${addFormId}-last-name`}>Last name</Label>
+                <Input
+                  id={`${addFormId}-last-name`}
+                  value={addFormState.lastName}
+                  onChange={(event) =>
+                    setAddFormState((previous) => ({
+                      ...previous,
+                      lastName: event.target.value
+                    }))
+                  }
+                  placeholder="Smith"
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor={`${addFormId}-email`}>Email</Label>
+                <Input
+                  id={`${addFormId}-email`}
+                  type="email"
+                  value={addFormState.email}
+                  onChange={(event) =>
+                    setAddFormState((previous) => ({
+                      ...previous,
+                      email: event.target.value
+                    }))
+                  }
+                  placeholder="alex@example.com"
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor={`${addFormId}-phone`}>Phone</Label>
+                <Input
+                  id={`${addFormId}-phone`}
+                  value={addFormState.phone}
+                  onChange={(event) =>
+                    setAddFormState((previous) => ({
+                      ...previous,
+                      phone: event.target.value
+                    }))
+                  }
+                  placeholder="+1 (555) 987-6543"
+                  inputMode="tel"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor={`${addFormId}-notes`}>Internal notes</Label>
+                <Textarea
+                  id={`${addFormId}-notes`}
+                  value={addFormState.notes}
+                  onChange={(event) =>
+                    setAddFormState((previous) => ({
+                      ...previous,
+                      notes: event.target.value
+                    }))
+                  }
+                  placeholder="Include any initial context for your team."
+                  rows={4}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsAddDialogOpen(false);
+                  setAddFormState({
+                    firstName: "",
+                    lastName: "",
+                    email: "",
+                    phone: "",
+                    notes: ""
+                  });
+                }}
+                disabled={isProcessingAdd}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isProcessingAdd} aria-live="assertive">
+                {isProcessingAdd ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                    Creating…
+                  </>
+                ) : (
+                  "Create contact"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isDeleteDialogOpen}
+        onOpenChange={(open) => {
+          setIsDeleteDialogOpen(open);
+          if (!open) {
+            setDeleteTargets([]);
+          }
+        }}>
+        <DialogContent
+          aria-labelledby={`${deleteDialogId}-title`}
+          aria-describedby={`${deleteDialogId}-description`}
+          className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle id={`${deleteDialogId}-title`}>Delete contact</DialogTitle>
+            <DialogDescription id={`${deleteDialogId}-description`}>
+              This action cannot be undone. Confirm that you want to remove{" "}
+              {deleteTargets.length === 1
+                ? getDisplayName(deleteTargets[0])
+                : `${numberFormatter.format(deleteTargets.length)} contacts`}
+              .
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-muted/30 text-muted-foreground rounded-md border p-3 text-sm">
+            {deleteTargets.length === 1 ? (
+              deleteTargetNames[0]
+            ) : (
+              <ul className="list-disc space-y-1 pl-4">
+                {deleteTargets.slice(0, 5).map((contact, index) => (
+                  <li key={`${contact.id ?? contact.email ?? contact.name}-${index}`}>
+                    {getDisplayName(contact)}
+                  </li>
+                ))}
+                {deleteTargets.length > 5 ? (
+                  <li>{`…and ${numberFormatter.format(deleteTargets.length - 5)} more`}</li>
+                ) : null}
+              </ul>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                setDeleteTargets([]);
+              }}
+              disabled={isProcessingDelete}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={isProcessingDelete}
+              aria-live="assertive">
+              {isProcessingDelete ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                  Deleting…
+                </>
+              ) : (
+                "Delete"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

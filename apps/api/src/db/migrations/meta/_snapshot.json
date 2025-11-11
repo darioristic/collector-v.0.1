@@ -4,13 +4,24 @@
   "tables": {
     "users": {},
     "accounts": {},
-    "account_contacts": {}
+    "account_contacts": {},
+    "deals": {},
+    "leads": {},
+    "opportunities": {},
+    "activities": {},
+    "crm_notes": {},
+    "client_activities": {}
   },
   "enums": {
     "user_status": {},
-    "account_type": {}
+    "account_type": {},
+    "deal_stage": {},
+    "lead_status": {},
+    "opportunity_stage": {},
+    "activity_type": {},
+    "client_activity_type": {},
+    "client_activity_status": {},
+    "client_activity_priority": {}
   },
   "schemas": {}
 }
-
-

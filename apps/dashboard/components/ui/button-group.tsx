@@ -1,3 +1,4 @@
+import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 
@@ -36,6 +37,33 @@ function ButtonGroup({
     />
   )
 }
+
+interface ButtonGroupItemProps
+  extends React.ComponentProps<"button"> {
+  isActive?: boolean
+  asChild?: boolean
+}
+
+const ButtonGroupItem = React.forwardRef<HTMLButtonElement, ButtonGroupItemProps>(
+  ({ className, isActive = false, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : "button"
+
+    return (
+      <Comp
+        ref={ref}
+        type={asChild ? undefined : "button"}
+        data-slot="button-group-item"
+        data-state={isActive ? "active" : "inactive"}
+        className={cn(
+          "border bg-background px-3 py-2 text-sm font-medium text-muted-foreground transition-colors first:rounded-l-md last:rounded-r-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 hover:bg-accent hover:text-accent-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:hover:bg-primary/90 dark:data-[state=active]:text-primary-foreground",
+          className
+        )}
+        {...props}
+      />
+    )
+  }
+)
+ButtonGroupItem.displayName = "ButtonGroupItem"
 
 function ButtonGroupText({
   className,
@@ -77,6 +105,7 @@ function ButtonGroupSeparator({
 
 export {
   ButtonGroup,
+  ButtonGroupItem,
   ButtonGroupSeparator,
   ButtonGroupText,
   buttonGroupVariants,

@@ -1,4 +1,4 @@
-export type AccountType = "company" | "individual";
+export type AccountType = "customer" | "partner" | "vendor";
 
 export type Account = {
   id: string;
@@ -74,6 +74,7 @@ export type LeadUpdateInput = Partial<Omit<LeadCreateInput, "createdAt">> & {
 };
 
 export const OPPORTUNITY_STAGES = [
+  "prospecting",
   "qualification",
   "proposal",
   "negotiation",
@@ -109,31 +110,46 @@ export type OpportunityUpdateInput = Partial<Omit<OpportunityCreateInput, "creat
   updatedAt?: string | null;
 };
 
-export const ACTIVITY_TYPES = ["call", "email", "meeting", "task"] as const;
+export const ACTIVITY_TYPES = ["call", "meeting", "task", "follow_up"] as const;
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 
 export type Activity = {
   id: string;
+  title: string;
+  clientId: string;
+  clientName: string;
+  assignedTo?: string | null;
+  assignedToName?: string | null;
+  assignedToEmail?: string | null;
   type: ActivityType;
-  subject: string;
-  date: string;
-  relatedTo: string;
+  dueDate: string;
+  status: ActivityStatus;
+  priority: ActivityPriority;
+  notes?: string | null;
   createdAt: string;
-  updatedAt?: string | null;
+  updatedAt: string;
 };
 
 export type ActivityCreateInput = {
+  title: string;
+  clientId: string;
+  assignedTo?: string | null;
   type: ActivityType;
-  subject: string;
-  relatedTo: string;
-  date?: string;
-  updatedAt?: string | null;
+  dueDate: string;
+  status: ActivityStatus;
+  priority: ActivityPriority;
+  notes?: string | null;
 };
 
 export type ActivityUpdateInput = Partial<ActivityCreateInput> & {
-  date?: string;
-  updatedAt?: string | null;
+  dueDate?: string;
 };
+
+export const ACTIVITY_STATUSES = ["scheduled", "in_progress", "completed", "missed"] as const;
+export type ActivityStatus = (typeof ACTIVITY_STATUSES)[number];
+
+export const ACTIVITY_PRIORITIES = ["high", "medium", "low"] as const;
+export type ActivityPriority = (typeof ACTIVITY_PRIORITIES)[number];
 
 export const CRM_ROLES = ["admin", "sales_manager", "sales_rep", "support", "viewer"] as const;
 export type CRMRole = (typeof CRM_ROLES)[number];

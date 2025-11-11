@@ -1,22 +1,58 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { drizzle as drizzleNodePostgres } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { Pool } from "pg";
 
-import { connectionPool, db } from "./index";
+const migrationsFolder = join(
+	dirname(fileURLToPath(import.meta.url)),
+	"migrations",
+);
 
-const migrationsFolder = join(dirname(fileURLToPath(import.meta.url)), "migrations");
+const loadEnv = async () => {
+	try {
+		const { config } = await import("dotenv");
+		config();
+	} catch (error) {
+		const shouldLogWarning = process.env.NODE_ENV !== "production";
+
+		if (shouldLogWarning) {
+			console.warn(
+				"dotenv nije pronađen; preskačem učitavanje .env fajla.",
+				error,
+			);
+		}
+	}
+};
+
+await loadEnv();
 
 const run = async () => {
-  await migrate(db, {
-    migrationsFolder
-  });
+	const connectionString = process.env.DATABASE_URL;
 
-  await connectionPool.end();
+	if (!connectionString || connectionString === "pg-mem") {
+		throw new Error(
+			"DATABASE_URL must be defined and point to a real PostgreSQL instance for migrations.",
+		);
+	}
+
+	const pool = new Pool({
+		connectionString,
+		max: Number(process.env.DB_MAX_CONNECTIONS ?? 10),
+		ssl:
+			process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : undefined,
+	});
+
+	try {
+		const nodeDb = drizzleNodePostgres(pool);
+		await migrate(nodeDb, { migrationsFolder });
+	} finally {
+		await pool.end();
+	}
 };
 
 void run().catch((error) => {
-  console.error("Database migration failed", error);
-  process.exit(1);
+	console.error("Database migration failed", error);
+	process.exit(1);
 });
-

@@ -15,7 +15,7 @@ VALUES
   (
     '00000000-0000-0000-0000-000000000001',
     'Acme Manufacturing',
-    'company',
+    'customer',
     'contact@acme.example',
     '+1-555-0101',
     NULL,
@@ -28,7 +28,7 @@ VALUES
   (
     '00000000-0000-0000-0000-000000000002',
     'Jane Doe',
-    'individual',
+    'vendor',
     'jane.doe@example.com',
     '+1-555-0123',
     NULL,

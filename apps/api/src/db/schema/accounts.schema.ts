@@ -1,24 +1,16 @@
 import { relations } from "drizzle-orm";
-import {
-  index,
-  pgEnum,
-  pgTable,
-  text,
-  timestamp,
-  uuid,
-  uniqueIndex
-} from "drizzle-orm/pg-core";
+import { index, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { users } from "./settings.schema";
 
-export const accountType = pgEnum("account_type", ["company", "individual"]);
+export const accountType = pgEnum("account_type", ["customer", "partner", "vendor"]);
 
 export const accounts = pgTable(
   "accounts",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     name: text("name").notNull(),
-    type: accountType("type").default("company").notNull(),
+    type: accountType("type").default("customer").notNull(),
     email: text("email").notNull(),
     phone: text("phone"),
     website: text("website"),

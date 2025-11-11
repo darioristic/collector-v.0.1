@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
   index,
+  numeric,
   pgEnum,
   pgTable,
   text,
@@ -23,9 +24,13 @@ export const projects = pgTable(
     ownerId: uuid("owner_id").references(() => users.id, { onDelete: "set null" }),
     name: text("name").notNull(),
     description: text("description"),
+    customer: text("customer"),
     status: projectStatus("status").default("planned").notNull(),
     startDate: timestamp("start_date", { withTimezone: true }),
     dueDate: timestamp("due_date", { withTimezone: true }),
+    budgetTotal: numeric("budget_total", { precision: 12, scale: 2 }),
+    budgetSpent: numeric("budget_spent", { precision: 12, scale: 2 }),
+    budgetCurrency: text("budget_currency"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
   },
@@ -63,7 +68,8 @@ export const projectMilestones = pgTable(
     description: text("description"),
     dueDate: timestamp("due_date", { withTimezone: true }),
     status: taskStatus("status").default("todo").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
   },
   (table) => ({
     projectIdx: index("project_milestones_project_idx").on(table.projectId)
@@ -94,6 +100,25 @@ export const projectTasks = pgTable(
   })
 );
 
+export const projectBudgetCategories = pgTable(
+  "project_budget_categories",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    category: text("category").notNull(),
+    allocatedAmount: numeric("allocated_amount", { precision: 12, scale: 2 }).default("0").notNull(),
+    spentAmount: numeric("spent_amount", { precision: 12, scale: 2 }).default("0").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
+  },
+  (table) => ({
+    projectIdx: index("project_budget_categories_project_idx").on(table.projectId),
+    categoryIdx: index("project_budget_categories_category_idx").on(table.category)
+  })
+);
+
 export const projectsRelations = relations(projects, ({ one, many }) => ({
   account: one(accounts, {
     fields: [projects.accountId],
@@ -105,7 +130,8 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
   }),
   members: many(projectMembers),
   milestones: many(projectMilestones),
-  tasks: many(projectTasks)
+  tasks: many(projectTasks),
+  budgetCategories: many(projectBudgetCategories)
 }));
 
 export const projectMembersRelations = relations(projectMembers, ({ one }) => ({
@@ -139,6 +165,13 @@ export const projectTasksRelations = relations(projectTasks, ({ one }) => ({
   assignee: one(users, {
     fields: [projectTasks.assigneeId],
     references: [users.id]
+  })
+}));
+
+export const projectBudgetCategoriesRelations = relations(projectBudgetCategories, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectBudgetCategories.projectId],
+    references: [projects.id]
   })
 }));
 

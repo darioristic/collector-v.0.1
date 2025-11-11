@@ -1,10 +1,17 @@
 import type { FastifySchema } from "fastify";
 
-import { ACTIVITY_TYPES, LEAD_STATUSES, OPPORTUNITY_STAGES } from "@crm/types";
+import { ACTIVITY_PRIORITIES, ACTIVITY_STATUSES, ACTIVITY_TYPES, LEAD_STATUSES, OPPORTUNITY_STAGES } from "@crm/types";
 
 const nullableDateTime = {
   anyOf: [
     { type: "string", format: "date-time" },
+    { type: "null" }
+  ]
+} as const;
+
+const nullableString = {
+  anyOf: [
+    { type: "string", minLength: 1 },
     { type: "null" }
   ]
 } as const;
@@ -39,15 +46,43 @@ const opportunityProperties = {
 
 const activityProperties = {
   id: { type: "string", minLength: 1 },
+  title: { type: "string", minLength: 1 },
+  clientId: { type: "string", minLength: 1 },
+  clientName: { type: "string", minLength: 1 },
+  assignedTo: {
+    anyOf: [
+      { type: "string", minLength: 1 },
+      { type: "null" }
+    ]
+  },
+  assignedToName: {
+    anyOf: [
+      { type: "string", minLength: 1 },
+      { type: "null" }
+    ]
+  },
+  assignedToEmail: {
+    anyOf: [
+      { type: "string", format: "email" },
+      { type: "null" }
+    ]
+  },
   type: {
     type: "string",
     enum: ACTIVITY_TYPES
   },
-  subject: { type: "string", minLength: 1 },
-  date: { type: "string", format: "date-time" },
-  relatedTo: { type: "string", minLength: 1 },
+  dueDate: { type: "string", format: "date-time" },
+  status: {
+    type: "string",
+    enum: ACTIVITY_STATUSES
+  },
+  priority: {
+    type: "string",
+    enum: ACTIVITY_PRIORITIES
+  },
+  notes: nullableString,
   createdAt: { type: "string", format: "date-time" },
-  updatedAt: nullableDateTime
+  updatedAt: { type: "string", format: "date-time" }
 } as const;
 
 const dataEnvelope = (itemsSchema: object) => ({
@@ -99,7 +134,12 @@ const activityListQuery = {
   type: "object",
   properties: {
     type: { type: "string", enum: ACTIVITY_TYPES },
-    relatedTo: { type: "string", minLength: 1 },
+    clientId: { type: "string", minLength: 1 },
+    assignedTo: { type: "string", minLength: 1 },
+    status: { type: "string", enum: ACTIVITY_STATUSES },
+    priority: { type: "string", enum: ACTIVITY_PRIORITIES },
+    dateFrom: { type: "string", format: "date-time" },
+    dateTo: { type: "string", format: "date-time" },
     ...paginationProperties
   },
   additionalProperties: false
@@ -166,23 +206,30 @@ const opportunityUpdateBody = {
 const activityCreateBody = {
   type: "object",
   properties: {
+    title: activityProperties.title,
+    clientId: activityProperties.clientId,
+    assignedTo: activityProperties.assignedTo,
     type: activityProperties.type,
-    subject: activityProperties.subject,
-    date: activityProperties.date,
-    relatedTo: activityProperties.relatedTo
+    dueDate: activityProperties.dueDate,
+    status: activityProperties.status,
+    priority: activityProperties.priority,
+    notes: activityProperties.notes
   },
-  required: ["type", "subject", "relatedTo"],
+  required: ["title", "clientId", "type", "dueDate", "status", "priority"],
   additionalProperties: false
 } as const;
 
 const activityUpdateBody = {
   type: "object",
   properties: {
+    title: activityProperties.title,
+    clientId: activityProperties.clientId,
+    assignedTo: activityProperties.assignedTo,
     type: activityProperties.type,
-    subject: activityProperties.subject,
-    date: activityProperties.date,
-    relatedTo: activityProperties.relatedTo,
-    updatedAt: activityProperties.updatedAt
+    dueDate: activityProperties.dueDate,
+    status: activityProperties.status,
+    priority: activityProperties.priority,
+    notes: activityProperties.notes
   },
   additionalProperties: false,
   minProperties: 1
@@ -350,7 +397,18 @@ export const activityListSchema: FastifySchema = {
       items: {
         type: "object",
         properties: activityProperties,
-        required: ["id", "type", "subject", "date", "relatedTo", "createdAt"],
+        required: [
+          "id",
+          "title",
+          "clientId",
+          "clientName",
+          "type",
+          "dueDate",
+          "status",
+          "priority",
+          "createdAt",
+          "updatedAt"
+        ],
         additionalProperties: false
       }
     })
@@ -363,7 +421,18 @@ export const activityDetailSchema: FastifySchema = {
     200: dataEnvelope({
       type: "object",
       properties: activityProperties,
-      required: ["id", "type", "subject", "date", "relatedTo", "createdAt"],
+      required: [
+        "id",
+        "title",
+        "clientId",
+        "clientName",
+        "type",
+        "dueDate",
+        "status",
+        "priority",
+        "createdAt",
+        "updatedAt"
+      ],
       additionalProperties: false
     })
   }
@@ -375,7 +444,18 @@ export const activityCreateSchema: FastifySchema = {
     201: dataEnvelope({
       type: "object",
       properties: activityProperties,
-      required: ["id", "type", "subject", "date", "relatedTo", "createdAt"],
+      required: [
+        "id",
+        "title",
+        "clientId",
+        "clientName",
+        "type",
+        "dueDate",
+        "status",
+        "priority",
+        "createdAt",
+        "updatedAt"
+      ],
       additionalProperties: false
     })
   }
@@ -388,7 +468,18 @@ export const activityUpdateSchema: FastifySchema = {
     200: dataEnvelope({
       type: "object",
       properties: activityProperties,
-      required: ["id", "type", "subject", "date", "relatedTo", "createdAt"],
+      required: [
+        "id",
+        "title",
+        "clientId",
+        "clientName",
+        "type",
+        "dueDate",
+        "status",
+        "priority",
+        "createdAt",
+        "updatedAt"
+      ],
       additionalProperties: false
     })
   }

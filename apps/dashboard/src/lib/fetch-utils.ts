@@ -9,7 +9,11 @@ export function getApiUrl(endpoint: string): string {
   const finalEndpoint = cleanEndpoint.startsWith("api/")
     ? cleanEndpoint.slice(4)
     : cleanEndpoint;
-  return `${baseUrl}/${finalEndpoint}`;
+  const fullUrl = `${baseUrl}/${finalEndpoint}`;
+
+  console.log("[getApiUrl]", { endpoint, baseUrl, fullUrl });
+
+  return fullUrl;
 }
 
 /**

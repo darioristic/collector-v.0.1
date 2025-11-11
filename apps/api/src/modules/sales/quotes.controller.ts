@@ -1,9 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { db } from "../../db/index.js";
 import { QuotesService } from "./quotes.service.js";
 import type { QuoteCreateInput, QuoteUpdateInput } from "@crm/types";
-
-const service = new QuotesService(db);
 
 type ListRequest = FastifyRequest<{
   Querystring: {
@@ -34,6 +31,7 @@ type DeleteRequest = FastifyRequest<{
 }>;
 
 export const listQuotesHandler = async (request: ListRequest, reply: FastifyReply) => {
+  const service = new QuotesService(request.db);
   const filters = {
     companyId: request.query.companyId,
     contactId: request.query.contactId,
@@ -54,6 +52,7 @@ export const listQuotesHandler = async (request: ListRequest, reply: FastifyRepl
 };
 
 export const getQuoteHandler = async (request: GetRequest, reply: FastifyReply) => {
+  const service = new QuotesService(request.db);
   const id = Number.parseInt(request.params.id, 10);
 
   if (Number.isNaN(id)) {
@@ -70,11 +69,13 @@ export const getQuoteHandler = async (request: GetRequest, reply: FastifyReply) 
 };
 
 export const createQuoteHandler = async (request: CreateRequest, reply: FastifyReply) => {
+  const service = new QuotesService(request.db);
   const quote = await service.create(request.body);
   await reply.status(201).send({ data: quote });
 };
 
 export const updateQuoteHandler = async (request: UpdateRequest, reply: FastifyReply) => {
+  const service = new QuotesService(request.db);
   const id = Number.parseInt(request.params.id, 10);
 
   if (Number.isNaN(id)) {
@@ -91,6 +92,7 @@ export const updateQuoteHandler = async (request: UpdateRequest, reply: FastifyR
 };
 
 export const deleteQuoteHandler = async (request: DeleteRequest, reply: FastifyReply) => {
+  const service = new QuotesService(request.db);
   const id = Number.parseInt(request.params.id, 10);
 
   if (Number.isNaN(id)) {

@@ -32,12 +32,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const { setOpen, setOpenMobile, isMobile } = useSidebar();
   const isTablet = useIsTablet();
   const [isDownloadBannerVisible, setIsDownloadBannerVisible] = React.useState(false);
+  const [isClient, setIsClient] = React.useState(false);
 
   useEffect(() => {
     if (isMobile) setOpenMobile(false);
@@ -46,6 +48,36 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   useEffect(() => {
     setOpen(!isTablet);
   }, [isTablet]);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return (
+      <Sidebar collapsible="icon" {...props}>
+        <SidebarHeader>
+          <div className="flex items-center gap-2 p-2">
+            <Skeleton className="size-10 rounded-md" />
+            <div className="flex flex-1 flex-col gap-1">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          </div>
+        </SidebarHeader>
+        <SidebarContent>
+          <div className="space-y-2 p-2">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <Skeleton key={index} className="h-8 w-full rounded-md" />
+            ))}
+          </div>
+        </SidebarContent>
+        <SidebarFooter>
+          <Skeleton className="h-20 w-full rounded-md" />
+        </SidebarFooter>
+      </Sidebar>
+    );
+  }
 
   return (
     <Sidebar collapsible="icon" {...props}>

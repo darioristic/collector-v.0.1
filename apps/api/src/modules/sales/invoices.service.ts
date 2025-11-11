@@ -1,6 +1,6 @@
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import Decimal from "decimal.js";
+import type { AppDatabase } from "../../db";
 import { invoices, invoiceItems } from "../../db/schema/sales.schema.js";
 import type {
   Invoice,
@@ -11,12 +11,12 @@ import type {
 } from "@crm/types";
 
 export class InvoicesService {
-  constructor(private database: PostgresJsDatabase<Record<string, never>>) {}
+  constructor(private database: AppDatabase) {}
 
   async list(filters?: {
     customerId?: string;
     orderId?: number;
-    status?: string;
+    status?: typeof invoices.$inferSelect.status;
     search?: string;
     limit?: number;
     offset?: number;
@@ -223,8 +223,8 @@ export class InvoicesService {
   }
 
   async delete(id: string): Promise<boolean> {
-    const result = await this.database.delete(invoices).where(eq(invoices.id, id));
-    return result.rowCount ? result.rowCount > 0 : false;
+    const deleted = await this.database.delete(invoices).where(eq(invoices.id, id)).returning();
+    return deleted.length > 0;
   }
 
   private calculateItemTotals(item: InvoiceItemCreateInput): {

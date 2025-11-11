@@ -12,56 +12,81 @@ import {
 } from "next/font/google";
 import { cn } from "@/lib/utils";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+  preload: false
+});
 
-const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
+const geist = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist",
+  display: "swap"
+});
 
 const roboto = Roboto({
   subsets: ["latin"],
   weight: ["400", "500", "700"],
-  variable: "--font-roboto"
+  variable: "--font-roboto",
+  display: "swap",
+  preload: false
 });
 
 const plus_jakarta_sans = Plus_Jakarta_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "800"],
-  variable: "--font-plus-jakarta-sans"
+  variable: "--font-plus-jakarta-sans",
+  display: "swap",
+  preload: false
 });
 
 const montserrat = Montserrat({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
-  variable: "--font-montserrat"
+  variable: "--font-montserrat",
+  display: "swap",
+  preload: false
 });
 
 const poppins = Poppins({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
-  variable: "--font-poppins"
+  variable: "--font-poppins",
+  display: "swap",
+  preload: false
 });
 
 const overpass_mono = Overpass_Mono({
   subsets: ["latin"],
   weight: ["400", "500", "700"],
-  variable: "--font-overpass-mono"
+  variable: "--font-overpass-mono",
+  display: "swap",
+  preload: false
 });
 
 const ptSans = PT_Sans({
   variable: "--font-pt-sans",
   subsets: ["latin"],
-  weight: ["400", "700"]
+  weight: ["400", "700"],
+  display: "swap",
+  preload: false
 });
 
 const hedvig_letters_serif = Hedvig_Letters_Serif({
   subsets: ["latin"],
   weight: ["400"],
-  variable: "--font-hedvig-letters-serif"
+  variable: "--font-hedvig-letters-serif",
+  display: "swap",
+  preload: false
 });
 
 const kumbh_sans = Kumbh_Sans({
   subsets: ["latin"],
   weight: ["400"],
-  variable: "--font-kumbh-sans"
+  variable: "--font-kumbh-sans",
+  display: "swap",
+  preload: false
 });
 
 export const fontVariables = cn(

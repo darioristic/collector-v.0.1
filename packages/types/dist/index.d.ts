@@ -1,4 +1,4 @@
-export type AccountType = "company" | "individual";
+export type AccountType = "customer" | "partner" | "vendor";
 export type Account = {
     id: string;
     name: string;
@@ -89,28 +89,41 @@ export type OpportunityCreateInput = {
 export type OpportunityUpdateInput = Partial<Omit<OpportunityCreateInput, "createdAt">> & {
     updatedAt?: string | null;
 };
-export declare const ACTIVITY_TYPES: readonly ["call", "email", "meeting", "task"];
+export declare const ACTIVITY_TYPES: readonly ["call", "meeting", "task", "follow_up"];
 export type ActivityType = (typeof ACTIVITY_TYPES)[number];
 export type Activity = {
     id: string;
+    title: string;
+    clientId: string;
+    clientName: string;
+    assignedTo?: string | null;
+    assignedToName?: string | null;
+    assignedToEmail?: string | null;
     type: ActivityType;
-    subject: string;
-    date: string;
-    relatedTo: string;
+    dueDate: string;
+    status: ActivityStatus;
+    priority: ActivityPriority;
+    notes?: string | null;
     createdAt: string;
-    updatedAt?: string | null;
+    updatedAt: string;
 };
 export type ActivityCreateInput = {
+    title: string;
+    clientId: string;
+    assignedTo?: string | null;
     type: ActivityType;
-    subject: string;
-    relatedTo: string;
-    date?: string;
-    updatedAt?: string | null;
+    dueDate: string;
+    status: ActivityStatus;
+    priority: ActivityPriority;
+    notes?: string | null;
 };
 export type ActivityUpdateInput = Partial<ActivityCreateInput> & {
-    date?: string;
-    updatedAt?: string | null;
+    dueDate?: string;
 };
+export declare const ACTIVITY_STATUSES: readonly ["scheduled", "in_progress", "completed", "missed"];
+export type ActivityStatus = (typeof ACTIVITY_STATUSES)[number];
+export declare const ACTIVITY_PRIORITIES: readonly ["high", "medium", "low"];
+export type ActivityPriority = (typeof ACTIVITY_PRIORITIES)[number];
 export declare const CRM_ROLES: readonly ["admin", "sales_manager", "sales_rep", "support", "viewer"];
 export type CRMRole = (typeof CRM_ROLES)[number];
 export declare const DEAL_STAGES: readonly ["prospecting", "qualification", "proposal", "negotiation", "closedWon", "closedLost"];

@@ -30,7 +30,7 @@ export default function AccountsTable({ accounts }: AccountsTableProps) {
       <div>
         <h2 className="text-2xl font-semibold tracking-tight">Accounts Overview</h2>
         <p className="text-muted-foreground mt-1 text-sm">
-          Review key details for company and individual accounts at a glance.
+          Review key details for customer, partner, and vendor accounts at a glance.
         </p>
       </div>
       <div className="overflow-hidden rounded-md border">
