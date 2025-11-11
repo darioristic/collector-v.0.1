@@ -33,6 +33,13 @@ import { Calendar } from "@/components/ui/calendar";
 import { Form, FormField, FormItem } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger

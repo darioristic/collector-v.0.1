@@ -77,3 +77,20 @@ Za deljeni kod koristimo `packages/ui` i `packages/types` pakete iz monorepa.
 3. Open `http://localhost:3000/accounts/companies` and confirm that 50 seeded companies (each with two related contacts) are listed. Optionally visit `http://localhost:3000/accounts/contacts` to review all 100 contacts.
 
 Seed data acts as a mock scenario for demos and QA, and you can refresh it at any time by running `bun run db:seed` again.
+
+## Vault migracije i seed
+
+- Drizzle konfiguracija se nalazi u `drizzle.config.ts`, a šeme u `lib/db/schema`.
+- Generisanje nove migracije:
+  ```sh
+  bun run db:generate -- --name naziv_migracije
+  ```
+- Primena migracija nad PostgreSQL bazom (koristi `lib/db/migrate.ts`):
+  ```sh
+  bun run db:migrate
+  ```
+- Pokretanje lokalnog seeda za Vault root foldere:
+  ```sh
+  bun run db:seed
+  ```
+- U CI okruženju pokreti `bun run db:migrate` i `bun run db:seed` iz korena monorepa – skripte će izvršiti i API i dashboard migracije/seed u ispravnom redosledu.

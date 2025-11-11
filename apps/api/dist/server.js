@@ -3,14 +3,16 @@ import { readdir } from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { db } from "./db/index.js";
 import corsPlugin from "./plugins/cors";
+import { cachePlugin } from "./lib/cache.service";
 import errorHandlerPlugin from "./plugins/error-handler";
 import openApiPlugin from "./plugins/openapi";
 import healthRoutes from "./routes/health";
 const createLogger = () => {
-    const baseLevel = process.env.LOG_LEVEL ?? (process.env.NODE_ENV === "production" ? "info" : "debug");
+    const baseLevel = process.env.LOG_LEVEL ??
+        (process.env.NODE_ENV === "production" ? "info" : "debug");
     if (process.env.NODE_ENV === "production") {
         return {
-            level: baseLevel
+            level: baseLevel,
         };
     }
     const devLogger = {
@@ -20,9 +22,9 @@ const createLogger = () => {
             options: {
                 colorize: true,
                 singleLine: false,
-                translateTime: "SYS:standard"
-            }
-        }
+                translateTime: "SYS:standard",
+            },
+        },
     };
     return devLogger;
 };
@@ -43,7 +45,8 @@ const loadModule = async (app, moduleName) => {
             const nodeError = error;
             if (nodeError?.code === "ERR_MODULE_NOT_FOUND" ||
                 nodeError?.code === "MODULE_NOT_FOUND" ||
-                (nodeError instanceof Error && nodeError.message.includes("Cannot find module"))) {
+                (nodeError instanceof Error &&
+                    nodeError.message.includes("Cannot find module"))) {
                 continue;
             }
             app.log.error({ err: error, module: moduleName }, "Failed to import module");
@@ -94,6 +97,7 @@ export const buildServer = async () => {
         app.decorateRequest("db", { getter: () => database });
     }
     await app.register(corsPlugin);
+    await app.register(cachePlugin);
     await app.register(errorHandlerPlugin);
     await app.register(openApiPlugin);
     await registerHealthcheck(app);
@@ -105,7 +109,7 @@ const start = async () => {
     try {
         await fastify.listen({
             port: Number(process.env.PORT ?? 4000),
-            host: process.env.HOST ?? "0.0.0.0"
+            host: process.env.HOST ?? "0.0.0.0",
         });
         fastify.log.info("API server is listening");
     }
@@ -114,7 +118,8 @@ const start = async () => {
         process.exit(1);
     }
 };
-const isMain = typeof process.argv[1] === "string" && import.meta.url === pathToFileURL(process.argv[1]).href;
+const isMain = typeof process.argv[1] === "string" &&
+    import.meta.url === pathToFileURL(process.argv[1]).href;
 if (isMain) {
     void start();
 }

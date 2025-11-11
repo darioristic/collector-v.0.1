@@ -1,49 +1,26 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { ReactNode } from "react";
-import { Controller, useForm } from "react-hook-form";
 import { format, parseISO } from "date-fns";
 import {
   CalendarDays,
-  CheckCircle2,
   CircleDashed,
   CircleDot,
   CircleSlash,
-  LayoutGrid,
-  ListTree,
   MoreHorizontal,
-  Plus,
   Trash2
 } from "lucide-react";
 
-import { TableToolbar } from "@/components/table-toolbar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -55,22 +32,12 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type {
-  CreateTaskPayload,
   ProjectDetails,
   ProjectOwner,
   ProjectTask,
   TaskStatus,
   UpdateTaskPayload
 } from "@/src/types/projects";
-
-const UNASSIGNED_VALUE = "__unassigned__";
-
-type ViewMode = "board" | "list";
-
-const VIEW_OPTIONS: Array<{ value: ViewMode; label: string; icon: ReactNode }> = [
-  { value: "board", label: "Board view", icon: <LayoutGrid className="size-4" /> },
-  { value: "list", label: "List view", icon: <ListTree className="size-4" /> }
-];
 
 const STATUS_ORDER: TaskStatus[] = ["todo", "in_progress", "blocked", "done"];
 
@@ -147,10 +114,8 @@ type TaskFormValues = {
 
 type ProjectTasksProps = {
   project: ProjectDetails;
-  onCreateTask: (payload: CreateTaskPayload) => Promise<unknown>;
   onUpdateTask: (taskId: string, payload: UpdateTaskPayload) => Promise<unknown>;
   onDeleteTask: (taskId: string) => Promise<unknown>;
-  isMutating?: boolean;
 };
 
 type TaskStatusOption = {
@@ -159,30 +124,8 @@ type TaskStatusOption = {
   icon: ReactNode;
 };
 
-export function ProjectTasks({
-  project,
-  onCreateTask,
-  onUpdateTask,
-  onDeleteTask,
-  isMutating
-}: ProjectTasksProps) {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("board");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<TaskStatus | "all">("all");
-  const [assigneeFilter, setAssigneeFilter] = useState<string | "all">("all");
-
+export function ProjectTasks({ project, onUpdateTask, onDeleteTask }: ProjectTasksProps) {
   const { toast } = useToast();
-
-  const form = useForm<TaskFormValues>({
-    defaultValues: {
-      title: "",
-      description: "",
-      dueDate: "",
-      status: "todo",
-      assigneeId: null
-    }
-  });
 
   const statusOptions = useMemo<TaskStatusOption[]>(
     () =>
@@ -193,70 +136,6 @@ export function ProjectTasks({
       })),
     []
   );
-
-  const teamOptions = useMemo(
-    () =>
-      project.team
-        .map((member) => ({
-          value: member.userId,
-          label: member.name ?? member.email ?? "Nepoznato"
-        }))
-        .sort((a, b) => a.label.localeCompare(b.label)),
-    [project.team]
-  );
-
-  const filteredTasks = useMemo(() => {
-    return project.tasks.filter((task) => {
-      const matchesSearch =
-        searchTerm.trim().length === 0 ||
-        task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (task.description ?? "").toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesStatus = statusFilter === "all" || task.status === statusFilter;
-      const matchesAssignee =
-        assigneeFilter === "all" ||
-        task.assignee?.id === assigneeFilter ||
-        task.assignee?.email === assigneeFilter ||
-        task.assignee?.name === assigneeFilter;
-
-      return matchesSearch && matchesStatus && matchesAssignee;
-    });
-  }, [project.tasks, searchTerm, statusFilter, assigneeFilter]);
-
-  const hasActiveFilters =
-    searchTerm.trim().length > 0 || statusFilter !== "all" || assigneeFilter !== "all";
-
-  const handleResetFilters = () => {
-    setSearchTerm("");
-    setStatusFilter("all");
-    setAssigneeFilter("all");
-  };
-
-  const handleCreate = async (values: TaskFormValues) => {
-    const payload: CreateTaskPayload = {
-      title: values.title,
-      description: values.description,
-      dueDate: values.dueDate,
-      status: values.status,
-      assigneeId: values.assigneeId || null
-    };
-
-    try {
-      await onCreateTask(payload);
-      toast({
-        title: "Zadatak dodat",
-        description: "Zadatak je uspešno dodat u projekat."
-      });
-      setIsDialogOpen(false);
-      form.reset();
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Greška",
-        description: error instanceof Error ? error.message : "Dodavanje zadatka nije uspelo."
-      });
-    }
-  };
 
   const handleStatusChange = async (task: ProjectTask, status: TaskStatus) => {
     if (task.status === status) return;
@@ -290,297 +169,15 @@ export function ProjectTasks({
 
   return (
     <Card className="border-none bg-card/80 shadow-lg shadow-primary/5">
-      <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="space-y-1">
-          <CardTitle className="text-xl font-semibold lg:text-2xl">Project tasks</CardTitle>
-          <p className="text-muted-foreground text-sm">
-            Pratite tok rada tima i upravljajte zadacima kroz kanban ili tabelarni prikaz.
-          </p>
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-          <div className="flex items-center gap-2 rounded-full border border-border/70 bg-background/70 px-4 py-2 text-sm text-muted-foreground">
-            <CheckCircle2 className="size-4 text-primary" />
-            <span>
-              {project.quickStats.completedTasks}/{project.quickStats.totalTasks} completed
-            </span>
-          </div>
-          <Button size="sm" onClick={() => setIsDialogOpen(true)}>
-            <Plus className="mr-2 size-4" />
-            Novi zadatak
-          </Button>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-6">
-        <TableToolbar
-          search={{
-            value: searchTerm,
-            onChange: setSearchTerm,
-            placeholder: "Pretraži zadatke po nazivu, opisu ili assignee imenu",
-            ariaLabel: "Search project tasks"
-          }}
-          filters={
-            <div className="flex flex-wrap items-center gap-3">
-              <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as TaskStatus | "all")}>
-                <SelectTrigger className="h-10 w-[180px]" aria-label="Filter by status">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Svi statusi</SelectItem>
-                  {STATUS_ORDER.map((status) => (
-                    <SelectItem key={status} value={status}>
-                      {statusConfig[status].statusLabel}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={assigneeFilter} onValueChange={(value) => setAssigneeFilter(value)}>
-                <SelectTrigger className="h-10 w-[200px]" aria-label="Filter by assignee">
-                  <SelectValue placeholder="Assignee" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Svi članovi</SelectItem>
-                  {teamOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          }
-          reset={{
-            onReset: handleResetFilters,
-            disabled: !hasActiveFilters,
-            hideUntilActive: true
-          }}
-          actions={
-            <div className="inline-flex rounded-full border border-border/70 bg-background/70 p-1 shadow-sm">
-              {VIEW_OPTIONS.map((option) => {
-                const isActive = viewMode === option.value;
-                return (
-                  <Button
-                    key={option.value}
-                    type="button"
-                    variant={isActive ? "default" : "ghost"}
-                    size="sm"
-                    className={cn(
-                      "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition",
-                      !isActive && "text-muted-foreground"
-                    )}
-                    onClick={() => setViewMode(option.value)}
-                  >
-                    {option.icon}
-                    {option.label}
-                  </Button>
-                );
-              })}
-            </div>
-          }
+      <CardContent className="space-y-4">
+        <TaskListView
+          tasks={project.tasks}
+          onStatusChange={handleStatusChange}
+          onDelete={handleDelete}
+          statusOptions={statusOptions}
         />
-
-        {viewMode === "board" ? (
-          <TaskBoardView
-            tasks={filteredTasks}
-            onStatusChange={handleStatusChange}
-            onDelete={handleDelete}
-            statusOptions={statusOptions}
-          />
-        ) : (
-          <TaskListView
-            tasks={filteredTasks}
-            onStatusChange={handleStatusChange}
-            onDelete={handleDelete}
-            statusOptions={statusOptions}
-          />
-        )}
       </CardContent>
-
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Dodaj novi zadatak</DialogTitle>
-          </DialogHeader>
-          <form className="space-y-4" onSubmit={form.handleSubmit(handleCreate)}>
-            <div className="space-y-2">
-              <Label htmlFor="title">Naziv</Label>
-              <Input id="title" placeholder="Naziv zadatka" {...form.register("title", { required: true })} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Opis</Label>
-              <Input id="description" placeholder="Kratak opis" {...form.register("description")} />
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Controller
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Odaberite status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {statusOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="dueDate">Rok</Label>
-                <Input id="dueDate" type="date" {...form.register("dueDate")} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="assigneeId">Assignee</Label>
-              <Controller
-                control={form.control}
-                name="assigneeId"
-                render={({ field }) => (
-                  <Select
-                    value={field.value ?? UNASSIGNED_VALUE}
-                    onValueChange={(value) => field.onChange(value === UNASSIGNED_VALUE ? null : value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Odaberi člana tima" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={UNASSIGNED_VALUE}>Nije dodeljeno</SelectItem>
-                      {project.team.map((member) => (
-                        <SelectItem key={member.userId} value={member.userId}>
-                          {member.name ?? member.email ?? member.userId}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Otkaži
-              </Button>
-              <Button type="submit" disabled={isMutating}>
-                Sačuvaj zadatak
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </Card>
-  );
-}
-
-type TaskBoardViewProps = {
-  tasks: ProjectTask[];
-  onStatusChange: (task: ProjectTask, status: TaskStatus) => void;
-  onDelete: (task: ProjectTask) => void;
-  statusOptions: TaskStatusOption[];
-};
-
-function TaskBoardView({ tasks, onStatusChange, onDelete, statusOptions }: TaskBoardViewProps) {
-  return (
-    <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-4">
-      {STATUS_ORDER.map((status) => {
-        const config = statusConfig[status];
-        const columnTasks = tasks.filter((task) => task.status === status);
-
-        return (
-          <div
-            key={status}
-            className="flex max-h-[680px] flex-col rounded-2xl border border-border/70 bg-card/85 shadow-sm backdrop-blur"
-          >
-            <div className={cn("flex items-center justify-between px-4 py-3", config.boardHeaderClass)}>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm uppercase tracking-wide">{config.boardTitle}</span>
-                <span className="rounded-full bg-background/80 px-2 py-0.5 text-xs font-semibold">
-                  {columnTasks.length}
-                </span>
-              </div>
-              <Badge variant="outline" className={cn("rounded-full px-2.5 py-1 text-xs font-semibold", config.boardBadgeClass)}>
-                {config.statusLabel}
-              </Badge>
-            </div>
-
-            <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-4">
-              {columnTasks.length === 0 ? (
-                <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-border/60 bg-background/70 px-4 py-10 text-center text-sm text-muted-foreground">
-                  Nema zadataka u ovoj koloni.
-                </div>
-              ) : (
-                columnTasks.map((task) => (
-                  <TaskBoardCard
-                    key={task.id}
-                    task={task}
-                    statusOptions={statusOptions}
-                    onStatusChange={onStatusChange}
-                    onDelete={onDelete}
-                  />
-                ))
-              )}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-type TaskBoardCardProps = {
-  task: ProjectTask;
-  statusOptions: TaskStatusOption[];
-  onStatusChange: (task: ProjectTask, status: TaskStatus) => void;
-  onDelete: (task: ProjectTask) => void;
-};
-
-function TaskBoardCard({ task, statusOptions, onStatusChange, onDelete }: TaskBoardCardProps) {
-  return (
-    <div className="group flex flex-col gap-3 rounded-2xl border border-border/60 bg-background/95 p-4 shadow-sm transition hover:border-primary/40 hover:shadow-md">
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <h3 className="text-sm font-semibold text-foreground">{task.title}</h3>
-          {task.description ? (
-            <p className="text-muted-foreground text-xs leading-relaxed line-clamp-3">{task.description}</p>
-          ) : null}
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-8 rounded-full">
-              <MoreHorizontal className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onSelect={(event) => {
-                event.preventDefault();
-                onDelete(task);
-              }}
-            >
-              <Trash2 className="mr-2 size-4" />
-              Obriši
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      <TaskStatusDropdown task={task} statusOptions={statusOptions} onChange={onStatusChange} />
-
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <div className="flex items-center gap-2">
-          <CalendarDays className="size-3.5" />
-          {formatDueDate(task.dueDate)}
-        </div>
-        <TaskAssignee assignee={task.assignee} compact />
-      </div>
-    </div>
   );
 }
 
@@ -593,94 +190,73 @@ type TaskListViewProps = {
 
 function TaskListView({ tasks, onStatusChange, onDelete, statusOptions }: TaskListViewProps) {
   return (
-    <div className="space-y-6">
-      {STATUS_ORDER.map((status) => {
-        const config = statusConfig[status];
-        const rows = tasks.filter((task) => task.status === status);
-
-        return (
-          <div
-            key={status}
-            className="overflow-hidden rounded-2xl border border-border/60 bg-card/85 shadow-sm backdrop-blur"
-          >
-            <div className={cn("flex items-center justify-between px-4 py-3", config.listHeaderClass)}>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm uppercase tracking-wide">{config.boardTitle}</span>
-                <span className="rounded-full bg-background/80 px-2 py-0.5 text-xs font-semibold">
-                  {rows.length}
-                </span>
-              </div>
-            </div>
-
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/40">
-                  <TableHead className="w-[32%]">Zadatak</TableHead>
-                  <TableHead>Assignee</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Rok</TableHead>
-                  <TableHead className="text-right">Akcije</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
-                      Nema zadataka u ovoj sekciji.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  rows.map((task) => (
-                    <TableRow key={task.id} className="group">
-                      <TableCell>
-                        <div className="space-y-1">
-                          <div className="font-medium text-sm text-foreground">{task.title}</div>
-                          {task.description ? (
-                            <p className="text-muted-foreground text-xs">{task.description}</p>
-                          ) : null}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <TaskAssignee assignee={task.assignee} />
-                      </TableCell>
-                      <TableCell>
-                        <TaskStatusDropdown task={task} statusOptions={statusOptions} onChange={onStatusChange} />
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <CalendarDays className="size-4" />
-                          {formatDueDate(task.dueDate)}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="size-8 rounded-full">
-                              <MoreHorizontal className="size-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onSelect={(event) => {
-                                event.preventDefault();
-                                onDelete(task);
-                              }}
-                            >
-                              <Trash2 className="mr-2 size-4" />
-                              Obriši
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        );
-      })}
+    <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/85 shadow-sm backdrop-blur">
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-muted/40">
+            <TableHead className="w-[32%]">Zadatak</TableHead>
+            <TableHead>Assignee</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Rok</TableHead>
+            <TableHead className="text-right">Akcije</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {tasks.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
+                Trenutno nema zadataka.
+              </TableCell>
+            </TableRow>
+          ) : (
+            tasks.map((task) => (
+              <TableRow key={task.id} className="group">
+                <TableCell>
+                  <div className="space-y-1">
+                    <div className="font-medium text-sm text-foreground">{task.title}</div>
+                    {task.description ? (
+                      <p className="text-muted-foreground text-xs">{task.description}</p>
+                    ) : null}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <TaskAssignee assignee={task.assignee} />
+                </TableCell>
+                <TableCell>
+                  <TaskStatusDropdown task={task} statusOptions={statusOptions} onChange={onStatusChange} />
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <CalendarDays className="size-4" />
+                    {formatDueDate(task.dueDate)}
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="size-8 rounded-full">
+                        <MoreHorizontal className="size-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onSelect={(event) => {
+                          event.preventDefault();
+                          onDelete(task);
+                        }}
+                      >
+                        <Trash2 className="mr-2 size-4" />
+                        Obriši
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
     </div>
   );
 }

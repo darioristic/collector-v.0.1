@@ -2,6 +2,7 @@
 
 import { useForm } from "react-hook-form";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -14,6 +15,7 @@ import {
   XIcon
 } from "lucide-react";
 import { useFileUpload } from "@/hooks/use-file-upload";
+import { createProduct } from "../api";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -53,25 +55,32 @@ const FormSchema = z.object({
   name: z.string().min(2, {
     message: "Product name must be at least 2 characters."
   }),
-  sku: z.string(),
-  barcode: z.string(),
-  description: z.string(),
-  file: z.string(),
-  variants: z.string(),
-  price: z.string(),
-  status: z.string(),
-  category: z.string(),
-  sub_category: z.string()
+  sku: z.string().min(1, {
+    message: "SKU is required."
+  }),
+  barcode: z.string().optional(),
+  description: z.string().optional(),
+  file: z.string().optional(),
+  variants: z.string().optional(),
+  price: z.string().min(1, {
+    message: "Price is required."
+  }),
+  status: z.string().optional(),
+  category: z.string().optional(),
+  sub_category: z.string().optional(),
+  active: z.boolean().default(true)
 });
 
 export default function AddProductForm() {
+  const router = useRouter();
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
       name: "",
       sku: "",
       barcode: "",
-      description: ""
+      description: "",
+      active: true
     }
   });
 
@@ -94,13 +103,33 @@ export default function AddProductForm() {
   });
 
   function onSubmit(data: z.infer<typeof FormSchema>) {
-    toast("You submitted the following values:", {
-      description: (
-        <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
-          <code className="text-white">{JSON.stringify(data, null, 2)}</code>
-        </pre>
-      )
-    });
+    const price = parseFloat(data.price);
+    if (isNaN(price) || price < 0) {
+      toast.error("Invalid price", {
+        description: "Price must be a valid positive number."
+      });
+      return;
+    }
+
+    createProduct({
+      name: data.name,
+      sku: data.sku,
+      price,
+      currency: "EUR",
+      category: data.category || null,
+      active: data.active ?? true
+    })
+      .then(() => {
+        toast.success("Product created successfully", {
+          description: `Product "${data.name}" has been created.`
+        });
+        router.push("/products");
+      })
+      .catch((error) => {
+        toast.error("Failed to create product", {
+          description: error instanceof Error ? error.message : "An unexpected error occurred."
+        });
+      });
   }
 
   return (

@@ -2,16 +2,23 @@
  * Get the full API URL for a given endpoint
  */
 export function getApiUrl(endpoint: string): string {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+  const defaultBaseUrl = "http://localhost:4000/api";
+  const rawBaseUrl = (process.env.NEXT_PUBLIC_API_URL ?? defaultBaseUrl).trim();
+  const baseWithoutTrailingSlash =
+    rawBaseUrl.endsWith("/") && rawBaseUrl.length > 1
+      ? rawBaseUrl.slice(0, -1)
+      : rawBaseUrl;
+  const baseUrl = baseWithoutTrailingSlash.toLowerCase().endsWith("/api")
+    ? baseWithoutTrailingSlash
+    : `${baseWithoutTrailingSlash}/api`;
+
   // Remove leading slash from endpoint if present
   const cleanEndpoint = endpoint.startsWith("/") ? endpoint.slice(1) : endpoint;
   // Remove /api prefix if present in endpoint (to avoid duplication)
-  const finalEndpoint = cleanEndpoint.startsWith("api/")
-    ? cleanEndpoint.slice(4)
-    : cleanEndpoint;
+  const finalEndpoint = cleanEndpoint.startsWith("api/") ? cleanEndpoint.slice(4) : cleanEndpoint;
   const fullUrl = `${baseUrl}/${finalEndpoint}`;
 
-  console.log("[getApiUrl]", { endpoint, baseUrl, fullUrl });
+  console.log("[getApiUrl]", { endpoint, rawBaseUrl, baseUrl, fullUrl });
 
   return fullUrl;
 }

@@ -11,8 +11,8 @@
 		"build": "bun run --filter ./apps/dashboard build && bun run --filter api build && bun run --filter @crm/ui build && bun run --filter @crm/types build && bun run --filter config build",
 		"lint": "bunx eslint --config packages/config/eslint.config.js \"apps/**/*.{ts,tsx,js,jsx}\" \"packages/**/*.{ts,tsx,js,jsx}\"",
 		"test": "bun run --filter ./apps/api test && bun run --filter ./apps/dashboard test",
-		"db:migrate": "bun run --filter ./apps/api db:migrate",
-		"db:seed": "bun run --filter ./apps/api db:seed"
+		"db:migrate": "bun run --filter ./apps/api db:migrate && bun run --filter ./apps/dashboard db:migrate",
+		"db:seed": "bun run --filter ./apps/api db:seed && bun run --filter ./apps/dashboard db:seed"
 	},
 	"dependencies": {
 		"@tiptap/core": "^2.27.1",

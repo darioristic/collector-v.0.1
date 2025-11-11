@@ -10,17 +10,29 @@ import {
 import {
   createProduct,
   deleteProduct,
+  getProduct,
   listProducts,
   updateProduct
 } from "./products.controller";
-import { listInventory } from "./inventory.controller";
+import {
+  adjustInventory,
+  getProductInventory,
+  listInventory
+} from "./inventory.controller";
 
 const productsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get("/", { schema: listProductsSchema }, listProducts);
+  fastify.get("/inventory", { schema: listInventorySchema }, listInventory);
+  fastify.get("/:id/inventory", { schema: getProductInventorySchema }, getProductInventory);
+  fastify.post(
+    "/:id/inventory/adjustments",
+    { schema: adjustInventorySchema },
+    adjustInventory
+  );
+  fastify.get("/:id", { schema: getProductSchema }, getProduct);
   fastify.post("/", { schema: createProductSchema }, createProduct);
   fastify.put("/:id", { schema: updateProductSchema }, updateProduct);
   fastify.delete("/:id", { schema: deleteProductSchema }, deleteProduct);
-  fastify.get("/inventory", { schema: listInventorySchema }, listInventory);
 };
 
 export default productsRoutes;

@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db as defaultDb, type AppDatabase } from "../../db";
 import {
   projectBudgetCategories,
@@ -10,7 +10,6 @@ import {
   taskStatus
 } from "../../db/schema/projects.schema";
 import { users } from "../../db/schema/settings.schema";
-import type { CacheService } from "../../lib/cache.service";
 import type {
   AddTeamMemberInput,
   CreateBudgetCategoryInput,
@@ -31,6 +30,7 @@ import type {
   UpdateTaskInput,
   UpdateTimelineEventInput
 } from "./projects.types";
+import type { CacheService } from "../../lib/cache.service";
 
 type ProjectsTableRow = typeof projects.$inferSelect;
 type TasksTableRow = typeof projectTasks.$inferSelect;
@@ -135,6 +135,8 @@ const mapOwner = (
   };
 };
 
+const PROJECT_LIST_CACHE_KEY = "projects:list:default";
+
 export class ProjectsService {
   constructor(
     private readonly database: AppDatabase = defaultDb,
@@ -142,48 +144,46 @@ export class ProjectsService {
   ) {}
 
   async list(): Promise<ProjectSummary[]> {
-    const cacheKey = "projects:list";
-
     if (this.cache) {
-      const cached = await this.cache.get<ProjectSummary[]>(cacheKey);
+      const cached = await this.cache.get<ProjectSummary[]>(PROJECT_LIST_CACHE_KEY);
       if (cached) {
         return cached;
       }
     }
 
-    const [projectRows, taskStats] = await Promise.all([
-      this.database
+    const taskStats = this.database
+      .select({
+        projectId: projectTasks.projectId,
+        totalCount: sql<number>`count(*)`.as("totalCount"),
+        completedCount: sql<number>`sum(case when ${projectTasks.status} = 'done' then 1 else 0 end)`.as(
+          "completedCount"
+        )
+      })
+      .from(projectTasks)
+      .groupBy(projectTasks.projectId)
+      .as("task_stats");
+
+    const rows = await this.database
         .select({
           project: projects,
-          owner: users
+        owner: users,
+        totalTasks: sql<number>`coalesce(${taskStats.totalCount}, 0)`,
+        completedTasks: sql<number>`coalesce(${taskStats.completedCount}, 0)`
         })
         .from(projects)
+      .leftJoin(taskStats, eq(taskStats.projectId, projects.id))
         .leftJoin(users, eq(projects.ownerId, users.id))
-        .orderBy(asc(projects.createdAt)),
-      this.database
-        .select({
-          projectId: projectTasks.projectId,
-          total: sql<number>`count(*)`,
-          completed: sql<number>`sum(case when ${projectTasks.status} = 'done' then 1 else 0 end)`
-        })
-        .from(projectTasks)
-        .groupBy(projectTasks.projectId)
-    ]);
+      .orderBy(desc(projects.createdAt));
 
-    const statsMap = new Map<string, { total: number; completed: number }>();
-    for (const stat of taskStats) {
-      statsMap.set(stat.projectId, {
-        total: toNumber(stat.total),
-        completed: toNumber(stat.completed)
-      });
-    }
-
-    const summaries = projectRows.map(({ project, owner }) =>
-      this.mapProjectSummary(project, owner ?? undefined, statsMap.get(project.id))
+    const summaries = rows.map(({ project, owner, totalTasks, completedTasks }) =>
+      this.mapProjectSummary(project, owner ?? undefined, {
+        total: toNumber(totalTasks),
+        completed: toNumber(completedTasks)
+      })
     );
 
     if (this.cache) {
-      await this.cache.set(cacheKey, summaries, { ttl: 300 });
+      await this.cache.set(PROJECT_LIST_CACHE_KEY, summaries, { ttl: 900 });
     }
 
     return summaries;
@@ -223,7 +223,7 @@ export class ProjectsService {
       throw new Error("Failed to create project");
     }
 
-    await this.invalidateProjectCaches();
+    await this.invalidateProjectCaches(row.id);
 
     return this.getProjectDetails(row.id) as Promise<ProjectDetails>;
   }
@@ -300,7 +300,7 @@ export class ProjectsService {
       return null;
     }
 
-    const cacheKey = `projects:details:${id}`;
+    const cacheKey = `projects:detail:${id}`;
 
     if (this.cache) {
       const cached = await this.cache.get<ProjectDetails>(cacheKey);
@@ -361,7 +361,7 @@ export class ProjectsService {
     };
 
     if (this.cache) {
-      await this.cache.set(cacheKey, details, { ttl: 600 });
+      await this.cache.set(cacheKey, details, { ttl: 900 });
     }
 
     return details;
@@ -387,13 +387,13 @@ export class ProjectsService {
       throw new Error("Failed to create task");
     }
 
-    await this.invalidateProjectCaches(projectId);
-
     const created = await this.getTaskById(row.id);
 
     if (!created) {
       throw new Error("Failed to load created task");
     }
+
+    await this.invalidateProjectCaches(projectId);
 
     return created;
   }
@@ -427,7 +427,6 @@ export class ProjectsService {
       .delete(projectTasks)
       .where(and(eq(projectTasks.id, taskId), eq(projectTasks.projectId, projectId)))
       .returning();
-
     const success = deleted.length > 0;
 
     if (success) {
@@ -462,6 +461,8 @@ export class ProjectsService {
       throw new Error("Failed to load created timeline event");
     }
 
+    await this.invalidateProjectCaches(projectId);
+
     return created;
   }
 
@@ -488,6 +489,8 @@ export class ProjectsService {
 
     await this.database.update(projectMilestones).set(payload).where(eq(projectMilestones.id, eventId));
 
+    await this.invalidateProjectCaches(projectId);
+
     return this.getTimelineEventById(eventId);
   }
 
@@ -496,8 +499,13 @@ export class ProjectsService {
       .delete(projectMilestones)
       .where(and(eq(projectMilestones.id, eventId), eq(projectMilestones.projectId, projectId)))
       .returning();
+    const success = deleted.length > 0;
 
-    return deleted.length > 0;
+    if (success) {
+      await this.invalidateProjectCaches(projectId);
+    }
+
+    return success;
   }
 
   async listTeamMembers(projectId: string): Promise<ProjectTeamMember[]> {
@@ -533,7 +541,7 @@ export class ProjectsService {
       return null;
     }
 
-    return {
+    const member: ProjectTeamMember = {
       projectId: row.projectId,
       userId: row.userId,
       role: row.role,
@@ -541,6 +549,10 @@ export class ProjectsService {
       email: user.email,
       addedAt: toIsoString(row.addedAt) ?? new Date().toISOString()
     };
+
+    await this.invalidateProjectCaches(projectId);
+
+    return member;
   }
 
   async removeTeamMember(projectId: string, userId: string): Promise<boolean> {
@@ -548,8 +560,13 @@ export class ProjectsService {
       .delete(projectMembers)
       .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)))
       .returning();
+    const success = deleted.length > 0;
 
-    return deleted.length > 0;
+    if (success) {
+      await this.invalidateProjectCaches(projectId);
+    }
+
+    return success;
   }
 
   async getBudget(projectId: string): Promise<ProjectBudgetSummary | null> {
@@ -580,6 +597,8 @@ export class ProjectsService {
 
     await this.database.update(projects).set(payload).where(eq(projects.id, projectId));
 
+    await this.invalidateProjectCaches(projectId);
+
     return this.getBudget(projectId);
   }
 
@@ -602,7 +621,11 @@ export class ProjectsService {
       throw new Error("Failed to create budget category");
     }
 
-    return this.mapBudgetCategory(row);
+    const category = this.mapBudgetCategory(row);
+
+    await this.invalidateProjectCaches(projectId);
+
+    return category;
   }
 
   async updateBudgetCategory(
@@ -643,7 +666,13 @@ export class ProjectsService {
       .where(eq(projectBudgetCategories.id, categoryId))
       .limit(1);
 
-    return row ? this.mapBudgetCategory(row) : null;
+    const updated = row ? this.mapBudgetCategory(row) : null;
+
+    if (updated) {
+      await this.invalidateProjectCaches(projectId);
+    }
+
+    return updated;
   }
 
   async deleteBudgetCategory(projectId: string, categoryId: string): Promise<boolean> {
@@ -651,8 +680,13 @@ export class ProjectsService {
       .delete(projectBudgetCategories)
       .where(and(eq(projectBudgetCategories.id, categoryId), eq(projectBudgetCategories.projectId, projectId)))
       .returning();
+    const success = deleted.length > 0;
 
-    return deleted.length > 0;
+    if (success) {
+      await this.invalidateProjectCaches(projectId);
+    }
+
+    return success;
   }
 
   private mapProjectSummary(
@@ -714,18 +748,6 @@ export class ProjectsService {
       remaining: Math.max(total - spent, 0),
       categories
     };
-  }
-
-  private async invalidateProjectCaches(projectId?: string): Promise<void> {
-    if (!this.cache) {
-      return;
-    }
-
-    if (projectId) {
-      await this.cache.delete(`projects:details:${projectId}`);
-    }
-
-    await this.cache.deletePattern("projects:list*");
   }
 
   private async fetchProjectTasks(projectId: string): Promise<ProjectTask[]> {
@@ -880,10 +902,27 @@ export class ProjectsService {
       updatedAt: toIsoString(row.updatedAt) ?? new Date().toISOString()
     };
   }
+
+  private async invalidateProjectCaches(projectId?: string): Promise<void> {
+    if (!this.cache) {
+      return;
+    }
+
+    await Promise.all([
+      this.cache.delete(PROJECT_LIST_CACHE_KEY),
+      this.cache.deletePattern("projects:list:*")
+    ]);
+
+    if (projectId) {
+      await this.cache.delete(`projects:detail:${projectId}`);
+    }
+  }
 }
 
-export const createProjectsService = (database: AppDatabase = defaultDb): ProjectsService =>
-  new ProjectsService(database);
+export const createProjectsService = (
+  database: AppDatabase = defaultDb,
+  cache?: CacheService
+): ProjectsService => new ProjectsService(database, cache);
 
 declare module "fastify" {
   interface FastifyInstance {

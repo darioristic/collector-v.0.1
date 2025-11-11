@@ -1,5 +1,5 @@
 {
-  "version": "6",
+  "version": "11",
   "dialect": "postgresql",
   "tables": {
     "users": {},
@@ -10,7 +10,17 @@
     "opportunities": {},
     "activities": {},
     "crm_notes": {},
-    "client_activities": {}
+    "client_activities": {},
+    "projects": {},
+    "project_members": {},
+    "project_milestones": {},
+    "project_tasks": {},
+    "project_budget_categories": {},
+    "team_members": {},
+    "companies": {},
+    "company_users": {},
+    "auth_sessions": {},
+    "password_reset_tokens": {}
   },
   "enums": {
     "user_status": {},
@@ -21,7 +31,10 @@
     "activity_type": {},
     "client_activity_type": {},
     "client_activity_status": {},
-    "client_activity_priority": {}
+    "client_activity_priority": {},
+    "project_status": {},
+    "task_status": {},
+    "team_member_status": {}
   },
   "schemas": {}
 }

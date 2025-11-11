@@ -14,7 +14,10 @@
     "db:push": "bunx drizzle-kit push --config drizzle.config.ts",
     "db:studio": "bunx drizzle-kit studio --config drizzle.config.ts",
     "db:migrate": "bun src/db/migrate.ts",
-    "db:seed": "bun src/db/seed/index.ts"
+    "db:seed": "bun src/db/seed/index.ts",
+    "db:seed:help": "bun src/db/seed/index.ts --help",
+    "db:reset": "bun scripts/migrate-and-seed.ts --drop",
+    "db:setup": "bun scripts/migrate-and-seed.ts"
   },
   "dependencies": {
     "@crm/types": "workspace:*",
@@ -30,6 +33,7 @@
     "fastify-plugin": "^5.1.0",
     "ioredis": "^5.8.2",
     "pg": "^8.16.3",
+    "bcryptjs": "^2.4.3",
     "pg-mem": "^3.0.5"
   },
   "devDependencies": {

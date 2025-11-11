@@ -12,6 +12,8 @@ import {
 export const userStatus = pgEnum("user_status", ["active", "inactive", "invited"]);
 export const roleKey = pgEnum("role_key", [
   "admin",
+  "manager",
+  "user",
   "sales_manager",
   "sales_rep",
   "support",
@@ -33,6 +35,8 @@ export const users = pgTable(
     email: text("email").notNull(),
     name: text("name").notNull(),
     status: userStatus("status").default("invited").notNull(),
+    hashedPassword: text("hashed_password").notNull().default(""),
+    defaultCompanyId: uuid("default_company_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
   },

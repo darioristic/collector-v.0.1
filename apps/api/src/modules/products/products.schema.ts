@@ -1,38 +1,32 @@
 import type { FastifySchema } from "fastify";
-import type {
-  InventoryEntry as InventoryEntryType,
-  Product,
-  ProductCreateInput,
-  ProductUpdateInput
-} from "@crm/types";
 
-const productProperties = {
-  id: { type: "string", minLength: 1 },
-  name: { type: "string", minLength: 1, maxLength: 120 },
-  sku: { type: "string", minLength: 1, maxLength: 64 },
-  price: { type: "number", minimum: 0 },
-  currency: { type: "string", minLength: 3, maxLength: 3 },
-  category: { type: "string", minLength: 1, maxLength: 80 },
-  active: { type: "boolean", default: true },
-  relatedSalesOrders: {
-    type: "array",
-    items: { type: "string", minLength: 1 },
-    description: "Placeholder za vezu sa prodajnim porudžbinama",
-    default: []
-  }
-} as const;
+import { productStatus } from "../../db/schema/products.schema";
 
-const inventoryProperties = {
-  productId: productProperties.id,
-  warehouse: { type: "string", minLength: 1, maxLength: 80 },
-  quantity: { type: "integer", minimum: 0 },
-  threshold: { type: "integer", minimum: 0 }
+const productStatusEnum = productStatus.enumValues;
+
+const productIdSchema = {
+  type: "string",
+  format: "uuid",
+  minLength: 1
 } as const;
 
 const productEntitySchema = {
   type: "object",
-  properties: productProperties,
-  required: ["id", "name", "sku", "price", "currency", "category", "active"],
+  properties: {
+    id: productIdSchema,
+    name: { type: "string", minLength: 1, maxLength: 255 },
+    sku: { type: "string", minLength: 1, maxLength: 64 },
+    price: { type: "number", minimum: 0 },
+    currency: { type: "string", minLength: 3, maxLength: 3, pattern: "^[A-Z]{3}$" },
+    category: { type: ["string", "null"], maxLength: 255 },
+    active: { type: "boolean" },
+    relatedSalesOrders: {
+      type: "array",
+      items: { type: "string" },
+      default: []
+    }
+  },
+  required: ["id", "name", "sku", "price", "currency", "active", "relatedSalesOrders"],
   additionalProperties: false
 } as const;
 
@@ -41,36 +35,30 @@ const productCollectionSchema = {
   items: productEntitySchema
 } as const;
 
-const inventoryItemSchema = {
-  type: "object",
-  properties: inventoryProperties,
-  required: ["productId", "warehouse", "quantity", "threshold"],
-  additionalProperties: false
-} as const;
-
-const inventoryCollectionSchema = {
-  type: "array",
-  items: inventoryItemSchema
-} as const;
-
-const productBodySchema = {
+const productCreateBodySchema = {
   type: "object",
   properties: {
-    name: productProperties.name,
-    sku: productProperties.sku,
-    price: productProperties.price,
-    currency: productProperties.currency,
-    category: productProperties.category,
-    active: productProperties.active,
-    relatedSalesOrders: productProperties.relatedSalesOrders
+    name: { type: "string", minLength: 1, maxLength: 255 },
+    sku: { type: "string", minLength: 1, maxLength: 64 },
+    price: { type: "number", minimum: 0 },
+    currency: { type: "string", minLength: 3, maxLength: 3, pattern: "^[A-Z]{3}$" },
+    category: { type: ["string", "null"], maxLength: 255 },
+    active: { type: "boolean", default: true }
   },
-  required: ["name", "sku", "price", "currency", "category"],
+  required: ["name", "sku", "price", "currency"],
   additionalProperties: false
 } as const;
 
 const productUpdateBodySchema = {
   type: "object",
-  properties: productBodySchema.properties,
+  properties: {
+    name: { type: "string", minLength: 1, maxLength: 255 },
+    sku: { type: "string", minLength: 1, maxLength: 64 },
+    price: { type: "number", minimum: 0 },
+    currency: { type: "string", minLength: 3, maxLength: 3, pattern: "^[A-Z]{3}$" },
+    category: { type: ["string", "null"], maxLength: 255 },
+    active: { type: "boolean" }
+  },
   additionalProperties: false,
   minProperties: 1
 } as const;
@@ -78,9 +66,91 @@ const productUpdateBodySchema = {
 const productIdParamsSchema = {
   type: "object",
   properties: {
-    id: productProperties.id
+    id: productIdSchema
   },
   required: ["id"],
+  additionalProperties: false
+} as const;
+
+const listProductsQuerySchema = {
+  type: "object",
+  properties: {
+    search: { type: "string", maxLength: 255 },
+    status: {
+      oneOf: [
+        { type: "string", enum: productStatusEnum },
+        {
+          type: "array",
+          items: { type: "string", enum: productStatusEnum }
+        }
+      ]
+    },
+    categoryId: {
+      oneOf: [
+        { type: "string", format: "uuid" },
+        {
+          type: "array",
+          items: { type: "string", format: "uuid" }
+        }
+      ]
+    },
+    limit: { type: "integer", minimum: 1, maximum: 100, default: 50 },
+    offset: { type: "integer", minimum: 0, default: 0 }
+  },
+  additionalProperties: false
+} as const;
+
+const inventoryLocationSchema = {
+  type: "object",
+  properties: {
+    locationId: { type: "string", format: "uuid" },
+    name: { type: "string" },
+    address: { type: ["string", "null"] },
+    quantity: { type: "integer", minimum: 0 },
+    reserved: { type: "integer", minimum: 0 },
+    updatedAt: { type: "string", format: "date-time" }
+  },
+  required: ["locationId", "name", "quantity", "reserved", "updatedAt"],
+  additionalProperties: false
+} as const;
+
+const inventorySummarySchema = {
+  type: "object",
+  properties: {
+    productId: { type: "string", format: "uuid" },
+    onHand: { type: "integer", minimum: 0 },
+    reserved: { type: "integer", minimum: 0 },
+    available: { type: "integer" },
+    locations: {
+      type: "array",
+      items: inventoryLocationSchema
+    }
+  },
+  required: ["productId", "onHand", "reserved", "available", "locations"],
+  additionalProperties: false
+} as const;
+
+const inventoryAdjustmentItemSchema = {
+  type: "object",
+  properties: {
+    locationId: { type: "string", format: "uuid" },
+    quantityDelta: { type: "integer" },
+    reservedDelta: { type: "integer" }
+  },
+  required: ["locationId"],
+  additionalProperties: false
+} as const;
+
+const adjustInventoryBodySchema = {
+  type: "object",
+  properties: {
+    adjustments: {
+      type: "array",
+      items: inventoryAdjustmentItemSchema,
+      minItems: 1
+    }
+  },
+  required: ["adjustments"],
   additionalProperties: false
 } as const;
 
@@ -94,20 +164,73 @@ const dataEnvelope = (itemsSchema: object) =>
     additionalProperties: false
   }) as const;
 
+const listEnvelope = (itemsSchema: object) =>
+  ({
+    type: "object",
+    properties: {
+      data: {
+        type: "array",
+        items: itemsSchema
+      },
+      meta: {
+        type: "object",
+        properties: {
+          total: { type: "integer", minimum: 0 },
+          limit: { type: ["integer", "null"] },
+          offset: { type: ["integer", "null"] }
+        },
+        required: ["total"],
+        additionalProperties: false
+      }
+    },
+    required: ["data", "meta"],
+    additionalProperties: false
+  }) as const;
+
 export const listProductsSchema: FastifySchema = {
   tags: ["products"],
   summary: "Lista proizvoda",
+  querystring: listProductsQuerySchema,
   response: {
-    200: dataEnvelope(productCollectionSchema)
+    200: listEnvelope(productEntitySchema)
+  }
+};
+
+export const getProductSchema: FastifySchema = {
+  tags: ["products"],
+  summary: "Detalji proizvoda",
+  params: productIdParamsSchema,
+  response: {
+    200: dataEnvelope(productEntitySchema),
+    404: {
+      type: "object",
+      properties: {
+        statusCode: { type: "number" },
+        error: { type: "string" },
+        message: { type: "string" }
+      },
+      required: ["statusCode", "error", "message"],
+      additionalProperties: false
+    }
   }
 };
 
 export const createProductSchema: FastifySchema = {
   tags: ["products"],
   summary: "Kreiranje proizvoda",
-  body: productBodySchema,
+  body: productCreateBodySchema,
   response: {
-    201: dataEnvelope(productEntitySchema)
+    201: dataEnvelope(productEntitySchema),
+    409: {
+      type: "object",
+      properties: {
+        statusCode: { type: "number" },
+        error: { type: "string" },
+        message: { type: "string" }
+      },
+      required: ["statusCode", "error", "message"],
+      additionalProperties: false
+    }
   }
 };
 
@@ -117,7 +240,27 @@ export const updateProductSchema: FastifySchema = {
   params: productIdParamsSchema,
   body: productUpdateBodySchema,
   response: {
-    200: dataEnvelope(productEntitySchema)
+    200: dataEnvelope(productEntitySchema),
+    404: {
+      type: "object",
+      properties: {
+        statusCode: { type: "number" },
+        error: { type: "string" },
+        message: { type: "string" }
+      },
+      required: ["statusCode", "error", "message"],
+      additionalProperties: false
+    },
+    409: {
+      type: "object",
+      properties: {
+        statusCode: { type: "number" },
+        error: { type: "string" },
+        message: { type: "string" }
+      },
+      required: ["statusCode", "error", "message"],
+      additionalProperties: false
+    }
   }
 };
 
@@ -126,7 +269,17 @@ export const deleteProductSchema: FastifySchema = {
   summary: "Brisanje proizvoda",
   params: productIdParamsSchema,
   response: {
-    204: { type: "null" }
+    204: { type: "null" },
+    404: {
+      type: "object",
+      properties: {
+        statusCode: { type: "number" },
+        error: { type: "string" },
+        message: { type: "string" }
+      },
+      required: ["statusCode", "error", "message"],
+      additionalProperties: false
+    }
   }
 };
 
@@ -134,13 +287,67 @@ export const listInventorySchema: FastifySchema = {
   tags: ["products"],
   summary: "Stanje zaliha po skladištu",
   response: {
-    200: dataEnvelope(inventoryCollectionSchema)
+    200: dataEnvelope({
+      type: "array",
+      items: inventorySummarySchema
+    })
   }
 };
 
-export type ProductEntity = Product;
-export type ProductCreateBody = ProductCreateInput;
-export type ProductUpdateBody = ProductUpdateInput;
+export const getProductInventorySchema: FastifySchema = {
+  tags: ["products"],
+  summary: "Detalji lagera za proizvod",
+  params: productIdParamsSchema,
+  response: {
+    200: dataEnvelope(inventorySummarySchema),
+    404: {
+      type: "object",
+      properties: {
+        statusCode: { type: "number" },
+        error: { type: "string" },
+        message: { type: "string" }
+      },
+      required: ["statusCode", "error", "message"],
+      additionalProperties: false
+    }
+  }
+};
+
+export const adjustInventorySchema: FastifySchema = {
+  tags: ["products"],
+  summary: "Prilagođavanje lagera proizvoda",
+  params: productIdParamsSchema,
+  body: adjustInventoryBodySchema,
+  response: {
+    200: dataEnvelope(inventorySummarySchema),
+    404: {
+      type: "object",
+      properties: {
+        statusCode: { type: "number" },
+        error: { type: "string" },
+        message: { type: "string" }
+      },
+      required: ["statusCode", "error", "message"],
+      additionalProperties: false
+    }
+  }
+};
+
 export type ProductIdParams = { id: string };
-export type InventoryEntry = InventoryEntryType;
+export type ProductCreateBody = {
+  name: string;
+  sku: string;
+  price: number;
+  currency: string;
+  category?: string | null;
+  active?: boolean;
+};
+export type ProductUpdateBody = {
+  name?: string;
+  sku?: string;
+  price?: number;
+  currency?: string;
+  category?: string | null;
+  active?: boolean;
+};
 

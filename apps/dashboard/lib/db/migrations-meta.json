@@ -1,0 +1,29 @@
+{
+  "version": "3",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "0001",
+      "when": 1762819200000,
+      "tag": "0001_create_employees",
+      "breakpoints": false
+    },
+    {
+      "idx": 1,
+      "version": "0002",
+      "when": 1762819200001,
+      "tag": "0002_create_team_members",
+      "breakpoints": false
+    },
+    {
+      "idx": 2,
+      "version": "0003",
+      "when": 1762819200002,
+      "tag": "0003_create_vault",
+      "breakpoints": false
+    }
+  ]
+}
+
+

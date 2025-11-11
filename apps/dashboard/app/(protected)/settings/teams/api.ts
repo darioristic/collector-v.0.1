@@ -108,3 +108,5 @@ export const deleteTeamMember = async (id: string): Promise<void> => {
 
 export const TEAM_MEMBER_STATUSES: TeamMemberStatus[] = ["online", "offline", "idle", "invited"];
 
+export type { TeamMemberStatus };
+

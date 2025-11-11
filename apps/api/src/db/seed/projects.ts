@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { createHash } from "node:crypto";
 import { sql } from "drizzle-orm";
 
 import { db as defaultDb } from "../index";
@@ -43,6 +44,18 @@ const ensureUsers = async (
   }
 
   return existingUsers;
+};
+
+const makeDeterministicUuid = (input: string): string => {
+  const hash = createHash("sha256").update(input).digest();
+  const bytes = Uint8Array.from(hash.slice(0, 16));
+
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 };
 
 const ensureProjectSchema = async (db: typeof defaultDb) => {
@@ -183,6 +196,8 @@ const ensureProjectSchema = async (db: typeof defaultDb) => {
 };
 
 export const seedProjects = async (database = defaultDb) => {
+  faker.seed(2025);
+
   await ensureProjectSchema(database);
 
   await database.transaction(async (tx) => {
@@ -218,9 +233,12 @@ export const seedProjects = async (database = defaultDb) => {
       const budgetTotal = 250_000 + index * 12_500;
       const budgetSpent = budgetTotal * 0.45;
 
+      const projectId = makeDeterministicUuid(`project-${index}`);
+
       const [projectRow] = await tx
         .insert(projects)
         .values({
+          id: projectId,
           name: `Project ${String(index + 1).padStart(2, "0")}`,
           description: faker.lorem.paragraph(),
           customer: account.name,
@@ -238,8 +256,6 @@ export const seedProjects = async (database = defaultDb) => {
       if (!projectRow) {
         throw new Error("Failed to insert project seed row.");
       }
-
-      const projectId = projectRow.id;
 
       // Project members (owner + additional teammates)
       const shuffledUsers = faker.helpers.shuffle(userRows);

@@ -4,7 +4,7 @@ import projectsRoutes from "./projects.routes";
 import { createProjectsService } from "./projects.service";
 
 const projectsModule: FastifyPluginAsync = async (fastify) => {
-  const service = createProjectsService(fastify.db);
+  const service = createProjectsService(fastify.db, fastify.cache);
 
   if (!fastify.hasDecorator("projectsService")) {
     fastify.decorate("projectsService", service);

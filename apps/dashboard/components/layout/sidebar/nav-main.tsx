@@ -161,7 +161,7 @@ export const navItems: NavGroup[] = [
       },
       {
         title: "Vault",
-        href: "/apps/file-manager",
+        href: "/file-manager",
         icon: ArchiveRestoreIcon
       },
       {
@@ -204,10 +204,10 @@ export const navItems: NavGroup[] = [
         icon: FingerprintIcon,
         items: [
           { title: "Login v1", href: "/login/v1" },
-          { title: "Login v2", href: "/login/v2" },
+          { title: "Login", href: "/auth/login" },
           { title: "Register v1", href: "/register/v1" },
-          { title: "Register v2", href: "/register/v2" },
-          { title: "Forgot Password", href: "/forgot-password" }
+          { title: "Register", href: "/auth/register" },
+          { title: "Forgot Password", href: "/auth/forgot-password" }
         ]
       }
     ]

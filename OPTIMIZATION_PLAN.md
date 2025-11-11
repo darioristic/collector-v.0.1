@@ -489,6 +489,37 @@ Pre deploy-a u production, proveriti:
 
 ---
 
+## 📦 Status Implementacije (novembar 2025)
+
+- ✅ Migracije `0007_project_budget.sql` i `0008_performance_indexes.sql` su prilagođene da budu idempotentne (DO blokovi + helper funkcije) i primenjene na lokalnoj bazi radi validacije.
+- ✅ `ProjectsService` sada koristi jedan agregirani upit sa window funkcijama, čuva listu i detalje u Redis cache-u (`projects:list:default`, `projects:detail:{id}`) i briše keš pri svakoj mutaciji (taskovi, timeline, članovi tima, budžet).
+- ✅ Fastify modul registruje `ProjectsService` sa globalnim `CacheService`, pa se isti Redis konektor koristi širom aplikacije.
+- ✅ Postoji integracioni test (`apps/api/tests/projects.service.test.ts`) koji na realnoj bazi proverava cache hit/miss i invalidaciju nakon insert/update/delete operacija.
+- ✅ Orders/Quotes/Invoices servisi već su na novom JOIN + transaction + cache obrascu (commitovi 7a3aad7, d1f8a41).
+
+## 🚀 Koraci za produkciju
+
+1. **Pokreni migracije**  
+   ```bash
+   cd apps/api
+   psql $DATABASE_URL -f src/db/migrations/0007_project_budget.sql
+   psql $DATABASE_URL -f src/db/migrations/0008_performance_indexes.sql
+   ```
+2. **Redis / konfiguracija**  
+   - Proveri da je produkcioni Redis dostupan и da `REDIS_URL` (env/secret) pokazuje na ispravnu instancu.
+3. **Deploy**  
+   - Standardni build/deploy API-a (kontinuirani delivery posle migracija).
+4. **Monitoring nakon deploy-a**  
+   - Redis hit rate (`projects:list:*`, `projects:detail:*`), logovi za `CacheService`.
+   - Postgres slow-query log (`pg_trgm`, indeksi) – očekuje se pad broja full scan upita.
+5. **Test / fallback**  
+   - Po potrebi pokreni integracioni test lokalno:  
+     `bunx vitest run tests/projects.service.test.ts` (zahteva `TEST_DATABASE_URL` prema izolovanoj bazi).
+
+Napomena: obavezno zadrži migracione helper funkcije u repo-u – omogućavaju bezbolnu primenu čak i kada deo šeme već postoji (tipično na stage/prod bazama).
+
+---
+
 ## 🤝 PITANJA?
 
 Za dodatna pitanja ili pomoć pri implementaciji:

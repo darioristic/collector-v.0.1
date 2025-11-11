@@ -1,5 +1,3 @@
-import { promises as fs } from "fs";
-import path from "path";
 import { generateMeta } from "@/lib/utils";
 import Link from "next/link";
 import { PlusIcon } from "@radix-ui/react-icons";
@@ -8,7 +6,8 @@ import { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import ProductList from "@/app/(protected)/products/product-list";
+import ProductList, { type Product } from "@/app/(protected)/products/product-list";
+import { fetchProducts, type Product as ApiProduct } from "./api";
 
 export async function generateMetadata(): Promise<Metadata> {
   return generateMeta({
@@ -19,11 +18,29 @@ export async function generateMetadata(): Promise<Metadata> {
   });
 }
 
+function mapApiProductToComponent(apiProduct: ApiProduct): Product {
+  return {
+    id: parseInt(apiProduct.id.replace(/-/g, "").slice(0, 8), 16) || 0,
+    name: apiProduct.name,
+    image: undefined,
+    description: undefined,
+    category: apiProduct.category ?? undefined,
+    sku: apiProduct.sku,
+    stock: undefined,
+    price: `${apiProduct.currency} ${apiProduct.price.toFixed(2)}`,
+    rating: undefined,
+    status: apiProduct.active ? "active" : "closed-for-sale"
+  };
+}
+
 async function getProducts() {
-  const data = await fs.readFile(
-    path.join(process.cwd(), "app/(protected)/products/data.json")
-  );
-  return JSON.parse(data.toString());
+  try {
+    const response = await fetchProducts();
+    return response.data.map(mapApiProductToComponent);
+  } catch (error) {
+    console.error("Failed to fetch products:", error);
+    return [];
+  }
 }
 
 export default async function Page() {

@@ -23,6 +23,10 @@ const openApiPlugin: FastifyPluginAsync = async (app) => {
           description: "Customer account management"
         },
         {
+          name: "products",
+          description: "Product and inventory management"
+        },
+        {
           name: "health",
           description: "Service health endpoints"
         }

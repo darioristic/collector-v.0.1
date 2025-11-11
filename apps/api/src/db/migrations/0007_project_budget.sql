@@ -1,5 +1,18 @@
-CREATE TYPE IF NOT EXISTS "project_status" AS ENUM ('planned', 'active', 'on_hold', 'completed');
-CREATE TYPE IF NOT EXISTS "task_status" AS ENUM ('todo', 'in_progress', 'blocked', 'done');
+DO $$
+BEGIN
+	CREATE TYPE "project_status" AS ENUM ('planned', 'active', 'on_hold', 'completed');
+EXCEPTION
+	WHEN duplicate_object THEN
+		NULL;
+END $$;
+
+DO $$
+BEGIN
+	CREATE TYPE "task_status" AS ENUM ('todo', 'in_progress', 'blocked', 'done');
+EXCEPTION
+	WHEN duplicate_object THEN
+		NULL;
+END $$;
 
 CREATE TABLE IF NOT EXISTS "projects" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
