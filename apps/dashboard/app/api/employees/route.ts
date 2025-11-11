@@ -7,6 +7,7 @@ import {
   SortOrder,
   employeeFormSchema,
   employmentStatusSchema,
+  employmentStatusValues,
   employmentTypeSchema,
   listEmployeesQuerySchema
 } from "@/lib/validations/employees";
@@ -23,6 +24,8 @@ import {
 } from "drizzle-orm";
 
 import { serializeEmployee } from "./shared";
+
+type EmploymentStatus = (typeof employmentStatusValues)[number];
 
 type EmployeeCursor =
   | {
@@ -41,7 +44,7 @@ type EmployeeCursor =
   | {
       sortField: "status";
       sortOrder: SortOrder;
-      status: string;
+      status: EmploymentStatus;
       id: number;
     };
 
@@ -88,10 +91,14 @@ const decodeCursor = (cursor: string): EmployeeCursor | null => {
         break;
       case "status":
         if (typeof payload.status === "string" && typeof payload.id === "number") {
+          const parsedStatus = employmentStatusSchema.safeParse(payload.status);
+          if (!parsedStatus.success) {
+            break;
+          }
           return {
             sortField: "status",
             sortOrder: payload.sortOrder,
-            status: payload.status,
+            status: parsedStatus.data,
             id: payload.id
           };
         }
@@ -127,21 +134,23 @@ const buildOrderBy = (sortField: ListEmployeesQuery["sortField"], sortOrder: Sor
 const buildCursorCondition = (cursor: EmployeeCursor): SQL => {
   const isAsc = cursor.sortOrder === "asc";
 
+  const falseCondition = eq(employees.id, -1);
+
   if (cursor.sortField === "name") {
-    const comparisons = [
+    const condition = or(
       isAsc ? gt(employees.lastName, cursor.lastName) : lt(employees.lastName, cursor.lastName),
       and(
         eq(employees.lastName, cursor.lastName),
         isAsc ? gt(employees.firstName, cursor.firstName) : lt(employees.firstName, cursor.firstName)
-      ),
+      )!,
       and(
         eq(employees.lastName, cursor.lastName),
         eq(employees.firstName, cursor.firstName),
         isAsc ? gt(employees.id, cursor.id) : lt(employees.id, cursor.id)
-      )
-    ];
+      )!
+    );
 
-    return or(...comparisons);
+    return condition ?? falseCondition;
   }
 
   if (cursor.sortField === "startDate") {
@@ -150,19 +159,23 @@ const buildCursorCondition = (cursor: EmployeeCursor): SQL => {
       return eq(employees.id, -1);
     }
 
-    return or(
+    const condition = or(
       isAsc ? gt(employees.startDate, cursorDate) : lt(employees.startDate, cursorDate),
       and(
         eq(employees.startDate, cursorDate),
         isAsc ? gt(employees.id, cursor.id) : lt(employees.id, cursor.id)
-      )
+      )!
     );
+
+    return condition ?? falseCondition;
   }
 
-  return or(
+  const condition = or(
     isAsc ? gt(employees.status, cursor.status) : lt(employees.status, cursor.status),
-    and(eq(employees.status, cursor.status), isAsc ? gt(employees.id, cursor.id) : lt(employees.id, cursor.id))
+    and(eq(employees.status, cursor.status), isAsc ? gt(employees.id, cursor.id) : lt(employees.id, cursor.id))!
   );
+
+  return condition ?? falseCondition;
 };
 
 const buildSearchConditions = (query: ListEmployeesQuery) => {
@@ -242,17 +255,13 @@ export async function GET(request: NextRequest) {
     filters.push(cursorCondition);
   }
 
-  let statement = db.select().from(employees);
-
-  if (filters.length > 0) {
-    statement = statement.where(filters.length === 1 ? filters[0] : and(...filters));
-  }
+  const baseStatement = db.select().from(employees);
+  const filteredStatement =
+    filters.length > 0 ? baseStatement.where(filters.length === 1 ? filters[0] : and(...filters)) : baseStatement;
 
   const orderBy = buildOrderBy(query.sortField, query.sortOrder);
 
-  statement = statement.orderBy(...orderBy).limit(query.limit + 1);
-
-  const rows = await statement;
+  const rows = await filteredStatement.orderBy(...orderBy).limit(query.limit + 1);
 
   const hasNextPage = rows.length > query.limit;
   const visibleRows = hasNextPage ? rows.slice(0, query.limit) : rows;
@@ -335,7 +344,7 @@ export async function POST(request: NextRequest) {
         status: payload.status,
         startDate: payload.startDate,
         endDate: payload.endDate ?? null,
-        salary: payload.salary !== undefined ? payload.salary : null,
+        salary: payload.salary !== undefined ? payload.salary.toString() : null,
         createdAt: now,
         updatedAt: now
       })

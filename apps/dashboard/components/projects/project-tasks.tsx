@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { format, parseISO } from "date-fns";
 import {
   CalendarDays,
+  CheckCircle2,
   CircleDashed,
   CircleDot,
   CircleSlash,
@@ -15,6 +16,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,

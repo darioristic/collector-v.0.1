@@ -29,7 +29,7 @@ export default function ResetPasswordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const defaultToken = searchParams.get("token") ?? "";
+  const defaultToken = searchParams?.get("token") ?? "";
 
   const form = useForm<ResetFormValues>({
     resolver: zodResolver(resetSchema),

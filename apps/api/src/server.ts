@@ -1,14 +1,14 @@
-import Fastify, {
-	type FastifyInstance,
-	type FastifyPluginAsync,
-	type FastifyLoggerOptions,
-} from "fastify";
 import { readdir } from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import Fastify, {
+	type FastifyInstance,
+	type FastifyLoggerOptions,
+	type FastifyPluginAsync,
+} from "fastify";
 
-import { db, type AppDatabase } from "./db/index.js";
-import corsPlugin from "./plugins/cors";
+import { type AppDatabase, db } from "./db/index.js";
 import { cachePlugin } from "./lib/cache.service";
+import corsPlugin from "./plugins/cors";
 import errorHandlerPlugin from "./plugins/error-handler";
 import openApiPlugin from "./plugins/openapi";
 import healthRoutes from "./routes/health";

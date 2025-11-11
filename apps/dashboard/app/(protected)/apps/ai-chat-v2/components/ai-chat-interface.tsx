@@ -64,8 +64,14 @@ export default function AIChatInterface() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const params = useParams<{ id: string }>();
+  const conversationId = params?.id ?? null;
 
-  const selectedConversation = conversations.find((i) => i.id === params.id);
+  const selectedConversation = React.useMemo(() => {
+    if (!conversationId) {
+      return undefined;
+    }
+    return conversations.find((i) => i.id === conversationId);
+  }, [conversationId]);
 
   const [messages, setMessages] = React.useState<
     { id: number | string; role: string; content: string; files?: File[] }[]

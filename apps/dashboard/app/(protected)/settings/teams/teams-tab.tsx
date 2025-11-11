@@ -81,7 +81,7 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 const getInitials = (firstName: string, lastName: string) =>
   `${firstName?.[0] ?? ""}${lastName?.[0] ?? ""}`.toUpperCase() || "TM";
 
-export default function TeamsTab(): JSX.Element {
+export default function TeamsTab() {
   const [searchValue, setSearchValue] = React.useState("");
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<"all" | TeamMemberStatus>("all");

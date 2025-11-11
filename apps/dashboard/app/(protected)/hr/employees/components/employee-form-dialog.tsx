@@ -65,6 +65,19 @@ export default function EmployeeFormDialog({
     defaultValues: getDefaultValues(initialValues)
   });
 
+  const normalizeDateValue = (value: string | Date | null | undefined) => {
+    if (value instanceof Date) {
+      if (Number.isNaN(value.getTime())) {
+        return "";
+      }
+      return value.toISOString().split("T")[0] ?? "";
+    }
+    if (typeof value === "string") {
+      return value;
+    }
+    return "";
+  };
+
   React.useEffect(() => {
     if (open) {
       form.reset(getDefaultValues(initialValues));
@@ -232,7 +245,11 @@ export default function EmployeeFormDialog({
                   <FormItem>
                     <FormLabel>Start date</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Input
+                        type="date"
+                        {...field}
+                        value={normalizeDateValue(field.value)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -246,7 +263,11 @@ export default function EmployeeFormDialog({
                   <FormItem>
                     <FormLabel>End date</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Input
+                        type="date"
+                        {...field}
+                        value={normalizeDateValue(field.value)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

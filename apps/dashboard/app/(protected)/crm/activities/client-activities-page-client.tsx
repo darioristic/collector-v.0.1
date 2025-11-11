@@ -131,6 +131,14 @@ export function ClientActivitiesPageClient({
 }: ClientActivitiesPageClientProps) {
   const { toast } = useToast();
   const [isPending, startTransition] = React.useTransition();
+
+  const runTransition = <T,>(task: () => Promise<T>): Promise<T> => {
+    return new Promise<T>((resolve, reject) => {
+      startTransition(() => {
+        task().then(resolve).catch(reject);
+      });
+    });
+  };
   const [isFilterSheetOpen, setFilterSheetOpen] = React.useState(false);
   const [isRefreshing, setRefreshing] = React.useState(false);
 
@@ -351,7 +359,7 @@ export function ClientActivitiesPageClient({
   };
 
   const handleFormSubmit = (values: ActivityCreateInput) => {
-    startTransition(async () => {
+    return runTransition(async () => {
       try {
         setSubmitting(true);
         if (modalMode === "edit" && activeActivity) {

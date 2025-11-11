@@ -1,6 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import { and, eq } from "drizzle-orm";
 
+import { getCurrentAuth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { teamMembers } from "@/lib/db/schema/team-members";
 import {
@@ -12,6 +14,20 @@ import {
 const withNoStore = (response: NextResponse) => {
   response.headers.set("Cache-Control", "no-store");
   return response;
+};
+
+const isUuid = (value: string | null | undefined): value is string =>
+  typeof value === "string"
+    ? /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/.test(value)
+    : false;
+
+const resolveCompanyId = (auth: Awaited<ReturnType<typeof getCurrentAuth>>): string | null => {
+  if (!auth || !auth.user) {
+    return null;
+  }
+
+  const candidate = auth.user.company?.id ?? auth.user.defaultCompanyId ?? null;
+  return isUuid(candidate) ? candidate : null;
 };
 
 type PgError = Error & {
@@ -35,12 +51,41 @@ const serializeTeamMember = (member: typeof teamMembers.$inferSelect): TeamMembe
   });
 
 type Params = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
-export async function PATCH(request: NextRequest, { params }: Params) {
+const extractParams = async ({ params }: Params) => {
+  return await params;
+};
+
+export async function PATCH(request: NextRequest, context: Params) {
+  const auth = await getCurrentAuth();
+  if (!auth || !auth.user) {
+    return withNoStore(
+      NextResponse.json(
+        {
+          error: "Niste autorizovani."
+        },
+        { status: 401 }
+      )
+    );
+  }
+
+  const companyId = resolveCompanyId(auth);
+
+  if (!companyId) {
+    return withNoStore(
+      NextResponse.json(
+        {
+          error: "Aktivna kompanija nije pronađena."
+        },
+        { status: 400 }
+      )
+    );
+  }
+
   const db = await getDb();
   const json = await request.json().catch(() => null);
 
@@ -65,6 +110,25 @@ export async function PATCH(request: NextRequest, { params }: Params) {
           details: parsed.error.flatten()
         },
         { status: 400 }
+      )
+    );
+  }
+
+  const { id: memberId } = await extractParams(context);
+
+  const current = await db
+    .select()
+    .from(teamMembers)
+    .where(and(eq(teamMembers.id, memberId), eq(teamMembers.companyId, companyId)))
+    .limit(1);
+
+  if (current.length === 0) {
+    return withNoStore(
+      NextResponse.json(
+        {
+          error: "Član tima nije pronađen."
+        },
+        { status: 404 }
       )
     );
   }
@@ -97,7 +161,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const [member] = await db
       .update(teamMembers)
       .set(updates)
-      .where(eq(teamMembers.id, params.id))
+      .where(and(eq(teamMembers.id, memberId), eq(teamMembers.companyId, companyId)))
       .returning();
 
     if (!member) {
@@ -140,11 +204,40 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   }
 }
 
-export async function DELETE(_request: NextRequest, { params }: Params) {
+export async function DELETE(_request: NextRequest, context: Params) {
+  const auth = await getCurrentAuth();
+  if (!auth || !auth.user) {
+    return withNoStore(
+      NextResponse.json(
+        {
+          error: "Niste autorizovani."
+        },
+        { status: 401 }
+      )
+    );
+  }
+
+  const companyId = resolveCompanyId(auth);
+
+  if (!companyId) {
+    return withNoStore(
+      NextResponse.json(
+        {
+          error: "Aktivna kompanija nije pronađena."
+        },
+        { status: 400 }
+      )
+    );
+  }
+
   const db = await getDb();
+  const { id: memberId } = await extractParams(context);
 
   try {
-    const [deleted] = await db.delete(teamMembers).where(eq(teamMembers.id, params.id)).returning({ id: teamMembers.id });
+    const [deleted] = await db
+      .delete(teamMembers)
+      .where(and(eq(teamMembers.id, memberId), eq(teamMembers.companyId, companyId)))
+      .returning();
 
     if (!deleted) {
       return withNoStore(

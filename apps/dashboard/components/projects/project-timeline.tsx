@@ -127,22 +127,23 @@ export function ProjectTimeline({
   };
 
   const onSubmit = async (values: TimelineFormValues) => {
-    const payload: UpdateTimelinePayload = {
+    const createPayload: CreateTimelinePayload = {
       title: values.title,
-      description: values.description,
+      description: values.description ? values.description : undefined,
       status: values.status,
-      date: values.date
+      date: values.date ? values.date : undefined
     };
+    const updatePayload: UpdateTimelinePayload = { ...createPayload };
 
     try {
       if (editingEvent) {
-        await onUpdate(editingEvent.id, payload);
+        await onUpdate(editingEvent.id, updatePayload);
         toast({
           title: "Milestone ažuriran",
           description: "Uspešno ste ažurirali stavku vremenske linije."
         });
       } else {
-        await onCreate(payload);
+        await onCreate(createPayload);
         toast({
           title: "Milestone dodat",
           description: "Nova stavka je dodata na vremensku liniju."

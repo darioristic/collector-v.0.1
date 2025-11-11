@@ -132,8 +132,9 @@ describe("Settings Teams Tab", () => {
 
     await user.click(screen.getByRole("button", { name: /Add member/i }));
 
-    await user.type(screen.getByLabelText(/Ime/i), "Ana");
-    await user.type(screen.getByLabelText(/Prezime/i), "Jovanović");
+    const [firstNameField] = screen.getAllByLabelText(/Ime/i);
+    await user.type(firstNameField, "Ana");
+    await user.type(screen.getByLabelText(/^Prezime/i), "Jovanović");
     await user.type(screen.getByLabelText(/^Email/i), "ana@example.com");
     await user.type(screen.getByLabelText(/Uloga/i), "Marketing");
     await user.click(screen.getByRole("button", { name: /Dodaj člana/i }));

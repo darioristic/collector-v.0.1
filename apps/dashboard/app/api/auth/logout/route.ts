@@ -9,7 +9,7 @@ import {
 } from "../_utils";
 
 export async function POST(_request: NextRequest) {
-  const cookieStore = cookies();
+	const cookieStore = await cookies();
   const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
   if (!sessionToken) {

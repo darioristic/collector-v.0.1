@@ -74,7 +74,7 @@ const SocialButtons = () => (
 export default function RegisterPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = useMemo(() => searchParams.get("redirect") ?? DEFAULT_REDIRECT, [searchParams]);
+  const redirectTo = useMemo(() => searchParams?.get("redirect") ?? DEFAULT_REDIRECT, [searchParams]);
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),

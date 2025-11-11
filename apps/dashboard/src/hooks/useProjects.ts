@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -55,11 +55,25 @@ export function useProjects(options?: { enabled?: boolean }) {
 }
 
 export function useProjectDetails(projectId: string, options?: { enabled?: boolean; suspense?: boolean }) {
+  if (options?.suspense) {
+    if (options.enabled === false) {
+      return useQuery<ProjectDetails>({
+        queryKey: projectKeys.detail(projectId),
+        queryFn: () => fetchProject(projectId),
+        enabled: false
+      });
+    }
+
+    return useSuspenseQuery<ProjectDetails>({
+      queryKey: projectKeys.detail(projectId),
+      queryFn: () => fetchProject(projectId)
+    });
+  }
+
   return useQuery<ProjectDetails>({
     queryKey: projectKeys.detail(projectId),
     queryFn: () => fetchProject(projectId),
-    enabled: options?.enabled ?? Boolean(projectId),
-    suspense: options?.suspense ?? false
+    enabled: options?.enabled ?? Boolean(projectId)
   });
 }
 

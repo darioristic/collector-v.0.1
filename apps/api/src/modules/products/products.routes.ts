@@ -1,8 +1,11 @@
 import type { FastifyPluginAsync } from "fastify";
 
 import {
+  adjustInventorySchema,
   createProductSchema,
   deleteProductSchema,
+  getProductInventorySchema,
+  getProductSchema,
   listInventorySchema,
   listProductsSchema,
   updateProductSchema

@@ -107,7 +107,7 @@ export function FileManager() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
-  const currentPath = searchParams.get("path") || "";
+  const currentPath = searchParams?.get("path") ?? "";
   const pathSegments = currentPath ? currentPath.split("/").filter(Boolean) : [];
 
   const isMobile = useIsMobile();

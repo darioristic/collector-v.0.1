@@ -163,8 +163,12 @@ const revenueFormatter = new Intl.NumberFormat("sr-RS", {
   maximumFractionDigits: 0
 });
 
-export default function CRMReportsPage(): JSX.Element {
+export default function CRMReportsPage() {
   const [dateRange, setDateRange] = React.useState<(typeof dateRangeOptions)[number]["value"]>("30d");
+
+  const handleDateRangeChange = (value: string) => {
+    setDateRange(value as (typeof dateRangeOptions)[number]["value"]);
+  };
 
   return (
     <div className="max-w-7xl space-y-8 p-8 mx-auto">
@@ -176,7 +180,7 @@ export default function CRMReportsPage(): JSX.Element {
           </p>
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Select value={dateRange} onValueChange={setDateRange}>
+          <Select value={dateRange} onValueChange={handleDateRangeChange}>
             <SelectTrigger className="w-[220px] rounded-xl border border-[#E5E5EA] bg-[#F9FAFB] text-sm font-medium text-slate-600 shadow-none">
               <SelectValue placeholder="Select range" />
             </SelectTrigger>

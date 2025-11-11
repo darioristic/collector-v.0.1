@@ -1,164 +1,247 @@
-import { NextRequest, NextResponse } from "next/server";
-import { and, desc, eq, ilike, or } from "drizzle-orm";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
+import { and, desc, eq, ilike, or, type SQL } from "drizzle-orm";
+
+import { getCurrentAuth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { teamMembers } from "@/lib/db/schema/team-members";
 import {
-  createTeamMemberSchema,
-  listTeamMembersQuerySchema,
-  listTeamMembersResponseSchema,
-  type TeamMemberApi
+	createTeamMemberSchema,
+	listTeamMembersQuerySchema,
+	listTeamMembersResponseSchema,
+	teamMemberApiSchema,
+	type TeamMemberApi,
 } from "@/lib/validations/settings/team-members";
 
 const withNoStore = (response: NextResponse) => {
-  response.headers.set("Cache-Control", "no-store");
-  return response;
+	response.headers.set("Cache-Control", "no-store");
+	return response;
+};
+
+const isUuid = (value: string | null | undefined): value is string =>
+	typeof value === "string"
+		? /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/.test(
+				value,
+			)
+		: false;
+
+const resolveCompanyId = (
+	auth: Awaited<ReturnType<typeof getCurrentAuth>>,
+): string | null => {
+	if (!auth || !auth.user) {
+		return null;
+	}
+
+	const candidate = auth.user.company?.id ?? auth.user.defaultCompanyId ?? null;
+	return isUuid(candidate) ? candidate : null;
 };
 
 type PgError = Error & {
-  code?: string;
+	code?: string;
 };
 
 const isUniqueViolation = (error: unknown): error is PgError =>
-  Boolean(error) && typeof error === "object" && "code" in (error as PgError) && (error as PgError).code === "23505";
+	Boolean(error) &&
+	typeof error === "object" &&
+	"code" in (error as PgError) &&
+	(error as PgError).code === "23505";
 
-const serializeTeamMember = (member: typeof teamMembers.$inferSelect): TeamMemberApi => ({
-  id: member.id,
-  firstName: member.firstName,
-  lastName: member.lastName,
-  email: member.email,
-  role: member.role,
-  status: member.status,
-  avatarUrl: member.avatarUrl,
-  createdAt: member.createdAt.toISOString(),
-  updatedAt: member.updatedAt.toISOString()
-});
+const serializeTeamMember = (
+	member: typeof teamMembers.$inferSelect,
+): TeamMemberApi =>
+	teamMemberApiSchema.parse({
+		id: member.id,
+		firstName: member.firstName,
+		lastName: member.lastName,
+		email: member.email,
+		role: member.role,
+		status: member.status,
+		avatarUrl: member.avatarUrl,
+		createdAt: member.createdAt.toISOString(),
+		updatedAt: member.updatedAt.toISOString(),
+	});
 
 export async function GET(request: NextRequest) {
-  const db = await getDb();
-  const rawParams = Object.fromEntries(request.nextUrl.searchParams.entries());
-  const parsed = listTeamMembersQuerySchema.safeParse(rawParams);
+	const auth = await getCurrentAuth();
+	if (!auth || !auth.user) {
+		return withNoStore(
+			NextResponse.json(
+				{
+					error: "Niste autorizovani.",
+				},
+				{ status: 401 },
+			),
+		);
+	}
 
-  if (!parsed.success) {
-    return withNoStore(
-      NextResponse.json(
-        {
-          error: "Nevalidni parametri.",
-          details: parsed.error.flatten()
-        },
-        { status: 400 }
-      )
-    );
-  }
+	const companyId = resolveCompanyId(auth);
 
-  const { search, status } = parsed.data;
-  const conditions = [];
+	if (!companyId) {
+		return withNoStore(
+			NextResponse.json({
+				data: [],
+			}),
+		);
+	}
 
-  if (status) {
-    conditions.push(eq(teamMembers.status, status));
-  }
+	const db = await getDb();
+	const rawParams = Object.fromEntries(request.nextUrl.searchParams.entries());
+	const parsed = listTeamMembersQuerySchema.safeParse(rawParams);
 
-  if (search) {
-    const pattern = `%${search.trim()}%`;
-    conditions.push(
-      or(
-        ilike(teamMembers.firstName, pattern),
-        ilike(teamMembers.lastName, pattern),
-        ilike(teamMembers.email, pattern)
-      )
-    );
-  }
+	if (!parsed.success) {
+		return withNoStore(
+			NextResponse.json(
+				{
+					error: "Nevalidni parametri.",
+					details: parsed.error.flatten(),
+				},
+				{ status: 400 },
+			),
+		);
+	}
 
-  let statement = db.select().from(teamMembers).orderBy(desc(teamMembers.createdAt));
+	const { search, status } = parsed.data;
+	const filters: SQL<unknown>[] = [eq(teamMembers.companyId, companyId)];
 
-  if (conditions.length > 0) {
-    statement = statement.where(conditions.length === 1 ? conditions[0] : and(...conditions));
-  }
+	if (status) {
+		filters.push(eq(teamMembers.status, status));
+	}
 
-  const rows = await statement;
-  const payload = listTeamMembersResponseSchema.parse({
-    data: rows.map(serializeTeamMember)
-  });
+	if (search) {
+		const pattern = `%${search.trim()}%`;
+		filters.push(
+			or(
+				ilike(teamMembers.firstName, pattern),
+				ilike(teamMembers.lastName, pattern),
+				ilike(teamMembers.email, pattern),
+			)!,
+		);
+	}
 
-  return withNoStore(NextResponse.json(payload));
+	const baseQuery = db.select().from(teamMembers);
+	const filteredQuery =
+		filters.length === 1
+			? baseQuery.where(filters[0]!)
+			: filters.length > 1
+				? baseQuery.where(and(...filters))
+				: baseQuery;
+
+	const rows = await filteredQuery.orderBy(desc(teamMembers.updatedAt));
+
+	const payload = listTeamMembersResponseSchema.parse({
+		data: rows.map(serializeTeamMember),
+	});
+
+	return withNoStore(NextResponse.json(payload));
 }
 
 export async function POST(request: NextRequest) {
-  const db = await getDb();
-  const json = await request.json().catch(() => null);
+	const auth = await getCurrentAuth();
+	if (!auth || !auth.user) {
+		return withNoStore(
+			NextResponse.json(
+				{
+					error: "Niste autorizovani.",
+				},
+				{ status: 401 },
+			),
+		);
+	}
 
-  if (!json || typeof json !== "object") {
-    return withNoStore(
-      NextResponse.json(
-        {
-          error: "Nevalidan payload."
-        },
-        { status: 400 }
-      )
-    );
-  }
+	const companyId = resolveCompanyId(auth);
 
-  const parsed = createTeamMemberSchema.safeParse(json);
+	if (!companyId) {
+		return withNoStore(
+			NextResponse.json(
+				{
+					error: "Aktivna kompanija nije pronađena.",
+				},
+				{ status: 400 },
+			),
+		);
+	}
 
-  if (!parsed.success) {
-    return withNoStore(
-      NextResponse.json(
-        {
-          error: "Nevalidni podaci.",
-          details: parsed.error.flatten()
-        },
-        { status: 400 }
-      )
-    );
-  }
+	const db = await getDb();
+	const json = await request.json().catch(() => null);
 
-  const values = parsed.data;
-  const now = new Date();
+	if (!json || typeof json !== "object") {
+		return withNoStore(
+			NextResponse.json(
+				{
+					error: "Nevalidan payload.",
+				},
+				{ status: 400 },
+			),
+		);
+	}
 
-  try {
-    const [member] = await db
-      .insert(teamMembers)
-      .values({
-        firstName: values.firstName,
-        lastName: values.lastName,
-        email: values.email,
-        role: values.role,
-        status: values.status ?? "invited",
-        avatarUrl: values.avatarUrl ?? null,
-        createdAt: now,
-        updatedAt: now
-      })
-      .returning();
+	const parsed = createTeamMemberSchema.safeParse(json);
 
-    return withNoStore(
-      NextResponse.json(
-        {
-          data: serializeTeamMember(member)
-        },
-        { status: 201 }
-      )
-    );
-  } catch (error) {
-    if (isUniqueViolation(error)) {
-      return withNoStore(
-        NextResponse.json(
-          {
-            error: "Član tima sa ovom e-mail adresom već postoji."
-          },
-          { status: 409 }
-        )
-      );
-    }
+	if (!parsed.success) {
+		return withNoStore(
+			NextResponse.json(
+				{
+					error: "Nevalidni podaci.",
+					details: parsed.error.flatten(),
+				},
+				{ status: 400 },
+			),
+		);
+	}
 
-    console.error("[team-members] Failed to create", error);
-    return withNoStore(
-      NextResponse.json(
-        {
-          error: "Kreiranje člana tima nije uspelo."
-        },
-        { status: 500 }
-      )
-    );
-  }
+	const values = parsed.data;
+	const now = new Date();
+
+	try {
+		const [member] = await db
+			.insert(teamMembers)
+			.values({
+				firstName: values.firstName,
+				lastName: values.lastName,
+				email: values.email,
+				role: values.role,
+				status: values.status ?? "invited",
+				avatarUrl: values.avatarUrl ?? null,
+				companyId,
+				createdAt: now,
+				updatedAt: now,
+			})
+			.returning();
+
+		console.info(
+			"[team-members][invite]",
+			`Invitation placeholder generated for ${member.email} (company: ${companyId}).`,
+		);
+
+		return withNoStore(
+			NextResponse.json(
+				{
+					data: serializeTeamMember(member),
+				},
+				{ status: 201 },
+			),
+		);
+	} catch (error) {
+		if (isUniqueViolation(error)) {
+			return withNoStore(
+				NextResponse.json(
+					{
+						error: "Član tima sa ovom e-mail adresom već postoji.",
+					},
+					{ status: 409 },
+				),
+			);
+		}
+
+		console.error("[team-members] Failed to create", error);
+		return withNoStore(
+			NextResponse.json(
+				{
+					error: "Kreiranje člana tima nije uspelo.",
+				},
+				{ status: 500 },
+			),
+		);
+	}
 }
-

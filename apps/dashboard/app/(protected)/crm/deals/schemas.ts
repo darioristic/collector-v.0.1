@@ -12,7 +12,7 @@ const notesTransformer = z
     }
 
     const trimmed = val.trim();
-    return trimmed.length > 0 ? trimmed : null;
+    return trimmed.length > 0 ? trimmed : undefined;
   });
 
 export const dealFormSchema = z.object({

@@ -78,18 +78,19 @@ const DialogContent = React.forwardRef<
           return false
         }
 
-        const childType = child.type as { displayName?: string; name?: string }
+        const element = child as React.ReactElement<{ children?: React.ReactNode }>
+        const childType = element.type as { displayName?: string; name?: string }
 
         if (
-          child.type === DialogTitle ||
+          element.type === DialogTitle ||
           childType?.displayName === dialogTitleIdentifier ||
           childType?.name === dialogTitleIdentifier
         ) {
           return true
         }
 
-        if (child.props?.children) {
-          return containsTitle(child.props.children)
+        if (element.props?.children) {
+          return containsTitle(element.props.children)
         }
 
         return false

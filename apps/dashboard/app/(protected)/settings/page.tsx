@@ -18,6 +18,7 @@ import {
   UserRound,
   type LucideIcon
 } from "lucide-react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -31,7 +32,13 @@ import {
   FormMessage
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -49,6 +56,7 @@ import { useToast } from "@/hooks/use-toast";
 import { settingsSchema, type SettingsFormValues } from "@/lib/validations/settings";
 import { cn } from "@/lib/utils";
 import TeamsTab from "./teams/teams-tab";
+import { fetchTeamMembers, type TeamMember, type TeamMemberStatus } from "./teams/api";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -119,13 +127,15 @@ const NOTIFICATION_CHANNELS: NotificationChannel[] = [
   {
     key: "inbox",
     label: "Inbox",
-    description: "You’ll consistently get notifications for your subscriptions within your dashboard inbox.",
+    description:
+      "You’ll consistently get notifications for your subscriptions within your dashboard inbox.",
     icon: Bell
   },
   {
     key: "email",
     label: "Email",
-    description: "Get an email summary for unread notifications, grouped and sent according to urgency.",
+    description:
+      "Get an email summary for unread notifications, grouped and sent according to urgency.",
     icon: Mail
   },
   {
@@ -221,7 +231,39 @@ const defaultValues: SettingsFormValues = {
   showActiveDot: false
 };
 
-export default function SettingsPage(): JSX.Element {
+const TEAM_MEMBER_STATUS_META: Record<TeamMemberStatus, { label: string; dotClassName: string }> = {
+  online: { label: "Online", dotClassName: "bg-emerald-500" },
+  offline: { label: "Offline", dotClassName: "bg-rose-500" },
+  idle: { label: "Idle", dotClassName: "bg-amber-400" },
+  invited: { label: "Invited", dotClassName: "bg-slate-400" }
+};
+
+const MAX_PROFILE_COLLEAGUES = 5;
+
+function SettingsSkeleton() {
+  return (
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-7 w-40 rounded-md" />
+        <Skeleton className="h-4 w-64 rounded-md" />
+      </div>
+
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-wrap items-center gap-2">
+          {tabs.map((tab) => (
+            <Skeleton key={`settings-skeleton-tab-${tab.value}`} className="h-9 w-28 rounded-xl" />
+          ))}
+        </div>
+        <Card className="p-6 md:p-8">
+          <SkeletonLayout />
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+export default function SettingsPage() {
+  const [isReady, setIsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [initialData, setInitialData] = useState<SettingsFormValues | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -245,6 +287,9 @@ export default function SettingsPage(): JSX.Element {
       {}
     )
   );
+  const [colleagues, setColleagues] = useState<TeamMember[]>([]);
+  const [colleaguesLoading, setColleaguesLoading] = useState<boolean>(true);
+  const [colleaguesError, setColleaguesError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const form = useForm<SettingsFormValues>({
@@ -261,6 +306,10 @@ export default function SettingsPage(): JSX.Element {
       .map((part) => part[0]?.toUpperCase());
     return parts.slice(0, 2).join("") || "PR";
   }, [watchedFirstName, watchedLastName]);
+
+  useEffect(() => {
+    setIsReady(true);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -298,6 +347,39 @@ export default function SettingsPage(): JSX.Element {
       isMounted = false;
     };
   }, [form, toast]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadColleagues = async () => {
+      try {
+        setColleaguesError(null);
+        setColleaguesLoading(true);
+        const members = await fetchTeamMembers({});
+        if (!active) {
+          return;
+        }
+        setColleagues(members.slice(0, MAX_PROFILE_COLLEAGUES));
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+        const message = error instanceof Error ? error.message : "Nije moguće učitati kolege.";
+        setColleaguesError(message);
+        setColleagues([]);
+      } finally {
+        if (active) {
+          setColleaguesLoading(false);
+        }
+      }
+    };
+
+    void loadColleagues();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleFileChange = (file: File | undefined, onChange: (value: string | null) => void) => {
     if (!file) {
@@ -377,11 +459,17 @@ export default function SettingsPage(): JSX.Element {
 
   const disableActions = isLoading || form.formState.isSubmitting;
 
+  if (!isReady) {
+    return <SettingsSkeleton />;
+  }
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Settings</h1>
-        <p className="text-sm text-muted-foreground">Configure your profile, teams, billing and more.</p>
+        <h1 className="text-foreground text-2xl font-semibold tracking-tight">Settings</h1>
+        <p className="text-muted-foreground text-sm">
+          Configure your profile, teams, billing and more.
+        </p>
       </div>
 
       <Tabs defaultValue="profile" className="flex flex-col gap-6">
@@ -391,10 +479,10 @@ export default function SettingsPage(): JSX.Element {
               key={value}
               value={value}
               className={cn(
-                "flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-muted-foreground transition-colors",
+                "text-muted-foreground flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors",
                 "hover:text-primary data-[state=active]:text-primary",
-                "relative data-[state=active]:bg-card data-[state=active]:shadow-sm",
-                "data-[state=active]:after:absolute data-[state=active]:after:-bottom-px data-[state=active]:after:left-3 data-[state=active]:after:right-3 data-[state=active]:after:h-0.5 data-[state=active]:after:rounded-full data-[state=active]:after:bg-primary"
+                "data-[state=active]:bg-card relative data-[state=active]:shadow-sm",
+                "data-[state=active]:after:bg-primary data-[state=active]:after:absolute data-[state=active]:after:right-3 data-[state=active]:after:-bottom-px data-[state=active]:after:left-3 data-[state=active]:after:h-0.5 data-[state=active]:after:rounded-full"
               )}>
               <Icon className="h-4 w-4" />
               {label}
@@ -406,8 +494,10 @@ export default function SettingsPage(): JSX.Element {
           <Card>
             <div className="flex flex-col gap-6 p-6 md:p-8">
               <div className="flex flex-col gap-1">
-                <h2 className="text-xl font-semibold text-foreground">Profile</h2>
-                <p className="text-sm text-muted-foreground">Manage your information, preferences, and connected data.</p>
+                <h2 className="text-foreground text-xl font-semibold">Profile</h2>
+                <p className="text-muted-foreground text-sm">
+                  Manage your information, preferences, and connected data.
+                </p>
               </div>
 
               {isLoading ? (
@@ -417,7 +507,9 @@ export default function SettingsPage(): JSX.Element {
                   <form className="flex flex-col gap-8" onSubmit={onSubmit}>
                     <section className="flex flex-col gap-6">
                       <header className="flex flex-col gap-1">
-                        <h3 className="text-base font-semibold text-foreground">Personal Information</h3>
+                        <h3 className="text-foreground text-base font-semibold">
+                          Personal Information
+                        </h3>
                       </header>
 
                       <FormField
@@ -425,11 +517,17 @@ export default function SettingsPage(): JSX.Element {
                         name="profilePhoto"
                         render={({ field }) => (
                           <FormItem className="flex flex-col gap-4">
-                            <FormLabel className="text-sm font-medium text-foreground">Profile photo</FormLabel>
+                            <FormLabel className="text-foreground text-sm font-medium">
+                              Profile photo
+                            </FormLabel>
                             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                               <Avatar className="h-16 w-16 rounded-xl">
                                 {photoPreview ? (
-                                  <AvatarImage src={photoPreview} alt="Profile preview" className="object-cover" />
+                                  <AvatarImage
+                                    src={photoPreview}
+                                    alt="Profile preview"
+                                    className="object-cover"
+                                  />
                                 ) : (
                                   <AvatarFallback className="rounded-xl text-base font-semibold uppercase">
                                     {initials}
@@ -441,10 +539,16 @@ export default function SettingsPage(): JSX.Element {
                                   type="file"
                                   accept="image/png, image/jpeg, image/svg+xml"
                                   disabled={disableActions}
-                                  onChange={(event) => handleFileChange(event.target.files?.[0], (value) => field.onChange(value))}
+                                  onChange={(event) =>
+                                    handleFileChange(event.target.files?.[0], (value) =>
+                                      field.onChange(value)
+                                    )
+                                  }
                                   onBlur={field.onBlur}
                                 />
-                                <FormDescription className="text-xs text-muted-foreground">PNG, JPEG, SVG (Less than 5MB)</FormDescription>
+                                <FormDescription className="text-muted-foreground text-xs">
+                                  PNG, JPEG, SVG (Less than 5MB)
+                                </FormDescription>
                               </div>
                             </div>
                             <FormMessage />
@@ -460,7 +564,11 @@ export default function SettingsPage(): JSX.Element {
                             <FormItem>
                               <FormLabel>First Name</FormLabel>
                               <FormControl>
-                                <Input placeholder="Enter first name" disabled={disableActions} {...field} />
+                                <Input
+                                  placeholder="Enter first name"
+                                  disabled={disableActions}
+                                  {...field}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -473,7 +581,11 @@ export default function SettingsPage(): JSX.Element {
                             <FormItem>
                               <FormLabel>Last Name</FormLabel>
                               <FormControl>
-                                <Input placeholder="Enter last name" disabled={disableActions} {...field} />
+                                <Input
+                                  placeholder="Enter last name"
+                                  disabled={disableActions}
+                                  {...field}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -486,9 +598,16 @@ export default function SettingsPage(): JSX.Element {
                             <FormItem>
                               <FormLabel>Username</FormLabel>
                               <FormControl>
-                                <Input placeholder="Enter username" disabled className="bg-muted" {...field} />
+                                <Input
+                                  placeholder="Enter username"
+                                  disabled
+                                  className="bg-muted"
+                                  {...field}
+                                />
                               </FormControl>
-                              <FormDescription>This field is managed by your organization.</FormDescription>
+                              <FormDescription>
+                                This field is managed by your organization.
+                              </FormDescription>
                               <FormMessage />
                             </FormItem>
                           )}
@@ -500,7 +619,12 @@ export default function SettingsPage(): JSX.Element {
                             <FormItem>
                               <FormLabel>Email</FormLabel>
                               <FormControl>
-                                <Input type="email" placeholder="Enter email" disabled={disableActions} {...field} />
+                                <Input
+                                  type="email"
+                                  placeholder="Enter email"
+                                  disabled={disableActions}
+                                  {...field}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -527,10 +651,106 @@ export default function SettingsPage(): JSX.Element {
                       </div>
                     </section>
 
+                    <section className="flex flex-col gap-4">
+                      <header className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex flex-col">
+                          <h3 className="text-foreground text-base font-semibold">
+                            Team directory
+                          </h3>
+                          <p className="text-muted-foreground text-sm">
+                            Kratak pregled kolega iz vaše kompanije.
+                          </p>
+                        </div>
+                        <Button
+                          asChild
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 rounded-full px-3 text-xs">
+                          <Link href="/settings?tab=teams">Upravljaj članovima</Link>
+                        </Button>
+                      </header>
+
+                      {colleaguesLoading ? (
+                        <div className="flex flex-col gap-3">
+                          {Array.from({ length: MAX_PROFILE_COLLEAGUES }).map((_, index) => (
+                            <div
+                              key={`colleague-skeleton-${index}`}
+                              className="border-border bg-card/60 flex items-center justify-between rounded-xl border p-4">
+                              <div className="flex items-center gap-3">
+                                <Skeleton className="h-10 w-10 rounded-full" />
+                                <div className="flex flex-col gap-2">
+                                  <Skeleton className="h-3 w-28 rounded-full" />
+                                  <Skeleton className="h-3 w-36 rounded-full" />
+                                </div>
+                              </div>
+                              <Skeleton className="h-3 w-24 rounded-full" />
+                            </div>
+                          ))}
+                        </div>
+                      ) : colleaguesError ? (
+                        <div className="border-destructive/40 bg-destructive/10 text-destructive rounded-xl border p-4 text-sm">
+                          {colleaguesError}
+                        </div>
+                      ) : colleagues.length === 0 ? (
+                        <div className="border-muted text-muted-foreground rounded-xl border border-dashed p-6 text-sm">
+                          Trenutno nema drugih članova u vašoj kompaniji.
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-3">
+                          {colleagues.map((member) => {
+                            const statusMeta = TEAM_MEMBER_STATUS_META[member.status];
+                            return (
+                              <div
+                                key={member.id}
+                                className="border-border bg-card/60 flex items-center justify-between rounded-xl border p-4">
+                                <div className="flex items-center gap-3">
+                                  <Avatar className="h-10 w-10 rounded-full">
+                                    {member.avatarUrl ? (
+                                      <AvatarImage src={member.avatarUrl} alt={member.fullName} />
+                                    ) : (
+                                      <AvatarFallback className="bg-primary/10 text-primary rounded-full text-sm font-medium">
+                                        {(member.firstName?.[0] ?? "").toUpperCase()}
+                                        {(member.lastName?.[0] ?? "").toUpperCase()}
+                                      </AvatarFallback>
+                                    )}
+                                  </Avatar>
+                                  <div className="flex flex-col gap-1">
+                                    <span className="text-foreground text-sm font-medium">
+                                      {member.fullName}
+                                    </span>
+                                    <span className="text-muted-foreground text-xs">
+                                      {member.email}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col items-end gap-1 text-right">
+                                  <span className="text-muted-foreground text-xs font-medium">
+                                    {member.role}
+                                  </span>
+                                  <span className="text-muted-foreground inline-flex items-center gap-2 text-xs">
+                                    <span
+                                      className={cn(
+                                        "h-2 w-2 rounded-full",
+                                        statusMeta?.dotClassName ?? "bg-muted-foreground"
+                                      )}
+                                      aria-hidden="true"
+                                    />
+                                    {statusMeta?.label ?? "Nepoznato"}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </section>
+
                     <section className="flex flex-col gap-6">
                       <header className="flex flex-col gap-1">
-                        <h3 className="text-base font-semibold text-foreground">Preferences</h3>
-                        <p className="text-sm text-muted-foreground">Manage your application preferences.</p>
+                        <h3 className="text-foreground text-base font-semibold">Preferences</h3>
+                        <p className="text-muted-foreground text-sm">
+                          Manage your application preferences.
+                        </p>
                       </header>
 
                       <div className="grid gap-4 md:grid-cols-2">
@@ -540,7 +760,10 @@ export default function SettingsPage(): JSX.Element {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Timezone</FormLabel>
-                              <Select disabled={disableActions} value={field.value} onValueChange={field.onChange}>
+                              <Select
+                                disabled={disableActions}
+                                value={field.value}
+                                onValueChange={field.onChange}>
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select timezone" />
@@ -565,7 +788,10 @@ export default function SettingsPage(): JSX.Element {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Language</FormLabel>
-                              <Select disabled={disableActions} value={field.value} onValueChange={field.onChange}>
+                              <Select
+                                disabled={disableActions}
+                                value={field.value}
+                                onValueChange={field.onChange}>
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select language" />
@@ -590,7 +816,10 @@ export default function SettingsPage(): JSX.Element {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Start of the week</FormLabel>
-                              <Select disabled={disableActions} value={field.value} onValueChange={field.onChange}>
+                              <Select
+                                disabled={disableActions}
+                                value={field.value}
+                                onValueChange={field.onChange}>
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select date" />
@@ -615,7 +844,10 @@ export default function SettingsPage(): JSX.Element {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Date format</FormLabel>
-                              <Select disabled={disableActions} value={field.value} onValueChange={field.onChange}>
+                              <Select
+                                disabled={disableActions}
+                                value={field.value}
+                                onValueChange={field.onChange}>
                                 <FormControl>
                                   <SelectTrigger>
                                     <SelectValue placeholder="Select format" />
@@ -640,15 +872,21 @@ export default function SettingsPage(): JSX.Element {
                           control={form.control}
                           name="use24HourFormat"
                           render={({ field }) => (
-                            <FormItem className="flex items-start justify-between gap-4 rounded-xl border border-border bg-card/60 p-4">
+                            <FormItem className="border-border bg-card/60 flex items-start justify-between gap-4 rounded-xl border p-4">
                               <div className="flex flex-col gap-1">
-                                <FormLabel className="text-base font-medium text-foreground">24 hour time format</FormLabel>
-                                <FormDescription className="text-sm text-muted-foreground">
+                                <FormLabel className="text-foreground text-base font-medium">
+                                  24 hour time format
+                                </FormLabel>
+                                <FormDescription className="text-muted-foreground text-sm">
                                   Example: 20:00 PM, 12-hour format if switch off
                                 </FormDescription>
                               </div>
                               <FormControl>
-                                <Switch checked={field.value} disabled={disableActions} onCheckedChange={field.onChange} />
+                                <Switch
+                                  checked={field.value}
+                                  disabled={disableActions}
+                                  onCheckedChange={field.onChange}
+                                />
                               </FormControl>
                             </FormItem>
                           )}
@@ -658,15 +896,21 @@ export default function SettingsPage(): JSX.Element {
                           control={form.control}
                           name="showActiveDot"
                           render={({ field }) => (
-                            <FormItem className="flex items-start justify-between gap-4 rounded-xl border border-border bg-card/60 p-4">
+                            <FormItem className="border-border bg-card/60 flex items-start justify-between gap-4 rounded-xl border p-4">
                               <div className="flex flex-col gap-1">
-                                <FormLabel className="text-base font-medium text-foreground">Show active dot</FormLabel>
-                                <FormDescription className="text-sm text-muted-foreground">
+                                <FormLabel className="text-foreground text-base font-medium">
+                                  Show active dot
+                                </FormLabel>
+                                <FormDescription className="text-muted-foreground text-sm">
                                   Display a green dot next to your picture if you’re online
                                 </FormDescription>
                               </div>
                               <FormControl>
-                                <Switch checked={field.value} disabled={disableActions} onCheckedChange={field.onChange} />
+                                <Switch
+                                  checked={field.value}
+                                  disabled={disableActions}
+                                  onCheckedChange={field.onChange}
+                                />
                               </FormControl>
                             </FormItem>
                           )}
@@ -674,8 +918,10 @@ export default function SettingsPage(): JSX.Element {
                       </div>
                     </section>
 
-                    <footer className="flex flex-col gap-4 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-sm text-muted-foreground">Your changes haven’t been saved</p>
+                    <footer className="border-border flex flex-col gap-4 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-muted-foreground text-sm">
+                        Your changes haven’t been saved
+                      </p>
                       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
                         <Button
                           type="button"
@@ -700,10 +946,10 @@ export default function SettingsPage(): JSX.Element {
           <Card>
             <div className="flex flex-col gap-6 p-6 md:p-8">
               <div className="flex flex-col gap-1">
-                <h2 className="text-2xl font-semibold text-foreground">Notifications</h2>
-                <p className="text-sm text-muted-foreground">
+                <h2 className="text-foreground text-2xl font-semibold">Notifications</h2>
+                <p className="text-muted-foreground text-sm">
                   Select where you want to be notified by our app.{" "}
-                  <Button type="button" variant="link" className="h-auto p-0 text-sm text-primary">
+                  <Button type="button" variant="link" className="text-primary h-auto p-0 text-sm">
                     Learn more
                   </Button>
                 </p>
@@ -719,28 +965,30 @@ export default function SettingsPage(): JSX.Element {
                       key={channel.key}
                       className={cn(
                         "flex flex-col gap-4 pt-6 first:pt-0",
-                        index !== 0 && "border-t border-border"
+                        index !== 0 && "border-border border-t"
                       )}>
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div className="flex flex-1 items-start gap-4">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                            <Icon className="h-5 w-5 text-muted-foreground" />
+                          <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-full">
+                            <Icon className="text-muted-foreground h-5 w-5" />
                           </div>
                           <div className="flex flex-col gap-2">
                             <div>
-                              <p className="text-base font-semibold text-foreground">{channel.label}</p>
-                              <p className="text-sm text-muted-foreground">{channel.description}</p>
+                              <p className="text-foreground text-base font-semibold">
+                                {channel.label}
+                              </p>
+                              <p className="text-muted-foreground text-sm">{channel.description}</p>
                             </div>
                             {channel.hasAction && (
                               <div className="flex flex-wrap items-center gap-3 text-sm">
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                  <span className="size-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium">
+                                <div className="text-muted-foreground flex items-center gap-2">
+                                  <span className="bg-primary/10 text-primary flex size-6 items-center justify-center rounded-full text-xs font-medium">
                                     S
                                   </span>
-                                  <span className="size-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium">
+                                  <span className="bg-primary/10 text-primary flex size-6 items-center justify-center rounded-full text-xs font-medium">
                                     D
                                   </span>
-                                  <span className="size-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium">
+                                  <span className="bg-primary/10 text-primary flex size-6 items-center justify-center rounded-full text-xs font-medium">
                                     C
                                   </span>
                                 </div>
@@ -778,12 +1026,12 @@ export default function SettingsPage(): JSX.Element {
               <div className="flex flex-col gap-2">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div className="flex flex-col gap-1">
-                    <h3 className="text-lg font-semibold text-foreground">Project notifications</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <h3 className="text-foreground text-lg font-semibold">Project notifications</h3>
+                    <p className="text-muted-foreground text-sm">
                       Choose which project updates land in your inbox and devices.
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
+                  <div className="text-muted-foreground flex items-center gap-2">
                     <Mail className="h-4 w-4" />
                     <Monitor className="h-4 w-4" />
                   </div>
@@ -805,8 +1053,12 @@ export default function SettingsPage(): JSX.Element {
                       <TableRow key={item.key} className="border-border">
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="text-sm font-medium text-foreground">{item.label}</span>
-                            <span className="text-xs text-muted-foreground">{item.description}</span>
+                            <span className="text-foreground text-sm font-medium">
+                              {item.label}
+                            </span>
+                            <span className="text-muted-foreground text-xs">
+                              {item.description}
+                            </span>
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
@@ -851,16 +1103,21 @@ export default function SettingsPage(): JSX.Element {
         </TabsContent>
 
         {tabs
-          .filter((tab) => tab.value !== "profile" && tab.value !== "notifications" && tab.value !== "teams")
+          .filter(
+            (tab) =>
+              tab.value !== "profile" && tab.value !== "notifications" && tab.value !== "teams"
+          )
           .map((tab) => {
             const Icon = tab.icon;
             return (
               <TabsContent key={tab.value} value={tab.value}>
-                <Card className="p-10 text-center text-muted-foreground">
+                <Card className="text-muted-foreground p-10 text-center">
                   <div className="mx-auto flex max-w-md flex-col items-center gap-3">
-                    <Icon className="h-8 w-8 text-primary" />
-                    <h3 className="text-lg font-semibold text-foreground">{tab.label}</h3>
-                    <p className="text-sm">This section is under construction. Please check back later.</p>
+                    <Icon className="text-primary h-8 w-8" />
+                    <h3 className="text-foreground text-lg font-semibold">{tab.label}</h3>
+                    <p className="text-sm">
+                      This section is under construction. Please check back later.
+                    </p>
                   </div>
                 </Card>
               </TabsContent>
@@ -871,7 +1128,7 @@ export default function SettingsPage(): JSX.Element {
   );
 }
 
-function SkeletonLayout(): JSX.Element {
+function SkeletonLayout() {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -908,4 +1165,3 @@ function SkeletonLayout(): JSX.Element {
     </div>
   );
 }
-

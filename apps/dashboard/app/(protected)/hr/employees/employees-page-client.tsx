@@ -30,7 +30,8 @@ import EmployeesTable from "./components/employees-table";
 import EmployeesToolbar from "./components/employees-toolbar";
 import { EMPLOYEES_PAGE_SIZE } from "./constants";
 import type { EmployeeFormValues } from "./schemas";
-import type { Employee, EmployeesQueryState } from "./types";
+import type { Employee, EmployeesQueryState, EmploymentStatus, EmploymentType } from "./types";
+import { employmentStatusValues, employmentTypeValues } from "@/lib/validations/employees";
 
 interface EmployeesPageClientProps {
   initialQuery: EmployeesQueryState;
@@ -38,6 +39,12 @@ interface EmployeesPageClientProps {
 
 const hasFilters = (query: EmployeesQueryState, searchValue: string) =>
   Boolean(query.department) || Boolean(query.status) || Boolean(query.employmentType) || Boolean(searchValue);
+
+const isEmploymentType = (value: string | undefined): value is EmploymentType =>
+  typeof value === "string" && (employmentTypeValues as readonly string[]).includes(value);
+
+const isEmploymentStatus = (value: string | undefined): value is EmploymentStatus =>
+  typeof value === "string" && (employmentStatusValues as readonly string[]).includes(value);
 
 export default function EmployeesPageClient({ initialQuery }: EmployeesPageClientProps) {
   const { toast } = useToast();
@@ -87,8 +94,7 @@ export default function EmployeesPageClient({ initialQuery }: EmployeesPageClien
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.pageInfo.nextCursor ?? undefined,
     staleTime: 0,
-    refetchOnWindowFocus: false,
-    keepPreviousData: true
+    refetchOnWindowFocus: false
   });
 
   const employees = React.useMemo(() => data?.pages.flatMap((page) => page.data) ?? [], [data?.pages]);
@@ -240,8 +246,8 @@ export default function EmployeesPageClient({ initialQuery }: EmployeesPageClien
       setQueryState((prev) => ({
         ...prev,
         department: nextFilters.department ?? undefined,
-        status: nextFilters.status ?? undefined,
-        employmentType: nextFilters.employmentType ?? undefined
+        status: isEmploymentStatus(nextFilters.status) ? nextFilters.status : undefined,
+        employmentType: isEmploymentType(nextFilters.employmentType) ? nextFilters.employmentType : undefined
       }));
     },
     []

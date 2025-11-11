@@ -89,8 +89,9 @@ export default function DealsKanbanBoard({ deals, onCardClick, onStageChange }: 
   const getProgressForStage = (stage: DealStage) => {
     const index = DEAL_STAGES.indexOf(stage);
     if (index < 0) return 0;
-    if (DEAL_STAGES.length === 1) return 100;
-    return Math.round((index / (DEAL_STAGES.length - 1)) * 100);
+    const totalStages: number = DEAL_STAGES.length;
+    if (totalStages === 1) return 100;
+    return Math.round((index / (totalStages - 1)) * 100);
   };
 
   return (
@@ -106,6 +107,13 @@ export default function DealsKanbanBoard({ deals, onCardClick, onStageChange }: 
           onDragEnd({ active, over }) {
             if (!over) return `Dropping ${String(active.id)} canceled`;
             return `${String(active.id)} dropped in ${String(over.id)}`;
+          },
+          onDragOver({ active, over }) {
+            if (!over) return `Dragging ${String(active.id)}`;
+            return `Dragging ${String(active.id)} over ${String(over.id)}`;
+          },
+          onDragCancel({ active }) {
+            return `Drag for ${String(active.id)} canceled`;
           }
         }
       }}

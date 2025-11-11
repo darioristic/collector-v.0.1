@@ -65,9 +65,9 @@ export default function VaultPage() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
 
-  const searchParamsString = searchParams.toString();
-  const currentFolderId = searchParams.get("folderId");
-  const queryParam = searchParams.get("q") ?? "";
+  const searchParamsString = searchParams?.toString() ?? "";
+  const currentFolderId = searchParams?.get("folderId") ?? null;
+  const queryParam = searchParams?.get("q") ?? "";
 
   const [search, setSearch] = useState(queryParam);
   const [debouncedSearch, setDebouncedSearch] = useState(queryParam);
@@ -103,7 +103,7 @@ export default function VaultPage() {
   }, [search]);
 
   useEffect(() => {
-    const existing = searchParams.get("q") ?? "";
+    const existing = searchParams?.get("q") ?? "";
     if (existing === debouncedSearch.trim()) {
       return;
     }
@@ -349,12 +349,8 @@ export default function VaultPage() {
   };
 
   const handleUpload = async (formData: FormData) => {
-    try {
-      await uploadVaultFilesAction(formData);
-      triggerReload();
-    } catch (error) {
-      throw error;
-    }
+    await uploadVaultFilesAction(formData);
+    triggerReload();
   };
 
   const isInitialLoading = isFetching && !vaultData;

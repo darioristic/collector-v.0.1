@@ -40,7 +40,7 @@ import {
   useUpdateProject,
   useUpdateProjectTask
 } from "@/src/hooks/useProjects";
-import type { ProjectStatus, ProjectUpdatePayload } from "@/src/types/projects";
+import type { ProjectDetails, ProjectStatus, ProjectUpdatePayload } from "@/src/types/projects";
 import { ProjectTasks } from "./project-tasks";
 
 type ProjectEditFormValues = {
@@ -70,7 +70,13 @@ export function ProjectDetailsView({ projectId }: ProjectDetailsViewProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const { data: project } = useProjectDetails(projectId, { suspense: true });
+  const projectQuery = useProjectDetails(projectId, { suspense: true });
+
+  if (!projectQuery.data) {
+    return null;
+  }
+
+  const project = projectQuery.data as unknown as ProjectDetails;
 
   const updateProjectMutation = useUpdateProject(projectId);
   const deleteProjectMutation = useDeleteProject(projectId, {

@@ -61,7 +61,7 @@ const SocialButtons = () => (
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = useMemo(() => searchParams.get("redirect") ?? DEFAULT_REDIRECT, [searchParams]);
+  const redirectTo = useMemo(() => searchParams?.get("redirect") ?? DEFAULT_REDIRECT, [searchParams]);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),

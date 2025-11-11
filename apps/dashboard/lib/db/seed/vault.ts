@@ -1,5 +1,5 @@
 import { isNull } from "drizzle-orm";
-import type { AnyPgDatabase } from "drizzle-orm/pg-core";
+import type { PgDatabase } from "drizzle-orm/pg-core";
 
 import { vaultFolders } from "../schema/vault";
 
@@ -10,7 +10,7 @@ type VaultSeedResult = {
   inserted: number;
 };
 
-export async function seedVault(db: AnyPgDatabase): Promise<VaultSeedResult> {
+export async function seedVault(db: PgDatabase<any, any, any>): Promise<VaultSeedResult> {
   const existingFolders = await db
     .select({ name: vaultFolders.name })
     .from(vaultFolders)

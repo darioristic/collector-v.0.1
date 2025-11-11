@@ -120,27 +120,37 @@ const NAVIGATION_GROUPS: NavigationGroup[] = [
   }
 ];
 
-const KPI_CARDS = [
+type KpiTrend = "up" | "down" | "neutral";
+
+type KpiCard = {
+  label: string;
+  value: string;
+  change: string | null;
+  description: string | null;
+  trend: KpiTrend;
+};
+
+const KPI_CARDS: KpiCard[] = [
   {
     label: "Engagement Score",
     value: "8.4 / 10",
     change: "+6%",
     description: "od prošlog meseca",
-    trend: "up" as const
+    trend: "up"
   },
   {
     label: "Active Contacts",
     value: "12,450",
     change: null,
     description: null,
-    trend: "neutral" as const
+    trend: "neutral"
   },
   {
     label: "Inactive Contacts",
     value: "1,375",
     change: null,
     description: null,
-    trend: "neutral" as const
+    trend: "neutral"
   },
   {
     label: "Lead Conversion Rate",
@@ -250,7 +260,7 @@ const MONTHS = [
   { value: "sep-2025", label: "Septembar 2025" }
 ];
 
-export default function CRMOverviewPage(): JSX.Element {
+export default function CRMOverviewPage() {
   const pathname = usePathname();
   const { toast } = useToast();
 

@@ -71,9 +71,12 @@ const FormSchema = z.object({
   active: z.boolean().default(true)
 });
 
+type FormValues = z.infer<typeof FormSchema>;
+type FormInput = z.input<typeof FormSchema>;
+
 export default function AddProductForm() {
   const router = useRouter();
-  const form = useForm<z.infer<typeof FormSchema>>({
+  const form = useForm<FormInput>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
       name: "",
@@ -102,8 +105,10 @@ export default function AddProductForm() {
     maxFiles: 5
   });
 
-  function onSubmit(data: z.infer<typeof FormSchema>) {
-    const price = parseFloat(data.price);
+  function onSubmit(data: FormInput) {
+    const parsed = FormSchema.parse(data);
+
+    const price = parseFloat(parsed.price);
     if (isNaN(price) || price < 0) {
       toast.error("Invalid price", {
         description: "Price must be a valid positive number."
@@ -112,16 +117,16 @@ export default function AddProductForm() {
     }
 
     createProduct({
-      name: data.name,
-      sku: data.sku,
+      name: parsed.name,
+      sku: parsed.sku,
       price,
       currency: "EUR",
-      category: data.category || null,
-      active: data.active ?? true
+      category: parsed.category || null,
+      active: parsed.active ?? true
     })
       .then(() => {
         toast.success("Product created successfully", {
-          description: `Product "${data.name}" has been created.`
+          description: `Product "${parsed.name}" has been created.`
         });
         router.push("/products");
       })

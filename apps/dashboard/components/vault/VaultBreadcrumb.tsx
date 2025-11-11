@@ -2,23 +2,21 @@
 
 import { Fragment, useCallback } from "react";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-
+import type { VaultBreadcrumb as VaultBreadcrumbItem } from "@/app/vault/types";
 import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
-  BreadcrumbSeparator
+  BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { cn } from "@/lib/utils";
-
-import type { VaultBreadcrumb } from "@/app/vault/types";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 type VaultBreadcrumbProps = {
-  items: VaultBreadcrumb[];
-  onNavigate?: (item: VaultBreadcrumb) => void;
+  items: VaultBreadcrumbItem[];
+  onNavigate?: (_item: VaultBreadcrumbItem) => void;
   className?: string;
 };
 
@@ -28,7 +26,7 @@ export function VaultBreadcrumb({ items, onNavigate, className }: VaultBreadcrum
   const searchParams = useSearchParams();
 
   const buildHref = useCallback(
-    (target: VaultBreadcrumb) => {
+    (target: VaultBreadcrumbItem) => {
       const params = new URLSearchParams(searchParams?.toString() ?? "");
       if (target.id) {
         params.set("folderId", target.id);
@@ -42,7 +40,7 @@ export function VaultBreadcrumb({ items, onNavigate, className }: VaultBreadcrum
     [pathname, searchParams]
   );
 
-  const handleNavigate = (item: VaultBreadcrumb) => {
+  const handleNavigate = (item: VaultBreadcrumbItem) => {
     const href = buildHref(item);
     router.push(href);
     onNavigate?.(item);
@@ -64,17 +62,17 @@ export function VaultBreadcrumb({ items, onNavigate, className }: VaultBreadcrum
               <Fragment key={key}>
                 <BreadcrumbItem className="whitespace-nowrap">
                   {isLast ? (
-                    <BreadcrumbPage className="text-foreground font-medium">{item.name}</BreadcrumbPage>
+                    <BreadcrumbPage className="text-foreground font-medium">
+                      {item.name}
+                    </BreadcrumbPage>
                   ) : (
                     <BreadcrumbLink
                       asChild
-                      className="text-muted-foreground transition hover:text-foreground"
-                    >
+                      className="text-muted-foreground hover:text-foreground transition">
                       <button
                         type="button"
                         onClick={() => handleNavigate(item)}
-                        className="text-sm font-medium"
-                      >
+                        className="text-sm font-medium">
                         {item.name}
                       </button>
                     </BreadcrumbLink>
@@ -89,5 +87,3 @@ export function VaultBreadcrumb({ items, onNavigate, className }: VaultBreadcrum
     </div>
   );
 }
-
-

@@ -211,6 +211,18 @@ export function ProjectsPageClient() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(parseInt(pageSizeOptions[0].value, 10));
 
+  const handleTimeframeFilterChange = (value: string) => {
+    setTimeframeFilter(value as (typeof timeframeOptions)[number]["value"]);
+  };
+
+  const handleDueDateFilterChange = (value: string) => {
+    setDueDateFilter(value as (typeof dueDateOptions)[number]["value"]);
+  };
+
+  const handlePriorityFilterChange = (value: string) => {
+    setPriorityFilter(value as (typeof priorityOptions)[number]["value"]);
+  };
+
   const form = useForm<CreateProjectFormValues>({
     defaultValues: {
       name: "",
@@ -386,7 +398,7 @@ export function ProjectsPageClient() {
         }}
         filters={
           <>
-            <Select value={timeframeFilter} onValueChange={(value) => setTimeframeFilter(value)}>
+            <Select value={timeframeFilter} onValueChange={handleTimeframeFilterChange}>
               <SelectTrigger className="w-[140px]" aria-label="Filter by timeframe">
                 <SelectValue placeholder="Timeframe" />
               </SelectTrigger>
@@ -399,7 +411,7 @@ export function ProjectsPageClient() {
               </SelectContent>
             </Select>
 
-            <Select value={dueDateFilter} onValueChange={(value) => setDueDateFilter(value)}>
+            <Select value={dueDateFilter} onValueChange={handleDueDateFilterChange}>
               <SelectTrigger className="w-[160px]" aria-label="Filter by due date">
                 <SelectValue placeholder="Deadline" />
               </SelectTrigger>
@@ -412,10 +424,7 @@ export function ProjectsPageClient() {
               </SelectContent>
             </Select>
 
-            <Select
-              value={priorityFilter}
-              onValueChange={(value) => setPriorityFilter(value as (typeof priorityOptions)[number]["value"])}
-            >
+            <Select value={priorityFilter} onValueChange={handlePriorityFilterChange}>
               <SelectTrigger className="w-[150px]" aria-label="Filter by priority">
                 <SelectValue placeholder="Priority" />
               </SelectTrigger>

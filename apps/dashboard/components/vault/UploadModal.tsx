@@ -1,28 +1,32 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import type { VaultDirectoryOption } from "@/app/vault/types";
+import { formatBytes } from "@/components/vault/utils";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Progress } from "@/components/ui/progress";
-import { useToast } from "@/hooks/use-toast";
 import { useFileUpload } from "@/hooks/use-file-upload";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-
-import { formatBytes } from "@/components/vault/utils";
-
-import type { VaultDirectoryOption } from "@/app/vault/types";
-
 import { FileText, Trash2, UploadCloud } from "lucide-react";
 
 type UploadModalProps = {
@@ -31,7 +35,7 @@ type UploadModalProps = {
   folders: VaultDirectoryOption[];
   defaultFolderId?: string | null;
   uploadedBy?: string | null;
-  onUpload: (formData: FormData) => Promise<unknown>;
+  onUpload: (_formData: FormData) => Promise<unknown>;
   maxFileSizeBytes?: number;
 };
 
@@ -47,6 +51,8 @@ export function UploadModal({
   maxFileSizeBytes = DEFAULT_MAX_SIZE
 }: UploadModalProps) {
   const { toast } = useToast();
+
+  const selectId = useId();
 
   const [selectedFolderId, setSelectedFolderId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -172,7 +178,10 @@ export function UploadModal({
       setProgress(100);
       toast({
         title: "Upload uspešan",
-        description: filesToUpload.length === 1 ? "Fajl je uspešno otpremljen." : "Svi fajlovi su uspešno otpremljeni."
+        description:
+          filesToUpload.length === 1
+            ? "Fajl je uspešno otpremljen."
+            : "Svi fajlovi su uspešno otpremljeni."
       });
       actions.clearFiles();
       setTimeout(() => {
@@ -181,7 +190,9 @@ export function UploadModal({
       onClose();
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Otpremanje fajlova nije uspelo. Pokušajte ponovo.";
+        error instanceof Error
+          ? error.message
+          : "Otpremanje fajlova nije uspelo. Pokušajte ponovo.";
       toast({
         title: "Greška",
         description: message
@@ -201,13 +212,12 @@ export function UploadModal({
 
         <div className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="vault-upload-folder">Ciljni folder</Label>
+            <Label htmlFor={selectId}>Ciljni folder</Label>
             <Select
               value={selectedFolderId}
               onValueChange={setSelectedFolderId}
-              disabled={isSubmitting || folderOptions.length === 0}
-            >
-              <SelectTrigger id="vault-upload-folder" className="w-full">
+              disabled={isSubmitting || folderOptions.length === 0}>
+              <SelectTrigger id={selectId} className="w-full">
                 <SelectValue placeholder="Izaberite folder" />
               </SelectTrigger>
               <SelectContent>
@@ -222,18 +232,27 @@ export function UploadModal({
 
           <div
             className={cn(
-              "flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-border/70 bg-muted/20 px-6 py-10 text-center transition hover:border-border",
+              "border-border/70 bg-muted/20 hover:border-border flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-10 text-center transition",
               state.isDragging && "border-primary bg-primary/10"
             )}
+            role="button"
+            tabIndex={0}
             onDragEnter={actions.handleDragEnter}
             onDragLeave={actions.handleDragLeave}
             onDragOver={actions.handleDragOver}
             onDrop={actions.handleDrop}
-          >
-            <UploadCloud className="size-10 text-muted-foreground" aria-hidden="true" />
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                actions.openFileDialog();
+              }
+            }}>
+            <UploadCloud className="text-muted-foreground size-10" aria-hidden="true" />
             <div className="space-y-1">
-              <p className="text-sm font-medium text-foreground">Prevucite fajlove ili odaberite sa diska</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-foreground text-sm font-medium">
+                Prevucite fajlove ili odaberite sa diska
+              </p>
+              <p className="text-muted-foreground text-xs">
                 Maksimalna veličina po fajlu {formatBytes(maxFileSizeBytes)}.
               </p>
             </div>
@@ -244,7 +263,11 @@ export function UploadModal({
               })}
               className="hidden"
             />
-            <Button type="button" variant="outline" onClick={actions.openFileDialog} disabled={isSubmitting}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={actions.openFileDialog}
+              disabled={isSubmitting}>
               Odaberi fajlove
             </Button>
           </div>
@@ -262,22 +285,22 @@ export function UploadModal({
           {state.files.length > 0 ? (
             <div className="space-y-3">
               <Label>Izabrani fajlovi</Label>
-              <ScrollArea className="max-h-48 rounded-lg border border-border/60 bg-background/50">
-                <ul className="divide-y divide-border/60">
+              <ScrollArea className="border-border/60 bg-background/50 max-h-48 rounded-lg border">
+                <ul className="divide-border/60 divide-y">
                   {state.files.map((entry) => {
                     const file = entry.file;
                     const fileSize =
                       file instanceof File ? file.size : "size" in file ? file.size : undefined;
                     return (
                       <li key={entry.id} className="flex items-center gap-4 px-4 py-3">
-                        <div className="flex size-10 items-center justify-center rounded-lg border border-border/70 bg-muted/20 text-muted-foreground">
+                        <div className="border-border/70 bg-muted/20 text-muted-foreground flex size-10 items-center justify-center rounded-lg border">
                           <FileText className="size-4" aria-hidden="true" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="line-clamp-1 text-sm font-medium text-foreground">
+                          <p className="text-foreground line-clamp-1 text-sm font-medium">
                             {file instanceof File ? file.name : file.name}
                           </p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-muted-foreground text-xs">
                             {fileSize ? formatBytes(fileSize) : "Nepoznata veličina"}
                           </p>
                         </div>
@@ -287,8 +310,7 @@ export function UploadModal({
                           size="icon"
                           className="size-8"
                           onClick={() => actions.removeFile(entry.id)}
-                          disabled={isSubmitting}
-                        >
+                          disabled={isSubmitting}>
                           <Trash2 className="size-4" aria-hidden="true" />
                           <span className="sr-only">Ukloni fajl</span>
                         </Button>
@@ -310,8 +332,7 @@ export function UploadModal({
           <Button
             type="button"
             onClick={handleUpload}
-            disabled={isSubmitting || state.files.length === 0 || !selectedFolderId}
-          >
+            disabled={isSubmitting || state.files.length === 0 || !selectedFolderId}>
             {isSubmitting ? "Otpremanje..." : "Otpremi fajlove"}
           </Button>
         </DialogFooter>
@@ -319,5 +340,3 @@ export function UploadModal({
     </Dialog>
   );
 }
-
-

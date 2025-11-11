@@ -55,6 +55,7 @@ const SidebarContent = () => {
   const [filteredConversations, setFilteredConversations] = useState(conversations);
 
   const params = useParams<{ id: string }>();
+  const activeConversationId = params?.id ?? null;
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -88,7 +89,7 @@ const SidebarContent = () => {
                     href={`/apps/ai-chat-v2/${conversation.id}`}
                     className={cn(
                       "hover:bg-muted block w-full min-w-0 justify-start truncate rounded-lg p-2 px-3 text-start text-sm",
-                      params.id === conversation.id && "bg-muted"
+                      activeConversationId === conversation.id && "bg-muted"
                     )}>
                     {conversation.title}
                   </Link>
