@@ -402,10 +402,28 @@ export const fetchTeamMembers = async (
 
 					// Also log as object for easier inspection (this might show [Object] in some browsers)
 					try {
-						console.error(
-							"[fetchTeamMembers] API error response (object):",
-							logDetails,
-						);
+						// Only log if logDetails has meaningful content
+						const hasContent =
+							Object.keys(logDetails).length > 0 &&
+							Object.values(logDetails).some(
+								(v) =>
+									v !== undefined && v !== null && v !== "unknown" && v !== "",
+							);
+						if (hasContent) {
+							console.error(
+								"[fetchTeamMembers] API error response (object):",
+								logDetails,
+							);
+						} else {
+							console.error(
+								"[fetchTeamMembers] API error response: Empty or invalid response from server",
+								{
+									status: String(status || "unknown"),
+									statusText: String(statusText || "unknown"),
+									url: String(url || "unknown"),
+								},
+							);
+						}
 					} catch (objectLogError) {
 						console.error(
 							"[fetchTeamMembers] Could not log logDetails as object:",

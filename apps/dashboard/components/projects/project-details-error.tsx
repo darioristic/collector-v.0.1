@@ -269,6 +269,12 @@ function resolveErrorVariant(
 	error: Error,
 ): "offline" | "not-found" | "generic" {
 	const message = error.message.toLowerCase();
+	
+	// Check for status code in error object
+	const status = (error as Error & { status?: number }).status;
+	if (status === 404) {
+		return "not-found";
+	}
 
 	if (message.includes("not found") || message.includes("404")) {
 		return "not-found";
@@ -277,7 +283,9 @@ function resolveErrorVariant(
 	if (
 		message.includes("ne mogu da uspostavim vezu") ||
 		message.includes("failed to fetch") ||
-		message.includes("network")
+		message.includes("network") ||
+		message.includes("connection") ||
+		status === 0 // Network error typically has status 0
 	) {
 		return "offline";
 	}

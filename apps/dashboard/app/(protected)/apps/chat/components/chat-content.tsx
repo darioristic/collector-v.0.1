@@ -17,8 +17,37 @@ export function ChatContent() {
 	const { selectedChat, setSelectedChat, setMessages, addMessage } = useChatStore();
 	const { user } = useAuth();
 	const messagesContainerRef = useRef<HTMLDivElement | null>(null);
-	const { socket, isConnected, joinConversation, leaveConversation } = useChatSocket();
+	const { isConnected, joinConversation, leaveConversation, onNewMessage, onConversationUpdate } = useChatSocket();
 	const queryClient = useQueryClient();
+	const currentUserId = user?.id;
+
+	// Determine otherUser - use existing otherUser or calculate from user1/user2
+	// This must be called BEFORE any conditional returns to maintain hook order
+	const otherUser = React.useMemo(() => {
+		if (!selectedChat) {
+			return null;
+		}
+
+		if (selectedChat.otherUser) {
+			return selectedChat.otherUser;
+		}
+
+		// Fallback: determine otherUser from user1 and user2
+		if (selectedChat.user1 && selectedChat.user2 && currentUserId) {
+			const fallbackOtherUser =
+				selectedChat.userId1 === currentUserId ? selectedChat.user2 : selectedChat.user1;
+			if (fallbackOtherUser) {
+				console.log("[chat-content] Using fallback otherUser:", {
+					conversationId: selectedChat.conversationId,
+					fallbackOtherUserId: fallbackOtherUser.id,
+					fallbackOtherUserEmail: fallbackOtherUser.email,
+				});
+				return fallbackOtherUser;
+			}
+		}
+
+		return null;
+	}, [selectedChat, currentUserId]);
 
 	// Log whenever selectedChat changes
 	useEffect(() => {
@@ -66,11 +95,10 @@ export function ChatContent() {
 
 	// Join conversation room when chat is selected
 	useEffect(() => {
-		if (!selectedChat?.conversationId || !isConnected || !socket) {
+		if (!selectedChat?.conversationId || !isConnected) {
 			console.log("[chat-content] Not joining conversation:", {
 				hasConversationId: !!selectedChat?.conversationId,
 				isConnected,
-				hasSocket: !!socket,
 			});
 			return;
 		}
@@ -78,52 +106,77 @@ export function ChatContent() {
 		console.log("[chat-content] Joining conversation:", selectedChat.conversationId);
 		joinConversation(selectedChat.conversationId);
 
-		const handleNewMessage = (payload: {
-			conversationId: string;
-			message: ChatMessage;
-		}) => {
-			console.log("[chat-content] New message received:", payload);
-			if (payload.conversationId === selectedChat.conversationId) {
-				console.log("[chat-content] Adding message to conversation:", payload.message);
-				// Add message to store (this will update selectedChat.messages)
+		return () => {
+			console.log("[chat-content] Leaving conversation:", selectedChat.conversationId);
+			leaveConversation(selectedChat.conversationId);
+		};
+	}, [selectedChat?.conversationId, isConnected, joinConversation, leaveConversation]);
+
+	// Global Socket.IO event listeners
+	useEffect(() => {
+		// Handle new messages for current conversation
+		const unsubscribeMessage = onNewMessage((payload) => {
+			console.log("[chat-content] New message from socket:", payload);
+
+			// Always invalidate conversations query to update sidebar
+			queryClient.invalidateQueries({ queryKey: ["chat", "conversations"] });
+
+			// If message is for currently selected conversation, add it to store
+			if (selectedChat?.conversationId === payload.conversationId) {
+				console.log("[chat-content] Adding message to current conversation");
 				addMessage(payload.message);
-				// Invalidate queries to refresh conversation list in sidebar
-				queryClient.invalidateQueries({ queryKey: ["chat", "conversations"] });
-				// Scroll to bottom after a short delay to ensure DOM is updated
+
+				// Scroll to bottom
 				setTimeout(() => {
 					const container = messagesContainerRef.current?.parentElement;
 					if (container) {
 						container.scrollTop = container.scrollHeight;
 					}
 				}, 100);
-			} else {
-				console.log("[chat-content] Message for different conversation, ignoring");
 			}
-		};
+		});
 
-		const handleConversationUpdated = (payload: {
-			conversationId: string;
-		}) => {
-			console.log("[chat-content] Conversation updated:", payload);
-			if (payload.conversationId === selectedChat.conversationId) {
-				console.log("[chat-content] Refetching messages for conversation:", payload.conversationId);
-				// Invalidate queries to refresh conversation list and messages
-				queryClient.invalidateQueries({ queryKey: ["chat", "conversations"] });
-				queryClient.invalidateQueries({ queryKey: ["chat", "messages", payload.conversationId] });
+		// Handle conversation updates
+		const unsubscribeUpdate = onConversationUpdate((payload) => {
+			console.log("[chat-content] Conversation updated from socket:", payload);
+
+			// Invalidate conversations list
+			queryClient.invalidateQueries({ queryKey: ["chat", "conversations"] });
+
+			// If it's current conversation, invalidate messages query
+			if (selectedChat?.conversationId === payload.conversationId) {
+				queryClient.invalidateQueries({
+					queryKey: ["chat", "messages", payload.conversationId]
+				});
 			}
-		};
-
-		socket.on("chat:message:new", handleNewMessage);
-		socket.on("chat:conversation:updated", handleConversationUpdated);
+		});
 
 		return () => {
-			console.log("[chat-content] Leaving conversation:", selectedChat.conversationId);
-			socket.off("chat:message:new", handleNewMessage);
-			socket.off("chat:conversation:updated", handleConversationUpdated);
-			leaveConversation(selectedChat.conversationId);
+			unsubscribeMessage();
+			unsubscribeUpdate();
 		};
-	}, [selectedChat?.conversationId, isConnected, socket, joinConversation, leaveConversation, addMessage, messagesQuery, setMessages, queryClient]);
+	}, [onNewMessage, onConversationUpdate, queryClient, selectedChat?.conversationId, addMessage]);
 
+	// Fix missing otherUser in store if it's not set but we can determine it
+	useEffect(() => {
+		if (
+			selectedChat &&
+			selectedChat.conversationId &&
+			!selectedChat.otherUser &&
+			otherUser
+		) {
+			console.log("[chat-content] Updating selectedChat with otherUser:", {
+				conversationId: selectedChat.conversationId,
+				otherUserId: otherUser.id,
+			});
+			setSelectedChat({
+				...selectedChat,
+				otherUser,
+			});
+		}
+	}, [selectedChat, otherUser, setSelectedChat]);
+
+	// Now we can safely return early after all hooks are called
 	if (!selectedChat) {
 		return (
 			<figure className="hidden h-full items-center justify-center text-center lg:flex">
@@ -159,50 +212,6 @@ export function ChatContent() {
 	}
 
 	const messages = selectedChat.messages || messagesQuery.data || [];
-	const currentUserId = user?.id;
-
-	// Determine otherUser - use existing otherUser or calculate from user1/user2
-	const otherUser = React.useMemo(() => {
-		if (selectedChat.otherUser) {
-			return selectedChat.otherUser;
-		}
-
-		// Fallback: determine otherUser from user1 and user2
-		if (selectedChat.user1 && selectedChat.user2 && currentUserId) {
-			const fallbackOtherUser =
-				selectedChat.userId1 === currentUserId ? selectedChat.user2 : selectedChat.user1;
-			if (fallbackOtherUser) {
-				console.log("[chat-content] Using fallback otherUser:", {
-					conversationId: selectedChat.conversationId,
-					fallbackOtherUserId: fallbackOtherUser.id,
-					fallbackOtherUserEmail: fallbackOtherUser.email,
-				});
-				// Update selectedChat with otherUser in useEffect to avoid render issues
-				return fallbackOtherUser;
-			}
-		}
-
-		return null;
-	}, [selectedChat, currentUserId]);
-
-	// Fix missing otherUser in store if it's not set but we can determine it
-	useEffect(() => {
-		if (
-			selectedChat &&
-			selectedChat.conversationId &&
-			!selectedChat.otherUser &&
-			otherUser
-		) {
-			console.log("[chat-content] Updating selectedChat with otherUser:", {
-				conversationId: selectedChat.conversationId,
-				otherUserId: otherUser.id,
-			});
-			setSelectedChat({
-				...selectedChat,
-				otherUser,
-			});
-		}
-	}, [selectedChat, otherUser, setSelectedChat]);
 
 	if (!otherUser) {
 		console.error("[chat-content] Cannot determine otherUser:", {

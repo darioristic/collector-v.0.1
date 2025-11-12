@@ -16,6 +16,8 @@ interface UseChatStore {
 	setSelectedChat: (chat: ChatItem | null) => void;
 	toggleProfileSheet: (value: boolean) => void;
 	addMessage: (message: ChatMessage) => void;
+	removeMessage: (messageId: string) => void;
+	updateMessage: (messageId: string, updates: Partial<ChatMessage>) => void;
 	setMessages: (conversationId: string, messages: ChatMessage[]) => void;
 }
 
@@ -49,6 +51,30 @@ const chatStore: StateCreator<UseChatStore> = (set, get) => ({
 				selectedChat: {
 					...state.selectedChat,
 					messages: [...(state.selectedChat.messages || []), message],
+				},
+			});
+		}
+	},
+	removeMessage: (messageId) => {
+		const state = get();
+		if (state.selectedChat && state.selectedChat.messages) {
+			set({
+				selectedChat: {
+					...state.selectedChat,
+					messages: state.selectedChat.messages.filter((msg) => msg.id !== messageId),
+				},
+			});
+		}
+	},
+	updateMessage: (messageId, updates) => {
+		const state = get();
+		if (state.selectedChat && state.selectedChat.messages) {
+			set({
+				selectedChat: {
+					...state.selectedChat,
+					messages: state.selectedChat.messages.map((msg) =>
+						msg.id === messageId ? { ...msg, ...updates } : msg
+					),
 				},
 			});
 		}

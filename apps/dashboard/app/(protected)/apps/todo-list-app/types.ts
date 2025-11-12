@@ -12,6 +12,8 @@ export interface Comment {
 	id: string;
 	text: string;
 	createdAt: Date;
+	author?: string;
+	authorAvatar?: string;
 }
 
 export interface TodoFile {
@@ -27,6 +29,9 @@ export interface SubTask {
 	id: string;
 	title: string;
 	completed: boolean;
+	status?: TodoStatus;
+	priority?: TodoPriority;
+	description?: string;
 }
 
 export interface Todo {
@@ -39,7 +44,9 @@ export interface Todo {
 	priority: TodoPriority;
 	createdAt: Date;
 	dueDate?: Date | null;
-	reminderDate?: Date | null; // New field for reminders
+	reminderDate?: Date | null;
+	category?: string;
+	createdBy?: string;
 	files?: TodoFile[];
 	subTasks?: SubTask[];
 	starred: boolean;

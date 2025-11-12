@@ -95,11 +95,19 @@ const TodoItem: React.FC<TodoItemProps> = ({
 
 								<h3
 									className={cn(
-										"text-md flex-1 leading-none font-medium",
+										"text-md flex-1 leading-none font-medium cursor-pointer hover:underline",
 										todo.status === "completed"
 											? "text-muted-foreground line-through"
 											: "",
 									)}
+									onPointerDown={(e) => {
+										e.stopPropagation();
+									}}
+									onClick={(e) => {
+										e.stopPropagation();
+										e.preventDefault();
+										if (onClick) onClick();
+									}}
 								>
 									{todo.title}
 								</h3>
@@ -209,11 +217,19 @@ const TodoItem: React.FC<TodoItemProps> = ({
 							<div className="flex items-center space-x-2">
 								<h3
 									className={cn(
-										"text-md leading-none font-medium",
+										"text-md leading-none font-medium cursor-pointer hover:underline",
 										todo.status === "completed"
 											? "text-muted-foreground line-through"
 											: "",
 									)}
+									onPointerDown={(e) => {
+										e.stopPropagation();
+									}}
+									onClick={(e) => {
+										e.stopPropagation();
+										e.preventDefault();
+										if (onClick) onClick();
+									}}
 								>
 									{todo.title}
 								</h3>

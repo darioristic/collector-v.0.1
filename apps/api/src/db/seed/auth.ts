@@ -1,10 +1,12 @@
-import { hashSync } from "bcryptjs";
+import { hash } from "bcryptjs";
 import { eq, inArray, sql } from "drizzle-orm";
 
 import { db as defaultDb } from "../index";
 import { authSessions, companies, companyUsers } from "../schema/auth.schema";
 import type { roleKey } from "../schema/auth.schema";
 import { roles, userRoles, users } from "../schema/settings.schema";
+
+const normalizeEmail = (email: string): string => email.trim().toLowerCase();
 
 type RoleSeed = {
 	key: (typeof roleKey.enumValues)[number];
@@ -152,7 +154,8 @@ export const seedAuth = async (database = defaultDb) => {
 		const seededUsers = [];
 
 		for (const definition of USER_DEFINITIONS) {
-			const hashed = hashSync(definition.password, SALT_ROUNDS);
+			const normalizedEmail = normalizeEmail(definition.email);
+			const hashed = await hash(definition.password, SALT_ROUNDS);
 			const roleId = roleMap.get(definition.role);
 
 			if (!roleId) {
@@ -162,7 +165,7 @@ export const seedAuth = async (database = defaultDb) => {
 			const [userRecord] = await tx
 				.insert(users)
 				.values({
-					email: definition.email,
+					email: normalizedEmail,
 					name: definition.name,
 					status: "active",
 					hashedPassword: hashed,
@@ -181,12 +184,12 @@ export const seedAuth = async (database = defaultDb) => {
 				.returning();
 
 			if (!userRecord) {
-				throw new Error(`Korisnik ${definition.email} nije kreiran.`);
+				throw new Error(`Korisnik ${normalizedEmail} nije kreiran.`);
 			}
 
 			seededUsers.push({
 				id: userRecord.id,
-				email: definition.email,
+				email: normalizedEmail,
 				roleKey: definition.role,
 				roleId,
 			});

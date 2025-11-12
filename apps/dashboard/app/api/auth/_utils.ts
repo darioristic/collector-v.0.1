@@ -53,6 +53,14 @@ export const forwardAuthRequest = async <T = unknown>(
 
 	const url = buildAuthUrl(path);
 
+	// Only log in development mode
+	const isDevelopment = process.env.NODE_ENV === "development";
+
+	if (isDevelopment) {
+		console.log("[forwardAuthRequest] Sending request to:", url);
+		console.log("[forwardAuthRequest] Method:", init.method);
+	}
+
 	let response: Response;
 
 	try {
@@ -61,6 +69,14 @@ export const forwardAuthRequest = async <T = unknown>(
 			headers,
 			cache: "no-store",
 		});
+
+		if (isDevelopment) {
+			console.log(
+				"[forwardAuthRequest] Response status:",
+				response.status,
+				response.statusText,
+			);
+		}
 	} catch (error) {
 		// If fetch fails (network error, connection refused, etc.)
 		console.error("[forwardAuthRequest] Fetch failed:", error);

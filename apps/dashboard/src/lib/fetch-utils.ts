@@ -20,7 +20,10 @@ export function getApiUrl(endpoint: string): string {
 		: cleanEndpoint;
 	const fullUrl = `${baseUrl}/${finalEndpoint}`;
 
-	console.log("[getApiUrl]", { endpoint, rawBaseUrl, baseUrl, fullUrl });
+	// Only log in development and when explicitly needed
+	if (process.env.NODE_ENV === "development" && process.env.DEBUG_API_URL) {
+		console.log("[getApiUrl]", { endpoint, rawBaseUrl, baseUrl, fullUrl });
+	}
 
 	return fullUrl;
 }
@@ -54,17 +57,32 @@ export async function ensureResponse(
 		let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
 
 		try {
-			const errorData = await response.json();
-			if (errorData.error) {
-				errorMessage = errorData.error;
-			} else if (errorData.message) {
-				errorMessage = errorData.message;
+			const contentType = response.headers.get("content-type");
+			if (contentType?.includes("application/json")) {
+				const errorData = await response.json();
+				if (errorData.error) {
+					errorMessage = errorData.error;
+				} else if (errorData.message) {
+					errorMessage = errorData.message;
+				} else if (typeof errorData === "string") {
+					errorMessage = errorData;
+				}
+			} else {
+				// Try to read as text if not JSON
+				const text = await response.text();
+				if (text) {
+					errorMessage = text;
+				}
 			}
-		} catch {
-			// If we can't parse the error as JSON, use the default message
+		} catch (parseError) {
+			// If we can't parse the error, use the default message
+			console.error("[ensureResponse] Failed to parse error response:", parseError);
 		}
 
-		throw new Error(errorMessage);
+		// Create error with status code for better error handling
+		const error = new Error(errorMessage);
+		(error as Error & { status?: number }).status = response.status;
+		throw error;
 	}
 
 	return response;

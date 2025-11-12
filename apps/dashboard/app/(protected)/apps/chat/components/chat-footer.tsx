@@ -8,8 +8,9 @@ import {
 	SmileIcon,
 } from "lucide-react";
 import { type FormEvent, type KeyboardEvent, useState } from "react";
-import { sendMessage } from "@/app/(protected)/apps/chat/api";
+import { sendMessage, type ChatMessage } from "@/app/(protected)/apps/chat/api";
 import useChatStore from "@/app/(protected)/apps/chat/useChatStore";
+import { useAuth } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -30,7 +31,8 @@ import { useToast } from "@/hooks/use-toast";
 export function ChatFooter() {
 	const [message, setMessage] = useState("");
 	const [isSending, setIsSending] = useState(false);
-	const { selectedChat, addMessage } = useChatStore();
+	const { selectedChat, addMessage, removeMessage, updateMessage } = useChatStore();
+	const { user } = useAuth();
 	const { toast } = useToast();
 
 	const handleSend = async (e?: FormEvent) => {
@@ -45,6 +47,15 @@ export function ChatFooter() {
 			return;
 		}
 
+		if (!user?.id) {
+			toast({
+				title: "Greška",
+				description: "Niste prijavljeni.",
+				variant: "destructive",
+			});
+			return;
+		}
+
 		const trimmedMessage = message.trim();
 		if (!trimmedMessage && isSending) {
 			return;
@@ -54,6 +65,37 @@ export function ChatFooter() {
 			return;
 		}
 
+		// Generate temporary ID for optimistic update
+		const optimisticId = `temp-${Date.now()}-${Math.random()}`;
+
+		// Create optimistic message
+		const optimisticMessage: ChatMessage = {
+			id: optimisticId,
+			conversationId: selectedChat.conversationId,
+			senderId: user.id,
+			content: trimmedMessage,
+			type: "text",
+			status: "sent",
+			fileUrl: null,
+			fileMetadata: null,
+			readAt: null,
+			createdAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString(),
+			sender: {
+				id: user.id,
+				firstName: user.firstName || "",
+				lastName: user.lastName || "",
+				displayName: user.displayName || null,
+				email: user.email,
+				avatarUrl: user.avatarUrl || null,
+			},
+		};
+
+		// Add optimistic message immediately
+		addMessage(optimisticMessage);
+
+		// Clear input immediately for better UX
+		setMessage("");
 		setIsSending(true);
 
 		try {
@@ -63,9 +105,13 @@ export function ChatFooter() {
 				type: "text",
 			});
 
+			// Replace optimistic message with real message from server
+			removeMessage(optimisticId);
 			addMessage(sentMessage);
-			setMessage("");
 		} catch (error) {
+			// Remove optimistic message on error
+			removeMessage(optimisticId);
+
 			const errorMessage =
 				error instanceof Error ? error.message : "Slanje poruke nije uspelo.";
 			toast({
@@ -73,6 +119,9 @@ export function ChatFooter() {
 				description: errorMessage,
 				variant: "destructive",
 			});
+
+			// Restore message in input on error
+			setMessage(trimmedMessage);
 		} finally {
 			setIsSending(false);
 		}

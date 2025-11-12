@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import { useAuth } from "@/components/providers/auth-provider";
 
@@ -14,6 +14,12 @@ export function useChatSocket() {
 		Record<string, "online" | "offline" | "away">
 	>({});
 	const socketRef = useRef<Socket | null>(null);
+	const messageCallbacksRef = useRef<
+		Set<(data: { conversationId: string; message: unknown }) => void>
+	>(new Set());
+	const conversationUpdateCallbacksRef = useRef<
+		Set<(data: { conversationId: string }) => void>
+	>(new Set());
 
 	useEffect(() => {
 		if (!user?.id) {
@@ -87,18 +93,36 @@ export function useChatSocket() {
 			},
 		);
 
-		// Message events (will be handled in chat-content component)
+		// Message events - notify all registered callbacks
 		newSocket.on(
 			"chat:message:new",
 			(data: { conversationId: string; message: unknown }) => {
 				console.log("[chat-socket] New message received:", data);
+				messageCallbacksRef.current.forEach((callback) => {
+					try {
+						callback(data);
+					} catch (error) {
+						console.error("[chat-socket] Error in message callback:", error);
+					}
+				});
 			},
 		);
 
+		// Conversation update events - notify all registered callbacks
 		newSocket.on(
 			"chat:conversation:updated",
 			(data: { conversationId: string }) => {
 				console.log("[chat-socket] Conversation updated:", data);
+				conversationUpdateCallbacksRef.current.forEach((callback) => {
+					try {
+						callback(data);
+					} catch (error) {
+						console.error(
+							"[chat-socket] Error in conversation update callback:",
+							error,
+						);
+					}
+				});
 			},
 		);
 
@@ -135,6 +159,32 @@ export function useChatSocket() {
 		return userStatuses[userId] || null;
 	};
 
+	// Subscribe to new message events
+	const onNewMessage = useCallback(
+		(
+			callback: (data: { conversationId: string; message: unknown }) => void,
+		) => {
+			messageCallbacksRef.current.add(callback);
+			// Return unsubscribe function
+			return () => {
+				messageCallbacksRef.current.delete(callback);
+			};
+		},
+		[],
+	);
+
+	// Subscribe to conversation update events
+	const onConversationUpdate = useCallback(
+		(callback: (data: { conversationId: string }) => void) => {
+			conversationUpdateCallbacksRef.current.add(callback);
+			// Return unsubscribe function
+			return () => {
+				conversationUpdateCallbacksRef.current.delete(callback);
+			};
+		},
+		[],
+	);
+
 	return {
 		socket,
 		isConnected,
@@ -142,5 +192,7 @@ export function useChatSocket() {
 		joinConversation,
 		leaveConversation,
 		getUserStatus,
+		onNewMessage,
+		onConversationUpdate,
 	};
 }

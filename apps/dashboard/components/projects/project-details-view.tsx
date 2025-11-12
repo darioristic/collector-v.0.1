@@ -1,9 +1,9 @@
 "use client";
 
 import { motion } from "motion/react";
-import Link from "next/link";
+import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Fragment, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
 	AlertDialog,
@@ -15,13 +15,6 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-	Breadcrumb,
-	BreadcrumbItem,
-	BreadcrumbLink,
-	BreadcrumbList,
-	BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -34,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import {
+	useCreateProjectTask,
 	useDeleteProject,
 	useDeleteProjectTask,
 	useProjectDetails,
@@ -45,7 +39,8 @@ import type {
 	ProjectStatus,
 	ProjectUpdatePayload,
 } from "@/src/types/projects";
-import { ProjectTasks } from "./project-tasks";
+import { ProjectTasks, type ProjectTasksRef } from "./project-tasks";
+import type { ViewMode } from "./project-header";
 
 type ProjectEditFormValues = {
 	name: string;
@@ -73,6 +68,8 @@ export function ProjectDetailsView({ projectId }: ProjectDetailsViewProps) {
 	const { toast } = useToast();
 	const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+	const [viewMode, setViewMode] = useState<ViewMode>("list");
+	const projectTasksRef = useRef<ProjectTasksRef>(null);
 
 	const projectQuery = useProjectDetails(projectId, { suspense: true });
 
@@ -88,6 +85,7 @@ export function ProjectDetailsView({ projectId }: ProjectDetailsViewProps) {
 	});
 	const updateTaskMutation = useUpdateProjectTask(projectId);
 	const deleteTaskMutation = useDeleteProjectTask(projectId);
+	const createTaskMutation = useCreateProjectTask(projectId);
 
 	const editForm = useForm<ProjectEditFormValues>({
 		defaultValues: {
@@ -156,48 +154,39 @@ export function ProjectDetailsView({ projectId }: ProjectDetailsViewProps) {
 				initial={{ opacity: 0, y: -8 }}
 				animate={{ opacity: 1, y: 0 }}
 				transition={{ duration: 0.25 }}
-				className="space-y-6"
+				className="space-y-8"
 			>
-				<section className="space-y-6 rounded-2xl border bg-card/90 p-6 shadow-lg shadow-primary/10 backdrop-blur">
-					<Breadcrumb>
-						<BreadcrumbList>
-							<BreadcrumbItem>
-								<BreadcrumbLink asChild>
-									<Link href="/project-list">Projects</Link>
-								</BreadcrumbLink>
-							</BreadcrumbItem>
-							<BreadcrumbSeparator />
-							<BreadcrumbItem>
-								<span className="text-foreground/80">{project.name}</span>
-							</BreadcrumbItem>
-						</BreadcrumbList>
-					</Breadcrumb>
-
-					<div className="flex justify-end gap-2">
-						<Button variant="outline" asChild>
-							<Link href="/project-list">Nazad na listu</Link>
-						</Button>
-						<Button variant="outline" onClick={() => setIsEditDialogOpen(true)}>
-							Izmeni
-						</Button>
-						<Button
-							variant="destructive"
-							onClick={() => setIsDeleteDialogOpen(true)}
-						>
-							Obriši
-						</Button>
+				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+					<div className="space-y-1">
+						<h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
+						<p className="text-muted-foreground text-sm">
+							Monitor each task's status, assignee, and due date to keep your
+							project moving.
+						</p>
 					</div>
-				</section>
-
-				<div className="space-y-6">
-					<ProjectTasks
-						project={project}
-						onUpdateTask={(taskId, payload) =>
-							updateTaskMutation.mutateAsync({ taskId, input: payload })
-						}
-						onDeleteTask={(taskId) => deleteTaskMutation.mutateAsync(taskId)}
-					/>
+					<Button
+						onClick={() => {
+							projectTasksRef.current?.openAddTaskDialog();
+						}}
+						className="gap-2"
+					>
+						<Plus className="size-4" />
+						New Task
+					</Button>
 				</div>
+
+				<ProjectTasks
+					ref={projectTasksRef}
+					project={project}
+					projectId={projectId}
+					viewMode={viewMode}
+					onViewModeChange={setViewMode}
+					onUpdateTask={(taskId, payload) =>
+						updateTaskMutation.mutateAsync({ taskId, input: payload })
+					}
+					onDeleteTask={(taskId) => deleteTaskMutation.mutateAsync(taskId)}
+					onCreateTask={(payload) => createTaskMutation.mutateAsync(payload)}
+				/>
 			</motion.section>
 
 			<Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

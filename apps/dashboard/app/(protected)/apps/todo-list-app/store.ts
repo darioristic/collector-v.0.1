@@ -40,7 +40,7 @@ interface TodoStore {
 	setActiveTab: (tab: FilterTab) => void;
 	setAddDialogOpen: (isOpen: boolean) => void;
 	setTodoSheetOpen: (isOpen: boolean) => void;
-	addComment: (todoId: string, text: string) => void;
+	addComment: (todoId: string, text: string, author?: string, authorAvatar?: string) => void;
 	deleteComment: (todoId: string, commentId: string) => void;
 	reorderTodos: (todoPositions: { id: string; position: number }[]) => void;
 	setViewMode: (mode: ViewMode) => void;
@@ -124,7 +124,7 @@ export const useTodoStore = create<TodoStore>((set) => ({
 			isTodoSheetOpen: isOpen,
 		})),
 
-	addComment: (todoId, text) =>
+	addComment: (todoId, text, author?: string, authorAvatar?: string) =>
 		set((state) => ({
 			todos: state.todos.map((todo) =>
 				todo.id === todoId
@@ -136,6 +136,8 @@ export const useTodoStore = create<TodoStore>((set) => ({
 									id: uuidv4(),
 									text,
 									createdAt: new Date(),
+									author: author || "Current User",
+									authorAvatar: authorAvatar || undefined,
 								},
 							],
 						}
@@ -239,6 +241,8 @@ export const useTodoStore = create<TodoStore>((set) => ({
 									id: uuidv4(),
 									title,
 									completed: false,
+									status: "pending" as const,
+									priority: "low" as const,
 								},
 							],
 						}

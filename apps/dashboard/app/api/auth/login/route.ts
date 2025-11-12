@@ -42,6 +42,15 @@ export async function POST(request: NextRequest) {
 	);
 
 	if (!response.ok) {
+		// Log error details in development
+		if (process.env.NODE_ENV === "development") {
+			console.error("[Next.js API /auth/login] Login failed:", {
+				status: response.status,
+				error: payload?.error,
+				message: payload?.message,
+			});
+		}
+
 		return backendErrorResponse(
 			response,
 			payload,

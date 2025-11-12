@@ -126,14 +126,31 @@ const rawEmployeeFormSchema = z.object({
 			}
 			return parsed;
 		}),
+	projectAssigned: z
+		.string()
+		.max(100)
+		.optional()
+		.transform((value) =>
+			value && value.trim().length > 0 ? value : undefined,
+		),
+	workHour: z
+		.string()
+		.max(50)
+		.optional()
+		.transform((value) =>
+			value && value.trim().length > 0 ? value : undefined,
+		),
+	description: z.string().optional(),
+	sendChangeToEmail: z.boolean().default(false),
 });
 
-export const employeeFormUiSchema = rawEmployeeFormSchema.transform((data) =>
-	employeeFormSchema.parse({
-		...data,
-		endDate: data.endDate ?? null,
-	}),
-);
+export const employeeFormUiSchema = rawEmployeeFormSchema.transform((data) => {
+	const { projectAssigned, workHour, description, sendChangeToEmail, ...rest } = data;
+	return employeeFormSchema.parse({
+		...rest,
+		endDate: rest.endDate ?? null,
+	});
+});
 
 export type EmployeeFormInput = z.input<typeof rawEmployeeFormSchema>;
 
@@ -171,6 +188,10 @@ export const toEmployeeFormInput = (
 		!Number.isNaN(values.salary)
 			? String(values.salary)
 			: "",
+	projectAssigned: (values as any)?.projectAssigned ?? "",
+	workHour: (values as any)?.workHour ?? "",
+	description: (values as any)?.description ?? "",
+	sendChangeToEmail: (values as any)?.sendChangeToEmail ?? false,
 });
 
 export const employeeFiltersSchema = z.object({

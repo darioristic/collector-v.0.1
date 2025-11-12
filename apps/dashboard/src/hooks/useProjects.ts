@@ -74,14 +74,58 @@ export function useProjectDetails(
 
 		return useSuspenseQuery<ProjectDetails>({
 			queryKey: projectKeys.detail(projectId),
-			queryFn: () => fetchProject(projectId),
+			queryFn: async () => {
+				try {
+					return await fetchProject(projectId);
+				} catch (error) {
+					console.error("[useProjectDetails] Error fetching project:", {
+						projectId,
+						error: error instanceof Error ? error.message : String(error),
+						stack: error instanceof Error ? error.stack : undefined,
+					});
+					throw error;
+				}
+			},
+			retry: (failureCount, error) => {
+				// Don't retry on 404 (not found) errors
+				if (error instanceof Error) {
+					const message = error.message.toLowerCase();
+					if (message.includes("404") || message.includes("not found")) {
+						return false;
+					}
+				}
+				// Retry up to 2 times for other errors
+				return failureCount < 2;
+			},
 		});
 	}
 
 	return useQuery<ProjectDetails>({
 		queryKey: projectKeys.detail(projectId),
-		queryFn: () => fetchProject(projectId),
+		queryFn: async () => {
+			try {
+				return await fetchProject(projectId);
+			} catch (error) {
+				console.error("[useProjectDetails] Error fetching project:", {
+					projectId,
+					error: error instanceof Error ? error.message : String(error),
+					stack: error instanceof Error ? error.stack : undefined,
+				});
+				throw error;
+			}
+		},
 		enabled: options?.enabled ?? Boolean(projectId),
+		retry: (failureCount, error) => {
+			// Don't retry on 404 (not found) errors
+			if (error instanceof Error) {
+				const message = error.message.toLowerCase();
+				if (message.includes("404") || message.includes("not found")) {
+					return false;
+				}
+			}
+			// Retry up to 2 times for other errors
+			return failureCount < 2;
+		},
 	});
 }
 

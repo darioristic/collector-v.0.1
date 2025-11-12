@@ -80,11 +80,11 @@ async function ensureTeamchatUsers(userIds: string[], companyId: string): Promis
 					status: "offline",
 				})
 				.onConflictDoUpdate({
-					target: teamchatUsers.id,
+					target: teamchatUsers.email,
 					set: {
+						id: userData.id,
 						firstName,
 						lastName,
-						email: userData.email,
 						companyId: companyId,
 						updatedAt: new Date(),
 					},

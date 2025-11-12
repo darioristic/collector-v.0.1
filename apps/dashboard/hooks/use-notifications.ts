@@ -89,6 +89,16 @@ export function useNotifications(
 					return;
 				}
 
+				// Handle service unavailable (503) gracefully
+				if (response.status === 503) {
+					console.warn(
+						"[notifications] Service unavailable (503), notifications will not be loaded. Make sure notification service is running on port 4002.",
+					);
+					setNotifications([]);
+					setUnreadCount(0);
+					return;
+				}
+
 				if (!response.ok) {
 					throw new Error(
 						`Preuzimanje notifikacija nije uspelo (${response.status}).`,
@@ -108,7 +118,11 @@ export function useNotifications(
 
 				// Network errors (service unavailable) should be handled gracefully
 				const errorMessage = error instanceof Error ? error.message : String(error);
-				if (errorMessage.includes("Failed to fetch") || errorMessage.includes("NetworkError")) {
+				if (
+					errorMessage.includes("Failed to fetch") ||
+					errorMessage.includes("NetworkError") ||
+					errorMessage.includes("503")
+				) {
 					console.warn(
 						"[notifications] Service unavailable, notifications will not be loaded. Make sure notification service is running on port 4002.",
 					);
@@ -253,6 +267,26 @@ export function useNotifications(
 					credentials: "include",
 				});
 
+				// Handle service unavailable (503) gracefully
+				if (response.status === 503) {
+					console.warn(
+						"[notifications] Service unavailable (503), mark as read failed. Make sure notification service is running on port 4002.",
+					);
+					// Optimistically update local state even if service is unavailable
+					setNotifications((prev) =>
+						prev.map((item) =>
+							ids.includes(item.id)
+								? {
+										...item,
+										read: true,
+									}
+								: item,
+						),
+					);
+					setUnreadCount((prev) => Math.max(0, prev - ids.length));
+					return;
+				}
+
 				if (!response.ok) {
 					throw new Error(`Označavanje nije uspelo (${response.status}).`);
 				}
@@ -274,7 +308,11 @@ export function useNotifications(
 				setUnreadCount(payload.unreadCount);
 			} catch (error) {
 				const errorMessage = error instanceof Error ? error.message : String(error);
-				if (errorMessage.includes("Failed to fetch") || errorMessage.includes("NetworkError")) {
+				if (
+					errorMessage.includes("Failed to fetch") ||
+					errorMessage.includes("NetworkError") ||
+					errorMessage.includes("503")
+				) {
 					console.warn(
 						"[notifications] Service unavailable, mark as read failed. Make sure notification service is running on port 4002.",
 					);
