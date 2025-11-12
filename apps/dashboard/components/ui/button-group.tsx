@@ -1,112 +1,111 @@
-import * as React from "react"
-import { Slot } from "@radix-ui/react-slot"
-import { cva, type VariantProps } from "class-variance-authority"
-
-import { cn } from "@/lib/utils"
-import { Separator } from "@/components/ui/separator"
+import { Slot } from "@radix-ui/react-slot";
+import { cva, type VariantProps } from "class-variance-authority";
+import * as React from "react";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 const buttonGroupVariants = cva(
-  "flex w-fit items-stretch [&>*]:focus-visible:z-10 [&>*]:focus-visible:relative [&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit [&>input]:flex-1 has-[select[aria-hidden=true]:last-child]:[&>[data-slot=select-trigger]:last-of-type]:rounded-r-md has-[>[data-slot=button-group]]:gap-2",
-  {
-    variants: {
-      orientation: {
-        horizontal:
-          "[&>*:not(:first-child)]:rounded-l-none [&>*:not(:first-child)]:border-l-0 [&>*:not(:last-child)]:rounded-r-none",
-        vertical:
-          "flex-col [&>*:not(:first-child)]:rounded-t-none [&>*:not(:first-child)]:border-t-0 [&>*:not(:last-child)]:rounded-b-none",
-      },
-    },
-    defaultVariants: {
-      orientation: "horizontal",
-    },
-  }
-)
+	"flex w-fit items-stretch [&>*]:focus-visible:z-10 [&>*]:focus-visible:relative [&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit [&>input]:flex-1 has-[select[aria-hidden=true]:last-child]:[&>[data-slot=select-trigger]:last-of-type]:rounded-r-md has-[>[data-slot=button-group]]:gap-2",
+	{
+		variants: {
+			orientation: {
+				horizontal:
+					"[&>*:not(:first-child)]:rounded-l-none [&>*:not(:first-child)]:border-l-0 [&>*:not(:last-child)]:rounded-r-none",
+				vertical:
+					"flex-col [&>*:not(:first-child)]:rounded-t-none [&>*:not(:first-child)]:border-t-0 [&>*:not(:last-child)]:rounded-b-none",
+			},
+		},
+		defaultVariants: {
+			orientation: "horizontal",
+		},
+	},
+);
 
 function ButtonGroup({
-  className,
-  orientation,
-  ...props
+	className,
+	orientation,
+	...props
 }: React.ComponentProps<"div"> & VariantProps<typeof buttonGroupVariants>) {
-  return (
-    <div
-      role="group"
-      data-slot="button-group"
-      data-orientation={orientation}
-      className={cn(buttonGroupVariants({ orientation }), className)}
-      {...props}
-    />
-  )
+	return (
+		<div
+			role="group"
+			data-slot="button-group"
+			data-orientation={orientation}
+			className={cn(buttonGroupVariants({ orientation }), className)}
+			{...props}
+		/>
+	);
 }
 
-interface ButtonGroupItemProps
-  extends React.ComponentProps<"button"> {
-  isActive?: boolean
-  asChild?: boolean
+interface ButtonGroupItemProps extends React.ComponentProps<"button"> {
+	isActive?: boolean;
+	asChild?: boolean;
 }
 
-const ButtonGroupItem = React.forwardRef<HTMLButtonElement, ButtonGroupItemProps>(
-  ({ className, isActive = false, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? Slot : "button"
+const ButtonGroupItem = React.forwardRef<
+	HTMLButtonElement,
+	ButtonGroupItemProps
+>(({ className, isActive = false, asChild = false, ...props }, ref) => {
+	const Comp = asChild ? Slot : "button";
 
-    return (
-      <Comp
-        ref={ref}
-        type={asChild ? undefined : "button"}
-        data-slot="button-group-item"
-        data-state={isActive ? "active" : "inactive"}
-        className={cn(
-          "border bg-background px-3 py-2 text-sm font-medium text-muted-foreground transition-colors first:rounded-l-md last:rounded-r-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 hover:bg-accent hover:text-accent-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:hover:bg-primary/90 dark:data-[state=active]:text-primary-foreground",
-          className
-        )}
-        {...props}
-      />
-    )
-  }
-)
-ButtonGroupItem.displayName = "ButtonGroupItem"
+	return (
+		<Comp
+			ref={ref}
+			type={asChild ? undefined : "button"}
+			data-slot="button-group-item"
+			data-state={isActive ? "active" : "inactive"}
+			className={cn(
+				"border bg-background px-3 py-2 text-sm font-medium text-muted-foreground transition-colors first:rounded-l-md last:rounded-r-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 hover:bg-accent hover:text-accent-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:hover:bg-primary/90 dark:data-[state=active]:text-primary-foreground",
+				className,
+			)}
+			{...props}
+		/>
+	);
+});
+ButtonGroupItem.displayName = "ButtonGroupItem";
 
 function ButtonGroupText({
-  className,
-  asChild = false,
-  ...props
+	className,
+	asChild = false,
+	...props
 }: React.ComponentProps<"div"> & {
-  asChild?: boolean
+	asChild?: boolean;
 }) {
-  const Comp = asChild ? Slot : "div"
+	const Comp = asChild ? Slot : "div";
 
-  return (
-    <Comp
-      className={cn(
-        "bg-muted flex items-center gap-2 rounded-md border px-4 text-sm font-medium shadow-xs [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4",
-        className
-      )}
-      {...props}
-    />
-  )
+	return (
+		<Comp
+			className={cn(
+				"bg-muted flex items-center gap-2 rounded-md border px-4 text-sm font-medium shadow-xs [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4",
+				className,
+			)}
+			{...props}
+		/>
+	);
 }
 
 function ButtonGroupSeparator({
-  className,
-  orientation = "vertical",
-  ...props
+	className,
+	orientation = "vertical",
+	...props
 }: React.ComponentProps<typeof Separator>) {
-  return (
-    <Separator
-      data-slot="button-group-separator"
-      orientation={orientation}
-      className={cn(
-        "bg-input relative !m-0 self-stretch data-[orientation=vertical]:h-auto",
-        className
-      )}
-      {...props}
-    />
-  )
+	return (
+		<Separator
+			data-slot="button-group-separator"
+			orientation={orientation}
+			className={cn(
+				"bg-input relative !m-0 self-stretch data-[orientation=vertical]:h-auto",
+				className,
+			)}
+			{...props}
+		/>
+	);
 }
 
 export {
-  ButtonGroup,
-  ButtonGroupItem,
-  ButtonGroupSeparator,
-  ButtonGroupText,
-  buttonGroupVariants,
-}
+	ButtonGroup,
+	ButtonGroupItem,
+	ButtonGroupSeparator,
+	ButtonGroupText,
+	buttonGroupVariants,
+};

@@ -25,12 +25,21 @@ import { config as loadEnv } from "dotenv";
 const rootDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const apiDir = join(rootDir, "apps", "api");
 const dashboardDir = join(rootDir, "apps", "dashboard");
+const notificationServiceDir = join(
+	rootDir,
+	"services",
+	"notification-service",
+);
+const chatServiceDir = join(rootDir, "services", "chat-service");
 
 const DEFAULT_PORTS = {
-  api: 4000,
-  web: 3000,
-  postgres: 5432,
-  redis: 6379
+	api: 4000,
+	web: 3000,
+	socket: 3001,
+	notification: 4002,
+	chat: 4001,
+	postgres: 5432,
+	redis: 6379,
 };
 
 // ============================================================================
@@ -38,58 +47,64 @@ const DEFAULT_PORTS = {
 // ============================================================================
 
 class DevLogger {
-  private startTime = Date.now();
+	private startTime = Date.now();
 
-  private formatTime(): string {
-    const elapsed = Date.now() - this.startTime;
-    const seconds = Math.floor(elapsed / 1000);
-    const ms = elapsed % 1000;
-    return `[${seconds}s ${ms}ms]`;
-  }
+	private formatTime(): string {
+		const elapsed = Date.now() - this.startTime;
+		const seconds = Math.floor(elapsed / 1000);
+		const ms = elapsed % 1000;
+		return `[${seconds}s ${ms}ms]`;
+	}
 
-  step(message: string) {
-    console.log(`\n${'\x1b[36m'}▶ ${message}${'\x1b[0m'} ${this.formatTime()}`);
-  }
+	step(message: string) {
+		console.log(`\n${"\x1b[36m"}▶ ${message}${"\x1b[0m"} ${this.formatTime()}`);
+	}
 
-  success(message: string) {
-    console.log(`${'\x1b[32m'}✓${'\x1b[0m'} ${message}`);
-  }
+	success(message: string) {
+		console.log(`${"\x1b[32m"}✓${"\x1b[0m"} ${message}`);
+	}
 
-  error(message: string) {
-    console.error(`${'\x1b[31m'}✗${'\x1b[0m'} ${message}`);
-  }
+	error(message: string) {
+		console.error(`${"\x1b[31m"}✗${"\x1b[0m"} ${message}`);
+	}
 
-  warn(message: string) {
-    console.warn(`${'\x1b[33m'}⚠${'\x1b[0m'} ${message}`);
-  }
+	warn(message: string) {
+		console.warn(`${"\x1b[33m"}⚠${"\x1b[0m"} ${message}`);
+	}
 
-  info(message: string) {
-    console.log(`${'\x1b[90m'}ℹ${'\x1b[0m'} ${message}`);
-  }
+	info(message: string) {
+		console.log(`${"\x1b[90m"}ℹ${"\x1b[0m"} ${message}`);
+	}
 
-  section(title: string) {
-    console.log('\n' + '='.repeat(60));
-    console.log(`${'\x1b[1m'}${title}${'\x1b[0m'}`);
-    console.log('='.repeat(60));
-  }
+	section(title: string) {
+		console.log(`\n${"=".repeat(60)}`);
+		console.log(`${"\x1b[1m"}${title}${"\x1b[0m"}`);
+		console.log("=".repeat(60));
+	}
 
-  subsection(title: string) {
-    console.log(`\n${'\x1b[1m'}${title}${'\x1b[0m'}`);
-    console.log('-'.repeat(40));
-  }
+	subsection(title: string) {
+		console.log(`\n${"\x1b[1m"}${title}${"\x1b[0m"}`);
+		console.log("-".repeat(40));
+	}
 
-  summary(items: Array<{ label: string; value: string; status?: 'ok' | 'warn' | 'error' }>) {
-    console.log('');
-    for (const item of items) {
-      const statusSymbol = {
-        ok: '\x1b[32m●\x1b[0m',
-        warn: '\x1b[33m●\x1b[0m',
-        error: '\x1b[31m●\x1b[0m'
-      }[item.status || 'ok'];
+	summary(
+		items: Array<{
+			label: string;
+			value: string;
+			status?: "ok" | "warn" | "error";
+		}>,
+	) {
+		console.log("");
+		for (const item of items) {
+			const statusSymbol = {
+				ok: "\x1b[32m●\x1b[0m",
+				warn: "\x1b[33m●\x1b[0m",
+				error: "\x1b[31m●\x1b[0m",
+			}[item.status || "ok"];
 
-      console.log(`  ${statusSymbol} ${item.label.padEnd(20)} ${item.value}`);
-    }
-  }
+			console.log(`  ${statusSymbol} ${item.label.padEnd(20)} ${item.value}`);
+		}
+	}
 }
 
 const logger = new DevLogger();
@@ -99,65 +114,69 @@ const logger = new DevLogger();
 // ============================================================================
 
 type ServiceState = {
-  name: string;
-  status: 'pending' | 'starting' | 'running' | 'failed';
-  port?: number;
-  pid?: number;
-  startTime?: number;
+	name: string;
+	status: "pending" | "starting" | "running" | "failed";
+	port?: number;
+	pid?: number;
+	startTime?: number;
 };
 
 class StateManager {
-  services: Map<string, ServiceState> = new Map();
-  children: Set<import("node:child_process").ChildProcess> = new Set();
-  dockerStarted = false;
-  isShuttingDown = false;
+	services: Map<string, ServiceState> = new Map();
+	children: Set<import("node:child_process").ChildProcess> = new Set();
+	dockerStarted = false;
+	isShuttingDown = false;
 
-  addService(name: string, port?: number): void {
-    this.services.set(name, {
-      name,
-      status: 'pending',
-      port,
-      startTime: Date.now()
-    });
-  }
+	addService(name: string, port?: number): void {
+		this.services.set(name, {
+			name,
+			status: "pending",
+			port,
+			startTime: Date.now(),
+		});
+	}
 
-  updateService(name: string, updates: Partial<ServiceState>): void {
-    const current = this.services.get(name);
-    if (current) {
-      this.services.set(name, { ...current, ...updates });
-    }
-  }
+	updateService(name: string, updates: Partial<ServiceState>): void {
+		const current = this.services.get(name);
+		if (current) {
+			this.services.set(name, { ...current, ...updates });
+		}
+	}
 
-  getStatus(): ServiceState[] {
-    return Array.from(this.services.values());
-  }
+	getStatus(): ServiceState[] {
+		return Array.from(this.services.values());
+	}
 
-  printStatus(): void {
-    logger.subsection('Services Status');
-    const items = this.getStatus().map(service => {
-      const statusEmoji = {
-        pending: '⏳',
-        starting: '🔄',
-        running: '✅',
-        failed: '❌'
-      }[service.status];
+	printStatus(): void {
+		logger.subsection("Services Status");
+		const items = this.getStatus().map((service) => {
+			const statusEmoji = {
+				pending: "⏳",
+				starting: "🔄",
+				running: "✅",
+				failed: "❌",
+			}[service.status];
 
-      const portInfo = service.port ? `:${service.port}` : '';
-      const uptimeInfo = service.startTime && service.status === 'running'
-        ? ` (${Math.floor((Date.now() - service.startTime) / 1000)}s)`
-        : '';
+			const portInfo = service.port ? `:${service.port}` : "";
+			const uptimeInfo =
+				service.startTime && service.status === "running"
+					? ` (${Math.floor((Date.now() - service.startTime) / 1000)}s)`
+					: "";
 
-      return {
-        label: `${statusEmoji} ${service.name}`,
-        value: `${service.status}${portInfo}${uptimeInfo}`,
-        status: service.status === 'running' ? 'ok' as const :
-                service.status === 'failed' ? 'error' as const :
-                'warn' as const
-      };
-    });
+			return {
+				label: `${statusEmoji} ${service.name}`,
+				value: `${service.status}${portInfo}${uptimeInfo}`,
+				status:
+					service.status === "running"
+						? ("ok" as const)
+						: service.status === "failed"
+							? ("error" as const)
+							: ("warn" as const),
+			};
+		});
 
-    logger.summary(items);
-  }
+		logger.summary(items);
+	}
 }
 
 const state = new StateManager();
@@ -167,36 +186,36 @@ const state = new StateManager();
 // ============================================================================
 
 function loadEnvFiles() {
-  const candidateFiles = [
-    join(rootDir, ".env.local"),
-    join(rootDir, ".env"),
-    join(apiDir, ".env.local"),
-    join(apiDir, ".env"),
-  ];
+	const candidateFiles = [
+		join(rootDir, ".env.local"),
+		join(rootDir, ".env"),
+		join(apiDir, ".env.local"),
+		join(apiDir, ".env"),
+	];
 
-  for (const filePath of candidateFiles) {
-    loadEnv({ path: filePath, override: false });
-  }
+	for (const filePath of candidateFiles) {
+		loadEnv({ path: filePath, override: false });
+	}
 }
 
 function parseArgs() {
-  const args = process.argv.slice(2);
+	const args = process.argv.slice(2);
 
-  return {
-    docker: args.includes("--docker"),
-    local: args.includes("--local"),
-    skipSeed: args.includes("--skip-seed"),
-    quick: args.includes("--quick"),
-    onlySeed: args.some(arg => arg.startsWith("--only=")),
-    skipSeedModules: args.some(arg => arg.startsWith("--skip=")),
-    verbose: args.includes("--verbose") || args.includes("-v"),
-    help: args.includes("--help") || args.includes("-h")
-  };
+	return {
+		docker: args.includes("--docker"),
+		local: args.includes("--local"),
+		skipSeed: args.includes("--skip-seed"),
+		quick: args.includes("--quick"),
+		onlySeed: args.some((arg) => arg.startsWith("--only=")),
+		skipSeedModules: args.some((arg) => arg.startsWith("--skip=")),
+		verbose: args.includes("--verbose") || args.includes("-v"),
+		help: args.includes("--help") || args.includes("-h"),
+	};
 }
 
 function printHelp() {
-  console.log(`
-${'\x1b[1m'}Development Environment Manager${'\x1b[0m'}
+	console.log(`
+${"\x1b[1m"}Development Environment Manager${"\x1b[0m"}
 
 Usage: bun run dev [options]
 
@@ -208,9 +227,11 @@ Seeding Options:
   --skip-seed       Skip database seeding
   --quick           Quick start (skip seed if data exists)
   --only=<modules>  Seed only specific modules (comma-separated)
-                    Example: --only=auth,accounts
+                    Example: --only=auth,accounts,employees
+                    API modules: auth,accounts,products,crm,sales,projects,settings
+                    Dashboard modules: employees,vault
   --skip=<modules>  Skip specific seed modules (comma-separated)
-                    Example: --skip=crm,projects
+                    Example: --skip=crm,projects,vault
 
 Other Options:
   --verbose, -v     Show verbose logging
@@ -245,98 +266,139 @@ Environment Variables:
 // ============================================================================
 
 async function runCommand(
-  command: string,
-  args: string[],
-  cwd: string,
-  options: { print?: boolean; env?: NodeJS.ProcessEnv } = {}
+	command: string,
+	args: string[],
+	cwd: string,
+	options: { print?: boolean; env?: NodeJS.ProcessEnv } = {},
 ): Promise<{ stdout: string; stderr: string }> {
-  return new Promise((resolve, reject) => {
-    let stdout = "";
-    let stderr = "";
+	return new Promise((resolve, reject) => {
+		let stdout = "";
+		let stderr = "";
 
-    const child = spawn(command, args, {
-      cwd,
-      stdio: ["inherit", "pipe", "pipe"],
-      env: { ...process.env, ...options.env }
-    });
+		const child = spawn(command, args, {
+			cwd,
+			stdio: ["inherit", "pipe", "pipe"],
+			env: { ...process.env, ...options.env },
+		});
 
-    if (options.print !== false) {
-      child.stdout?.on("data", (data) => {
-        stdout += data.toString();
-        process.stdout.write(data);
-      });
+		if (options.print !== false) {
+			child.stdout?.on("data", (data) => {
+				stdout += data.toString();
+				process.stdout.write(data);
+			});
 
-      child.stderr?.on("data", (data) => {
-        stderr += data.toString();
-        process.stderr.write(data);
-      });
-    } else {
-      child.stdout?.on("data", (data) => { stdout += data.toString(); });
-      child.stderr?.on("data", (data) => { stderr += data.toString(); });
-    }
+			child.stderr?.on("data", (data) => {
+				stderr += data.toString();
+				process.stderr.write(data);
+			});
+		} else {
+			child.stdout?.on("data", (data) => {
+				stdout += data.toString();
+			});
+			child.stderr?.on("data", (data) => {
+				stderr += data.toString();
+			});
+		}
 
-    child.once("error", reject);
-    child.once("exit", (code) => {
-      if (code === 0) {
-        resolve({ stdout, stderr });
-      } else {
-        reject(new Error(`${command} exited with code ${code}\n${stderr || stdout}`));
-      }
-    });
-  });
+		child.once("error", reject);
+		child.once("exit", (code) => {
+			if (code === 0) {
+				resolve({ stdout, stderr });
+			} else {
+				reject(
+					new Error(`${command} exited with code ${code}\n${stderr || stdout}`),
+				);
+			}
+		});
+	});
 }
 
 async function killProcessOnPort(port: number): Promise<void> {
-  try {
-    const { stdout } = await runCommand("lsof", ["-t", `-i:${port}`], rootDir, { print: false });
-    const pids = stdout.trim().split('\n').filter(Boolean);
+	try {
+		const { stdout } = await runCommand("lsof", ["-t", `-i:${port}`], rootDir, {
+			print: false,
+		});
+		const pids = stdout.trim().split("\n").filter(Boolean);
 
-    for (const pid of pids) {
-      try {
-        process.kill(parseInt(pid), "SIGTERM");
-        logger.info(`Killed process ${pid} on port ${port}`);
-      } catch (error) {
-        // Process might already be dead
-      }
-    }
+		if (pids.length === 0) {
+			return;
+		}
 
-    if (pids.length > 0) {
-      await delay(500);
-    }
-  } catch (error) {
-    // No process on port, that's fine
-  }
+		// First, try graceful shutdown with SIGTERM
+		for (const pid of pids) {
+			try {
+				const pidNum = parseInt(pid, 10);
+				process.kill(pidNum, "SIGTERM");
+				logger.info(`Sent SIGTERM to process ${pid} on port ${port}`);
+			} catch {
+				// Process might already be dead
+			}
+		}
+
+		// Wait a bit for processes to exit gracefully
+		await delay(2000);
+
+		// Check if processes are still running
+		try {
+			const { stdout: checkStdout } = await runCommand(
+				"lsof",
+				["-t", `-i:${port}`],
+				rootDir,
+				{ print: false },
+			);
+			const remainingPids = checkStdout.trim().split("\n").filter(Boolean);
+
+			// Force kill any remaining processes
+			for (const pid of remainingPids) {
+				try {
+					const pidNum = parseInt(pid, 10);
+					process.kill(pidNum, "SIGKILL");
+					logger.info(`Force killed process ${pid} on port ${port}`);
+				} catch {
+					// Process might already be dead
+				}
+			}
+
+			if (remainingPids.length > 0) {
+				await delay(500);
+			}
+		} catch {
+			// No processes remaining, that's fine
+		}
+	} catch {
+		// No process on port, that's fine
+	}
 }
 
 async function isPortFree(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const server = createServer();
+	return new Promise((resolve) => {
+		const server = createServer();
 
-    server.once("error", () => {
-      resolve(false);
-    });
+		server.once("error", () => {
+			resolve(false);
+		});
 
-    server.listen(port, "0.0.0.0", () => {
-      server.close(() => resolve(true));
-    });
-  });
+		server.listen(port, "0.0.0.0", () => {
+			server.close(() => resolve(true));
+		});
+	});
 }
 
 async function ensurePortFree(port: number, label: string): Promise<void> {
-  const free = await isPortFree(port);
+	const free = await isPortFree(port);
 
-  if (!free) {
-    logger.warn(`Port ${port} (${label}) is in use, attempting to free it...`);
-    await killProcessOnPort(port);
+	if (!free) {
+		logger.warn(`Port ${port} (${label}) is in use, attempting to free it...`);
+		await killProcessOnPort(port);
 
-    // Verify it's free now
-    const nowFree = await isPortFree(port);
-    if (!nowFree) {
-      throw new Error(`Failed to free port ${port} for ${label}`);
-    }
+		// Verify it's free now
+		const nowFree = await isPortFree(port);
+		if (!nowFree) {
+			throw new Error(`Failed to free port ${port} for ${label}`);
+		}
 
-    logger.success(`Port ${port} freed`);
-  }
+		logger.success(`Port ${port} freed`);
+	}
 }
 
 // ============================================================================
@@ -344,141 +406,225 @@ async function ensurePortFree(port: number, label: string): Promise<void> {
 // ============================================================================
 
 function resolveDatabaseUrl(): string {
-  const envUrl = process.env.DATABASE_URL;
+	const envUrl = process.env.DATABASE_URL;
 
-  if (envUrl && envUrl !== "pg-mem") {
-    return envUrl;
-  }
+	if (envUrl && envUrl !== "pg-mem") {
+		return envUrl;
+	}
 
-  const fallback = "postgres://postgres:postgres@localhost:5432/collector_dashboard";
-  process.env.DATABASE_URL = fallback;
-  return fallback;
+	const fallback =
+		"postgres://postgres:postgres@localhost:5432/collector_dashboard";
+	process.env.DATABASE_URL = fallback;
+	return fallback;
 }
 
 function parseDatabaseUrl(connectionString: string) {
-  const parsed = new URL(connectionString);
-  const database = parsed.pathname?.replace(/^\//, "") ?? "";
+	const parsed = new URL(connectionString);
+	const database = parsed.pathname?.replace(/^\//, "") ?? "";
 
-  if (!database) {
-    throw new Error("DATABASE_URL must contain database name");
-  }
+	if (!database) {
+		throw new Error("DATABASE_URL must contain database name");
+	}
 
-  const adminUrl = new URL(parsed);
-  adminUrl.pathname = "/postgres";
+	const adminUrl = new URL(parsed);
+	adminUrl.pathname = "/postgres";
 
-  return {
-    database,
-    host: parsed.hostname,
-    port: parsed.port || '5432',
-    adminConnectionString: adminUrl.toString()
-  };
+	return {
+		database,
+		host: parsed.hostname,
+		port: parsed.port || "5432",
+		adminConnectionString: adminUrl.toString(),
+	};
 }
 
 async function checkDatabaseExists(connectionString: string): Promise<boolean> {
-  const { database, adminConnectionString } = parseDatabaseUrl(connectionString);
-  const sanitizedName = database.replace(/'/g, "''");
-  const checkQuery = `SELECT 1 FROM pg_database WHERE datname='${sanitizedName}'`;
+	const { database, adminConnectionString } =
+		parseDatabaseUrl(connectionString);
+	const sanitizedName = database.replace(/'/g, "''");
+	const checkQuery = `SELECT 1 FROM pg_database WHERE datname='${sanitizedName}'`;
 
-  try {
-    const result = await runCommand(
-      "psql",
-      ["--dbname", adminConnectionString, "-tAc", checkQuery],
-      rootDir,
-      { print: false }
-    );
-    return result.stdout.trim() === "1";
-  } catch {
-    return false;
-  }
+	try {
+		const result = await runCommand(
+			"psql",
+			["--dbname", adminConnectionString, "-tAc", checkQuery],
+			rootDir,
+			{ print: false },
+		);
+		return result.stdout.trim() === "1";
+	} catch {
+		return false;
+	}
 }
 
-async function checkDatabaseHasData(connectionString: string): Promise<boolean> {
-  const { database } = parseDatabaseUrl(connectionString);
+async function checkDatabaseHasData(
+	connectionString: string,
+): Promise<boolean> {
+	try {
+		// Check if there are any user tables
+		const result = await runCommand(
+			"psql",
+			[
+				"--dbname",
+				connectionString,
+				"-tAc",
+				"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'",
+			],
+			rootDir,
+			{ print: false },
+		);
 
-  try {
-    // Check if there are any user tables
-    const result = await runCommand(
-      "psql",
-      [
-        "--dbname", connectionString,
-        "-tAc",
-        "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'"
-      ],
-      rootDir,
-      { print: false }
-    );
-
-    const tableCount = parseInt(result.stdout.trim());
-    return tableCount > 0;
-  } catch {
-    return false;
-  }
+		const tableCount = parseInt(result.stdout.trim(), 10);
+		return tableCount > 0;
+	} catch {
+		return false;
+	}
 }
 
 async function ensureDatabaseExists(connectionString: string): Promise<void> {
-  const { database, adminConnectionString } = parseDatabaseUrl(connectionString);
+	const { database, adminConnectionString } =
+		parseDatabaseUrl(connectionString);
 
-  const exists = await checkDatabaseExists(connectionString);
+	const exists = await checkDatabaseExists(connectionString);
 
-  if (exists) {
-    logger.info(`Database "${database}" already exists`);
-    return;
-  }
+	if (exists) {
+		logger.info(`Database "${database}" already exists`);
+		return;
+	}
 
-  logger.step(`Creating database "${database}"...`);
+	logger.step(`Creating database "${database}"...`);
 
-  const sanitizedName = database.replace(/"/g, '""');
+	const sanitizedName = database.replace(/"/g, '""');
 
-  try {
-    await runCommand(
-      "psql",
-      [
-        "--dbname", adminConnectionString,
-        "-c", `CREATE DATABASE "${sanitizedName}" WITH ENCODING='UTF8'`
-      ],
-      rootDir
-    );
+	try {
+		await runCommand(
+			"psql",
+			[
+				"--dbname",
+				adminConnectionString,
+				"-c",
+				`CREATE DATABASE "${sanitizedName}" WITH ENCODING='UTF8'`,
+			],
+			rootDir,
+		);
 
-    logger.success(`Database "${database}" created`);
-  } catch (error) {
-    throw new Error(
-      `Failed to create database "${database}". Make sure PostgreSQL is running and user has CREATE DATABASE permission.\n${
-        error instanceof Error ? error.message : String(error)
-      }`
-    );
-  }
+		logger.success(`Database "${database}" created`);
+	} catch (error) {
+		throw new Error(
+			`Failed to create database "${database}". Make sure PostgreSQL is running and user has CREATE DATABASE permission.\n${
+				error instanceof Error ? error.message : String(error)
+			}`,
+		);
+	}
 }
 
 async function runMigrations(): Promise<void> {
-  logger.step("Running database migrations...");
+	logger.step("Running database migrations...");
 
-  try {
-    await runCommand("bun", ["run", "db:push"], apiDir);
-    logger.success("Migrations completed");
-  } catch (error) {
-    throw new Error(`Migration failed: ${error instanceof Error ? error.message : String(error)}`);
-  }
+	try {
+		// Run API migrations
+		try {
+			await runCommand("bun", ["run", "db:push", "--yes"], apiDir);
+			logger.success("API migrations completed");
+		} catch {
+			// If --yes doesn't work, try without it
+			try {
+				await runCommand("bun", ["run", "db:push"], apiDir);
+				logger.success("API migrations completed");
+			} catch {
+				logger.warn("API migrations had issues, but continuing...");
+			}
+		}
+	} catch (error) {
+		logger.warn(
+			`API migration error: ${error instanceof Error ? error.message : String(error)}`,
+		);
+	}
+
+	let dashboardMigrationsOk = false;
+	try {
+		// Run Dashboard migrations
+		await runCommand("bun", ["run", "db:migrate"], dashboardDir);
+		logger.success("Dashboard migrations completed");
+		dashboardMigrationsOk = true;
+	} catch (error) {
+		const errorMsg = error instanceof Error ? error.message : String(error);
+		logger.error(`Dashboard migrations failed: ${errorMsg}`);
+		logger.warn(
+			"Dashboard migrations did not complete successfully. Seed may fail.",
+		);
+		// Don't throw - allow dev server to start even if migrations have issues
+		// But log it clearly so user knows what happened
+	}
+
+	if (!dashboardMigrationsOk) {
+		logger.warn(
+			"⚠ Dashboard migrations did not complete. Employees seed will likely fail.",
+		);
+		logger.info(
+			"💡 Try running migrations manually: cd apps/dashboard && bun run db:migrate",
+		);
+	}
 }
 
-async function runSeed(options: { only?: string; skip?: string }): Promise<void> {
-  logger.step("Seeding database...");
+async function runSeed(options: {
+	only?: string;
+	skip?: string;
+}): Promise<void> {
+	logger.step("Seeding database...");
 
-  const seedArgs = ["run", "db:seed"];
+	const seedArgs = ["run", "db:seed"];
 
-  if (options.only) {
-    seedArgs.push(`--only=${options.only}`);
-  }
+	if (options.only) {
+		seedArgs.push(`--only=${options.only}`);
+	}
 
-  if (options.skip) {
-    seedArgs.push(`--skip=${options.skip}`);
-  }
+	if (options.skip) {
+		seedArgs.push(`--skip=${options.skip}`);
+	}
 
-  try {
-    await runCommand("bun", seedArgs, apiDir);
-    logger.success("Database seeded");
-  } catch (error) {
-    throw new Error(`Seeding failed: ${error instanceof Error ? error.message : String(error)}`);
-  }
+	try {
+		// Seed API database
+		await runCommand("bun", seedArgs, apiDir);
+		logger.success("API database seeded");
+	} catch (error) {
+		logger.warn(
+			`API seeding had issues: ${error instanceof Error ? error.message : String(error)}`,
+		);
+		// Continue even if API seed fails
+	}
+
+	try {
+		// Seed Dashboard database (employees, vault, etc.)
+		const dashboardSeedArgs = ["run", "db:seed"];
+
+		// If --only is specified, check if it includes dashboard modules
+		if (options.only) {
+			const onlyModules = options.only.split(",");
+			const dashboardModules = onlyModules.filter((m) =>
+				["employees", "vault"].includes(m.trim()),
+			);
+			if (dashboardModules.length > 0) {
+				dashboardSeedArgs.push(`--only=${dashboardModules.join(",")}`);
+			} else if (onlyModules.length > 0) {
+				// If only API modules are specified, skip dashboard seed
+				logger.info("Skipping dashboard seed (only API modules specified)");
+				return;
+			}
+		}
+
+		// If --skip is specified, pass it through
+		if (options.skip) {
+			dashboardSeedArgs.push(`--skip=${options.skip}`);
+		}
+
+		await runCommand("bun", dashboardSeedArgs, dashboardDir);
+		logger.success("Dashboard database seeded");
+	} catch (error) {
+		logger.warn(
+			`Dashboard seeding had issues: ${error instanceof Error ? error.message : String(error)}`,
+		);
+		// Continue even if dashboard seed fails
+	}
 }
 
 // ============================================================================
@@ -486,66 +632,78 @@ async function runSeed(options: { only?: string; skip?: string }): Promise<void>
 // ============================================================================
 
 async function checkDockerAvailable(): Promise<boolean> {
-  try {
-    await runCommand("docker", ["compose", "version"], rootDir, { print: false });
-    return true;
-  } catch {
-    return false;
-  }
+	try {
+		await runCommand("docker", ["compose", "version"], rootDir, {
+			print: false,
+		});
+		return true;
+	} catch {
+		return false;
+	}
 }
 
-async function getDockerComposeStatus(): Promise<Array<{ Service?: string; State?: string; Health?: string }>> {
-  try {
-    const { stdout } = await runCommand(
-      "docker",
-      ["compose", "ps", "--format", "json"],
-      rootDir,
-      { print: false }
-    );
+async function getDockerComposeStatus(): Promise<
+	Array<{ Service?: string; State?: string; Health?: string }>
+> {
+	try {
+		const { stdout } = await runCommand(
+			"docker",
+			["compose", "ps", "--format", "json"],
+			rootDir,
+			{ print: false },
+		);
 
-    const trimmed = stdout.trim();
-    if (!trimmed) return [];
+		const trimmed = stdout.trim();
+		if (!trimmed) return [];
 
-    try {
-      return JSON.parse(trimmed);
-    } catch {
-      // Handle line-delimited JSON
-      const lines = trimmed.split("\n").filter(Boolean);
-      return lines.map(line => {
-        try {
-          return JSON.parse(line);
-        } catch {
-          return {};
-        }
-      });
-    }
-  } catch {
-    return [];
-  }
+		try {
+			return JSON.parse(trimmed);
+		} catch {
+			// Handle line-delimited JSON
+			const lines = trimmed.split("\n").filter(Boolean);
+			return lines.map((line) => {
+				try {
+					return JSON.parse(line);
+				} catch {
+					return {};
+				}
+			});
+		}
+	} catch {
+		return [];
+	}
 }
 
-async function waitForDockerService(service: string, timeoutMs = 60000): Promise<void> {
-  const start = Date.now();
+async function waitForDockerService(
+	service: string,
+	timeoutMs = 60000,
+): Promise<void> {
+	const start = Date.now();
 
-  logger.info(`Waiting for ${service} to be ready...`);
+	logger.info(`Waiting for ${service} to be ready...`);
 
-  while (Date.now() - start < timeoutMs) {
-    const status = await getDockerComposeStatus();
-    const serviceStatus = status.find(s => s.Service === service);
+	while (Date.now() - start < timeoutMs) {
+		const status = await getDockerComposeStatus();
+		const serviceStatus = status.find((s) => s.Service === service);
 
-    if (serviceStatus?.State === 'running' || serviceStatus?.Health === 'healthy') {
-      logger.success(`${service} is ready`);
-      return;
-    }
+		if (
+			serviceStatus?.State === "running" ||
+			serviceStatus?.Health === "healthy"
+		) {
+			logger.success(`${service} is ready`);
+			return;
+		}
 
-    if (serviceStatus?.State === 'exited' || serviceStatus?.State === 'dead') {
-      throw new Error(`${service} failed to start`);
-    }
+		if (serviceStatus?.State === "exited" || serviceStatus?.State === "dead") {
+			throw new Error(`${service} failed to start`);
+		}
 
-    await delay(2000);
-  }
+		await delay(2000);
+	}
 
-  throw new Error(`${service} did not become ready within ${timeoutMs / 1000}s`);
+	throw new Error(
+		`${service} did not become ready within ${timeoutMs / 1000}s`,
+	);
 }
 
 // ============================================================================
@@ -553,52 +711,56 @@ async function waitForDockerService(service: string, timeoutMs = 60000): Promise
 // ============================================================================
 
 function spawnDevProcess(
-  name: string,
-  command: string,
-  args: string[],
-  cwd: string,
-  envOverrides: NodeJS.ProcessEnv = {}
+	name: string,
+	command: string,
+	args: string[],
+	cwd: string,
+	envOverrides: NodeJS.ProcessEnv = {},
 ): void {
-  const child = spawn(command, args, {
-    cwd,
-    env: { ...process.env, ...envOverrides },
-    stdio: ["inherit", "pipe", "pipe"]
-  });
+	const child = spawn(command, args, {
+		cwd,
+		env: { ...process.env, ...envOverrides },
+		stdio: ["inherit", "pipe", "pipe"],
+	});
 
-  state.children.add(child);
-  state.updateService(name, { status: 'starting' });
+	state.children.add(child);
+	state.updateService(name, { status: "starting" });
 
-  const prefix = `[\x1b[35m${name}\x1b[0m]`;
+	const prefix = `[\x1b[35m${name}\x1b[0m]`;
 
-  child.stdout?.on("data", (data) => {
-    // Check for successful start indicators
-    const output = data.toString();
-    if (output.includes("ready") || output.includes("listening") || output.includes("started")) {
-      state.updateService(name, { status: 'running' });
-    }
-    process.stdout.write(`${prefix} ${data}`);
-  });
+	child.stdout?.on("data", (data) => {
+		// Check for successful start indicators
+		const output = data.toString();
+		if (
+			output.includes("ready") ||
+			output.includes("listening") ||
+			output.includes("started")
+		) {
+			state.updateService(name, { status: "running" });
+		}
+		process.stdout.write(`${prefix} ${data}`);
+	});
 
-  child.stderr?.on("data", (data) => {
-    process.stderr.write(`${prefix} ${data}`);
-  });
+	child.stderr?.on("data", (data) => {
+		process.stderr.write(`${prefix} ${data}`);
+	});
 
-  child.once("exit", (code) => {
-    state.children.delete(child);
-    state.updateService(name, { status: 'failed' });
+	child.once("exit", (code) => {
+		state.children.delete(child);
+		state.updateService(name, { status: "failed" });
 
-    if (code !== 0) {
-      logger.error(`${name} exited with code ${code}`);
-      shutdown(code ?? 1);
-    }
-  });
+		if (code !== 0) {
+			logger.error(`${name} exited with code ${code}`);
+			shutdown(code ?? 1);
+		}
+	});
 
-  // Mark as running after a delay (assume successful start)
-  setTimeout(() => {
-    if (state.services.get(name)?.status === 'starting') {
-      state.updateService(name, { status: 'running' });
-    }
-  }, 3000);
+	// Mark as running after a delay (assume successful start)
+	setTimeout(() => {
+		if (state.services.get(name)?.status === "starting") {
+			state.updateService(name, { status: "running" });
+		}
+	}, 3000);
 }
 
 // ============================================================================
@@ -606,33 +768,39 @@ function spawnDevProcess(
 // ============================================================================
 
 async function shutdown(exitCode: number): Promise<void> {
-  if (state.isShuttingDown) {
-    return;
-  }
+	if (state.isShuttingDown) {
+		return;
+	}
 
-  state.isShuttingDown = true;
+	state.isShuttingDown = true;
 
-  logger.section("Shutting Down");
+	logger.section("Shutting Down");
 
-  // Kill all child processes
-  for (const child of state.children) {
-    child.removeAllListeners();
-    child.kill("SIGTERM");
-  }
+	// Kill all child processes
+	for (const child of state.children) {
+		child.removeAllListeners();
+		child.kill("SIGTERM");
+	}
 
-  // Stop Docker services if started
-  if (state.dockerStarted) {
-    logger.step("Stopping Docker services...");
-    try {
-      await runCommand("docker", ["compose", "down", "--remove-orphans"], rootDir);
-      logger.success("Docker services stopped");
-    } catch (error) {
-      logger.error(`Failed to stop Docker: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
+	// Stop Docker services if started
+	if (state.dockerStarted) {
+		logger.step("Stopping Docker services...");
+		try {
+			await runCommand(
+				"docker",
+				["compose", "down", "--remove-orphans"],
+				rootDir,
+			);
+			logger.success("Docker services stopped");
+		} catch (error) {
+			logger.error(
+				`Failed to stop Docker: ${error instanceof Error ? error.message : String(error)}`,
+			);
+		}
+	}
 
-  logger.success("Shutdown complete");
-  process.exit(exitCode);
+	logger.success("Shutdown complete");
+	process.exit(exitCode);
 }
 
 process.on("SIGINT", () => void shutdown(0));
@@ -643,139 +811,235 @@ process.on("SIGTERM", () => void shutdown(0));
 // ============================================================================
 
 async function runDockerWorkflow(): Promise<void> {
-  logger.section("Docker Workflow");
+	logger.section("Docker Workflow");
 
-  const dockerAvailable = await checkDockerAvailable();
-  if (!dockerAvailable) {
-    throw new Error("Docker Compose is not available. Install it or use --local mode.");
-  }
+	const dockerAvailable = await checkDockerAvailable();
+	if (!dockerAvailable) {
+		throw new Error(
+			"Docker Compose is not available. Install it or use --local mode.",
+		);
+	}
 
-  logger.step("Starting infrastructure (PostgreSQL, Redis)...");
-  await runCommand("docker", ["compose", "up", "-d", "postgres", "redis"], rootDir);
-  state.dockerStarted = true;
+	logger.step("Starting infrastructure (PostgreSQL, Redis)...");
+	await runCommand(
+		"docker",
+		["compose", "up", "-d", "postgres", "redis"],
+		rootDir,
+	);
+	state.dockerStarted = true;
 
-  await waitForDockerService("postgres");
-  await waitForDockerService("redis");
+	await waitForDockerService("postgres");
+	await waitForDockerService("redis");
 
-  logger.step("Building API image...");
-  await runCommand("docker", ["compose", "build", "api"], rootDir);
+	logger.step("Building API image...");
+	await runCommand("docker", ["compose", "build", "api"], rootDir);
 
-  logger.step("Starting API container...");
-  await runCommand("docker", ["compose", "up", "-d", "api"], rootDir);
+	logger.step("Starting API container...");
+	await runCommand("docker", ["compose", "up", "-d", "api"], rootDir);
 
-  await waitForDockerService("api");
+	await waitForDockerService("api");
 
-  logger.success("All Docker services running");
-  logger.info("Following logs (Ctrl+C to exit)...");
+	logger.success("All Docker services running");
+	logger.info("Following logs (Ctrl+C to exit)...");
 
-  spawnDevProcess(
-    "docker",
-    "docker",
-    ["compose", "logs", "-f", "postgres", "redis", "api"],
-    rootDir
-  );
+	spawnDevProcess(
+		"docker",
+		"docker",
+		["compose", "logs", "-f", "postgres", "redis", "api"],
+		rootDir,
+	);
 }
 
-async function runLocalWorkflow(opts: ReturnType<typeof parseArgs>): Promise<void> {
-  logger.section("Local Development Workflow");
+async function runLocalWorkflow(
+	opts: ReturnType<typeof parseArgs>,
+): Promise<void> {
+	logger.section("Local Development Workflow");
 
-  // Environment setup
-  loadEnvFiles();
-  const connectionString = resolveDatabaseUrl();
-  const { database, host, port } = parseDatabaseUrl(connectionString);
+	// Environment setup
+	loadEnvFiles();
+	const connectionString = resolveDatabaseUrl();
+	const { database, host, port } = parseDatabaseUrl(connectionString);
 
-  logger.summary([
-    { label: 'Database', value: database },
-    { label: 'Host', value: `${host}:${port}` },
-    { label: 'Mode', value: 'Local' }
-  ]);
+	logger.summary([
+		{ label: "Database", value: database },
+		{ label: "Host", value: `${host}:${port}` },
+		{ label: "Mode", value: "Local" },
+	]);
 
-  // Check ports
-  const apiPort = Number(process.env.API_PORT ?? DEFAULT_PORTS.api);
-  let webPort = Number(process.env.WEB_PORT ?? process.env.PORT ?? DEFAULT_PORTS.web);
+	// Check ports
+	const apiPort = Number(process.env.API_PORT ?? DEFAULT_PORTS.api);
+	let webPort = Number(
+		process.env.WEB_PORT ?? process.env.PORT ?? DEFAULT_PORTS.web,
+	);
+	const socketPort = Number(process.env.SOCKET_PORT ?? DEFAULT_PORTS.socket);
+	const notificationPort = Number(
+		process.env.NOTIFICATION_PORT ?? DEFAULT_PORTS.notification,
+	);
+	const chatPort = Number(process.env.CHAT_PORT ?? DEFAULT_PORTS.chat);
 
-  if (apiPort === webPort) {
-    const fallback = apiPort === 3000 ? 3001 : 3000;
-    logger.warn(`API and Web using same port ${apiPort}, moving Web to ${fallback}`);
-    webPort = fallback;
-    process.env.WEB_PORT = String(fallback);
-  }
+	if (apiPort === webPort) {
+		const fallback = apiPort === 3000 ? 3001 : 3000;
+		logger.warn(
+			`API and Web using same port ${apiPort}, moving Web to ${fallback}`,
+		);
+		webPort = fallback;
+		process.env.WEB_PORT = String(fallback);
+	}
 
-  state.addService('PostgreSQL', apiPort);
-  state.addService('API', apiPort);
-  state.addService('Frontend', webPort);
+	state.addService("PostgreSQL", apiPort);
+	state.addService("API", apiPort);
+	state.addService("Frontend", webPort);
+	state.addService("Socket.IO", socketPort);
+	state.addService("Notification Service", notificationPort);
+	state.addService("Chat Service", chatPort);
 
-  // Check and free ports
-  logger.step("Checking ports...");
-  await ensurePortFree(apiPort, "API");
-  await ensurePortFree(webPort, "Frontend");
+	// Check and free ports
+	logger.step("Checking ports...");
+	await ensurePortFree(apiPort, "API");
+	await ensurePortFree(webPort, "Frontend");
+	await ensurePortFree(socketPort, "Socket.IO");
+	await ensurePortFree(notificationPort, "Notification Service");
+	await ensurePortFree(chatPort, "Chat Service");
 
-  // Database setup
-  logger.step("Setting up database...");
-  await ensureDatabaseExists(connectionString);
+	// Database setup
+	logger.step("Setting up database...");
+	await ensureDatabaseExists(connectionString);
 
-  const hasData = await checkDatabaseHasData(connectionString);
+	const hasData = await checkDatabaseHasData(connectionString);
 
-  if (hasData && opts.quick) {
-    logger.info("Database has data, skipping migrations and seed (quick mode)");
-  } else {
-    await runMigrations();
+	if (hasData && opts.quick) {
+		logger.info("Database has data, skipping migrations and seed (quick mode)");
+	} else {
+		let migrationsSuccessful = false;
+		try {
+			await runMigrations();
+			migrationsSuccessful = true;
+		} catch (error) {
+			logger.error(
+				`Migrations failed: ${error instanceof Error ? error.message : String(error)}`,
+			);
+			logger.warn("Continuing anyway, but seed may fail if tables don't exist");
+		}
 
-    if (!opts.skipSeed) {
-      const seedOpts: { only?: string; skip?: string } = {};
+		if (!opts.skipSeed) {
+			if (!migrationsSuccessful) {
+				logger.warn(
+					"Migrations had issues. Seed may fail if required tables don't exist.",
+				);
+				logger.info(
+					"You can skip seed with --skip-seed or fix migrations first",
+				);
+			}
 
-      // Parse --only and --skip arguments
-      for (const arg of process.argv.slice(2)) {
-        if (arg.startsWith("--only=")) {
-          seedOpts.only = arg.split("=")[1];
-        }
-        if (arg.startsWith("--skip=")) {
-          seedOpts.skip = arg.split("=")[1];
-        }
-      }
+			const seedOpts: { only?: string; skip?: string } = {};
 
-      await runSeed(seedOpts);
-    } else {
-      logger.info("Skipping database seed (--skip-seed)");
-    }
-  }
+			// Parse --only and --skip arguments
+			for (const arg of process.argv.slice(2)) {
+				if (arg.startsWith("--only=")) {
+					seedOpts.only = arg.split("=")[1];
+				}
+				if (arg.startsWith("--skip=")) {
+					seedOpts.skip = arg.split("=")[1];
+				}
+			}
 
-  // Start services
-  logger.step("Starting development servers...");
+			await runSeed(seedOpts);
+		} else {
+			logger.info("Skipping database seed (--skip-seed)");
+		}
+	}
 
-  spawnDevProcess("api", "bun", ["run", "dev"], apiDir, {
-    PORT: String(apiPort),
-    API_PORT: String(apiPort)
-  });
+	// Start services
+	logger.step("Starting development servers...");
 
-  spawnDevProcess("web", "bun", ["run", "dev"], dashboardDir, {
-    PORT: String(webPort),
-    WEB_PORT: String(webPort)
-  });
+	spawnDevProcess("api", "bun", ["run", "dev"], apiDir, {
+		PORT: String(apiPort),
+		API_PORT: String(apiPort),
+	});
 
-  // Wait a bit for services to start
-  await delay(2000);
+	spawnDevProcess("socket", "bun", ["socket-server.ts"], dashboardDir, {
+		SOCKET_PORT: String(socketPort),
+		SOCKET_HOST: "0.0.0.0",
+		NODE_ENV: process.env.NODE_ENV || "development",
+	});
 
-  // Print final status
-  logger.section("Development Environment Ready");
+	spawnDevProcess(
+		"notification",
+		"bun",
+		["run", "dev"],
+		notificationServiceDir,
+		{
+			PORT: String(notificationPort),
+			HOST: "0.0.0.0",
+			NODE_ENV: process.env.NODE_ENV || "development",
+		},
+	);
 
-  logger.summary([
-    { label: 'API Server', value: `http://localhost:${apiPort}`, status: 'ok' },
-    { label: 'Frontend', value: `http://localhost:${webPort}`, status: 'ok' },
-    { label: 'Database', value: database, status: 'ok' }
-  ]);
+	spawnDevProcess("chat", "bun", ["run", "dev"], chatServiceDir, {
+		PORT: String(chatPort),
+		HOST: "0.0.0.0",
+		DATABASE_URL: connectionString,
+		REDIS_URL: process.env.REDIS_URL || "redis://localhost:6379",
+		JWT_SECRET: process.env.JWT_SECRET || "dev-secret-change-in-production",
+		NODE_ENV: process.env.NODE_ENV || "development",
+	});
 
-  state.printStatus();
+	// Use Next.js with Turbopack for faster hot reload
+	spawnDevProcess(
+		"web",
+		"bunx",
+		["next", "dev", "--turbo", "-p", String(webPort)],
+		dashboardDir,
+		{
+			PORT: String(webPort),
+			WEB_PORT: String(webPort),
+			SOCKET_PORT: String(socketPort),
+			// Enable Turbopack explicitly
+			TURBOPACK: "1",
+		},
+	);
 
-  console.log(`
-${'\x1b[32m'}╔═══════════════════════════════════════════════════════════╗${'\x1b[0m'}
-${'\x1b[32m'}║${'\x1b[0m'}  ${'\x1b[1m'}Development environment is ready!${'\x1b[0m'}                     ${'\x1b[32m'}║${'\x1b[0m'}
-${'\x1b[32m'}╠═══════════════════════════════════════════════════════════╣${'\x1b[0m'}
-${'\x1b[32m'}║${'\x1b[0m'}  API:      ${'\x1b[36m'}http://localhost:${apiPort}${'\x1b[0m'}                       ${'\x1b[32m'}║${'\x1b[0m'}
-${'\x1b[32m'}║${'\x1b[0m'}  Frontend: ${'\x1b[36m'}http://localhost:${webPort}${'\x1b[0m'}                       ${'\x1b[32m'}║${'\x1b[0m'}
-${'\x1b[32m'}╠═══════════════════════════════════════════════════════════╣${'\x1b[0m'}
-${'\x1b[32m'}║${'\x1b[0m'}  Press ${'\x1b[1m'}Ctrl+C${'\x1b[0m'} to stop all services                    ${'\x1b[32m'}║${'\x1b[0m'}
-${'\x1b[32m'}╚═══════════════════════════════════════════════════════════╝${'\x1b[0m'}
+	// Wait a bit for services to start
+	await delay(2000);
+
+	// Print final status
+	logger.section("Development Environment Ready");
+
+	logger.summary([
+		{ label: "API Server", value: `http://localhost:${apiPort}`, status: "ok" },
+		{ label: "Frontend", value: `http://localhost:${webPort}`, status: "ok" },
+		{
+			label: "Socket.IO",
+			value: `http://localhost:${socketPort}`,
+			status: "ok",
+		},
+		{
+			label: "Notification Service",
+			value: `http://localhost:${notificationPort}`,
+			status: "ok",
+		},
+		{
+			label: "Chat Service",
+			value: `http://localhost:${chatPort}`,
+			status: "ok",
+		},
+		{ label: "Database", value: database, status: "ok" },
+	]);
+
+	state.printStatus();
+
+	console.log(`
+${"\x1b[32m"}╔═══════════════════════════════════════════════════════════╗${"\x1b[0m"}
+${"\x1b[32m"}║${"\x1b[0m"}  ${"\x1b[1m"}Development environment is ready!${"\x1b[0m"}                     ${"\x1b[32m"}║${"\x1b[0m"}
+${"\x1b[32m"}╠═══════════════════════════════════════════════════════════╣${"\x1b[0m"}
+${"\x1b[32m"}║${"\x1b[0m"}  API:      ${"\x1b[36m"}http://localhost:${apiPort}${"\x1b[0m"}                       ${"\x1b[32m"}║${"\x1b[0m"}
+${"\x1b[32m"}║${"\x1b[0m"}  Frontend: ${"\x1b[36m"}http://localhost:${webPort}${"\x1b[0m"}                       ${"\x1b[32m"}║${"\x1b[0m"}
+${"\x1b[32m"}║${"\x1b[0m"}  Socket.IO: ${"\x1b[36m"}http://localhost:${socketPort}${"\x1b[0m"}                      ${"\x1b[32m"}║${"\x1b[0m"}
+${"\x1b[32m"}║${"\x1b[0m"}  Notifications: ${"\x1b[36m"}http://localhost:${notificationPort}${"\x1b[0m"}                  ${"\x1b[32m"}║${"\x1b[0m"}
+${"\x1b[32m"}║${"\x1b[0m"}  Chat Service: ${"\x1b[36m"}http://localhost:${chatPort}${"\x1b[0m"}                  ${"\x1b[32m"}║${"\x1b[0m"}
+${"\x1b[32m"}╠═══════════════════════════════════════════════════════════╣${"\x1b[0m"}
+${"\x1b[32m"}║${"\x1b[0m"}  Press ${"\x1b[1m"}Ctrl+C${"\x1b[0m"} to stop all services                    ${"\x1b[32m"}║${"\x1b[0m"}
+${"\x1b[32m"}╚═══════════════════════════════════════════════════════════╝${"\x1b[0m"}
 `);
 }
 
@@ -784,23 +1048,25 @@ ${'\x1b[32m'}╚═════════════════════�
 // ============================================================================
 
 async function main() {
-  const opts = parseArgs();
+	const opts = parseArgs();
 
-  if (opts.help) {
-    printHelp();
-    process.exit(0);
-  }
+	if (opts.help) {
+		printHelp();
+		process.exit(0);
+	}
 
-  try {
-    if (opts.docker && !opts.local) {
-      await runDockerWorkflow();
-    } else {
-      await runLocalWorkflow(opts);
-    }
-  } catch (error) {
-    logger.error(`Setup failed: ${error instanceof Error ? error.message : String(error)}`);
-    await shutdown(1);
-  }
+	try {
+		if (opts.docker && !opts.local) {
+			await runDockerWorkflow();
+		} else {
+			await runLocalWorkflow(opts);
+		}
+	} catch (error) {
+		logger.error(
+			`Setup failed: ${error instanceof Error ? error.message : String(error)}`,
+		);
+		await shutdown(1);
+	}
 }
 
 // Start

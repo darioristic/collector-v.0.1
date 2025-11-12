@@ -6,8 +6,8 @@ import {
 	PUT as updateEmployeeRoute,
 } from "@/app/api/employees/[id]/route";
 import {
-	GET as listEmployeesRoute,
 	POST as createEmployeeRoute,
+	GET as listEmployeesRoute,
 } from "@/app/api/employees/route";
 
 type StoredEmployee = {
@@ -84,8 +84,12 @@ class QueryBuilderMock implements PromiseLike<StoredEmployee[]> {
 	}
 
 	then<TResult1 = StoredEmployee[], TResult2 = never>(
-		onFulfilled?: ((value: StoredEmployee[]) => TResult1 | PromiseLike<TResult1>) | null,
-		onRejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+		onFulfilled?:
+			| ((_value: StoredEmployee[]) => TResult1 | PromiseLike<TResult1>)
+			| null,
+		onRejected?:
+			| ((_reason: unknown) => TResult2 | PromiseLike<TResult2>)
+			| null,
 	): Promise<TResult1 | TResult2> {
 		return Promise.resolve(this.data).then(onFulfilled, onRejected);
 	}

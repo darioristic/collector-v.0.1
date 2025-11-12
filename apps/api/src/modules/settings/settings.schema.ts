@@ -65,6 +65,12 @@ const teamMemberProperties = {
       { type: "null" }
     ]
   },
+  userId: {
+    anyOf: [
+      { type: "string", minLength: 1 },
+      { type: "null" }
+    ]
+  },
   createdAt: { type: "string", format: "date-time" },
   updatedAt: { type: "string", format: "date-time" }
 } as const;
@@ -141,7 +147,7 @@ export const teamMemberListSchema: FastifySchema = {
         type: "object",
         properties: teamMemberProperties,
         required: ["id", "firstName", "lastName", "email", "role", "status", "createdAt", "updatedAt"],
-        additionalProperties: false
+        additionalProperties: true
       }
     })
   }
@@ -267,6 +273,7 @@ export type SettingsTeamMember = {
   role: string;
   status: TeamMemberStatus;
   avatarUrl: string | null;
+  userId: string | null;
   createdAt: string;
   updatedAt: string;
 };

@@ -1,127 +1,147 @@
 "use client";
 
+import type {
+	Invoice,
+	InvoiceCreateInput,
+	InvoiceUpdateInput,
+} from "@crm/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Invoice, InvoiceCreateInput, InvoiceUpdateInput } from "@crm/types";
 
 import { useToast } from "@/hooks/use-toast";
 import {
-  createInvoice,
-  deleteInvoice,
-  fetchInvoice,
-  fetchInvoices,
-  invoiceKeys,
-  updateInvoice
+	createInvoice,
+	deleteInvoice,
+	fetchInvoice,
+	fetchInvoices,
+	invoiceKeys,
+	updateInvoice,
 } from "@/src/queries/invoices";
 
 type UseInvoicesOptions = {
-  customerId?: string;
-  orderId?: number;
-  status?: string;
-  search?: string;
-  limit?: number;
-  offset?: number;
+	customerId?: string;
+	orderId?: number;
+	status?: string;
+	search?: string;
+	limit?: number;
+	offset?: number;
 };
 
 export function useInvoices(options: UseInvoicesOptions = {}) {
-  return useQuery({
-    queryKey: invoiceKeys.list(options),
-    queryFn: () => fetchInvoices(options)
-  });
+	return useQuery({
+		queryKey: invoiceKeys.list(options),
+		queryFn: () => fetchInvoices(options),
+	});
 }
 
 export function useInvoicesByCustomer(customerId: string) {
-  return useQuery({
-    queryKey: invoiceKeys.byCustomer(customerId),
-    queryFn: () => fetchInvoices({ customerId }),
-    enabled: Boolean(customerId)
-  });
+	return useQuery({
+		queryKey: invoiceKeys.byCustomer(customerId),
+		queryFn: () => fetchInvoices({ customerId }),
+		enabled: Boolean(customerId),
+	});
 }
 
 export function useInvoicesByOrder(orderId: number) {
-  return useQuery({
-    queryKey: invoiceKeys.byOrder(orderId),
-    queryFn: () => fetchInvoices({ orderId }),
-    enabled: Boolean(orderId)
-  });
+	return useQuery({
+		queryKey: invoiceKeys.byOrder(orderId),
+		queryFn: () => fetchInvoices({ orderId }),
+		enabled: Boolean(orderId),
+	});
 }
 
 export function useInvoice(id: string, options: { enabled?: boolean } = {}) {
-  return useQuery({
-    queryKey: invoiceKeys.detail(id),
-    queryFn: () => fetchInvoice(id),
-    enabled: options.enabled ?? Boolean(id)
-  });
+	return useQuery({
+		queryKey: invoiceKeys.detail(id),
+		queryFn: () => fetchInvoice(id),
+		enabled: options.enabled ?? Boolean(id),
+	});
 }
 
 export function useCreateInvoice() {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
+	const queryClient = useQueryClient();
+	const { toast } = useToast();
 
-  return useMutation({
-    mutationFn: async (input: InvoiceCreateInput) => createInvoice(input),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
-      toast({
-        title: "Invoice created",
-        description: "The invoice has been created successfully."
-      });
-    },
-    onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Creation failed",
-        description: error instanceof Error ? error.message : "Unable to create the invoice."
-      });
-    }
-  });
+	return useMutation({
+		mutationFn: async (input: InvoiceCreateInput) => createInvoice(input),
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+			toast({
+				title: "Invoice created",
+				description: "The invoice has been created successfully.",
+			});
+		},
+		onError: (error) => {
+			toast({
+				variant: "destructive",
+				title: "Creation failed",
+				description:
+					error instanceof Error
+						? error.message
+						: "Unable to create the invoice.",
+			});
+		},
+	});
 }
 
 export function useUpdateInvoice() {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
+	const queryClient = useQueryClient();
+	const { toast } = useToast();
 
-  return useMutation({
-    mutationFn: async ({ id, input }: { id: string; input: InvoiceUpdateInput }) =>
-      updateInvoice(id, input),
-    onSuccess: async (invoice) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() }),
-        queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(invoice.id) })
-      ]);
-      toast({
-        title: "Invoice updated",
-        description: "The invoice has been updated successfully."
-      });
-    },
-    onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Update failed",
-        description: error instanceof Error ? error.message : "Unable to update the invoice."
-      });
-    }
-  });
+	return useMutation({
+		mutationFn: async ({
+			id,
+			input,
+		}: {
+			id: string;
+			input: InvoiceUpdateInput;
+		}) => updateInvoice(id, input),
+		onSuccess: async (invoice) => {
+			await Promise.all([
+				queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() }),
+				queryClient.invalidateQueries({
+					queryKey: invoiceKeys.detail(invoice.id),
+				}),
+			]);
+			toast({
+				title: "Invoice updated",
+				description: "The invoice has been updated successfully.",
+			});
+		},
+		onError: (error) => {
+			toast({
+				variant: "destructive",
+				title: "Update failed",
+				description:
+					error instanceof Error
+						? error.message
+						: "Unable to update the invoice.",
+			});
+		},
+	});
 }
 
 export function useDeleteInvoice() {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
+	const queryClient = useQueryClient();
+	const { toast } = useToast();
 
-  return useMutation({
-    mutationFn: async (id: string) => deleteInvoice(id),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
-      toast({
-        title: "Invoice deleted",
-        description: "The invoice has been removed."
-      });
-    },
-    onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Delete failed",
-        description: error instanceof Error ? error.message : "Unable to delete the invoice."
-      });
-    }
-  });
+	return useMutation({
+		mutationFn: async (id: string) => deleteInvoice(id),
+		onSuccess: async () => {
+			await queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
+			toast({
+				title: "Invoice deleted",
+				description: "The invoice has been removed.",
+			});
+		},
+		onError: (error) => {
+			toast({
+				variant: "destructive",
+				title: "Delete failed",
+				description:
+					error instanceof Error
+						? error.message
+						: "Unable to delete the invoice.",
+			});
+		},
+	});
 }

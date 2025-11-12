@@ -1,779 +1,633 @@
-import { and, asc, desc, eq, inArray, ne, max } from "drizzle-orm";
-import { alias } from "drizzle-orm/pg-core";
+import { readFile } from "node:fs/promises";
+import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import type { z } from "zod";
 
-import { getDb } from "@/lib/db";
 import type { AuthCompany, AuthUser } from "@/lib/auth";
+import { getDb } from "@/lib/db";
+import { companies } from "@/lib/db/schema/core";
 import {
-	channelMembers,
-	channels,
-	companies,
-	messages,
-	users,
+	type TeamChatChannel,
+	teamchatChannelMembers,
+	teamchatChannels,
+	teamchatMessages,
+	teamchatUsers,
 } from "@/lib/db/schema/teamchat";
 import type {
+	bootstrapResponseSchema,
+	channelSummarySchema,
+} from "@/lib/validations/teamchat";
+
+import { emitTeamChatEvent } from "./socket-server";
+import type {
 	ChannelMemberSummary,
-	ChannelMetadata,
 	ChannelSummary,
 	MessageWithAuthor,
-	TeamChatBootstrap,
-} from "@/lib/teamchat/types";
+} from "./types";
 
-const CHANNEL_METADATA_GROUP: ChannelMetadata = { type: "group" };
+let schemaInitializationPromise: Promise<void> | null = null;
 
-const messageSender = alias(users, "message_sender");
-
-type ChannelRecord = typeof channels.$inferSelect;
-type CompanyRecord = typeof companies.$inferSelect;
-type UserRecord = typeof users.$inferSelect;
-
-type MessageRow = {
-	id: string;
-	content: string | null;
-	fileUrl: string | null;
-	channelId: string;
-	createdAt: Date;
-	senderId: string;
-	senderFirstName: string;
-	senderLastName: string;
-	senderDisplayName: string | null;
-	senderEmail: string;
-	senderAvatarUrl: string | null;
-};
-
-const parseChannelMetadata = (value: string | null): ChannelMetadata | null => {
-	if (!value) {
-		return null;
+const ensureTeamChatSchema = async (db: Awaited<ReturnType<typeof getDb>>) => {
+	if (schemaInitializationPromise) {
+		await schemaInitializationPromise;
+		return;
 	}
-	try {
-		const parsed = JSON.parse(value) as ChannelMetadata;
-		if (parsed && typeof parsed === "object") {
-			return parsed;
+
+	schemaInitializationPromise = (async () => {
+		try {
+			await db.execute(sql.raw('select 1 from "teamchat_users" limit 1;'));
+			return;
+		} catch (error) {
+			console.warn(
+				"[teamchat] Schema check failed, applying migrations",
+				error,
+			);
 		}
-		return null;
-	} catch (error) {
-		console.warn("[teamchat] Failed to parse channel metadata", error);
+
+		// Use absolute path from current working directory (apps/dashboard)
+		const migrationPath = `${process.cwd()}/lib/db/migrations/0005_create_teamchat.sql`;
+		const ddl = await readFile(migrationPath, "utf8");
+		const statements = ddl
+			.split(/;\s*[\r\n]+/)
+			.map((statement) => statement.trim())
+			.filter(Boolean);
+
+		for (const statement of statements) {
+			await db.execute(sql.raw(`${statement};`));
+		}
+	})();
+
+	await schemaInitializationPromise;
+};
+
+export const ensureTeamChatSchemaReady = async () => {
+	const db = await getDb();
+	await ensureTeamChatSchema(db);
+	return db;
+};
+
+const parseMetadata = (
+	metadata: string | null,
+): {
+	type: "dm" | "group" | "custom";
+	userIds?: string[];
+} | null => {
+	if (!metadata) return null;
+	try {
+		const parsed = JSON.parse(metadata);
+		return parsed;
+	} catch {
 		return null;
 	}
 };
 
-const serializeMetadata = (metadata: ChannelMetadata | null): string | null => {
-	if (!metadata) {
-		return null;
-	}
+const formatMetadata = (
+	metadata: { type: "dm" | "group" | "custom"; userIds?: string[] } | null,
+): string | null => {
+	if (!metadata) return null;
 	return JSON.stringify(metadata);
 };
 
-const buildDisplayName = (user: UserRecord): string => {
-	const display = user.displayName?.trim();
-	if (display && display.length > 0) {
-		return display;
-	}
-	const parts = [user.firstName, user.lastName].filter(
-		(part) => part && part.length > 0,
-	);
-	const full = parts.join(" ").trim();
-	return full.length > 0 ? full : user.email;
+const buildChannelSummary = (
+	channel: TeamChatChannel & {
+		members: Array<{
+			id: string;
+			firstName: string;
+			lastName: string;
+			displayName: string | null;
+			email: string;
+			avatarUrl: string | null;
+			status: string;
+		}>;
+		lastMessage?: {
+			content: string | null;
+			createdAt: Date;
+		} | null;
+		unreadCount?: number;
+	},
+): z.infer<typeof channelSummarySchema> => {
+	const metadata = parseMetadata(channel.metadata);
+	const memberSummaries: ChannelMemberSummary[] = channel.members.map((m) => ({
+		id: m.id,
+		name:
+			m.displayName ||
+			[m.firstName, m.lastName].filter(Boolean).join(" ") ||
+			m.email,
+		email: m.email,
+		avatarUrl: m.avatarUrl,
+		status: m.status,
+	}));
+
+	return {
+		id: channel.id,
+		name: channel.name,
+		isPrivate: channel.isPrivate,
+		metadata: metadata as z.infer<typeof channelSummarySchema>["metadata"],
+		unreadCount: channel.unreadCount || 0,
+		lastMessageAt: channel.lastMessage?.createdAt || null,
+		lastMessagePreview: channel.lastMessage?.content || null,
+		members: memberSummaries,
+	};
 };
 
-const mapUserToSummary = (user: UserRecord): ChannelMemberSummary => ({
-	id: user.id,
-	name: buildDisplayName(user),
-	email: user.email,
-	avatarUrl: user.avatarUrl ?? null,
-	status: user.status,
-});
+export const bootstrapTeamChat = async (auth: {
+	user: AuthUser;
+	company: AuthCompany | null;
+}): Promise<z.infer<typeof bootstrapResponseSchema>> => {
+	const db = await ensureTeamChatSchemaReady();
 
-const mapMessageRowToDto = (row: MessageRow): MessageWithAuthor => ({
-	id: row.id,
-	content: row.content ?? null,
-	fileUrl: row.fileUrl ?? null,
-	attachment: row.fileUrl
-		? {
-				url: row.fileUrl,
-				name: null,
-				size: null,
-				mimeType: null,
-			}
-		: null,
-	senderId: row.senderId,
-	senderName:
-		row.senderDisplayName?.trim() ||
-		[row.senderFirstName, row.senderLastName]
-			.filter((value) => value && value.length > 0)
-			.join(" ") ||
-		row.senderEmail,
-	senderEmail: row.senderEmail,
-	senderAvatarUrl: row.senderAvatarUrl ?? null,
-	channelId: row.channelId,
-	createdAt: row.createdAt,
-});
+	if (!auth.company) {
+		throw new Error("Company is required");
+	}
 
-const upsertCompany = async (company: AuthCompany): Promise<CompanyRecord> => {
-	const db = await getDb();
-	const now = new Date();
-	const slug =
-		(company.slug ?? "").trim().length > 0 ? company.slug : company.id;
-	const domain = company.domain?.trim() ?? null;
-
-	await db
+	// Upsert company
+	const [company] = await db
 		.insert(companies)
 		.values({
-			id: company.id,
-			name: company.name,
-			slug,
-			domain,
-			updatedAt: now,
+			id: auth.company.id,
+			name: auth.company.name,
+			slug: auth.company.slug || auth.company.id,
+			domain: auth.company.domain,
 		})
 		.onConflictDoUpdate({
 			target: companies.id,
 			set: {
-				name: company.name,
-				slug,
-				domain,
-				updatedAt: now,
+				name: auth.company.name,
+				slug: auth.company.slug || auth.company.id,
+				domain: auth.company.domain,
+				updatedAt: new Date(),
 			},
-		});
-
-	const [record] = await db
-		.select()
-		.from(companies)
-		.where(eq(companies.id, company.id))
-		.limit(1);
-
-	if (!record) {
-		throw new Error("Ne postoji kompanija iz sesije.");
-	}
-
-	return record;
-};
-
-const normalizeRole = (role: string | null | undefined): "ADMIN" | "MEMBER" => {
-	if (role === "ADMIN" || role === "OWNER" || role === "SUPERADMIN") {
-		return "ADMIN";
-	}
-	return "MEMBER";
-};
-
-const splitName = (fullName: string | null | undefined) => {
-	const fallback = "Korisnik";
-	const trimmed = (fullName ?? "").trim();
-	if (!trimmed) {
-		return { firstName: fallback, lastName: "" };
-	}
-	const parts = trimmed.split(/\s+/);
-	const firstName = parts.shift() ?? fallback;
-	const lastName = parts.join(" ");
-	return { firstName, lastName };
-};
-
-const upsertUser = async ({
-	authUser,
-	companyId,
-}: {
-	authUser: AuthUser;
-	companyId: string;
-}): Promise<UserRecord> => {
-	const db = await getDb();
-	const now = new Date();
-	const role = normalizeRole(authUser.company?.role ?? null);
-	const { firstName, lastName } = splitName(authUser.name);
-	const displayName =
-		(authUser.name ?? "").trim() || `${firstName} ${lastName}`.trim();
-
-	await db
-		.insert(users)
-		.values({
-			id: authUser.id,
-			firstName,
-			lastName,
-			displayName,
-			email: authUser.email,
-			role,
-			status: "online",
-			avatarUrl: null,
-			companyId,
-			updatedAt: now,
-		})
-		.onConflictDoUpdate({
-			target: users.email,
-			set: {
-				id: authUser.id,
-				firstName,
-				lastName,
-				displayName,
-				email: authUser.email,
-				role,
-				status: "online",
-				companyId,
-				updatedAt: now,
-			},
-		});
-
-	const [record] = await db
-		.select()
-		.from(users)
-		.where(eq(users.id, authUser.id))
-		.limit(1);
-	if (!record) {
-		throw new Error("Korisnik iz sesije nije pronađen.");
-	}
-	return record;
-};
-
-const ensureDefaultChannel = async ({
-	companyId,
-	userId,
-}: {
-	companyId: string;
-	userId: string;
-}) => {
-	const db = await getDb();
-	const now = new Date();
-
-	const existing = await db
-		.select()
-		.from(channels)
-		.where(and(eq(channels.companyId, companyId), eq(channels.name, "general")))
-		.limit(1);
-
-	if (existing.length > 0) {
-		await db
-			.insert(channelMembers)
-			.values({
-				channelId: existing[0].id,
-				userId,
-				joinedAt: now,
-			})
-			.onConflictDoNothing();
-		return existing[0];
-	}
-
-	const [channel] = await db
-		.insert(channels)
-		.values({
-			name: "general",
-			isPrivate: false,
-			metadata: serializeMetadata(CHANNEL_METADATA_GROUP),
-			companyId,
-			createdAt: now,
-			updatedAt: now,
 		})
 		.returning();
 
-	await db
-		.insert(channelMembers)
+	if (!company) {
+		throw new Error("Failed to upsert company");
+	}
+
+	// Upsert user
+	const userName = auth.user.name.split(" ");
+	const firstName = userName[0] || "";
+	const lastName = userName.slice(1).join(" ") || "";
+
+	const [user] = await db
+		.insert(teamchatUsers)
 		.values({
-			channelId: channel.id,
-			userId,
-			joinedAt: now,
-			lastReadAt: now,
+			id: auth.user.id,
+			firstName,
+			lastName,
+			email: auth.user.email,
+			companyId: company.id,
+			status: "online",
 		})
-		.onConflictDoNothing();
+		.onConflictDoUpdate({
+			target: teamchatUsers.email,
+			set: {
+				firstName,
+				lastName,
+				companyId: company.id,
+				updatedAt: new Date(),
+			},
+		})
+		.returning();
 
-	return channel;
-};
-
-const ensurePublicChannelMemberships = async (
-	companyId: string,
-	userId: string,
-) => {
-	const db = await getDb();
-	const publicChannels = await db
-		.select({ id: channels.id })
-		.from(channels)
-		.where(
-			and(eq(channels.companyId, companyId), eq(channels.isPrivate, false)),
-		);
-
-	if (publicChannels.length === 0) {
-		return;
+	if (!user) {
+		throw new Error("Failed to upsert user");
 	}
 
-	await db
-		.insert(channelMembers)
-		.values(
-			publicChannels.map((channel) => ({ channelId: channel.id, userId })),
-		)
-		.onConflictDoNothing();
-};
-
-const ensureMembership = async (channelId: string, userId: string) => {
-	const db = await getDb();
-	await db
-		.insert(channelMembers)
+	// Ensure general channel exists
+	const [generalChannel] = await db
+		.insert(teamchatChannels)
 		.values({
-			channelId,
-			userId,
+			name: "general",
+			isPrivate: false,
+			companyId: company.id,
+			metadata: null,
 		})
-		.onConflictDoNothing();
-};
+		.onConflictDoNothing()
+		.returning();
 
-const getAccessibleChannels = async ({
-	companyId,
-	userId,
-}: {
-	companyId: string;
-	userId: string;
-}): Promise<ChannelSummary[]> => {
-	const db = await getDb();
+	if (generalChannel) {
+		// Add all users to general channel
+		const allUsers = await db
+			.select({ id: teamchatUsers.id })
+			.from(teamchatUsers)
+			.where(eq(teamchatUsers.companyId, company.id));
 
-	const channelRows = await db
-		.select({
-			id: channels.id,
-			name: channels.name,
-			isPrivate: channels.isPrivate,
-			metadata: channels.metadata,
-			createdAt: channels.createdAt,
-			updatedAt: channels.updatedAt,
-		})
-		.from(channels)
-		.where(eq(channels.companyId, companyId))
-		.orderBy(desc(channels.updatedAt));
-
-	if (channelRows.length === 0) {
-		return [];
-	}
-
-	const channelIds = channelRows.map((channel) => channel.id);
-
-	const memberRows = await db
-		.select({
-			channelId: channelMembers.channelId,
-			userId: users.id,
-			firstName: users.firstName,
-			lastName: users.lastName,
-			displayName: users.displayName,
-			email: users.email,
-			status: users.status,
-			avatarUrl: users.avatarUrl,
-		})
-		.from(channelMembers)
-		.innerJoin(users, eq(channelMembers.userId, users.id))
-		.where(inArray(channelMembers.channelId, channelIds));
-
-	const membersByChannel = new Map<string, ChannelMemberSummary[]>();
-	for (const row of memberRows) {
-		const list = membersByChannel.get(row.channelId) ?? [];
-		list.push({
-			id: row.userId,
-			name:
-				row.displayName?.trim() ||
-				[row.firstName, row.lastName]
-					.filter((value) => value && value.length > 0)
-					.join(" ") ||
-				row.email,
-			email: row.email,
-			avatarUrl: row.avatarUrl ?? null,
-			status: row.status,
-		});
-		membersByChannel.set(row.channelId, list);
-	}
-
-	let lastMessageMap = new Map<string, MessageWithAuthor>();
-	if (channelIds.length > 0) {
-		const lastMessageSubquery = db
-			.select({
-				channelId: messages.channelId,
-				lastCreatedAt: max(messages.createdAt).as("lastCreatedAt"),
-			})
-			.from(messages)
-			.where(inArray(messages.channelId, channelIds))
-			.groupBy(messages.channelId)
-			.as("last_message");
-
-		const lastMessageRows = await db
-			.select({
-				channelId: messages.channelId,
-				id: messages.id,
-				content: messages.content,
-				fileUrl: messages.fileUrl,
-				createdAt: messages.createdAt,
-				senderId: messages.senderId,
-				senderFirstName: messageSender.firstName,
-				senderLastName: messageSender.lastName,
-				senderDisplayName: messageSender.displayName,
-				senderEmail: messageSender.email,
-				senderAvatarUrl: messageSender.avatarUrl,
-			})
-			.from(messages)
-			.innerJoin(
-				lastMessageSubquery,
-				and(
-					eq(lastMessageSubquery.channelId, messages.channelId),
-					eq(lastMessageSubquery.lastCreatedAt, messages.createdAt),
-				),
+		await db
+			.insert(teamchatChannelMembers)
+			.values(
+				allUsers.map((u) => ({
+					channelId: generalChannel.id,
+					userId: u.id,
+				})),
 			)
-			.innerJoin(messageSender, eq(messages.senderId, messageSender.id));
-
-		lastMessageMap = new Map(
-			lastMessageRows.map((row) => [
-				row.channelId,
-				mapMessageRowToDto({
-					id: row.id,
-					content: row.content,
-					fileUrl: row.fileUrl,
-					channelId: row.channelId,
-					createdAt: row.createdAt,
-					senderId: row.senderId,
-					senderFirstName: row.senderFirstName,
-					senderLastName: row.senderLastName,
-					senderDisplayName: row.senderDisplayName,
-					senderEmail: row.senderEmail,
-					senderAvatarUrl: row.senderAvatarUrl,
-				}),
-			]),
-		);
-	}
-
-	return channelRows.reduce<ChannelSummary[]>((acc, channel) => {
-		const members = membersByChannel.get(channel.id) ?? [];
-		const metadata = parseChannelMetadata(channel.metadata);
-		const lastMessage = lastMessageMap.get(channel.id) ?? null;
-
-		const memberRecord = members.find((member) => member.id === userId);
-		if (channel.isPrivate && !memberRecord) {
-			return acc;
-		}
-
-		acc.push({
-			id: channel.id,
-			name: channel.name,
-			isPrivate: channel.isPrivate,
-			metadata,
-			unreadCount: 0,
-			lastMessageAt: lastMessage ? lastMessage.createdAt : null,
-			lastMessagePreview:
-				lastMessage?.content ?? (lastMessage?.fileUrl ? "Attachment" : null),
-			members,
-		});
-
-		return acc;
-	}, []);
-};
-
-const getDirectMessageTargets = async (
-	companyId: string,
-	excludeUserId: string,
-) => {
-	const db = await getDb();
-	const rows = await db
-		.select()
-		.from(users)
-		.where(and(eq(users.companyId, companyId), ne(users.id, excludeUserId)))
-		.orderBy(asc(users.firstName), asc(users.lastName));
-
-	return rows.map(mapUserToSummary);
-};
-
-export const listChannels = async ({
-	companyId,
-	userId,
-}: {
-	companyId: string;
-	userId: string;
-}): Promise<ChannelSummary[]> => {
-	await ensureDefaultChannel({ companyId, userId });
-	await ensurePublicChannelMemberships(companyId, userId);
-	return getAccessibleChannels({ companyId, userId });
-};
-
-export const listDirectMessageTargets = async ({
-	companyId,
-	userId,
-}: {
-	companyId: string;
-	userId: string;
-}): Promise<ChannelMemberSummary[]> =>
-	getDirectMessageTargets(companyId, userId);
-
-export const bootstrapTeamChat = async ({
-	authUser,
-	authCompany,
-}: {
-	authUser: AuthUser;
-	authCompany: AuthCompany;
-}): Promise<TeamChatBootstrap> => {
-	const company = await upsertCompany(authCompany);
-	const currentUser = await upsertUser({ authUser, companyId: company.id });
-
-	const channelsSummary = await listChannels({
-		companyId: company.id,
-		userId: currentUser.id,
-	});
-
-	return {
-		currentUser: mapUserToSummary(currentUser),
-		channels: channelsSummary,
-		directMessageTargets: await getDirectMessageTargets(
-			company.id,
-			currentUser.id,
-		),
-	};
-};
-
-export const getChannelMessages = async ({
-	companyId,
-	channelId,
-	userId,
-	limit = 50,
-}: {
-	companyId: string;
-	channelId: string;
-	userId: string;
-	limit?: number;
-}): Promise<MessageWithAuthor[]> => {
-	const db = await getDb();
-
-	const channelRow = await db
-		.select({
-			id: channels.id,
-			isPrivate: channels.isPrivate,
-		})
-		.from(channels)
-		.where(and(eq(channels.id, channelId), eq(channels.companyId, companyId)))
-		.limit(1)
-		.then((rows) => rows[0]);
-
-	if (!channelRow) {
-		throw new Error("Kanal nije pronađen.");
-	}
-
-	if (channelRow.isPrivate) {
-		const membership = await db
-			.select({ userId: channelMembers.userId })
-			.from(channelMembers)
+			.onConflictDoNothing();
+	} else {
+		// Find existing general channel
+		const [existing] = await db
+			.select()
+			.from(teamchatChannels)
 			.where(
 				and(
-					eq(channelMembers.channelId, channelId),
-					eq(channelMembers.userId, userId),
+					eq(teamchatChannels.name, "general"),
+					eq(teamchatChannels.companyId, company.id),
 				),
 			)
 			.limit(1);
 
-		if (membership.length === 0) {
-			throw new Error("Nemate pristup ovom kanalu.");
+		if (existing) {
+			// Ensure user is member
+			await db
+				.insert(teamchatChannelMembers)
+				.values({
+					channelId: existing.id,
+					userId: user.id,
+				})
+				.onConflictDoNothing();
 		}
 	}
 
-	await ensureMembership(channelId, userId);
+	// Get channels
+	const channels = await listChannels(company.id, user.id);
 
-	const messageRows = await db
-		.select({
-			id: messages.id,
-			content: messages.content,
-			fileUrl: messages.fileUrl,
-			channelId: messages.channelId,
-			createdAt: messages.createdAt,
-			senderId: messages.senderId,
-			senderFirstName: messageSender.firstName,
-			senderLastName: messageSender.lastName,
-			senderDisplayName: messageSender.displayName,
-			senderEmail: messageSender.email,
-			senderAvatarUrl: messageSender.avatarUrl,
-		})
-		.from(messages)
-		.innerJoin(messageSender, eq(messages.senderId, messageSender.id))
-		.where(eq(messages.channelId, channelId))
-		.orderBy(asc(messages.createdAt))
-		.limit(limit);
-
-	return messageRows.map((row) =>
-		mapMessageRowToDto({
-			id: row.id,
-			content: row.content,
-			fileUrl: row.fileUrl,
-			channelId: row.channelId,
-			createdAt: row.createdAt,
-			senderId: row.senderId,
-			senderFirstName: row.senderFirstName,
-			senderLastName: row.senderLastName,
-			senderDisplayName: row.senderDisplayName,
-			senderEmail: row.senderEmail,
-			senderAvatarUrl: row.senderAvatarUrl,
-		}),
+	// Get direct message targets
+	const directMessageTargets = await listDirectMessageTargets(
+		company.id,
+		user.id,
 	);
+
+	return {
+		currentUser: {
+			id: user.id,
+			name:
+				user.displayName ||
+				[user.firstName, user.lastName].filter(Boolean).join(" ") ||
+				user.email,
+			email: user.email,
+			avatarUrl: user.avatarUrl,
+			status: user.status,
+		},
+		channels,
+		directMessageTargets,
+	};
 };
 
-type CreateMessageInput = {
-	companyId: string;
-	channelId: string;
-	userId: string;
-	content: string | null;
-	fileUrl: string | null;
-};
+export const listChannels = async (
+	companyId: string,
+	userId: string,
+): Promise<ChannelSummary[]> => {
+	const db = await ensureTeamChatSchemaReady();
 
-export const createMessage = async (
-	input: CreateMessageInput,
-): Promise<MessageWithAuthor> => {
-	const db = await getDb();
-
-	const channel = await db
-		.select({ id: channels.id })
-		.from(channels)
+	const userChannels = await db
+		.select({
+			channel: teamchatChannels,
+			member: teamchatUsers,
+		})
+		.from(teamchatChannelMembers)
+		.innerJoin(
+			teamchatChannels,
+			eq(teamchatChannelMembers.channelId, teamchatChannels.id),
+		)
+		.innerJoin(
+			teamchatUsers,
+			eq(teamchatChannelMembers.userId, teamchatUsers.id),
+		)
 		.where(
 			and(
-				eq(channels.id, input.channelId),
-				eq(channels.companyId, input.companyId),
+				eq(teamchatChannels.companyId, companyId),
+				eq(teamchatChannelMembers.userId, userId),
+			),
+		);
+
+	// Group by channel
+	const channelMap = new Map<
+		string,
+		TeamChatChannel & {
+			members: Array<{
+				id: string;
+				firstName: string;
+				lastName: string;
+				displayName: string | null;
+				email: string;
+				avatarUrl: string | null;
+				status: string;
+			}>;
+		}
+	>();
+
+	for (const row of userChannels) {
+		const channelId = row.channel.id;
+		if (!channelMap.has(channelId)) {
+			channelMap.set(channelId, {
+				...row.channel,
+				members: [],
+			});
+		}
+		const channel = channelMap.get(channelId);
+		if (!channel) continue;
+		channel.members.push({
+			id: row.member.id,
+			firstName: row.member.firstName,
+			lastName: row.member.lastName,
+			displayName: row.member.displayName,
+			email: row.member.email,
+			avatarUrl: row.member.avatarUrl,
+			status: row.member.status,
+		});
+	}
+
+	// Get last messages and unread counts
+	const channelIds = Array.from(channelMap.keys());
+	if (channelIds.length === 0) {
+		return [];
+	}
+
+	const lastMessages = await db
+		.select({
+			channelId: teamchatMessages.channelId,
+			content: teamchatMessages.content,
+			createdAt: teamchatMessages.createdAt,
+		})
+		.from(teamchatMessages)
+		.where(inArray(teamchatMessages.channelId, channelIds))
+		.orderBy(desc(teamchatMessages.createdAt));
+
+	const lastMessageMap = new Map<
+		string,
+		{ content: string | null; createdAt: Date }
+	>();
+	for (const msg of lastMessages) {
+		if (!lastMessageMap.has(msg.channelId)) {
+			lastMessageMap.set(msg.channelId, {
+				content: msg.content,
+				createdAt: msg.createdAt,
+			});
+		}
+	}
+
+	// Get unread counts (simplified - count messages after lastReadAt)
+	const unreadCounts = await db
+		.select({
+			channelId: teamchatChannelMembers.channelId,
+			count: sql<number>`count(*)`,
+		})
+		.from(teamchatChannelMembers)
+		.leftJoin(
+			teamchatMessages,
+			and(
+				eq(teamchatMessages.channelId, teamchatChannelMembers.channelId),
+				sql`${teamchatMessages.createdAt} > COALESCE(${teamchatChannelMembers.lastReadAt}, '1970-01-01'::timestamp)`,
+			),
+		)
+		.where(
+			and(
+				inArray(teamchatChannelMembers.channelId, channelIds),
+				eq(teamchatChannelMembers.userId, userId),
+			),
+		)
+		.groupBy(teamchatChannelMembers.channelId);
+
+	const unreadCountMap = new Map<string, number>();
+	for (const row of unreadCounts) {
+		unreadCountMap.set(row.channelId, Number(row.count) || 0);
+	}
+
+	// Build channel summaries
+	const summaries: ChannelSummary[] = [];
+	for (const channel of channelMap.values()) {
+		summaries.push({
+			...buildChannelSummary({
+				...channel,
+				lastMessage: lastMessageMap.get(channel.id) || null,
+				unreadCount: unreadCountMap.get(channel.id) || 0,
+			}),
+		});
+	}
+
+	return summaries.sort((a, b) => {
+		if (a.lastMessageAt && b.lastMessageAt) {
+			return b.lastMessageAt.getTime() - a.lastMessageAt.getTime();
+		}
+		if (a.lastMessageAt) return -1;
+		if (b.lastMessageAt) return 1;
+		return 0;
+	});
+};
+
+export const listDirectMessageTargets = async (
+	companyId: string,
+	userId: string,
+): Promise<ChannelMemberSummary[]> => {
+	const db = await ensureTeamChatSchemaReady();
+
+	const users = await db
+		.select()
+		.from(teamchatUsers)
+		.where(
+			and(eq(teamchatUsers.companyId, companyId), ne(teamchatUsers.id, userId)),
+		);
+
+	return users.map((u) => ({
+		id: u.id,
+		name:
+			u.displayName ||
+			[u.firstName, u.lastName].filter(Boolean).join(" ") ||
+			u.email,
+		email: u.email,
+		avatarUrl: u.avatarUrl,
+		status: u.status,
+	}));
+};
+
+export const getChannelMessages = async (
+	channelId: string,
+	userId: string,
+	limit = 50,
+): Promise<MessageWithAuthor[]> => {
+	const db = await ensureTeamChatSchemaReady();
+
+	// Verify user has access to channel
+	const [membership] = await db
+		.select()
+		.from(teamchatChannelMembers)
+		.where(
+			and(
+				eq(teamchatChannelMembers.channelId, channelId),
+				eq(teamchatChannelMembers.userId, userId),
 			),
 		)
 		.limit(1);
 
-	if (channel.length === 0) {
-		throw new Error("Kanal nije pronađen.");
+	if (!membership) {
+		throw new Error("Access denied");
 	}
 
-	await ensureMembership(input.channelId, input.userId);
+	const messages = await db
+		.select({
+			message: teamchatMessages,
+			sender: teamchatUsers,
+		})
+		.from(teamchatMessages)
+		.innerJoin(teamchatUsers, eq(teamchatMessages.senderId, teamchatUsers.id))
+		.where(eq(teamchatMessages.channelId, channelId))
+		.orderBy(desc(teamchatMessages.createdAt))
+		.limit(limit);
 
-	const now = new Date();
+	return messages.reverse().map((row) => ({
+		id: row.message.id,
+		content: row.message.content,
+		fileUrl: row.message.fileUrl,
+		attachment: null,
+		senderId: row.sender.id,
+		senderName:
+			row.sender.displayName ||
+			[row.sender.firstName, row.sender.lastName].filter(Boolean).join(" ") ||
+			row.sender.email,
+		senderEmail: row.sender.email,
+		senderAvatarUrl: row.sender.avatarUrl,
+		channelId: row.message.channelId,
+		createdAt: row.message.createdAt,
+	}));
+};
 
+export const createMessage = async (
+	channelId: string,
+	senderId: string,
+	content: string | null,
+	fileUrl: string | null,
+): Promise<MessageWithAuthor> => {
+	const db = await ensureTeamChatSchemaReady();
+
+	// Verify user has access to channel
+	const [membership] = await db
+		.select()
+		.from(teamchatChannelMembers)
+		.where(
+			and(
+				eq(teamchatChannelMembers.channelId, channelId),
+				eq(teamchatChannelMembers.userId, senderId),
+			),
+		)
+		.limit(1);
+
+	if (!membership) {
+		throw new Error("Access denied");
+	}
+
+	// Create message
 	const [message] = await db
-		.insert(messages)
+		.insert(teamchatMessages)
 		.values({
-			channelId: input.channelId,
-			senderId: input.userId,
-			content: input.content,
-			fileUrl: input.fileUrl,
-			createdAt: now,
-			updatedAt: now,
+			channelId,
+			senderId,
+			content,
+			fileUrl,
 		})
 		.returning();
 
-	await db
-		.update(channels)
-		.set({ updatedAt: now })
-		.where(eq(channels.id, input.channelId));
-
-	await db
-		.update(channelMembers)
-		.set({ lastReadAt: now })
-		.where(
-			and(
-				eq(channelMembers.channelId, input.channelId),
-				eq(channelMembers.userId, input.userId),
-			),
-		);
-
-	const fullMessageRow = await db
-		.select({
-			id: messages.id,
-			content: messages.content,
-			fileUrl: messages.fileUrl,
-			channelId: messages.channelId,
-			createdAt: messages.createdAt,
-			senderId: messages.senderId,
-			senderFirstName: messageSender.firstName,
-			senderLastName: messageSender.lastName,
-			senderDisplayName: messageSender.displayName,
-			senderEmail: messageSender.email,
-			senderAvatarUrl: messageSender.avatarUrl,
-		})
-		.from(messages)
-		.innerJoin(messageSender, eq(messages.senderId, messageSender.id))
-		.where(eq(messages.id, message.id))
-		.limit(1)
-		.then((rows) => rows[0]);
-
-	if (!fullMessageRow) {
-		throw new Error("Poruka nije pronađena nakon kreiranja.");
+	if (!message) {
+		throw new Error("Failed to create message");
 	}
 
-	return mapMessageRowToDto({
-		id: fullMessageRow.id,
-		content: fullMessageRow.content,
-		fileUrl: fullMessageRow.fileUrl,
-		channelId: fullMessageRow.channelId,
-		createdAt: fullMessageRow.createdAt,
-		senderId: fullMessageRow.senderId,
-		senderFirstName: fullMessageRow.senderFirstName,
-		senderLastName: fullMessageRow.senderLastName,
-		senderDisplayName: fullMessageRow.senderDisplayName,
-		senderEmail: fullMessageRow.senderEmail,
-		senderAvatarUrl: fullMessageRow.senderAvatarUrl,
-	});
+	// Update channel updatedAt
+	await db
+		.update(teamchatChannels)
+		.set({ updatedAt: new Date() })
+		.where(eq(teamchatChannels.id, channelId));
+
+	// Get sender
+	const [sender] = await db
+		.select()
+		.from(teamchatUsers)
+		.where(eq(teamchatUsers.id, senderId))
+		.limit(1);
+
+	if (!sender) {
+		throw new Error("Sender not found");
+	}
+
+	const messageWithAuthor: MessageWithAuthor = {
+		id: message.id,
+		content: message.content,
+		fileUrl: message.fileUrl,
+		attachment: null,
+		senderId: sender.id,
+		senderName:
+			sender.displayName ||
+			[sender.firstName, sender.lastName].filter(Boolean).join(" ") ||
+			sender.email,
+		senderEmail: sender.email,
+		senderAvatarUrl: sender.avatarUrl,
+		channelId: message.channelId,
+		createdAt: message.createdAt,
+	};
+
+	// Emit socket event
+	emitTeamChatEvent(channelId, "message:new", messageWithAuthor);
+	emitTeamChatEvent(channelId, "channel:updated", { id: channelId });
+
+	return messageWithAuthor;
 };
 
-export const upsertDirectMessageChannel = async ({
-	companyId,
-	currentUserId,
-	targetUserId,
-}: {
-	companyId: string;
-	currentUserId: string;
-	targetUserId: string;
-}): Promise<ChannelRecord> => {
-	const db = await getDb();
-	const metadata = JSON.stringify({
+export const upsertDirectMessageChannel = async (
+	companyId: string,
+	currentUserId: string,
+	targetUserId: string,
+): Promise<{ channelId: string; channel?: ChannelSummary }> => {
+	const db = await ensureTeamChatSchemaReady();
+
+	// Find existing DM channel
+	const existingChannels = await db
+		.select({
+			channel: teamchatChannels,
+		})
+		.from(teamchatChannels)
+		.where(
+			and(
+				eq(teamchatChannels.companyId, companyId),
+				eq(teamchatChannels.isPrivate, true),
+				sql`${teamchatChannels.metadata}::jsonb->>'type' = 'dm'`,
+				sql`${teamchatChannels.metadata}::jsonb->'userIds' @> ${JSON.stringify([currentUserId, targetUserId])}`,
+			),
+		)
+		.limit(1);
+
+	if (existingChannels.length > 0) {
+		const channel = existingChannels[0].channel;
+		return { channelId: channel.id };
+	}
+
+	// Create new DM channel
+	const metadata = formatMetadata({
 		type: "dm",
 		userIds: [currentUserId, targetUserId],
 	});
 
-	const existing = await db
-		.select()
-		.from(channels)
-		.where(
-			and(
-				eq(channels.companyId, companyId),
-				eq(channels.isPrivate, true),
-				eq(channels.metadata, metadata),
-			),
-		)
-		.limit(1);
-
-	if (existing.length > 0) {
-		await ensureMembership(existing[0].id, currentUserId);
-		await ensureMembership(existing[0].id, targetUserId);
-		return existing[0];
-	}
-
-	const now = new Date();
-	const participants = await db
-		.select()
-		.from(users)
-		.where(
-			and(
-				eq(users.companyId, companyId),
-				inArray(users.id, [currentUserId, targetUserId]),
-			),
-		);
-
-	if (participants.length < 2) {
-		throw new Error("Nije moguće formirati direktnu konverzaciju.");
-	}
-
-	const target = participants.find((user) => user.id === targetUserId);
-	if (!target) {
-		throw new Error("Ciljani korisnik nije pronađen.");
-	}
-
 	const [channel] = await db
-		.insert(channels)
+		.insert(teamchatChannels)
 		.values({
-			name: buildDisplayName(target),
+			name: `DM: ${currentUserId}-${targetUserId}`,
 			isPrivate: true,
-			metadata,
 			companyId,
-			createdAt: now,
-			updatedAt: now,
+			metadata,
 		})
 		.returning();
 
-	await db
-		.insert(channelMembers)
-		.values([
-			{
-				channelId: channel.id,
-				userId: currentUserId,
-				joinedAt: now,
-				lastReadAt: now,
-			},
-			{
-				channelId: channel.id,
-				userId: targetUserId,
-				joinedAt: now,
-				lastReadAt: now,
-			},
-		])
-		.onConflictDoNothing();
+	if (!channel) {
+		throw new Error("Failed to create channel");
+	}
 
-	return channel;
+	// Add members
+	await db.insert(teamchatChannelMembers).values([
+		{ channelId: channel.id, userId: currentUserId },
+		{ channelId: channel.id, userId: targetUserId },
+	]);
+
+	// Get channel summary
+	const channels = await listChannels(companyId, currentUserId);
+	const channelSummary = channels.find((c) => c.id === channel.id);
+
+	return {
+		channelId: channel.id,
+		channel: channelSummary,
+	};
 };

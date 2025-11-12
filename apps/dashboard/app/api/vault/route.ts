@@ -1,12 +1,10 @@
+import { and, asc, eq, ilike, isNull } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-
-import { eq, ilike, isNull, and, asc } from "drizzle-orm";
 import { z } from "zod";
-
-import { getDb } from "@/lib/db";
+import { teamchatUsers } from "@/lib/db/schema/teamchat";
 import { vaultFiles, vaultFolders } from "@/lib/db/schema/vault";
-import { users } from "@/lib/db/schema/teamchat";
+import { ensureTeamChatSchemaReady } from "@/lib/teamchat/repository";
 
 const querySchema = z.object({
 	folderId: z.string().uuid().optional(),
@@ -40,7 +38,7 @@ type FileResponse = {
 };
 
 export async function GET(request: NextRequest) {
-	const db = await getDb();
+	const db = await ensureTeamChatSchemaReady();
 	const rawParams = Object.fromEntries(request.nextUrl.searchParams.entries());
 	const parsed = querySchema.safeParse(rawParams);
 
@@ -116,12 +114,14 @@ export async function GET(request: NextRequest) {
 			createdAt: vaultFolders.createdAt,
 			updatedAt: vaultFolders.updatedAt,
 			createdBy: vaultFolders.createdBy,
-			ownerFirstName: users.firstName,
-			ownerLastName: users.lastName,
-			ownerAvatar: users.avatarUrl,
+			ownerFirstName: teamchatUsers.firstName,
+			ownerLastName: teamchatUsers.lastName,
+			ownerDisplayName: teamchatUsers.displayName,
+			ownerEmail: teamchatUsers.email,
+			ownerAvatarUrl: teamchatUsers.avatarUrl,
 		})
 		.from(vaultFolders)
-		.leftJoin(users, eq(vaultFolders.createdBy, users.id))
+		.leftJoin(teamchatUsers, eq(vaultFolders.createdBy, teamchatUsers.id))
 		.where(
 			folderConditions.length === 1
 				? folderConditions[0]
@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
 							[folder.ownerFirstName, folder.ownerLastName]
 								.filter(Boolean)
 								.join(" ") || null,
-						avatarUrl: folder.ownerAvatar ?? null,
+						avatarUrl: folder.ownerAvatarUrl ?? null,
 					}
 				: null,
 	}));
@@ -167,12 +167,14 @@ export async function GET(request: NextRequest) {
 				createdAt: vaultFiles.createdAt,
 				updatedAt: vaultFiles.updatedAt,
 				uploadedBy: vaultFiles.uploadedBy,
-				uploaderFirstName: users.firstName,
-				uploaderLastName: users.lastName,
-				uploaderAvatar: users.avatarUrl,
+				uploaderFirstName: teamchatUsers.firstName,
+				uploaderLastName: teamchatUsers.lastName,
+				uploaderDisplayName: teamchatUsers.displayName,
+				uploaderEmail: teamchatUsers.email,
+				uploaderAvatarUrl: teamchatUsers.avatarUrl,
 			})
 			.from(vaultFiles)
-			.leftJoin(users, eq(vaultFiles.uploadedBy, users.id))
+			.leftJoin(teamchatUsers, eq(vaultFiles.uploadedBy, teamchatUsers.id))
 			.where(
 				fileConditions.length === 1
 					? fileConditions[0]
@@ -197,7 +199,7 @@ export async function GET(request: NextRequest) {
 								[file.uploaderFirstName, file.uploaderLastName]
 									.filter(Boolean)
 									.join(" ") || null,
-							avatarUrl: file.uploaderAvatar ?? null,
+							avatarUrl: file.uploaderAvatarUrl ?? null,
 						}
 					: null,
 		}));

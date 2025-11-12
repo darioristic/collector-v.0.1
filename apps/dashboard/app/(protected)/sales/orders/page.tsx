@@ -7,46 +7,49 @@ import { OrderList } from "@/components/orders/order-list";
 import { useDeleteOrder } from "@/src/hooks/useOrders";
 
 export default function OrdersPage() {
-  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
-  const deleteOrder = useDeleteOrder();
+	const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+	const deleteOrder = useDeleteOrder();
 
-  const handleOrderClick = (orderId: number) => {
-    setSelectedOrderId(orderId);
-  };
+	const handleOrderClick = (orderId: number) => {
+		setSelectedOrderId(orderId);
+	};
 
-  const handleCreateOrder = () => {
-    alert("Create order dialog - Coming soon!");
-  };
+	const handleCreateOrder = () => {
+		alert("Create order dialog - Coming soon!");
+	};
 
-  const handleDeleteOrder = async (orderId: number) => {
-    if (confirm("Are you sure you want to delete this order?")) {
-      await deleteOrder.mutateAsync(orderId);
-      if (selectedOrderId === orderId) {
-        setSelectedOrderId(null);
-      }
-    }
-  };
+	const handleDeleteOrder = async (orderId: number) => {
+		if (confirm("Are you sure you want to delete this order?")) {
+			await deleteOrder.mutateAsync(orderId);
+			if (selectedOrderId === orderId) {
+				setSelectedOrderId(null);
+			}
+		}
+	};
 
-  return (
-    <div className="container mx-auto space-y-6 py-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Orders</h1>
-        <p className="text-muted-foreground">Manage and track your orders</p>
-      </div>
+	return (
+		<div className="container mx-auto space-y-6 py-6">
+			<div>
+				<h1 className="text-3xl font-bold tracking-tight">Orders</h1>
+				<p className="text-muted-foreground">Manage and track your orders</p>
+			</div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <OrderList onOrderClick={handleOrderClick} onCreateOrder={handleCreateOrder} />
+			<div className="grid gap-6 lg:grid-cols-2">
+				<OrderList
+					onOrderClick={handleOrderClick}
+					onCreateOrder={handleCreateOrder}
+				/>
 
-        {selectedOrderId && (
-          <OrderDetail
-            orderId={selectedOrderId}
-            onEdit={() => {
-              alert("Edit order dialog - Coming soon!");
-            }}
-            onDelete={handleDeleteOrder}
-          />
-        )}
-      </div>
-    </div>
-  );
+				{selectedOrderId && (
+					<OrderDetail
+						orderId={selectedOrderId}
+						onEdit={() => {
+							alert("Edit order dialog - Coming soon!");
+						}}
+						onDelete={handleDeleteOrder}
+					/>
+				)}
+			</div>
+		</div>
+	);
 }

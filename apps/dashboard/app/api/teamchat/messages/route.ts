@@ -1,124 +1,170 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 import { getCurrentAuth } from "@/lib/auth";
-import { createMessage, getChannelMessages } from "@/lib/teamchat/repository";
-import { getSocketServer } from "@/lib/teamchat/socket-server";
-import { createMessageSchema } from "@/lib/validations/teamchat";
+import {
+	createMessage,
+	ensureTeamChatSchemaReady,
+	getChannelMessages,
+} from "@/lib/teamchat/repository";
+import {
+	createMessageSchema,
+	messageResponseSchema,
+	messagesResponseSchema,
+} from "@/lib/validations/teamchat";
 
 const withNoStore = (response: NextResponse) => {
-  response.headers.set("Cache-Control", "no-store");
-  return response;
+	response.headers.set("Cache-Control", "no-store");
+	return response;
 };
 
 const unauthorized = () =>
-  withNoStore(
-    NextResponse.json(
-      {
-        error: "Niste autorizovani."
-      },
-      { status: 401 }
-    )
-  );
+	withNoStore(
+		NextResponse.json(
+			{
+				error: "Niste autorizovani.",
+			},
+			{ status: 401 },
+		),
+	);
 
 export async function GET(request: NextRequest) {
-  const auth = await getCurrentAuth();
-  if (!auth || !auth.user || !auth.user.company) {
-    return unauthorized();
-  }
+	try {
+		const auth = await getCurrentAuth();
+		if (!auth || !auth.user || !auth.user.company) {
+			return unauthorized();
+		}
 
-  const channelId = request.nextUrl.searchParams.get("channelId");
-  if (!channelId) {
-    return withNoStore(
-      NextResponse.json(
-        {
-          error: "Parametar channelId je obavezan."
-        },
-        { status: 400 }
-      )
-    );
-  }
+		const { searchParams } = new URL(request.url);
+		const channelId = searchParams.get("channelId");
+		const limit = parseInt(searchParams.get("limit") || "50", 10);
 
-  try {
-    const messages = await getChannelMessages({
-      companyId: auth.user.company.id,
-      channelId,
-      userId: auth.user.id
-    });
+		if (!channelId) {
+			return withNoStore(
+				NextResponse.json(
+					{
+						error: "channelId je obavezan.",
+					},
+					{ status: 400 },
+				),
+			);
+		}
 
-    return withNoStore(
-      NextResponse.json({
-        messages
-      })
-    );
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Preuzimanje poruka nije uspelo.";
-    return withNoStore(
-      NextResponse.json(
-        {
-          error: message
-        },
-        { status: 400 }
-      )
-    );
-  }
+		await ensureTeamChatSchemaReady();
+
+		try {
+			const messages = await getChannelMessages(
+				channelId,
+				auth.user.id,
+				limit,
+			);
+			const validated = messagesResponseSchema.parse({ messages });
+
+			return withNoStore(NextResponse.json(validated));
+		} catch (error) {
+			console.error("[teamchat] GET messages error:", error);
+			const message =
+				error instanceof Error
+					? error.message
+					: "Preuzimanje poruka nije uspelo.";
+			return withNoStore(
+				NextResponse.json(
+					{
+						error: message,
+					},
+					{ status: 500 },
+				),
+			);
+		}
+	} catch (error) {
+		console.error("[teamchat] GET messages route error:", error);
+		const message =
+			error instanceof Error
+				? error.message
+				: "Preuzimanje poruka nije uspelo.";
+		return withNoStore(
+			NextResponse.json(
+				{
+					error: message,
+				},
+				{ status: 500 },
+			),
+		);
+	}
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await getCurrentAuth();
-  if (!auth || !auth.user || !auth.user.company) {
-    return unauthorized();
-  }
+	try {
+		const auth = await getCurrentAuth();
+		if (!auth || !auth.user || !auth.user.company) {
+			return unauthorized();
+		}
 
-  const json = await request.json().catch(() => null);
-  const parsed = createMessageSchema.safeParse(json);
+		const json = await request.json().catch(() => null);
+		if (!json || typeof json !== "object") {
+			return withNoStore(
+				NextResponse.json(
+					{
+						error: "Nevalidni podaci.",
+					},
+					{ status: 400 },
+				),
+			);
+		}
 
-  if (!parsed.success) {
-    return withNoStore(
-      NextResponse.json(
-        {
-          error: "Nevalidni podaci."
-        },
-        { status: 400 }
-      )
-    );
-  }
+		const parsed = createMessageSchema.safeParse(json);
+		if (!parsed.success) {
+			return withNoStore(
+				NextResponse.json(
+					{
+						error: "Nevalidni podaci.",
+						details: parsed.error.flatten(),
+					},
+					{ status: 400 },
+				),
+			);
+		}
 
-  try {
-    const message = await createMessage({
-      companyId: auth.user.company.id,
-      channelId: parsed.data.channelId,
-      userId: auth.user.id,
-      content: parsed.data.content ?? null,
-      fileUrl: parsed.data.fileUrl ?? null
-    });
+		await ensureTeamChatSchemaReady();
 
-    const io = getSocketServer();
-    if (io) {
-      io.to(message.channelId).emit("message:new", {
-        channelId: message.channelId,
-        message
-      });
-      io.emit("channel:updated", {
-        channelId: message.channelId
-      });
-    }
+		try {
+			const message = await createMessage(
+				parsed.data.channelId,
+				auth.user.id,
+				parsed.data.content,
+				parsed.data.fileUrl || null,
+			);
+			const validated = messageResponseSchema.parse({ message });
 
-    return withNoStore(
-      NextResponse.json({
-        message
-      })
-    );
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Slanje poruke nije uspelo.";
-    return withNoStore(
-      NextResponse.json(
-        {
-          error: message
-        },
-        { status: 400 }
-      )
-    );
-  }
+			return withNoStore(NextResponse.json(validated));
+		} catch (error) {
+			console.error("[teamchat] POST messages error:", error);
+			const message =
+				error instanceof Error
+					? error.message
+					: "Slanje poruke nije uspelo.";
+			return withNoStore(
+				NextResponse.json(
+					{
+						error: message,
+					},
+					{ status: 500 },
+				),
+			);
+		}
+	} catch (error) {
+		console.error("[teamchat] POST messages route error:", error);
+		const message =
+			error instanceof Error
+				? error.message
+				: "Slanje poruke nije uspelo.";
+		return withNoStore(
+			NextResponse.json(
+				{
+					error: message,
+				},
+				{ status: 500 },
+			),
+		);
+	}
 }
-
 

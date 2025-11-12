@@ -1,5 +1,16 @@
 "use client";
 
+import { ChevronRight } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -13,38 +24,26 @@ import {
   SidebarMenuSubItem,
   useSidebar
 } from "@/components/ui/sidebar";
+import { useUnreadMessages } from "@/hooks/use-unread-messages";
+import type { LucideIcon } from "./nav-icons";
 import {
   ArchiveRestoreIcon,
   BadgeDollarSignIcon,
   BrainCircuitIcon,
   ChartBarDecreasingIcon,
-  ChartPieIcon,
-  ChevronRight,
   ClipboardCheckIcon,
   FingerprintIcon,
   FolderDotIcon,
-  FolderIcon,
   KeyIcon,
   MailIcon,
   MessageSquareIcon,
   SettingsIcon,
-  SlidersHorizontalIcon,
   ShoppingBagIcon,
+  SlidersHorizontalIcon,
   UserIcon,
   UsersIcon,
-  WalletMinimalIcon,
-  type LucideIcon
-} from "lucide-react";
-import Link from "next/link";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { usePathname } from "next/navigation";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
+  WalletMinimalIcon
+} from "./nav-icons";
 
 type NavGroup = {
   title: string;
@@ -59,6 +58,7 @@ type NavItem = {
   isDataBadge?: string;
   isNew?: boolean;
   newTab?: boolean;
+  unreadCount?: number;
   items?: NavItem;
 }[];
 
@@ -72,10 +72,9 @@ export const navItems: NavGroup[] = [
         icon: WalletMinimalIcon
       },
       {
-        title: "TeamChat",
-        href: "/apps/teamchat",
-        icon: MessageSquareIcon,
-        isDataBadge: "5"
+        title: "Chat",
+        href: "/apps/chat",
+        icon: MessageSquareIcon
       },
       {
         title: "Inbox",
@@ -217,10 +216,25 @@ export const navItems: NavGroup[] = [
 export function NavMain() {
   const pathname = usePathname();
   const { isMobile } = useSidebar();
+  const { unreadCount } = useUnreadMessages();
+
+  // Dodaj unread count u Chat item ako postoji
+  const enhancedNavItems = navItems.map((nav) => ({
+    ...nav,
+    items: nav.items.map((item) => {
+      if (item.href === "/apps/chat") {
+        return {
+          ...item,
+          unreadCount: unreadCount > 0 ? unreadCount : undefined
+        };
+      }
+      return item;
+    })
+  }));
 
   return (
     <>
-      {navItems.map((nav) => (
+      {enhancedNavItems.map((nav) => (
         <SidebarGroup key={nav.title}>
           <SidebarGroupLabel>{nav.title}</SidebarGroupLabel>
           <SidebarGroupContent className="flex flex-col gap-2">
@@ -235,6 +249,11 @@ export function NavMain() {
                             <SidebarMenuButton tooltip={item.title}>
                               {item.icon && <item.icon />}
                               <span>{item.title}</span>
+                              {!!item.unreadCount && item.unreadCount > 0 && (
+                                <SidebarMenuBadge className="bg-primary text-primary-foreground ml-auto">
+                                  {item.unreadCount > 99 ? "99+" : item.unreadCount}
+                                </SidebarMenuBadge>
+                              )}
                               <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                             </SidebarMenuButton>
                           </DropdownMenuTrigger>
@@ -245,7 +264,7 @@ export function NavMain() {
                             <DropdownMenuLabel>{item.title}</DropdownMenuLabel>
                             {item.items?.map((item) => (
                               <DropdownMenuItem
-                                className="hover:text-foreground active:text-foreground !hover:bg-primary/10 !active:bg-primary/10"
+                                className="hover:text-foreground active:text-foreground"
                                 asChild
                                 key={item.title}>
                                 <a href={item.href}>{item.title}</a>
@@ -257,19 +276,25 @@ export function NavMain() {
                       <Collapsible className="group/collapsible block group-data-[collapsible=icon]:hidden">
                         <CollapsibleTrigger asChild>
                           <SidebarMenuButton
-                            className="hover:text-foreground active:text-foreground hover:bg-primary/10 active:bg-primary/10"
+                            className="hover:text-foreground active:text-foreground"
                             tooltip={item.title}>
                             {item.icon && <item.icon />}
                             <span>{item.title}</span>
+                            {!!item.unreadCount && item.unreadCount > 0 && (
+                              <SidebarMenuBadge className="bg-primary text-primary-foreground ml-auto">
+                                {item.unreadCount > 99 ? "99+" : item.unreadCount}
+                              </SidebarMenuBadge>
+                            )}
                             <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                           </SidebarMenuButton>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                           <SidebarMenuSub>
                             {item?.items?.map((subItem, key) => (
+                              // biome-ignore lint/suspicious/noArrayIndexKey: Nav items are static and order won't change
                               <SidebarMenuSubItem key={key}>
                                 <SidebarMenuSubButton
-                                  className="hover:text-foreground active:text-foreground hover:bg-primary/10 active:bg-primary/10"
+                                  className="hover:text-foreground active:text-foreground"
                                   isActive={pathname === subItem.href}
                                   asChild>
                                   <Link href={subItem.href} target={subItem.newTab ? "_blank" : ""}>
@@ -283,31 +308,38 @@ export function NavMain() {
                       </Collapsible>
                     </>
                   ) : (
-                    <SidebarMenuButton
-                      className="hover:text-foreground active:text-foreground hover:bg-primary/10 active:bg-primary/10"
-                      isActive={pathname === item.href}
-                      tooltip={item.title}
-                      asChild>
-                      <Link href={item.href} target={item.newTab ? "_blank" : ""}>
-                        {item.icon && <item.icon />}
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  )}
-                  {!!item.isComing && (
-                    <SidebarMenuBadge className="peer-hover/menu-button:text-foreground opacity-50">
-                      Coming
-                    </SidebarMenuBadge>
-                  )}
-                  {!!item.isNew && (
-                    <SidebarMenuBadge className="border border-green-400 text-green-600 peer-hover/menu-button:text-green-600">
-                      New
-                    </SidebarMenuBadge>
-                  )}
-                  {!!item.isDataBadge && (
-                    <SidebarMenuBadge className="peer-hover/menu-button:text-foreground">
-                      {item.isDataBadge}
-                    </SidebarMenuBadge>
+                    <>
+                      <SidebarMenuButton
+                        className="hover:text-foreground active:text-foreground"
+                        isActive={pathname === item.href}
+                        tooltip={item.title}
+                        asChild>
+                        <Link href={item.href} target={item.newTab ? "_blank" : ""}>
+                          {item.icon && <item.icon />}
+                          <span>{item.title}</span>
+                          {!!item.unreadCount && item.unreadCount > 0 && (
+                            <SidebarMenuBadge className="bg-primary text-primary-foreground ml-auto">
+                              {item.unreadCount > 99 ? "99+" : item.unreadCount}
+                            </SidebarMenuBadge>
+                          )}
+                        </Link>
+                      </SidebarMenuButton>
+                      {!!item.isComing && (
+                        <SidebarMenuBadge className="peer-hover/menu-button:text-foreground opacity-50">
+                          Coming
+                        </SidebarMenuBadge>
+                      )}
+                      {!!item.isNew && (
+                        <SidebarMenuBadge className="border border-green-400 text-green-600 peer-hover/menu-button:text-green-600">
+                          New
+                        </SidebarMenuBadge>
+                      )}
+                      {!!item.isDataBadge && (
+                        <SidebarMenuBadge className="peer-hover/menu-button:text-foreground">
+                          {item.isDataBadge}
+                        </SidebarMenuBadge>
+                      )}
+                    </>
                   )}
                 </SidebarMenuItem>
               ))}

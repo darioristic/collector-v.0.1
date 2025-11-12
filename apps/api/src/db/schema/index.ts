@@ -6,4 +6,5 @@ export * from "./sales.schema";
 export * from "./projects.schema";
 export * from "./hr.schema";
 export * from "./auth.schema";
+export * from "./notifications.schema";
 

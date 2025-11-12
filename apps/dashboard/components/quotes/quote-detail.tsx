@@ -44,8 +44,8 @@ type QuoteDetailProps = {
 	quoteId: number | null;
 	open: boolean;
 	onClose: () => void;
-	onEdit?: (quote: Quote) => void;
-	onDelete?: (quoteId: number) => void;
+	onEdit?: (_quote: Quote) => void;
+	onDelete?: (_quoteId: number) => void;
 };
 
 async function fetchAccount(accountId: string): Promise<Account> {

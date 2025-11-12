@@ -1,4 +1,5 @@
 import {
+	bigint,
 	index,
 	pgTable,
 	text,
@@ -6,10 +7,9 @@ import {
 	uniqueIndex,
 	uuid,
 	varchar,
-	bigint,
 } from "drizzle-orm/pg-core";
 
-import { users } from "./teamchat";
+import { teamchatUsers } from "./teamchat";
 
 export const vaultFolders = pgTable(
 	"vault_folders",
@@ -17,7 +17,7 @@ export const vaultFolders = pgTable(
 		id: uuid("id").defaultRandom().primaryKey(),
 		name: varchar("name", { length: 255 }).notNull(),
 		parentId: uuid("parent_id"),
-		createdBy: uuid("created_by").references(() => users.id, {
+		createdBy: uuid("created_by").references(() => teamchatUsers.id, {
 			onDelete: "set null",
 		}),
 		createdAt: timestamp("created_at", { withTimezone: true })
@@ -48,7 +48,7 @@ export const vaultFiles = pgTable(
 		folderId: uuid("folder_id")
 			.notNull()
 			.references(() => vaultFolders.id, { onDelete: "cascade" }),
-		uploadedBy: uuid("uploaded_by").references(() => users.id, {
+		uploadedBy: uuid("uploaded_by").references(() => teamchatUsers.id, {
 			onDelete: "set null",
 		}),
 		createdAt: timestamp("created_at", { withTimezone: true })

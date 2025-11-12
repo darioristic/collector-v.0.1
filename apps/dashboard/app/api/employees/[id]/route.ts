@@ -1,12 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
-
+import { eq } from "drizzle-orm";
+import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { employees, type NewEmployee } from "@/lib/db/schema/employees";
 import {
 	employeeIdSchema,
 	employeeUpdateSchema,
 } from "@/lib/validations/employees";
-import { eq } from "drizzle-orm";
 
 import { serializeEmployee } from "../shared";
 

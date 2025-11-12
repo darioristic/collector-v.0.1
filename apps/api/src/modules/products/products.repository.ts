@@ -22,6 +22,7 @@ import type {
   InventoryAdjustmentInput,
   InventoryWriteInput,
   InventoryLocationDefinition,
+  ProductCategorySummary,
   ProductEntity,
   ProductInventoryLocationSummary,
   ProductInventorySummary,
@@ -552,7 +553,7 @@ class DrizzleProductsRepository implements ProductsRepository {
     const deleted = await this.database
       .delete(products)
       .where(eq(products.id, id))
-      .returning({ id: products.id });
+      .returning();
 
     return deleted.length > 0;
   }

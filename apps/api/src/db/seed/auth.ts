@@ -1,212 +1,242 @@
-import { eq, inArray, sql } from "drizzle-orm";
 import { hashSync } from "bcryptjs";
+import { eq, inArray, sql } from "drizzle-orm";
 
 import { db as defaultDb } from "../index";
 import { authSessions, companies, companyUsers } from "../schema/auth.schema";
-import { roleKey, roles, userRoles, users } from "../schema/settings.schema";
+import type { roleKey } from "../schema/auth.schema";
+import { roles, userRoles, users } from "../schema/settings.schema";
 
 type RoleSeed = {
-  key: (typeof roleKey.enumValues)[number];
-  name: string;
-  description: string;
+	key: (typeof roleKey.enumValues)[number];
+	name: string;
+	description: string;
 };
 
 type UserSeed = {
-  email: string;
-  name: string;
-  password: string;
-  role: RoleSeed["key"];
+	email: string;
+	name: string;
+	password: string;
+	role: RoleSeed["key"];
 };
 
 const SALT_ROUNDS = 12;
 
 const COMPANY_SEED = {
-  name: "Collector Labs",
-  slug: "collector-labs",
-  domain: "collectorlabs.test"
+	name: "Collector Labs",
+	slug: "collector-labs",
+	domain: "collectorlabs.test",
 };
 
 const ROLE_DEFINITIONS: RoleSeed[] = [
-  {
-    key: "admin",
-    name: "Administrator",
-    description: "Potpuni pristup svim resursima i podešavanjima."
-  },
-  {
-    key: "manager",
-    name: "Manager",
-    description: "Može da upravlja timovima, korisnicima i većinom poslovnih podataka."
-  },
-  {
-    key: "user",
-    name: "User",
-    description: "Standardni korisnik sa osnovnim pristupom informacijama svoje kompanije."
-  }
+	{
+		key: "admin",
+		name: "Administrator",
+		description: "Potpuni pristup svim resursima i podešavanjima.",
+	},
+	{
+		key: "manager",
+		name: "Manager",
+		description:
+			"Može da upravlja timovima, korisnicima i većinom poslovnih podataka.",
+	},
+	{
+		key: "user",
+		name: "User",
+		description:
+			"Standardni korisnik sa osnovnim pristupom informacijama svoje kompanije.",
+	},
 ];
 
 const USER_DEFINITIONS: UserSeed[] = [
-  {
-    email: "dario@collectorlabs.test",
-    name: "Dario Ristic",
-    password: "Collector!2025",
-    role: "admin"
-  },
-  {
-    email: "miha@collectorlabs.test",
-    name: "Miha Manager",
-    password: "Collector!2025",
-    role: "manager"
-  },
-  {
-    email: "tara@collectorlabs.test",
-    name: "Tara User",
-    password: "Collector!2025",
-    role: "user"
-  }
+	{
+		email: "dario@collectorlabs.test",
+		name: "Dario Ristic",
+		password: "Collector!2025",
+		role: "admin",
+	},
+	{
+		email: "miha@collectorlabs.test",
+		name: "Miha Manager",
+		password: "Collector!2025",
+		role: "manager",
+	},
+	{
+		email: "tara@collectorlabs.test",
+		name: "Tara User",
+		password: "Collector!2025",
+		role: "user",
+	},
 ];
 
 export const seedAuth = async (database = defaultDb) => {
-  await database.transaction(async (tx) => {
-    await Promise.all(
-      ROLE_DEFINITIONS.map((role) =>
-        tx
-          .insert(roles)
-          .values({
-            key: role.key,
-            name: role.name,
-            description: role.description
-          })
-          .onConflictDoUpdate({
-            target: roles.key,
-            set: {
-              name: role.name,
-              description: role.description
-            }
-          })
-      )
-    );
+	await database.transaction(async (tx) => {
+		// Ensure unique index exists for company_users table
+		// This is needed for onConflictDoUpdate to work
+		// First, try to drop constraint if it exists (as constraint-based unique)
+		await tx.execute(sql`
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM pg_constraint 
+          WHERE conname = 'company_users_company_user_key'
+        ) THEN
+          ALTER TABLE "company_users" 
+          DROP CONSTRAINT IF EXISTS "company_users_company_user_key";
+        END IF;
+      END $$;
+    `);
 
-    const roleRecords = await tx
-      .select({
-        id: roles.id,
-        key: roles.key
-      })
-      .from(roles)
-      .where(inArray(roles.key, ROLE_DEFINITIONS.map((role) => role.key)));
+		// Create unique index if it doesn't exist
+		await tx.execute(sql`
+      CREATE UNIQUE INDEX IF NOT EXISTS "company_users_company_user_key" 
+      ON "company_users" ("company_id", "user_id");
+    `);
 
-    const roleMap = new Map(roleRecords.map((role) => [role.key, role.id]));
+		await Promise.all(
+			ROLE_DEFINITIONS.map((role) =>
+				tx
+					.insert(roles)
+					.values({
+						key: role.key,
+						name: role.name,
+						description: role.description,
+					})
+					.onConflictDoUpdate({
+						target: roles.key,
+						set: {
+							name: role.name,
+							description: role.description,
+						},
+					}),
+			),
+		);
 
-    const [companyRecord] = await tx
-      .insert(companies)
-      .values({
-        name: COMPANY_SEED.name,
-        slug: COMPANY_SEED.slug,
-        domain: COMPANY_SEED.domain
-      })
-      .onConflictDoUpdate({
-        target: companies.slug,
-        set: {
-          name: COMPANY_SEED.name,
-          domain: COMPANY_SEED.domain,
-          updatedAt: sql`NOW()`
-        }
-      })
-      .returning({
-        id: companies.id,
-        createdBy: companies.createdBy
-      });
+		const roleRecords = await tx
+			.select({
+				id: roles.id,
+				key: roles.key,
+			})
+			.from(roles)
+			.where(
+				inArray(
+					roles.key,
+					ROLE_DEFINITIONS.map((role) => role.key),
+				),
+			);
 
-    if (!companyRecord) {
-      throw new Error("Company seed failed to insert.");
-    }
+		const roleMap = new Map(roleRecords.map((role) => [role.key, role.id]));
 
-    const seededUsers = [];
+		const [companyRecord] = await tx
+			.insert(companies)
+			.values({
+				name: COMPANY_SEED.name,
+				slug: COMPANY_SEED.slug,
+				domain: COMPANY_SEED.domain,
+			})
+			.onConflictDoUpdate({
+				target: companies.slug,
+				set: {
+					name: COMPANY_SEED.name,
+					domain: COMPANY_SEED.domain,
+					updatedAt: sql`NOW()`,
+				},
+			})
+			.returning();
 
-    for (const definition of USER_DEFINITIONS) {
-      const hashed = hashSync(definition.password, SALT_ROUNDS);
-      const roleId = roleMap.get(definition.role);
+		if (!companyRecord) {
+			throw new Error("Company seed failed to insert.");
+		}
 
-      if (!roleId) {
-        throw new Error(`Role ${definition.role} nije pronađena u bazi.`);
-      }
+		const companyId = companyRecord.id;
 
-      const [userRecord] = await tx
-        .insert(users)
-        .values({
-          email: definition.email,
-          name: definition.name,
-          status: "active",
-          hashedPassword: hashed,
-          defaultCompanyId: companyRecord.id
-        })
-        .onConflictDoUpdate({
-          target: users.email,
-          set: {
-            name: definition.name,
-            status: "active",
-            hashedPassword: hashed,
-            defaultCompanyId: companyRecord.id,
-            updatedAt: sql`NOW()`
-          }
-        })
-        .returning({
-          id: users.id
-        });
+		const seededUsers = [];
 
-      if (!userRecord) {
-        throw new Error(`Korisnik ${definition.email} nije kreiran.`);
-      }
+		for (const definition of USER_DEFINITIONS) {
+			const hashed = hashSync(definition.password, SALT_ROUNDS);
+			const roleId = roleMap.get(definition.role);
 
-      seededUsers.push({
-        id: userRecord.id,
-        email: definition.email,
-        roleKey: definition.role,
-        roleId
-      });
+			if (!roleId) {
+				throw new Error(`Role ${definition.role} nije pronađena u bazi.`);
+			}
 
-      await tx
-        .insert(userRoles)
-        .values({
-          userId: userRecord.id,
-          roleId
-        })
-        .onConflictDoNothing();
+			const [userRecord] = await tx
+				.insert(users)
+				.values({
+					email: definition.email,
+					name: definition.name,
+					status: "active",
+					hashedPassword: hashed,
+					defaultCompanyId: companyId,
+				})
+				.onConflictDoUpdate({
+					target: users.email,
+					set: {
+						name: definition.name,
+						status: "active",
+						hashedPassword: hashed,
+						defaultCompanyId: companyId,
+						updatedAt: sql`NOW()`,
+					},
+				})
+				.returning();
 
-      await tx
-        .insert(companyUsers)
-        .values({
-          companyId: companyRecord.id,
-          userId: userRecord.id,
-          roleId,
-          role: definition.role
-        })
-        .onConflictDoUpdate({
-          target: [companyUsers.companyId, companyUsers.userId],
-          set: {
-            roleId,
-            role: definition.role,
-            updatedAt: sql`NOW()`
-          }
-        });
-    }
+			if (!userRecord) {
+				throw new Error(`Korisnik ${definition.email} nije kreiran.`);
+			}
 
-    const adminUser = seededUsers.find((user) => user.roleKey === "admin");
+			seededUsers.push({
+				id: userRecord.id,
+				email: definition.email,
+				roleKey: definition.role,
+				roleId,
+			});
 
-    if (adminUser) {
-      await tx
-        .update(companies)
-        .set({
-          createdBy: adminUser.id,
-          updatedBy: adminUser.id,
-          updatedAt: sql`NOW()`
-        })
-        .where(eq(companies.id, companyRecord.id));
-    }
+			await tx
+				.insert(userRoles)
+				.values({
+					userId: userRecord.id,
+					roleId,
+				})
+				.onConflictDoNothing();
 
-    if (seededUsers.length > 0) {
-      await tx.delete(authSessions).where(inArray(authSessions.userId, seededUsers.map((user) => user.id)));
-    }
-  });
+			await tx
+				.insert(companyUsers)
+				.values({
+					companyId: companyId,
+					userId: userRecord.id,
+					roleId,
+					role: definition.role,
+				})
+				.onConflictDoUpdate({
+					target: [companyUsers.companyId, companyUsers.userId],
+					set: {
+						roleId,
+						role: definition.role,
+						updatedAt: sql`NOW()`,
+					},
+				});
+		}
+
+		const adminUser = seededUsers.find((user) => user.roleKey === "admin");
+
+		if (adminUser) {
+			await tx
+				.update(companies)
+				.set({
+					createdBy: adminUser.id,
+					updatedBy: adminUser.id,
+					updatedAt: sql`NOW()`,
+				})
+				.where(eq(companies.id, companyId));
+		}
+
+		if (seededUsers.length > 0) {
+			await tx.delete(authSessions).where(
+				inArray(
+					authSessions.userId,
+					seededUsers.map((user) => user.id),
+				),
+			);
+		}
+	});
 };
-
-

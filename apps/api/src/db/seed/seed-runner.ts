@@ -213,7 +213,8 @@ function sortModulesByDependencies(modules: SeedModule[]): SeedModule[] {
 async function runModule(
   module: SeedModule,
   database: AppDatabase,
-  logger: SeedLogger
+  logger: SeedLogger,
+  options: SeedOptions
 ): Promise<SeedResult> {
   const startTime = Date.now();
 
@@ -237,7 +238,7 @@ async function runModule(
     logger.module(module.name, 'error');
     logger.error(`Failed ${module.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
 
-    if (error instanceof Error && logger.verbose) {
+    if (error instanceof Error && options.verbose) {
       logger.debug(`Stack trace: ${error.stack}`);
     }
 
@@ -351,7 +352,7 @@ export async function runSeeds(
   const results: SeedResult[] = [];
 
   for (const module of activeModules) {
-    const result = await runModule(module, database, logger);
+    const result = await runModule(module, database, logger, options);
     results.push(result);
 
     // Stop on first error if continueOnError is false

@@ -2,15 +2,15 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 import {
-	withNoStore,
 	unauthorizedResponse,
-	serializeNotification,
+	withNoStore,
 } from "@/app/api/notifications/_utils";
-import { getDb } from "@/lib/db";
-import { notifications } from "@/lib/db/schema/core";
-import { emitNotification } from "@/lib/socket";
 import { getCurrentAuth } from "@/lib/auth";
 import { createNotificationSchema } from "@/lib/validations/notifications";
+
+const getNotificationServiceUrl = () => {
+	return process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL || "http://localhost:4002";
+};
 
 export async function POST(request: NextRequest) {
 	const auth = await getCurrentAuth();
@@ -34,34 +34,49 @@ export async function POST(request: NextRequest) {
 		);
 	}
 
-	const db = await getDb();
-	const now = new Date();
-	const { title, message, recipientId, type, link } = parsed.data;
+	const token = request.cookies.get("auth_session")?.value;
 
-	const [notification] = await db
-		.insert(notifications)
-		.values({
-			title,
-			message,
-			type: type ?? "info",
-			link: link && link.length > 0 ? link : null,
-			recipientId,
-			companyId: auth.user.company.id,
-			read: false,
-			createdAt: now,
-		})
-		.returning();
-
-	const serialized = serializeNotification(notification);
-
-	emitNotification(recipientId, "notification:new", serialized);
-
-	return withNoStore(
-		NextResponse.json(
-			{
-				data: serialized,
+	try {
+		const response = await fetch(`${getNotificationServiceUrl()}/api/notifications`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				...(token && {
+					Authorization: `Bearer ${token}`,
+				}),
 			},
-			{ status: 201 },
-		),
-	);
+			body: JSON.stringify(parsed.data),
+		});
+
+		if (!response.ok) {
+			const error = await response.json().catch(() => ({ error: "Failed to create notification" }));
+			return withNoStore(
+				NextResponse.json(
+					{
+						error: error.error || "Failed to create notification",
+					},
+					{ status: response.status },
+				),
+			);
+		}
+
+		const notification = await response.json();
+		return withNoStore(
+			NextResponse.json(
+				{
+					data: notification,
+				},
+				{ status: 201 },
+			),
+		);
+	} catch (error) {
+		return withNoStore(
+			NextResponse.json(
+				{
+					error: "Failed to create notification",
+				},
+				{ status: 500 },
+			),
+		);
+	}
 }

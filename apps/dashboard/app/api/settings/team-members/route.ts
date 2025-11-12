@@ -1,16 +1,15 @@
+import { and, desc, eq, ilike, inArray, or, type SQL } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-import { and, desc, eq, ilike, or, type SQL } from "drizzle-orm";
-
 import { getCurrentAuth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
+import { users } from "@/lib/db/schema/core";
 import { teamMembers } from "@/lib/db/schema/team-members";
 import {
 	createTeamMemberSchema,
 	listTeamMembersQuerySchema,
 	listTeamMembersResponseSchema,
-	teamMemberApiSchema,
 	type TeamMemberApi,
 } from "@/lib/validations/settings/team-members";
 
@@ -49,22 +48,48 @@ const isUniqueViolation = (error: unknown): error is PgError =>
 
 const serializeTeamMember = (
 	member: typeof teamMembers.$inferSelect,
-): TeamMemberApi =>
-	teamMemberApiSchema.parse({
-		id: member.id,
-		firstName: member.firstName,
-		lastName: member.lastName,
-		email: member.email,
-		role: member.role,
-		status: member.status,
-		avatarUrl: member.avatarUrl,
-		createdAt: member.createdAt.toISOString(),
-		updatedAt: member.updatedAt.toISOString(),
-	});
+	userId: string | null = null,
+): TeamMemberApi => ({
+	id: member.id,
+	firstName: member.firstName,
+	lastName: member.lastName,
+	email: member.email,
+	role: member.role,
+	status: member.status as TeamMemberApi["status"],
+	avatarUrl: member.avatarUrl,
+	userId: userId ?? null,
+	createdAt: member.createdAt.toISOString(),
+	updatedAt: member.updatedAt.toISOString(),
+});
 
 export async function GET(request: NextRequest) {
-	const auth = await getCurrentAuth();
+	let auth: Awaited<ReturnType<typeof getCurrentAuth>>;
+
+	try {
+		auth = await getCurrentAuth();
+	} catch (error) {
+		console.error("[team-members] Error during authentication", {
+			error: error instanceof Error ? error.message : String(error),
+			stack: error instanceof Error ? error.stack : undefined,
+			url: request.url,
+		});
+		return withNoStore(
+			NextResponse.json(
+				{
+					error: "Greška pri autentifikaciji.",
+				},
+				{ status: 401 },
+			),
+		);
+	}
+
 	if (!auth || !auth.user) {
+		console.error("[team-members] Authentication failed", {
+			hasAuth: !!auth,
+			hasUser: !!auth?.user,
+			url: request.url,
+			method: request.method,
+		});
 		return withNoStore(
 			NextResponse.json(
 				{
@@ -78,6 +103,12 @@ export async function GET(request: NextRequest) {
 	const companyId = resolveCompanyId(auth);
 
 	if (!companyId) {
+		console.warn("[team-members] No companyId found for user", {
+			userId: auth.user.id,
+			email: auth.user.email,
+			defaultCompanyId: auth.user.defaultCompanyId,
+			company: auth.user.company,
+		});
 		return withNoStore(
 			NextResponse.json({
 				data: [],
@@ -110,30 +141,124 @@ export async function GET(request: NextRequest) {
 
 	if (search) {
 		const pattern = `%${search.trim()}%`;
-		filters.push(
-			or(
-				ilike(teamMembers.firstName, pattern),
-				ilike(teamMembers.lastName, pattern),
-				ilike(teamMembers.email, pattern),
-			)!,
+		const searchFilter = or(
+			ilike(teamMembers.firstName, pattern),
+			ilike(teamMembers.lastName, pattern),
+			ilike(teamMembers.email, pattern),
 		);
+
+		if (searchFilter) {
+			filters.push(searchFilter);
+		}
 	}
 
-	const baseQuery = db.select().from(teamMembers);
-	const filteredQuery =
-		filters.length === 1
-			? baseQuery.where(filters[0]!)
-			: filters.length > 1
-				? baseQuery.where(and(...filters))
-				: baseQuery;
+	const [initialFilter, ...remainingFilters] = filters as [
+		SQL<unknown>,
+		...SQL<unknown>[],
+	];
 
-	const rows = await filteredQuery.orderBy(desc(teamMembers.updatedAt));
+	let whereClause: SQL<unknown> = initialFilter;
 
-	const payload = listTeamMembersResponseSchema.parse({
-		data: rows.map(serializeTeamMember),
-	});
+	for (const filter of remainingFilters) {
+		const combined = and(whereClause, filter);
+		whereClause = combined ?? whereClause;
+	}
 
-	return withNoStore(NextResponse.json(payload));
+	try {
+		const rows = await db
+			.select()
+			.from(teamMembers)
+			.where(whereClause)
+			.orderBy(desc(teamMembers.updatedAt));
+
+		const emails = rows.map((row) => row.email);
+		const userMap = new Map<string, string>();
+
+		if (emails.length > 0) {
+			try {
+				const userRows = await db
+					.select({ id: users.id, email: users.email })
+					.from(users)
+					.where(inArray(users.email, emails));
+
+				userRows.forEach((user) => {
+					userMap.set(user.email.toLowerCase(), user.id);
+				});
+
+				console.log(
+					`[team-members] Mapped ${userRows.length} users for ${emails.length} team members`,
+				);
+				console.log(
+					"[team-members] User mapping:",
+					Array.from(userMap.entries()).map(([email, id]) => ({
+						email,
+						userId: id,
+					})),
+				);
+			} catch (userError) {
+				console.warn(
+					"[team-members] Failed to fetch users for team members",
+					userError,
+				);
+			}
+		}
+
+		const serializedData = rows.map((member) => {
+			const userId = userMap.get(member.email.toLowerCase()) || null;
+			if (!userId) {
+				console.warn(
+					`[team-members] No user found for team member email: ${member.email}`,
+				);
+			}
+			return serializeTeamMember(member, userId);
+		});
+
+		try {
+			const payload = listTeamMembersResponseSchema.parse({
+				data: serializedData,
+			});
+
+			return withNoStore(NextResponse.json(payload));
+		} catch (validationError) {
+			console.error("[team-members] Validation error", validationError);
+			console.error("[team-members] Serialized data", {
+				count: serializedData.length,
+				sample: serializedData[0],
+				allData: serializedData,
+			});
+
+			const errorMessage =
+				validationError instanceof Error
+					? validationError.message
+					: String(validationError);
+			return withNoStore(
+				NextResponse.json(
+					{
+						error: "Greška pri validaciji podataka.",
+						details: errorMessage,
+					},
+					{ status: 500 },
+				),
+			);
+		}
+	} catch (error) {
+		console.error("[team-members] Error fetching team members", error);
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		const errorStack = error instanceof Error ? error.stack : undefined;
+
+		return withNoStore(
+			NextResponse.json(
+				{
+					error: "Greška pri učitavanju članova tima.",
+					details: errorMessage,
+					...(process.env.NODE_ENV === "development" && errorStack
+						? { stack: errorStack }
+						: {}),
+				},
+				{ status: 500 },
+			),
+		);
+	}
 }
 
 export async function POST(request: NextRequest) {

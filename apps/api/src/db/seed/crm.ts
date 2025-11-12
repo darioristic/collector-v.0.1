@@ -394,9 +394,9 @@ export const seedCrm = async (database = defaultDb) => {
 						owner: sql`excluded.owner`,
 						stage: sql`excluded.stage`,
 						value: sql`excluded.value`,
-						close_date: sql`excluded.close_date`,
+						closeDate: sql`excluded.close_date`,
 						notes: sql`excluded.notes`,
-						updated_at: sql`NOW()`,
+						updatedAt: sql`NOW()`,
 					},
 				});
 		}

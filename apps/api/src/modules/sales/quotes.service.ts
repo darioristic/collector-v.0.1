@@ -309,18 +309,26 @@ export class QuotesService {
     return {
       id: dbQuote.id,
       quoteNumber: dbQuote.quoteNumber,
-      companyId: dbQuote.companyId,
-      contactId: dbQuote.contactId,
+      companyId: dbQuote.companyId ?? null,
+      contactId: dbQuote.contactId ?? null,
       companyName: extras.companyName ?? null,
       contactName: extras.contactName ?? null,
-      issueDate: dbQuote.issueDate,
-      expiryDate: dbQuote.expiryDate,
+      issueDate: dbQuote.issueDate 
+        ? (typeof dbQuote.issueDate === 'string' 
+          ? dbQuote.issueDate 
+          : String(dbQuote.issueDate))
+        : new Date().toISOString().split('T')[0],
+      expiryDate: dbQuote.expiryDate 
+        ? (typeof dbQuote.expiryDate === 'string' 
+          ? dbQuote.expiryDate 
+          : String(dbQuote.expiryDate))
+        : null,
       currency: dbQuote.currency,
       subtotal: Number(dbQuote.subtotal),
       tax: Number(dbQuote.tax),
       total: Number(dbQuote.total),
       status: dbQuote.status,
-      notes: dbQuote.notes,
+      notes: dbQuote.notes ?? null,
       createdAt: dbQuote.createdAt.toISOString(),
       updatedAt: dbQuote.updatedAt.toISOString()
     };

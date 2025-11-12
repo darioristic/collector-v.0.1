@@ -1,14 +1,15 @@
-import type { Server as SocketIOServer } from "socket.io";
+// Socket server utilities for team chat
+// This is a placeholder - actual socket.io server runs separately
 
-declare global {
-	// eslint-disable-next-line no-var
-	var __teamchat_io: SocketIOServer | undefined;
+export function emitTeamChatEvent(
+	channelId: string,
+	event: string,
+	data: unknown,
+): void {
+	// In production, this would emit to a real socket.io server
+	// For now, we just log it
+	console.log(`[teamchat-socket] Event: ${event}`, {
+		channelId,
+		data,
+	});
 }
-
-export const setSocketServer = (server: SocketIOServer) => {
-	globalThis.__teamchat_io = server;
-};
-
-export const getSocketServer = (): SocketIOServer | null => {
-	return globalThis.__teamchat_io ?? null;
-};

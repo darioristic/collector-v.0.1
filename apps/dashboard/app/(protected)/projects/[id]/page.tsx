@@ -1,60 +1,63 @@
 import { Suspense } from "react";
-
-import { ProjectDetailsView } from "@/components/projects/project-details-view";
-import { ProjectDetailsSkeleton } from "@/components/projects/project-details-skeleton";
 import {
-  ProjectDetailsErrorBoundary,
-  ProjectDetailsNotFoundState
+	ProjectDetailsErrorBoundary,
+	ProjectDetailsNotFoundState,
 } from "@/components/projects/project-details-error";
+import { ProjectDetailsSkeleton } from "@/components/projects/project-details-skeleton";
+import { ProjectDetailsView } from "@/components/projects/project-details-view";
 
 type ProjectDetailsPageProps = {
-  params: Promise<{
-    id: string;
-  }>;
+	params: Promise<{
+		id: string;
+	}>;
 };
 
-export default async function ProjectDetailsPage({ params }: ProjectDetailsPageProps) {
-  const { id } = await params;
-  const projectId = normaliseProjectId(id);
+export default async function ProjectDetailsPage({
+	params,
+}: ProjectDetailsPageProps) {
+	const { id } = await params;
+	const projectId = normaliseProjectId(id);
 
-  if (!projectId) {
-    return <ProjectDetailsNotFoundState />;
-  }
+	if (!projectId) {
+		return <ProjectDetailsNotFoundState />;
+	}
 
-  if (!isValidUuid(projectId)) {
-    return <ProjectDetailsNotFoundState projectId={projectId} variant="invalid" />;
-  }
+	if (!isValidUuid(projectId)) {
+		return (
+			<ProjectDetailsNotFoundState projectId={projectId} variant="invalid" />
+		);
+	}
 
-  return (
-    <ProjectDetailsErrorBoundary projectId={projectId}>
-      <Suspense fallback={<ProjectDetailsSkeleton />}>
-        <ProjectDetailsView projectId={projectId} />
-      </Suspense>
-    </ProjectDetailsErrorBoundary>
-  );
+	return (
+		<ProjectDetailsErrorBoundary projectId={projectId}>
+			<Suspense fallback={<ProjectDetailsSkeleton />}>
+				<ProjectDetailsView projectId={projectId} />
+			</Suspense>
+		</ProjectDetailsErrorBoundary>
+	);
 }
 
 function normaliseProjectId(id: string | undefined): string | null {
-  if (!id) {
-    return null;
-  }
+	if (!id) {
+		return null;
+	}
 
-  const trimmed = id.trim();
+	const trimmed = id.trim();
 
-  if (!trimmed) {
-    return null;
-  }
+	if (!trimmed) {
+		return null;
+	}
 
-  try {
-    return decodeURIComponent(trimmed);
-  } catch {
-    return trimmed;
-  }
+	try {
+		return decodeURIComponent(trimmed);
+	} catch {
+		return trimmed;
+	}
 }
 
-const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const uuidRegex =
+	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function isValidUuid(value: string): boolean {
-  return uuidRegex.test(value);
+	return uuidRegex.test(value);
 }
-

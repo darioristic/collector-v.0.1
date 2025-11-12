@@ -51,7 +51,7 @@ const seedModules: SeedModule[] = [
   {
     name: "settings",
     description: "Settings: team members (8 members)",
-    dependencies: [],
+    dependencies: ["auth"],
     seedFn: seedSettings
   }
 ];

@@ -121,8 +121,7 @@ export const seedProducts = async (database = defaultDb) => {
             target: productCategories.id,
             set: {
               name: category.name,
-              description: category.description,
-              updatedAt: sql`NOW()`
+              description: category.description
             }
           })
       )
@@ -141,8 +140,7 @@ export const seedProducts = async (database = defaultDb) => {
             target: inventoryLocations.id,
             set: {
               name: location.name,
-              address: location.address,
-              updatedAt: sql`NOW()`
+              address: location.address
             }
           })
       )

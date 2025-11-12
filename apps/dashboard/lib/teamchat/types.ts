@@ -1,16 +1,3 @@
-export type ChannelMetadata =
-	| {
-			type: "dm";
-			userIds: string[];
-	  }
-	| {
-			type: "group";
-	  }
-	| {
-			type: "custom";
-			[key: string]: unknown;
-	  };
-
 export type ChannelMemberSummary = {
 	id: string;
 	name: string;
@@ -23,25 +10,26 @@ export type ChannelSummary = {
 	id: string;
 	name: string;
 	isPrivate: boolean;
-	metadata: ChannelMetadata | null;
+	metadata: {
+		type: "dm" | "group" | "custom";
+		userIds?: string[];
+	} | null;
 	unreadCount: number;
 	lastMessageAt: Date | null;
 	lastMessagePreview: string | null;
 	members: ChannelMemberSummary[];
 };
 
-export type MessageAttachment = {
-	url: string;
-	name: string | null;
-	size: number | null;
-	mimeType: string | null;
-};
-
 export type MessageWithAuthor = {
 	id: string;
 	content: string | null;
 	fileUrl: string | null;
-	attachment: MessageAttachment | null;
+	attachment: {
+		url: string;
+		name: string | null;
+		size: number | null;
+		mimeType: string | null;
+	} | null;
 	senderId: string;
 	senderName: string;
 	senderEmail: string;

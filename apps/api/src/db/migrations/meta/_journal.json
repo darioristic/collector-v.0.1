@@ -81,10 +81,24 @@
     },
     {
       "idx": 11,
-      "version": "7",
-      "when": 1762892965744,
-      "tag": "0011_left_gravity",
-      "breakpoints": true
+      "version": "0012",
+      "when": 1762901598311,
+      "tag": "0012_add_notifications",
+      "breakpoints": false
+    },
+    {
+      "idx": 12,
+      "version": "0013",
+      "when": 1762902200000,
+      "tag": "0013_fix_company_users_unique_index",
+      "breakpoints": false
+    },
+    {
+      "idx": 13,
+      "version": "0014",
+      "when": 1762902300000,
+      "tag": "0014_add_company_to_team_members",
+      "breakpoints": false
     }
   ]
 }

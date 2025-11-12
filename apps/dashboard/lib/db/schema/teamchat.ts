@@ -16,8 +16,8 @@ export const companies = baseCompanies;
 
 export type Company = typeof companies.$inferSelect;
 
-export const users = pgTable(
-	"users",
+export const teamchatUsers = pgTable(
+	"teamchat_users",
 	{
 		id: uuid("id").defaultRandom().primaryKey(),
 		firstName: text("first_name").notNull(),
@@ -38,16 +38,23 @@ export const users = pgTable(
 			.notNull(),
 	},
 	(table) => ({
-		usersEmailUnique: uniqueIndex("users_email_unique").on(table.email),
-		usersCompanyIdx: index("users_company_idx").on(table.companyId),
-		usersStatusIdx: index("users_status_idx").on(table.status),
+		teamchatUsersEmailUnique: uniqueIndex("teamchat_users_email_unique").on(
+			table.email,
+		),
+		teamchatUsersCompanyIdx: index("teamchat_users_company_idx").on(
+			table.companyId,
+		),
+		teamchatUsersStatusIdx: index("teamchat_users_status_idx").on(table.status),
 	}),
 );
 
-export type User = typeof users.$inferSelect;
+export type TeamChatUser = typeof teamchatUsers.$inferSelect;
 
-export const channels = pgTable(
-	"channels",
+// Alias for backward compatibility - deprecated, use teamchatUsers instead
+export const users = teamchatUsers;
+
+export const teamchatChannels = pgTable(
+	"teamchat_channels",
 	{
 		id: uuid("id").defaultRandom().primaryKey(),
 		name: text("name").notNull(),
@@ -64,22 +71,24 @@ export const channels = pgTable(
 			.notNull(),
 	},
 	(table) => ({
-		channelsCompanyIdx: index("channels_company_idx").on(table.companyId),
-		channelsNameIdx: index("channels_name_idx").on(table.name),
+		teamchatChannelsCompanyIdx: index("teamchat_channels_company_idx").on(
+			table.companyId,
+		),
+		teamchatChannelsNameIdx: index("teamchat_channels_name_idx").on(table.name),
 	}),
 );
 
-export type Channel = typeof channels.$inferSelect;
+export type TeamChatChannel = typeof teamchatChannels.$inferSelect;
 
-export const channelMembers = pgTable(
-	"channel_members",
+export const teamchatChannelMembers = pgTable(
+	"teamchat_channel_members",
 	{
 		channelId: uuid("channel_id")
 			.notNull()
-			.references(() => channels.id, { onDelete: "cascade" }),
+			.references(() => teamchatChannels.id, { onDelete: "cascade" }),
 		userId: uuid("user_id")
 			.notNull()
-			.references(() => users.id, { onDelete: "cascade" }),
+			.references(() => teamchatUsers.id, { onDelete: "cascade" }),
 		joinedAt: timestamp("joined_at", { withTimezone: true })
 			.defaultNow()
 			.notNull(),
@@ -88,27 +97,31 @@ export const channelMembers = pgTable(
 	(table) => ({
 		pk: primaryKey({
 			columns: [table.channelId, table.userId],
-			name: "channel_members_pk",
+			name: "teamchat_channel_members_pk",
 		}),
-		channelIdx: index("channel_members_channel_idx").on(table.channelId),
-		userIdx: index("channel_members_user_idx").on(table.userId),
+		teamchatChannelIdx: index("teamchat_channel_members_channel_idx").on(
+			table.channelId,
+		),
+		teamchatUserIdx: index("teamchat_channel_members_user_idx").on(
+			table.userId,
+		),
 	}),
 );
 
-export type ChannelMember = typeof channelMembers.$inferSelect;
+export type TeamChatChannelMember = typeof teamchatChannelMembers.$inferSelect;
 
-export const messages = pgTable(
-	"messages",
+export const teamchatMessages = pgTable(
+	"teamchat_messages",
 	{
 		id: uuid("id").defaultRandom().primaryKey(),
 		content: text("content"),
 		fileUrl: text("file_url"),
 		senderId: uuid("sender_id")
 			.notNull()
-			.references(() => users.id, { onDelete: "cascade" }),
+			.references(() => teamchatUsers.id, { onDelete: "cascade" }),
 		channelId: uuid("channel_id")
 			.notNull()
-			.references(() => channels.id, { onDelete: "cascade" }),
+			.references(() => teamchatChannels.id, { onDelete: "cascade" }),
 		createdAt: timestamp("created_at", { withTimezone: true })
 			.defaultNow()
 			.notNull(),
@@ -117,54 +130,70 @@ export const messages = pgTable(
 			.notNull(),
 	},
 	(table) => ({
-		messagesChannelIdx: index("messages_channel_idx").on(table.channelId),
-		messagesSenderIdx: index("messages_sender_idx").on(table.senderId),
+		teamchatMessagesChannelIdx: index("teamchat_messages_channel_idx").on(
+			table.channelId,
+		),
+		teamchatMessagesSenderIdx: index("teamchat_messages_sender_idx").on(
+			table.senderId,
+		),
 	}),
 );
 
-export type Message = typeof messages.$inferSelect;
+export type TeamChatMessage = typeof teamchatMessages.$inferSelect;
 
 export const companiesRelations = relations(companies, ({ many }) => ({
-	users: many(users),
-	channels: many(channels),
+	users: many(teamchatUsers),
+	channels: many(teamchatChannels),
 }));
 
-export const usersRelations = relations(users, ({ one, many }) => ({
-	company: one(companies, {
-		fields: [users.companyId],
-		references: [companies.id],
+export const teamchatUsersRelations = relations(
+	teamchatUsers,
+	({ one, many }) => ({
+		company: one(companies, {
+			fields: [teamchatUsers.companyId],
+			references: [companies.id],
+		}),
+		memberships: many(teamchatChannelMembers),
+		messages: many(teamchatMessages),
 	}),
-	memberships: many(channelMembers),
-	messages: many(messages),
-}));
+);
 
-export const channelsRelations = relations(channels, ({ one, many }) => ({
-	company: one(companies, {
-		fields: [channels.companyId],
-		references: [companies.id],
+export const teamchatChannelsRelations = relations(
+	teamchatChannels,
+	({ one, many }) => ({
+		company: one(companies, {
+			fields: [teamchatChannels.companyId],
+			references: [companies.id],
+		}),
+		members: many(teamchatChannelMembers),
+		messages: many(teamchatMessages),
 	}),
-	members: many(channelMembers),
-	messages: many(messages),
-}));
+);
 
-export const channelMembersRelations = relations(channelMembers, ({ one }) => ({
-	channel: one(channels, {
-		fields: [channelMembers.channelId],
-		references: [channels.id],
+export const teamchatChannelMembersRelations = relations(
+	teamchatChannelMembers,
+	({ one }) => ({
+		channel: one(teamchatChannels, {
+			fields: [teamchatChannelMembers.channelId],
+			references: [teamchatChannels.id],
+		}),
+		user: one(teamchatUsers, {
+			fields: [teamchatChannelMembers.userId],
+			references: [teamchatUsers.id],
+		}),
 	}),
-	user: one(users, {
-		fields: [channelMembers.userId],
-		references: [users.id],
-	}),
-}));
+);
 
-export const messagesRelations = relations(messages, ({ one }) => ({
-	sender: one(users, {
-		fields: [messages.senderId],
-		references: [users.id],
+export const teamchatMessagesRelations = relations(
+	teamchatMessages,
+	({ one }) => ({
+		sender: one(teamchatUsers, {
+			fields: [teamchatMessages.senderId],
+			references: [teamchatUsers.id],
+		}),
+		channel: one(teamchatChannels, {
+			fields: [teamchatMessages.channelId],
+			references: [teamchatChannels.id],
+		}),
 	}),
-	channel: one(channels, {
-		fields: [messages.channelId],
-		references: [channels.id],
-	}),
-}));
+);

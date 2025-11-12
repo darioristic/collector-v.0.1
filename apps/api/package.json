@@ -17,7 +17,8 @@
     "db:seed": "bun src/db/seed/index.ts",
     "db:seed:help": "bun src/db/seed/index.ts --help",
     "db:reset": "bun scripts/migrate-and-seed.ts --drop",
-    "db:setup": "bun scripts/migrate-and-seed.ts"
+    "db:setup": "bun scripts/migrate-and-seed.ts",
+    "db:check-user": "bun scripts/check-user.ts"
   },
   "dependencies": {
     "@crm/types": "workspace:*",
@@ -37,6 +38,7 @@
     "pg-mem": "^3.0.5"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
     "@types/node": "^24.10.0",
     "@types/pg": "^8.15.6",
     "drizzle-kit": "^0.30.3",

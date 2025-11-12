@@ -1,8 +1,9 @@
-import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 import { Ellipsis, FileIcon, PlayIcon } from "lucide-react";
-import { ChatMessageProps } from "../types";
-
-import { Card, CardContent } from "@/components/ui/card";
+import Image from "next/image";
+import { useId } from "react";
+import { MessageStatusIcon } from "@/app/(protected)/apps/chat/components/message-status-icon";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,11 +11,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { MessageStatusIcon } from "@/app/(protected)/apps/chat/components";
-import Image from "next/image";
+import { cn } from "@/lib/utils";
+import type { ChatMessageProps } from "../types";
 
-function TextChatBubble({ message }: { message: ChatMessageProps }) {
+type ChatBubbleProps = {
+  message: ChatMessageProps;
+  type?: string;
+  createdAt?: string;
+};
+
+function TextChatBubble({ message, createdAt }: { message: ChatMessageProps; createdAt?: string }) {
+  const formattedTime = createdAt ? format(new Date(createdAt), "HH:mm") : null;
+
   return (
     <div
       className={cn("max-w-(--breakpoint-sm) space-y-1", {
@@ -53,15 +61,16 @@ function TextChatBubble({ message }: { message: ChatMessageProps }) {
           className={cn("text-muted-foreground mt-1 flex items-center text-xs", {
             "justify-end": message.own_message
           })}>
-          05:23 PM
+          {formattedTime || "05:23 PM"}
         </time>
-        {message.own_message && <MessageStatusIcon status="read" />}
+        {message.own_message && <MessageStatusIcon status={message.read ? "read" : "sent"} />}
       </div>
     </div>
   );
 }
 
-function FileChatBubble({ message }: { message: ChatMessageProps }) {
+function FileChatBubble({ message, createdAt }: { message: ChatMessageProps; createdAt?: string }) {
+  const formattedTime = createdAt ? format(new Date(createdAt), "HH:mm") : null;
   return (
     <div
       className={cn("max-w-(--breakpoint-sm) space-y-1", {
@@ -114,15 +123,22 @@ function FileChatBubble({ message }: { message: ChatMessageProps }) {
           className={cn("text-muted-foreground mt-1 flex items-center text-xs", {
             "justify-end": message.own_message
           })}>
-          05:23 PM
+          {formattedTime || "05:23 PM"}
         </time>
-        {message.own_message && <MessageStatusIcon status="read" />}
+        {message.own_message && <MessageStatusIcon status={message.read ? "read" : "sent"} />}
       </div>
     </div>
   );
 }
 
-function VideoChatBubble({ message }: { message: ChatMessageProps }) {
+function VideoChatBubble({
+  message,
+  createdAt
+}: {
+  message: ChatMessageProps;
+  createdAt?: string;
+}) {
+  const formattedTime = createdAt ? format(new Date(createdAt), "HH:mm") : null;
   return (
     <div
       className={cn("max-w-(--breakpoint-sm) space-y-1", {
@@ -167,15 +183,23 @@ function VideoChatBubble({ message }: { message: ChatMessageProps }) {
           className={cn("text-muted-foreground mt-1 flex items-center text-xs", {
             "justify-end": message.own_message
           })}>
-          05:23 PM
+          {formattedTime || "05:23 PM"}
         </time>
-        {message.own_message && <MessageStatusIcon status="read" />}
+        {message.own_message && <MessageStatusIcon status={message.read ? "read" : "sent"} />}
       </div>
     </div>
   );
 }
 
-function SoundChatBubble({ message }: { message: ChatMessageProps }) {
+function SoundChatBubble({
+  message,
+  createdAt
+}: {
+  message: ChatMessageProps;
+  createdAt?: string;
+}) {
+  const formattedTime = createdAt ? format(new Date(createdAt), "HH:mm") : null;
+  const audioId = useId();
   return (
     <div
       className={cn("max-w-(--breakpoint-sm)", {
@@ -187,8 +211,9 @@ function SoundChatBubble({ message }: { message: ChatMessageProps }) {
             "relative order-1 flex items-center justify-center": message.own_message
           })}>
           {message.content}
-          <audio id="song" className="block w-80" controls>
+          <audio id={audioId} className="block w-80" controls>
             <source src={message?.data?.path} type="audio/mpeg" />
+            <track kind="captions" srcLang="en" label="English captions" />
           </audio>
         </div>
         <div className={cn({ "order-2": !message.own_message })}>
@@ -217,15 +242,22 @@ function SoundChatBubble({ message }: { message: ChatMessageProps }) {
           className={cn("text-muted-foreground mt-1 flex items-center text-sm", {
             "justify-end": message.own_message
           })}>
-          05:23 PM
+          {formattedTime || "05:23 PM"}
         </time>
-        {message.own_message && <MessageStatusIcon status="read" />}
+        {message.own_message && <MessageStatusIcon status={message.read ? "read" : "sent"} />}
       </div>
     </div>
   );
 }
 
-function ImageChatBubble({ message }: { message: ChatMessageProps }) {
+function ImageChatBubble({
+  message,
+  createdAt
+}: {
+  message: ChatMessageProps;
+  createdAt?: string;
+}) {
+  const formattedTime = createdAt ? format(new Date(createdAt), "HH:mm") : null;
   const images_limit = 4;
   const images = message?.data?.images ?? [];
   const images_with_limit = images.slice(0, images_limit);
@@ -247,10 +279,10 @@ function ImageChatBubble({ message }: { message: ChatMessageProps }) {
                 "grid-cols-1": images.length === 1,
                 "grid-cols-2": images.length > 1
               })}>
-              {images_with_limit.map((image, key) => (
+              {images_with_limit.map((image, index) => (
                 <figure
                   className="relative cursor-pointer overflow-hidden rounded-lg transition-opacity hover:opacity-90"
-                  key={key}>
+                  key={typeof image === "string" ? image : `image-${index}`}>
                   <Image
                     src={image}
                     className="aspect-4/3 object-cover"
@@ -259,7 +291,7 @@ function ImageChatBubble({ message }: { message: ChatMessageProps }) {
                     alt="shadcn/ui"
                     unoptimized
                   />
-                  {key + 1 === images_limit && images.length > images_limit && (
+                  {index + 1 === images_limit && images.length > images_limit && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-3xl font-semibold text-white">
                       +{images.length - images_with_limit.length}
                     </div>
@@ -295,26 +327,26 @@ function ImageChatBubble({ message }: { message: ChatMessageProps }) {
           className={cn("text-muted-foreground mt-1 flex items-center text-xs", {
             "justify-end": message.own_message
           })}>
-          05:23 PM
+          {formattedTime || "05:23 PM"}
         </time>
-        {message.own_message && <MessageStatusIcon status="read" />}
+        {message.own_message && <MessageStatusIcon status={message.read ? "read" : "sent"} />}
       </div>
     </div>
   );
 }
 
-export function ChatBubble({ message, type }: { message: ChatMessageProps; type?: string }) {
+export function ChatBubble({ message, type, createdAt }: ChatBubbleProps) {
   switch (type) {
     case "text":
-      return <TextChatBubble message={message} />;
+      return <TextChatBubble message={message} createdAt={createdAt} />;
     case "video":
-      return <VideoChatBubble message={message} />;
+      return <VideoChatBubble message={message} createdAt={createdAt} />;
     case "sound":
-      return <SoundChatBubble message={message} />;
+      return <SoundChatBubble message={message} createdAt={createdAt} />;
     case "image":
-      return <ImageChatBubble message={message} />;
+      return <ImageChatBubble message={message} createdAt={createdAt} />;
     case "file":
-      return <FileChatBubble message={message} />;
+      return <FileChatBubble message={message} createdAt={createdAt} />;
     default:
       break;
   }

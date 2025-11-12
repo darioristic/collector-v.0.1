@@ -158,15 +158,38 @@ export const buildServer = async () => {
 const fastify = await buildServer();
 
 const start = async () => {
+	const port = Number(process.env.PORT ?? 4000);
+	const host = process.env.HOST ?? "0.0.0.0";
+
 	try {
 		await fastify.listen({
-			port: Number(process.env.PORT ?? 4000),
-			host: process.env.HOST ?? "0.0.0.0",
+			port,
+			host,
 		});
 
-		fastify.log.info("API server is listening");
+		fastify.log.info(
+			`Server listening at http://${host === "0.0.0.0" ? "localhost" : host}:${port}`,
+		);
 	} catch (error) {
-		fastify.log.error(error);
+		const nodeError = error as NodeJS.ErrnoException;
+
+		if (nodeError?.code === "EADDRINUSE") {
+			fastify.log.error(
+				`Failed to start server. Port ${port} is already in use.`,
+			);
+			fastify.log.error(
+				`Please free the port by running: lsof -ti:${port} | xargs kill -9`,
+			);
+			fastify.log.error(
+				`Or use a different port by setting PORT environment variable.`,
+			);
+		} else {
+			fastify.log.error(
+				{ err: error },
+				"Failed to start server. Is port 4000 in use?",
+			);
+		}
+
 		process.exit(1);
 	}
 };

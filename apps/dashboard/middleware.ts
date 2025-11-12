@@ -1,28 +1,71 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
+import { SESSION_COOKIE_NAME } from "@/lib/auth";
+
+// Public routes that don't require authentication
+const publicRoutes = [
+	"/auth/login",
+	"/auth/register",
+	"/auth/forgot-password",
+	"/auth/reset-password",
+	"/login",
+	"/register",
+	"/api/auth",
+];
 
 export function middleware(request: NextRequest) {
-  const url = request.nextUrl.clone();
+	const url = request.nextUrl.clone();
+	const pathname = url.pathname;
 
-  if (url.pathname === "/") {
-    url.pathname = "/finance";
-    return NextResponse.redirect(url);
-  }
+	// Allow public routes and API routes
+	if (
+		publicRoutes.some((route) => pathname.startsWith(route)) ||
+		pathname.startsWith("/api/")
+	) {
+		return NextResponse.next();
+	}
 
-  if (url.pathname === "/dashboard" || url.pathname === "/dashboard/") {
-    url.pathname = "/finance";
-    return NextResponse.redirect(url);
-  }
+	// Check for session cookie
+	const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME);
 
-  if (url.pathname.startsWith("/dashboard/")) {
-    const nextPath = url.pathname.replace("/dashboard", "") || "/";
-    url.pathname = nextPath === "/" ? "/finance" : nextPath;
-    url.search = request.nextUrl.search;
-    return NextResponse.redirect(url);
-  }
+	// For root and protected routes, check authentication
+	if (pathname === "/" || pathname.startsWith("/dashboard") || pathname.startsWith("/finance") || pathname.startsWith("/crm") || pathname.startsWith("/projects") || pathname.startsWith("/hr") || pathname.startsWith("/settings")) {
+		// If no session cookie, redirect to login
+		if (!sessionCookie) {
+			const loginUrl = new URL("/auth/login", request.url);
+			// Preserve the original URL as redirect parameter
+			if (pathname !== "/") {
+				loginUrl.searchParams.set("redirect", pathname);
+			}
+			return NextResponse.redirect(loginUrl);
+		}
 
-  return NextResponse.next();
+		// Authenticated - handle redirects
+		if (pathname === "/") {
+			url.pathname = "/finance";
+			return NextResponse.redirect(url);
+		}
+
+		if (pathname === "/dashboard" || pathname === "/dashboard/") {
+			url.pathname = "/finance";
+			return NextResponse.redirect(url);
+		}
+
+		if (pathname.startsWith("/dashboard/")) {
+			const nextPath = pathname.replace("/dashboard", "") || "/";
+			url.pathname = nextPath === "/" ? "/finance" : nextPath;
+			url.search = request.nextUrl.search;
+			return NextResponse.redirect(url);
+		}
+	}
+
+	return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/", "/dashboard/:path*"]
+	matcher: [
+		"/",
+		"/dashboard/:path*",
+		"/(protected)/:path*",
+		"/auth/:path*",
+	],
 };

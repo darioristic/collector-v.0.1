@@ -1,16 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-
+import { eq } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-
-import { eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { getDb } from "@/lib/db";
-import { users } from "@/lib/db/schema/teamchat";
+import { teamchatUsers } from "@/lib/db/schema/teamchat";
 import { vaultFiles, vaultFolders } from "@/lib/db/schema/vault";
+import { ensureTeamChatSchemaReady } from "@/lib/teamchat/repository";
 
 const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50MB
 const uploadsDirectory = path.join(process.cwd(), "public", "uploads");
@@ -95,7 +93,7 @@ export async function POST(request: NextRequest) {
 		);
 	}
 
-	const db = await getDb();
+	const db = await ensureTeamChatSchemaReady();
 
 	const [folder] = await db
 		.select({ id: vaultFolders.id })
@@ -123,13 +121,13 @@ export async function POST(request: NextRequest) {
 	if (parsed.data.uploadedBy) {
 		const [member] = await db
 			.select({
-				id: users.id,
-				firstName: users.firstName,
-				lastName: users.lastName,
-				avatarUrl: users.avatarUrl,
+				id: teamchatUsers.id,
+				firstName: teamchatUsers.firstName,
+				lastName: teamchatUsers.lastName,
+				avatarUrl: teamchatUsers.avatarUrl,
 			})
-			.from(users)
-			.where(eq(users.id, parsed.data.uploadedBy))
+			.from(teamchatUsers)
+			.where(eq(teamchatUsers.id, parsed.data.uploadedBy))
 			.limit(1);
 
 		if (!member) {

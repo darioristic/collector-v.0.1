@@ -1,7 +1,9 @@
+import { eq, isNull } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 
 import { db as defaultDb } from "../index";
-import { teamMembers } from "../schema/settings.schema";
+import { companies } from "../schema/auth.schema";
+import { teamMembers, users } from "../schema/settings.schema";
 
 type SeedTeamMember = {
   firstName: string;
@@ -150,8 +152,71 @@ export const seedSettings = async (database = defaultDb) => {
   await ensureTeamMembersSchema(database);
 
   await database.transaction(async (tx) => {
+    // Get the company ID (Collector Labs)
+    const [company] = await tx
+      .select({ id: companies.id })
+      .from(companies)
+      .where(eq(companies.slug, "collector-labs"))
+      .limit(1);
+
+    if (!company) {
+      throw new Error("Company 'collector-labs' not found. Please run auth seed first.");
+    }
+
+    const companyId = company.id;
+
+    // Update existing team members without companyId to have companyId
+    await tx
+      .update(teamMembers)
+      .set({ companyId: companyId })
+      .where(isNull(teamMembers.companyId));
+
+    // Get users from auth seed to create team members for them
+    const authUsers = await tx
+      .select({
+        id: users.id,
+        email: users.email,
+        name: users.name,
+      })
+      .from(users)
+      .where(eq(users.defaultCompanyId, companyId));
+
+    // Create team members for auth users
+    const authTeamMembers = authUsers.map((user) => {
+      const nameParts = user.name.split(" ");
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+
+      // Map role from user roles
+      let role = "User";
+      if (user.email === "dario@collectorlabs.test") {
+        role = "Admin";
+      } else if (user.email === "miha@collectorlabs.test") {
+        role = "Manager";
+      }
+
+      return {
+        firstName,
+        lastName,
+        email: user.email,
+        role,
+        status: "online" as const,
+        createdAt: new Date(),
+      };
+    });
+
+    // Combine auth users and example team members
+    const allTeamMembers = [...authTeamMembers, ...TEAM_MEMBERS.map((member) => ({
+      firstName: member.firstName,
+      lastName: member.lastName,
+      email: member.email,
+      role: member.role,
+      status: member.status,
+      createdAt: new Date(member.createdAt),
+    }))];
+
     await Promise.all(
-      TEAM_MEMBERS.map((member) =>
+      allTeamMembers.map((member) =>
         tx
           .insert(teamMembers)
           .values({
@@ -160,16 +225,18 @@ export const seedSettings = async (database = defaultDb) => {
             email: member.email,
             role: member.role,
             status: member.status,
-            createdAt: new Date(member.createdAt),
+            companyId: companyId,
+            createdAt: member.createdAt,
             updatedAt: sql`NOW()`
           })
           .onConflictDoUpdate({
-            target: teamMembers.email,
+            target: [teamMembers.companyId, teamMembers.email],
             set: {
               firstName: member.firstName,
               lastName: member.lastName,
               role: member.role,
               status: member.status,
+              companyId: companyId,
               updatedAt: sql`NOW()`
             }
           })

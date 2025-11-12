@@ -232,8 +232,8 @@ async function runMigrations() {
   log("Running migrations...");
 
   try {
-    // Use drizzle-kit push for development
-    execSync("bunx drizzle-kit push", {
+    // Use migrate.ts to apply migrations
+    execSync("bun src/db/migrate.ts", {
       cwd: process.cwd() + "/apps/api",
       stdio: "inherit"
     });

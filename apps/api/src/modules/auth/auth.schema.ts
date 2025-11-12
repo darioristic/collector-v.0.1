@@ -1,6 +1,7 @@
 import { type FastifySchema } from "fastify";
 
-import { roleKey, userStatus } from "../../db/schema/settings.schema";
+import { roleKey } from "../../db/schema/auth.schema";
+import { userStatus } from "../../db/schema/settings.schema";
 
 const ERROR_SCHEMA = {
   type: "object",

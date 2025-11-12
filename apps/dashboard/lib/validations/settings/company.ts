@@ -10,17 +10,15 @@ const emptyToNull = (value: unknown) => {
 };
 
 const optionalText = (max: number, message: string) =>
-	z.preprocess(emptyToNull, z.string().max(max, message).trim().nullable().optional());
+	z.preprocess(
+		emptyToNull,
+		z.string().max(max, message).trim().nullable().optional(),
+	);
 
 const optionalUrl = (message: string) =>
 	z.preprocess(
 		emptyToNull,
-		z
-			.string()
-			.url(message)
-			.trim()
-			.nullable()
-			.optional(),
+		z.string().url(message).trim().nullable().optional(),
 	);
 
 const toNumberOrNull = (value: unknown) => {
@@ -48,7 +46,10 @@ export const companyUpsertSchema = z.object({
 		.min(2, "Naziv kompanije je obavezan.")
 		.max(255, "Naziv može imati najviše 255 karaktera."),
 	legalName: optionalText(255, "Pravno ime može imati najviše 255 karaktera."),
-	registrationNo: optionalText(100, "Registracioni broj može imati najviše 100 karaktera."),
+	registrationNo: optionalText(
+		100,
+		"Registracioni broj može imati najviše 100 karaktera.",
+	),
 	taxId: optionalText(100, "PIB može imati najviše 100 karaktera."),
 	industry: optionalText(255, "Industrija može imati najviše 255 karaktera."),
 	employees: z
@@ -77,16 +78,18 @@ export const companyUpsertSchema = z.object({
 	website: optionalUrl("URL sajta mora biti validan."),
 	logoUrl: optionalUrl("URL logotipa mora biti validan."),
 	faviconUrl: optionalUrl("URL favicon-a mora biti validan."),
-	brandColor: z
-		.preprocess(
-			emptyToNull,
-			z
-				.string()
-				.regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "Boja mora biti u HEX formatu.")
-				.trim()
-				.nullable()
-				.optional(),
-		),
+	brandColor: z.preprocess(
+		emptyToNull,
+		z
+			.string()
+			.regex(
+				/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/,
+				"Boja mora biti u HEX formatu.",
+			)
+			.trim()
+			.nullable()
+			.optional(),
+	),
 	description: z
 		.preprocess(
 			emptyToNull,

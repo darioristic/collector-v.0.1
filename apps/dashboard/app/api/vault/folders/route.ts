@@ -1,12 +1,11 @@
+import { and, eq, ilike, isNull } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-
-import { and, eq, ilike, isNull } from "drizzle-orm";
 import { z } from "zod";
 
-import { getDb } from "@/lib/db";
-import { users } from "@/lib/db/schema/teamchat";
+import { teamchatUsers } from "@/lib/db/schema/teamchat";
 import { vaultFolders } from "@/lib/db/schema/vault";
+import { ensureTeamChatSchemaReady } from "@/lib/teamchat/repository";
 
 const payloadSchema = z
 	.object({
@@ -40,7 +39,7 @@ const withNoStore = (response: NextResponse) => {
 };
 
 export async function POST(request: NextRequest) {
-	const db = await getDb();
+	const db = await ensureTeamChatSchemaReady();
 	const json = await request.json().catch(() => null);
 
 	if (!json || typeof json !== "object") {
@@ -123,9 +122,9 @@ export async function POST(request: NextRequest) {
 
 	if (createdBy) {
 		const [member] = await db
-			.select({ id: users.id })
-			.from(users)
-			.where(eq(users.id, createdBy))
+			.select({ id: teamchatUsers.id })
+			.from(teamchatUsers)
+			.where(eq(teamchatUsers.id, createdBy))
 			.limit(1);
 
 		if (!member) {
@@ -163,13 +162,13 @@ export async function POST(request: NextRequest) {
 		if (inserted.createdBy) {
 			const ownerRow = await db
 				.select({
-					id: users.id,
-					firstName: users.firstName,
-					lastName: users.lastName,
-					avatarUrl: users.avatarUrl,
+					id: teamchatUsers.id,
+					firstName: teamchatUsers.firstName,
+					lastName: teamchatUsers.lastName,
+					avatarUrl: teamchatUsers.avatarUrl,
 				})
-				.from(users)
-				.where(eq(users.id, inserted.createdBy))
+				.from(teamchatUsers)
+				.where(eq(teamchatUsers.id, inserted.createdBy))
 				.limit(1)
 				.then((rows) => rows[0] ?? null);
 

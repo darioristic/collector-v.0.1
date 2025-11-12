@@ -1,9 +1,7 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import { cn } from "@/lib/utils";
-import Link from "next/link";
-import { useParams } from "next/navigation";
+import { CodeIcon, CopyIcon } from "@radix-ui/react-icons";
+import Lottie from "lottie-react";
 import {
   ArrowUpIcon,
   BrainIcon,
@@ -16,27 +14,27 @@ import {
   ThumbsUpIcon,
   X
 } from "lucide-react";
-import { CodeIcon, CopyIcon } from "@radix-ui/react-icons";
-import Lottie from "lottie-react";
-
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import React, { useEffect, useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { ChatContainer } from "@/components/ui/custom/prompt/chat-container";
 import {
   Input,
   PromptInputAction,
   PromptInputActions,
   PromptInputTextarea
 } from "@/components/ui/custom/prompt/input";
-import { Button } from "@/components/ui/button";
-import { Suggestion } from "@/components/ui/custom/prompt/suggestion";
-import { ChatContainer } from "@/components/ui/custom/prompt/chat-container";
+import { PromptLoader } from "@/components/ui/custom/prompt/loader";
+import { Markdown } from "@/components/ui/custom/prompt/markdown";
 import {
   Message,
   MessageAction,
   MessageActions,
   MessageContent
 } from "@/components/ui/custom/prompt/message";
-import { Markdown } from "@/components/ui/custom/prompt/markdown";
-import { PromptLoader } from "@/components/ui/custom/prompt/loader";
 import { PromptScrollButton } from "@/components/ui/custom/prompt/scroll-button";
+import { Suggestion } from "@/components/ui/custom/prompt/suggestion";
 import {
   Select,
   SelectContent,
@@ -44,16 +42,41 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { AIUpgradePricingModal } from "./ai-upgrade-modal";
-
+import { cn } from "@/lib/utils";
 import aiSphereAnimation from "../ai-sphere-animation.json";
 import conversations from "../data.json";
+import { AIUpgradePricingModal } from "./ai-upgrade-modal";
+
+interface FileListItemProps {
+  file: File;
+  dismiss?: boolean;
+  index: number;
+  onRemove: (index: number) => void;
+}
+
+function FileListItem({ file, dismiss = true, index, onRemove }: FileListItemProps) {
+  return (
+    <div className="bg-muted flex items-center gap-2 rounded-lg px-3 py-2 text-sm">
+      <Paperclip className="size-4" />
+      <span className="max-w-[120px] truncate">{file.name}</span>
+      {dismiss && (
+        <button
+          type="button"
+          onClick={() => onRemove(index)}
+          className="hover:bg-secondary/50 rounded-full p-1">
+          <X className="size-4" />
+        </button>
+      )}
+    </div>
+  );
+}
 
 export default function AIChatInterface() {
   const [prompt, setPrompt] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const [activeCategory, setActiveCategory] = useState("");
+  const fileUploadId = React.useId();
 
   const [isFirstResponse, setIsFirstResponse] = useState(false); // Understanding whether the conversation has started or not
 
@@ -134,7 +157,9 @@ export default function AIChatInterface() {
           );
           charIndex++;
         } else {
-          clearInterval(streamIntervalRef.current!);
+          if (streamIntervalRef.current) {
+            clearInterval(streamIntervalRef.current);
+          }
           setIsStreaming(false);
         }
       }, 5);
@@ -162,28 +187,6 @@ export default function AIChatInterface() {
       uploadInputRef.current.value = "";
     }
   };
-
-  const FileListItem = ({
-    file,
-    dismiss = true,
-    index
-  }: {
-    file: File;
-    dismiss?: boolean;
-    index: number;
-  }) => (
-    <div className="bg-muted flex items-center gap-2 rounded-lg px-3 py-2 text-sm">
-      <Paperclip className="size-4" />
-      <span className="max-w-[120px] truncate">{file.name}</span>
-      {dismiss && (
-        <button
-          onClick={() => handleRemoveFile(index)}
-          className="hover:bg-secondary/50 rounded-full p-1">
-          <X className="size-4" />
-        </button>
-      )}
-    </div>
-  );
 
   const activeCategoryData = suggestionGroups.find((group) => group.label === activeCategory);
 
@@ -239,16 +242,20 @@ export default function AIChatInterface() {
                 ) : message?.files && message.files.length > 0 ? (
                   <div className="flex flex-col items-end space-y-2">
                     <div className="flex flex-wrap justify-end gap-2">
-                      {message.files.map((file, index) => (
-                        <FileListItem key={index} index={index} file={file} dismiss={false} />
+                      {message.files.map((file) => (
+                        <FileListItem
+                          key={`${file.name}-${file.size}-${file.lastModified}`}
+                          index={0}
+                          file={file}
+                          dismiss={false}
+                          onRemove={() => {}}
+                        />
                       ))}
                     </div>
                     {message.content ? (
-                      <>
-                        <MessageContent className="bg-primary text-primary-foreground inline-flex">
-                          {message.content}
-                        </MessageContent>
-                      </>
+                      <MessageContent className="bg-primary text-primary-foreground inline-flex">
+                        {message.content}
+                      </MessageContent>
                     ) : null}
                   </div>
                 ) : (
@@ -285,7 +292,7 @@ export default function AIChatInterface() {
 
           <h1 className="text-center text-2xl leading-normal font-medium lg:text-4xl">
             Good Morning, Toby <br /> How Can I{" "}
-            <span className="bg-gradient-to-r from-purple-400 to-indigo-300 bg-clip-text text-transparent">
+            <span className="bg-linear-to-r from-purple-400 to-indigo-300 bg-clip-text text-transparent">
               Assist You Today?
             </span>
           </h1>
@@ -310,7 +317,12 @@ export default function AIChatInterface() {
           {files.length > 0 && (
             <div className="flex flex-wrap gap-2 pb-2">
               {files.map((file, index) => (
-                <FileListItem key={index} index={index} file={file} />
+                <FileListItem
+                  key={`${file.name}-${file.size}-${file.lastModified}-${index}`}
+                  index={index}
+                  file={file}
+                  onRemove={handleRemoveFile}
+                />
               ))}
             </div>
           )}
@@ -321,14 +333,14 @@ export default function AIChatInterface() {
             <div className="flex items-center gap-2">
               <PromptInputAction tooltip="Attach files">
                 <label
-                  htmlFor="file-upload"
+                  htmlFor={fileUploadId}
                   className="hover:bg-secondary-foreground/10 flex size-8 cursor-pointer items-center justify-center rounded-2xl">
                   <input
                     type="file"
                     multiple
                     onChange={handleFileChange}
                     className="hidden"
-                    id="file-upload"
+                    id={fileUploadId}
                   />
                   <Paperclip className="text-primary size-5" />
                 </label>

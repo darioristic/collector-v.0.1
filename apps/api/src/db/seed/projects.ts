@@ -295,7 +295,7 @@ export const seedProjects = async (database = defaultDb) => {
             };
           })
         )
-        .returning({ id: projectMilestones.id });
+        .returning();
 
       const milestoneIds = milestoneRows.map((entry) => entry.id);
 

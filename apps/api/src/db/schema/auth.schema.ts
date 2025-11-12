@@ -8,7 +8,11 @@ import {
   uuid
 } from "drizzle-orm/pg-core";
 
-import { roleKey, roles, users } from "./settings.schema";
+import { roles, users } from "./settings.schema";
+import { roleKey } from "./enums.schema";
+
+// Re-export roleKey for convenience
+export { roleKey };
 
 export const companies = pgTable(
   "companies",

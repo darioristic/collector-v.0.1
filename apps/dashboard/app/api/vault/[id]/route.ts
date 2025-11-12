@@ -1,15 +1,13 @@
-import path from "node:path";
 import { rm } from "node:fs/promises";
-
+import path from "node:path";
+import { and, eq, ilike, inArray, isNull, ne } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-
-import { and, eq, ilike, inArray, isNull, ne } from "drizzle-orm";
 import { z } from "zod";
 
-import { getDb } from "@/lib/db";
-import { users } from "@/lib/db/schema/teamchat";
+import { teamchatUsers } from "@/lib/db/schema/teamchat";
 import { vaultFiles, vaultFolders } from "@/lib/db/schema/vault";
+import { ensureTeamChatSchemaReady } from "@/lib/teamchat/repository";
 
 const renameSchema = z
 	.object({
@@ -44,7 +42,7 @@ const extractParams = async ({ params }: VaultRouteContext) => {
 };
 
 export async function PUT(request: NextRequest, context: VaultRouteContext) {
-	const db = await getDb();
+	const db = await ensureTeamChatSchemaReady();
 	const json = await request.json().catch(() => null);
 
 	if (!json || typeof json !== "object") {
@@ -162,13 +160,13 @@ export async function PUT(request: NextRequest, context: VaultRouteContext) {
 		if (updatedFolder.createdBy) {
 			const [ownerRow] = await db
 				.select({
-					id: users.id,
-					firstName: users.firstName,
-					lastName: users.lastName,
-					avatarUrl: users.avatarUrl,
+					id: teamchatUsers.id,
+					firstName: teamchatUsers.firstName,
+					lastName: teamchatUsers.lastName,
+					avatarUrl: teamchatUsers.avatarUrl,
 				})
-				.from(users)
-				.where(eq(users.id, updatedFolder.createdBy))
+				.from(teamchatUsers)
+				.where(eq(teamchatUsers.id, updatedFolder.createdBy))
 				.limit(1);
 
 			if (ownerRow) {
@@ -211,13 +209,13 @@ export async function PUT(request: NextRequest, context: VaultRouteContext) {
 		if (updatedFile.uploadedBy) {
 			const [ownerRow] = await db
 				.select({
-					id: users.id,
-					firstName: users.firstName,
-					lastName: users.lastName,
-					avatarUrl: users.avatarUrl,
+					id: teamchatUsers.id,
+					firstName: teamchatUsers.firstName,
+					lastName: teamchatUsers.lastName,
+					avatarUrl: teamchatUsers.avatarUrl,
 				})
-				.from(users)
-				.where(eq(users.id, updatedFile.uploadedBy))
+				.from(teamchatUsers)
+				.where(eq(teamchatUsers.id, updatedFile.uploadedBy))
 				.limit(1);
 
 			if (ownerRow) {
@@ -253,7 +251,7 @@ export async function DELETE(
 	_request: NextRequest,
 	context: VaultRouteContext,
 ) {
-	const db = await getDb();
+	const db = await ensureTeamChatSchemaReady();
 	const { id: resourceId } = await extractParams(context);
 
 	const folder = await db

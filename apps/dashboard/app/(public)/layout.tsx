@@ -1,9 +1,9 @@
-import React from "react";
+import type React from "react";
 
 export default function GuestLayout({
-  children
+	children,
 }: Readonly<{
-  children: React.ReactNode;
+	children: React.ReactNode;
 }>) {
-  return <>{children}</>;
+	return <>{children}</>;
 }

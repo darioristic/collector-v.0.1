@@ -1,64 +1,70 @@
 "use client";
 
-import { InvoiceList } from "@/components/invoices/invoice-list";
+import { Plus } from "lucide-react";
 import { useState } from "react";
 import { InvoiceDetail } from "@/components/invoices/invoice-detail";
-import { useDeleteInvoice } from "@/src/hooks/useInvoices";
+import { InvoiceList } from "@/components/invoices/invoice-list";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { useDeleteInvoice } from "@/src/hooks/useInvoices";
 
 export default function InvoicesPage() {
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
-  const deleteInvoice = useDeleteInvoice();
+	const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(
+		null,
+	);
+	const deleteInvoice = useDeleteInvoice();
 
-  const handleInvoiceClick = (invoiceId: string) => {
-    setSelectedInvoiceId(invoiceId);
-  };
+	const handleInvoiceClick = (invoiceId: string) => {
+		setSelectedInvoiceId(invoiceId);
+	};
 
-  const handleCreateInvoice = () => {
-    // TODO: Implement create invoice dialog
-    alert("Create invoice dialog - Coming soon!");
-  };
+	const handleCreateInvoice = () => {
+		// TODO: Implement create invoice dialog
+		alert("Create invoice dialog - Coming soon!");
+	};
 
-  const handleDeleteInvoice = async (invoiceId: string) => {
-    if (confirm("Are you sure you want to delete this invoice?")) {
-      await deleteInvoice.mutateAsync(invoiceId);
-      if (selectedInvoiceId === invoiceId) {
-        setSelectedInvoiceId(null);
-      }
-    }
-  };
+	const handleDeleteInvoice = async (invoiceId: string) => {
+		if (confirm("Are you sure you want to delete this invoice?")) {
+			await deleteInvoice.mutateAsync(invoiceId);
+			if (selectedInvoiceId === invoiceId) {
+				setSelectedInvoiceId(null);
+			}
+		}
+	};
 
-  return (
-    <div className="space-y-8 py-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
-          <p className="text-muted-foreground text-sm">Manage and track your invoices.</p>
-        </div>
-        <Button type="button" onClick={handleCreateInvoice} className="gap-2">
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          New Invoice
-        </Button>
-      </div>
+	return (
+		<div className="space-y-8 py-6">
+			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+				<div className="space-y-1">
+					<h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
+					<p className="text-muted-foreground text-sm">
+						Manage and track your invoices.
+					</p>
+				</div>
+				<Button type="button" onClick={handleCreateInvoice} className="gap-2">
+					<Plus className="h-4 w-4" aria-hidden="true" />
+					New Invoice
+				</Button>
+			</div>
 
-      <div className={`grid gap-6 ${selectedInvoiceId ? "lg:grid-cols-2" : "grid-cols-1"}`}>
-        <InvoiceList
-          onInvoiceClick={handleInvoiceClick}
-          onCreateInvoice={handleCreateInvoice}
-          showCreateAction={false}
-        />
+			<div
+				className={`grid gap-6 ${selectedInvoiceId ? "lg:grid-cols-2" : "grid-cols-1"}`}
+			>
+				<InvoiceList
+					onInvoiceClick={handleInvoiceClick}
+					onCreateInvoice={handleCreateInvoice}
+					showCreateAction={false}
+				/>
 
-        {selectedInvoiceId && (
-          <InvoiceDetail
-            invoiceId={selectedInvoiceId}
-            onEdit={() => {
-              // TODO: Open edit dialog
-            }}
-            onDelete={handleDeleteInvoice}
-          />
-        )}
-      </div>
-    </div>
-  );
+				{selectedInvoiceId && (
+					<InvoiceDetail
+						invoiceId={selectedInvoiceId}
+						onEdit={() => {
+							// TODO: Open edit dialog
+						}}
+						onDelete={handleDeleteInvoice}
+					/>
+				)}
+			</div>
+		</div>
+	);
 }

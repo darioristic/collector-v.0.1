@@ -1,7 +1,14 @@
 "use client";
 
+import {
+	Download,
+	ExternalLink,
+	FolderOpen,
+	MoreHorizontal,
+	Pencil,
+	Trash2,
+} from "lucide-react";
 import { useMemo } from "react";
-
 import type { VaultOwner } from "@/app/vault/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -33,14 +40,6 @@ import {
 	getVaultIcon,
 } from "@/components/vault/utils";
 import { cn } from "@/lib/utils";
-import {
-	Download,
-	ExternalLink,
-	FolderOpen,
-	MoreHorizontal,
-	Pencil,
-	Trash2,
-} from "lucide-react";
 
 type VaultTableItem = {
 	id: string;

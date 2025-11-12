@@ -1,12 +1,16 @@
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 import { getCurrentAuth } from "@/lib/auth";
 import {
+	ensureTeamChatSchemaReady,
 	listChannels,
 	upsertDirectMessageChannel,
 } from "@/lib/teamchat/repository";
-import { createDirectMessageSchema } from "@/lib/validations/teamchat";
+import {
+	channelListResponseSchema,
+	createDirectMessageSchema,
+	directChannelResponseSchema,
+} from "@/lib/validations/teamchat";
 
 const withNoStore = (response: NextResponse) => {
 	response.headers.set("Cache-Control", "no-store");
@@ -23,72 +27,121 @@ const unauthorized = () =>
 		),
 	);
 
-export async function GET() {
-	const auth = await getCurrentAuth();
-	if (!auth || !auth.user || !auth.user.company) {
-		return unauthorized();
+export async function GET(_request: NextRequest) {
+	try {
+		const auth = await getCurrentAuth();
+		if (!auth || !auth.user || !auth.user.company) {
+			return unauthorized();
+		}
+
+		await ensureTeamChatSchemaReady();
+
+		try {
+			const channels = await listChannels(auth.user.company.id, auth.user.id);
+			const validated = channelListResponseSchema.parse({ channels });
+
+			return withNoStore(NextResponse.json(validated));
+		} catch (error) {
+			console.error("[teamchat] GET channels error:", error);
+			const message =
+				error instanceof Error
+					? error.message
+					: "Preuzimanje kanala nije uspelo.";
+			return withNoStore(
+				NextResponse.json(
+					{
+						error: message,
+					},
+					{ status: 500 },
+				),
+			);
+		}
+	} catch (error) {
+		console.error("[teamchat] GET channels route error:", error);
+		const message =
+			error instanceof Error
+				? error.message
+				: "Preuzimanje kanala nije uspelo.";
+		return withNoStore(
+			NextResponse.json(
+				{
+					error: message,
+				},
+				{ status: 500 },
+			),
+		);
 	}
-
-	const channels = await listChannels({
-		companyId: auth.user.company.id,
-		userId: auth.user.id,
-	});
-
-	return withNoStore(
-		NextResponse.json({
-			channels,
-		}),
-	);
 }
 
 export async function POST(request: NextRequest) {
-	const auth = await getCurrentAuth();
-	if (!auth || !auth.user || !auth.user.company) {
-		return unauthorized();
-	}
+	try {
+		const auth = await getCurrentAuth();
+		if (!auth || !auth.user || !auth.user.company) {
+			return unauthorized();
+		}
 
-	const json = await request.json().catch(() => null);
-	const parsed = createDirectMessageSchema.safeParse(json);
+		const json = await request.json().catch(() => null);
+		if (!json || typeof json !== "object") {
+			return withNoStore(
+				NextResponse.json(
+					{
+						error: "Nevalidni podaci.",
+					},
+					{ status: 400 },
+				),
+			);
+		}
 
-	if (!parsed.success) {
+		const parsed = createDirectMessageSchema.safeParse(json);
+		if (!parsed.success) {
+			return withNoStore(
+				NextResponse.json(
+					{
+						error: "Nevalidni podaci.",
+						details: parsed.error.flatten(),
+					},
+					{ status: 400 },
+				),
+			);
+		}
+
+		await ensureTeamChatSchemaReady();
+
+		try {
+			const result = await upsertDirectMessageChannel(
+				auth.user.company.id,
+				auth.user.id,
+				parsed.data.targetUserId,
+			);
+			const validated = directChannelResponseSchema.parse(result);
+
+			return withNoStore(NextResponse.json(validated));
+		} catch (error) {
+			console.error("[teamchat] POST channels error:", error);
+			const message =
+				error instanceof Error
+					? error.message
+					: "Kreiranje kanala nije uspelo.";
+			return withNoStore(
+				NextResponse.json(
+					{
+						error: message,
+					},
+					{ status: 500 },
+				),
+			);
+		}
+	} catch (error) {
+		console.error("[teamchat] POST channels route error:", error);
+		const message =
+			error instanceof Error ? error.message : "Kreiranje kanala nije uspelo.";
 		return withNoStore(
 			NextResponse.json(
 				{
-					error: "Nevalidni podaci.",
+					error: message,
 				},
-				{ status: 400 },
+				{ status: 500 },
 			),
 		);
 	}
-
-	if (parsed.data.targetUserId === auth.user.id) {
-		return withNoStore(
-			NextResponse.json(
-				{
-					error: "Ne možete započeti razgovor sami sa sobom.",
-				},
-				{ status: 400 },
-			),
-		);
-	}
-
-	const channel = await upsertDirectMessageChannel({
-		companyId: auth.user.company.id,
-		currentUserId: auth.user.id,
-		targetUserId: parsed.data.targetUserId,
-	});
-
-	const channels = await listChannels({
-		companyId: auth.user.company.id,
-		userId: auth.user.id,
-	});
-
-	const channelSummary = channels.find((item) => item.id === channel.id);
-
-	return withNoStore(
-		NextResponse.json({
-			channel: channelSummary ?? null,
-			channelId: channel.id,
-		}),
-	);
 }

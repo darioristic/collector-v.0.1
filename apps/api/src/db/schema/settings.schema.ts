@@ -9,16 +9,11 @@ import {
   uniqueIndex
 } from "drizzle-orm/pg-core";
 
+import { companies } from "./auth.schema";
+import { roleKey } from "./enums.schema";
+
 export const userStatus = pgEnum("user_status", ["active", "inactive", "invited"]);
-export const roleKey = pgEnum("role_key", [
-  "admin",
-  "manager",
-  "user",
-  "sales_manager",
-  "sales_rep",
-  "support",
-  "viewer"
-]);
+// roleKey is now exported from auth.schema to avoid circular dependency
 export const integrationProvider = pgEnum("integration_provider", [
   "hubspot",
   "salesforce",
@@ -117,12 +112,14 @@ export const teamMembers = pgTable(
     role: text("role").notNull(),
     status: teamMemberStatus("status").default("offline").notNull(),
     avatarUrl: text("avatar_url"),
+    companyId: uuid("company_id").references(() => companies.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
   },
   (table) => ({
-    emailUnique: uniqueIndex("team_members_email_key").on(table.email),
-    statusIdx: index("team_members_status_idx").on(table.status)
+    emailCompanyUnique: uniqueIndex("team_members_company_email_key").on(table.companyId, table.email),
+    statusIdx: index("team_members_status_idx").on(table.status),
+    companyIdx: index("team_members_company_idx").on(table.companyId)
   })
 );
 

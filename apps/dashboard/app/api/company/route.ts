@@ -1,14 +1,14 @@
-import { NextResponse, type NextRequest } from "next/server";
 import { eq } from "drizzle-orm";
+import { type NextRequest, NextResponse } from "next/server";
 
 import { getCurrentAuth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { company } from "@/lib/db/schema/core";
 import {
-	companyResponseSchema,
-	companyUpsertSchema,
 	type CompanyResponse,
 	type CompanyUpsertPayload,
+	companyResponseSchema,
+	companyUpsertSchema,
 } from "@/lib/validations/settings/company";
 
 const withNoStore = (response: NextResponse) => {
@@ -35,26 +35,48 @@ const isMissingCompanyTableError = (error: unknown) => {
 		"message" in error ? (error as PgError).message?.toLowerCase() : undefined;
 
 	return Boolean(
-		message &&
-			message.includes('relation "company" does not exist'),
+		message && message.includes('relation "company" does not exist'),
 	);
 };
 
-const serializeCompany = (record: typeof company.$inferSelect | undefined): CompanyResponse =>
+const serializeCompany = (
+	record: typeof company.$inferSelect | undefined,
+): CompanyResponse =>
 	companyResponseSchema.parse(
 		record
 			? {
 					...record,
 					createdAt: record.createdAt.toISOString(),
 					updatedAt: record.updatedAt.toISOString(),
-			  }
+				}
 			: null,
 	);
 
 export async function GET() {
-	const auth = await getCurrentAuth();
+	let auth: Awaited<ReturnType<typeof getCurrentAuth>>;
+	
+	try {
+		auth = await getCurrentAuth();
+	} catch (error) {
+		console.error("[company] Error during authentication", {
+			error: error instanceof Error ? error.message : String(error),
+			stack: error instanceof Error ? error.stack : undefined,
+		});
+		return withNoStore(
+			NextResponse.json(
+				{
+					error: "Greška pri autentifikaciji.",
+				},
+				{ status: 401 },
+			),
+		);
+	}
 
 	if (!auth || !auth.user) {
+		console.error("[company] Authentication failed", {
+			hasAuth: !!auth,
+			hasUser: !!(auth?.user),
+		});
 		return withNoStore(
 			NextResponse.json(
 				{
@@ -78,12 +100,20 @@ export async function GET() {
 		if (isMissingCompanyTableError(error)) {
 			console.warn(
 				"[company] Tabela company ne postoji. Vraćam prazan rezultat.",
+				error,
 			);
 
 			return withNoStore(NextResponse.json(serializeCompany(undefined)));
 		}
 
-		console.error("[company] Greška prilikom učitavanja podataka:", error);
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		const errorDetails = error instanceof Error ? { name: error.name, stack: error.stack } : {};
+
+		console.error("[company] Greška prilikom učitavanja podataka:", {
+			message: errorMessage,
+			...errorDetails,
+			userId: auth.user.id,
+		});
 
 		return withNoStore(
 			NextResponse.json(
@@ -157,9 +187,33 @@ const prepareValues = (payload: CompanyUpsertPayload) => {
 };
 
 export async function PATCH(request: NextRequest) {
-	const auth = await getCurrentAuth();
+	let auth: Awaited<ReturnType<typeof getCurrentAuth>>;
+	
+	try {
+		auth = await getCurrentAuth();
+	} catch (error) {
+		console.error("[company] Error during authentication", {
+			error: error instanceof Error ? error.message : String(error),
+			stack: error instanceof Error ? error.stack : undefined,
+			url: request.url,
+		});
+		return withNoStore(
+			NextResponse.json(
+				{
+					error: "Greška pri autentifikaciji.",
+				},
+				{ status: 401 },
+			),
+		);
+	}
 
 	if (!auth || !auth.user) {
+		console.error("[company] Authentication failed", {
+			hasAuth: !!auth,
+			hasUser: !!(auth?.user),
+			url: request.url,
+			method: request.method,
+		});
 		return withNoStore(
 			NextResponse.json(
 				{
@@ -173,7 +227,9 @@ export async function PATCH(request: NextRequest) {
 	const parsed = await parsePayload(request);
 
 	if (!parsed.success) {
-		return withNoStore(NextResponse.json(parsed.error.body, { status: parsed.error.status }));
+		return withNoStore(
+			NextResponse.json(parsed.error.body, { status: parsed.error.status }),
+		);
 	}
 
 	const db = await getDb();
@@ -230,14 +286,18 @@ export async function PATCH(request: NextRequest) {
 			return withNoStore(
 				NextResponse.json(
 					{
-						error: "Tabela za čuvanje podataka o kompaniji nije kreirana. Pokrenite migracije.",
+						error:
+							"Tabela za čuvanje podataka o kompaniji nije kreirana. Pokrenite migracije.",
 					},
 					{ status: 503 },
 				),
 			);
 		}
 
-		console.error("[company] Greška prilikom čuvanja podataka o kompaniji:", error);
+		console.error(
+			"[company] Greška prilikom čuvanja podataka o kompaniji:",
+			error,
+		);
 		return withNoStore(
 			NextResponse.json(
 				{

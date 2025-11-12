@@ -71,7 +71,7 @@ export class AuthService {
           slug: uniqueSlug,
           domain: input.companyDomain ?? null
         })
-        .returning({ id: companies.id });
+        .returning();
 
       if (!company) {
         throw new AuthServiceError(500, "COMPANY_CREATE_FAILED", "Kreiranje kompanije nije uspelo.");
@@ -86,10 +86,7 @@ export class AuthService {
           hashedPassword,
           defaultCompanyId: company.id
         })
-        .returning({
-          id: users.id,
-          defaultCompanyId: users.defaultCompanyId
-        });
+        .returning();
 
       if (!userRecord) {
         throw new AuthServiceError(500, "USER_CREATE_FAILED", "Kreiranje korisnika nije uspelo.");
@@ -167,7 +164,17 @@ export class AuthService {
       throw new AuthServiceError(403, "USER_INACTIVE", "Nalog nije aktivan.");
     }
 
-    const passwordMatches = await compare(input.password, userRecord.hashedPassword);
+    if (!userRecord.hashedPassword || userRecord.hashedPassword.trim() === "") {
+      throw new AuthServiceError(401, "INVALID_CREDENTIALS", "Neispravni podaci za prijavu.");
+    }
+
+    let passwordMatches: boolean;
+    try {
+      passwordMatches = await compare(input.password, userRecord.hashedPassword);
+    } catch (error) {
+      // If bcrypt compare fails (e.g., invalid hash format), treat as invalid credentials
+      throw new AuthServiceError(401, "INVALID_CREDENTIALS", "Neispravni podaci za prijavu.");
+    }
 
     if (!passwordMatches) {
       throw new AuthServiceError(401, "INVALID_CREDENTIALS", "Neispravni podaci za prijavu.");
@@ -337,7 +344,7 @@ export class AuthService {
     const [role] = await database
       .select({ id: roles.id })
       .from(roles)
-      .where(eq(roles.key, roleKeyValue))
+      .where(eq(roles.key, roleKeyValue as typeof roles.$inferSelect.key))
       .limit(1);
 
     if (!role) {

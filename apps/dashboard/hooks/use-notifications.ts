@@ -5,10 +5,10 @@ import type { Socket } from "socket.io-client";
 import { io } from "socket.io-client";
 
 import {
+	type NotificationPayload,
 	notificationListResponseSchema,
 	notificationPayloadSchema,
 	notificationUpdateResponseSchema,
-	type NotificationPayload,
 } from "@/lib/validations/notifications";
 
 type UseNotificationsOptions = {
@@ -21,7 +21,7 @@ type NotificationReadPayload = {
 	unreadCount: number;
 };
 
-const SOCKET_PATH = "/api/notifications/socket";
+const SOCKET_PATH = "/socket/notifications";
 
 export function useNotifications(
 	userId: string | null | undefined,
@@ -63,13 +63,24 @@ export function useNotifications(
 			setIsLoading(true);
 
 			try {
-				const response = await fetch(`/api/notifications?limit=${limit}`, {
+				const serviceUrl = process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL || "http://localhost:4002";
+				const response = await fetch(`${serviceUrl}/api/notifications?limit=${limit}`, {
 					method: "GET",
 					headers: {
 						"Content-Type": "application/json",
+						...(document.cookie
+							.split("; ")
+							.find((row) => row.startsWith("auth_session="))
+							?.split("=")[1] && {
+							Authorization: `Bearer ${document.cookie
+								.split("; ")
+								.find((row) => row.startsWith("auth_session="))
+								?.split("=")[1]}`,
+						}),
 					},
 					cache: "no-store",
 					signal,
+					credentials: "include",
 				});
 
 				if (response.status === 401) {
@@ -95,7 +106,18 @@ export function useNotifications(
 					return;
 				}
 
-				console.error("[notifications] Fetch failed", error);
+				// Network errors (service unavailable) should be handled gracefully
+				const errorMessage = error instanceof Error ? error.message : String(error);
+				if (errorMessage.includes("Failed to fetch") || errorMessage.includes("NetworkError")) {
+					console.warn(
+						"[notifications] Service unavailable, notifications will not be loaded. Make sure notification service is running on port 4002.",
+					);
+					// Set empty state but don't throw - app should work without notifications
+					setNotifications([]);
+					setUnreadCount(0);
+				} else {
+					console.error("[notifications] Fetch failed", error);
+				}
 			} finally {
 				setIsLoading(false);
 			}
@@ -115,21 +137,32 @@ export function useNotifications(
 		controllerRef.current = controller;
 		void fetchNotifications(controller.signal);
 
-		const endpoint =
-			process.env.NEXT_PUBLIC_SOCKET_URL &&
-			process.env.NEXT_PUBLIC_SOCKET_URL.length > 0
-				? process.env.NEXT_PUBLIC_SOCKET_URL
-				: window.location.origin;
-
-		const socket = io(endpoint, {
+		// Use notification service
+		const serviceUrl = process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL || "http://localhost:4002";
+		const socket = io(serviceUrl, {
 			path: SOCKET_PATH,
 			addTrailingSlash: false,
 			withCredentials: true,
 			transports: ["websocket"],
 			query: { userId },
+			reconnection: true,
+			reconnectionAttempts: 5,
+			reconnectionDelay: 1000,
 		});
 
 		socketRef.current = socket;
+
+		// Handle connection errors gracefully
+		socket.on("connect_error", (error) => {
+			console.warn(
+				"[notifications] Socket connection failed. Notifications will not be received in real-time. Make sure notification service is running on port 4002.",
+				error.message,
+			);
+		});
+
+		socket.on("connect", () => {
+			console.info("[notifications] Socket connected successfully");
+		});
 
 		const handleNewNotification = (payload: unknown) => {
 			const parsed = notificationPayloadSchema.safeParse(payload);
@@ -203,12 +236,21 @@ export function useNotifications(
 			}
 
 			try {
-				const response = await fetch("/api/notifications/read", {
+				const serviceUrl = process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL || "http://localhost:4002";
+				const token = document.cookie
+					.split("; ")
+					.find((row) => row.startsWith("auth_session="))
+					?.split("=")[1];
+				const response = await fetch(`${serviceUrl}/api/notifications/mark-read`, {
 					method: "PATCH",
 					headers: {
 						"Content-Type": "application/json",
+						...(token && {
+							Authorization: `Bearer ${token}`,
+						}),
 					},
 					body: JSON.stringify({ ids }),
+					credentials: "include",
 				});
 
 				if (!response.ok) {
@@ -231,7 +273,26 @@ export function useNotifications(
 				);
 				setUnreadCount(payload.unreadCount);
 			} catch (error) {
-				console.error("[notifications] Mark as read failed", error);
+				const errorMessage = error instanceof Error ? error.message : String(error);
+				if (errorMessage.includes("Failed to fetch") || errorMessage.includes("NetworkError")) {
+					console.warn(
+						"[notifications] Service unavailable, mark as read failed. Make sure notification service is running on port 4002.",
+					);
+					// Optimistically update local state even if service is unavailable
+					setNotifications((prev) =>
+						prev.map((item) =>
+							ids.includes(item.id)
+								? {
+										...item,
+										read: true,
+									}
+								: item,
+						),
+					);
+					setUnreadCount((prev) => Math.max(0, prev - ids.length));
+				} else {
+					console.error("[notifications] Mark as read failed", error);
+				}
 			}
 		},
 		[userId],
