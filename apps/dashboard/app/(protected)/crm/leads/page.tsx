@@ -5,7 +5,7 @@ import LeadsPageClient from "./leads-page-client";
 
 export async function generateMetadata() {
 	return generateMeta({
-		title: "CRM Leads",
+		title: "Leads - Collector Dashboard",
 		description: "Overview and management of leads in the CRM module.",
 		canonical: "/crm/leads",
 	});

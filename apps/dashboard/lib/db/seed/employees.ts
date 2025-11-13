@@ -407,19 +407,52 @@ export async function seedEmployees(
 	}
 
 	await db.transaction(async (tx) => {
-		await Promise.all(
-			employeesToInsert.map(async (emp) => {
-				// Normalize optional values to null instead of undefined
-				const phoneValue = emp.phone ? emp.phone : null;
-				const endDateValue = emp.endDate ? emp.endDate : null;
-				const salaryValue = emp.salary !== undefined ? emp.salary : null;
+		for (const emp of employeesToInsert) {
+			// Normalize optional values to null instead of undefined
+			const phoneValue = emp.phone ? emp.phone : null;
+			const endDateValue = emp.endDate ? emp.endDate : null;
+			const salaryValue = emp.salary !== undefined ? emp.salary : null;
 
-				// Set default password for employees (email as password for seed data)
-				// In production, employees should set their own passwords
-				const defaultPassword = emp.email.split("@")[0] || "password123";
-				const hashedPassword = await hash(defaultPassword, SALT_ROUNDS);
+			// Set default password for employees (email as password for seed data)
+			// In production, employees should set their own passwords
+			const defaultPassword = emp.email.split("@")[0] || "password123";
+			const hashedPassword = await hash(defaultPassword, SALT_ROUNDS);
 
-				const values = {
+			// Check if employee already exists
+			const existing = await tx
+				.select()
+				.from(employees)
+				.where(sql`${employees.email} = ${emp.email}`)
+				.limit(1);
+
+			if (existing.length > 0) {
+				// Update existing employee, but only set password if it's empty
+				const existingPassword = existing[0].hashedPassword;
+				const shouldUpdatePassword =
+					!existingPassword || existingPassword === "";
+
+				await tx
+					.update(employees)
+					.set({
+						firstName: emp.firstName,
+						lastName: emp.lastName,
+						phone: phoneValue,
+						department: emp.department,
+						role: emp.role,
+						employmentType: emp.employmentType,
+						status: emp.status,
+						startDate: emp.startDate,
+						endDate: endDateValue,
+						salary: salaryValue,
+						updatedAt: new Date(),
+						hashedPassword: shouldUpdatePassword
+							? hashedPassword
+							: existingPassword,
+					})
+					.where(sql`${employees.email} = ${emp.email}`);
+			} else {
+				// Insert new employee
+				await tx.insert(employees).values({
 					firstName: emp.firstName,
 					lastName: emp.lastName,
 					email: emp.email,
@@ -432,35 +465,9 @@ export async function seedEmployees(
 					startDate: emp.startDate,
 					endDate: endDateValue,
 					salary: salaryValue,
-				};
-
-				return tx
-					.insert(employees)
-					.values(values)
-					.onConflictDoUpdate({
-						target: employees.email,
-						set: {
-							firstName: emp.firstName,
-							lastName: emp.lastName,
-							phone: phoneValue,
-							department: emp.department,
-							role: emp.role,
-							employmentType: emp.employmentType,
-							status: emp.status,
-							startDate: emp.startDate,
-							endDate: endDateValue,
-							salary: salaryValue,
-							updatedAt: new Date(),
-							// Only update password if it's empty (don't overwrite existing passwords)
-							hashedPassword: sql`CASE 
-								WHEN ${employees.hashedPassword} = '' OR ${employees.hashedPassword} IS NULL 
-								THEN ${hashedPassword} 
-								ELSE ${employees.hashedPassword} 
-							END`,
-						},
-					});
-			}),
-		);
+				});
+			}
+		}
 	});
 
 	return {

@@ -23,7 +23,7 @@ export function generateMeta({
 	canonical: string;
 }): Metadata {
 	return {
-		title: `${title} - Shadcn UI Kit`,
+		title: title.includes(" - Collector Dashboard") ? title : `${title} - Collector Dashboard`,
 		description: description,
 		metadataBase: new URL(`https://shadcnuikit.com`),
 		alternates: {

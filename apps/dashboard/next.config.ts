@@ -19,6 +19,76 @@ const nextConfig: NextConfig = {
 			},
 		],
 	},
+	async redirects() {
+		return [
+			// Dashboard redirects
+			{
+				source: "/finance",
+				destination: "/dashboard",
+				permanent: false,
+			},
+			// Vault redirects
+			{
+				source: "/file-manager",
+				destination: "/vault",
+				permanent: false,
+			},
+			// HR redirects
+			{
+				source: "/employee-dashboard",
+				destination: "/hr/dashboard",
+				permanent: false,
+			},
+			// Projects redirects
+			{
+				source: "/project-management",
+				destination: "/projects",
+				permanent: false,
+			},
+			{
+				source: "/project-list",
+				destination: "/projects/list",
+				permanent: false,
+			},
+			// Profile redirects
+			{
+				source: "/pages/profile",
+				destination: "/profile",
+				permanent: false,
+			},
+			// Settings redirects
+			{
+				source: "/pages/settings",
+				destination: "/settings",
+				permanent: false,
+			},
+			{
+				source: "/pages/settings/account",
+				destination: "/settings/account",
+				permanent: false,
+			},
+			{
+				source: "/pages/settings/billing",
+				destination: "/settings/billing",
+				permanent: false,
+			},
+			{
+				source: "/pages/settings/appearance",
+				destination: "/settings/appearance",
+				permanent: false,
+			},
+			{
+				source: "/pages/settings/notifications",
+				destination: "/settings/notifications",
+				permanent: false,
+			},
+			{
+				source: "/pages/settings/display",
+				destination: "/settings/display",
+				permanent: false,
+			},
+		];
+	},
 	// Webpack config only applies when NOT using Turbopack
 	// When using --turbo flag, this config is ignored
 	webpack: (config, { dev, isServer }) => {

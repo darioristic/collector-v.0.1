@@ -13,7 +13,7 @@ import Transactions from "./components/transactions";
 
 export async function generateMetadata() {
 	return generateMeta({
-		title: "Finance Admin Dashboard",
+		title: "Finance Dashboard - Collector Dashboard",
 		description:
 			"A finance dashboard is an admin panel that visualizes key financial data such as income, expenses, cash flow, budget, and profit. Built with shadcn/ui, Tailwind CSS, Next.js.",
 		canonical: "/finance",

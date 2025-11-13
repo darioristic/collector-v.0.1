@@ -28,7 +28,7 @@ export function middleware(request: NextRequest) {
 	const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME);
 
 	// For root and protected routes, check authentication
-	if (pathname === "/" || pathname.startsWith("/dashboard") || pathname.startsWith("/finance") || pathname.startsWith("/crm") || pathname.startsWith("/projects") || pathname.startsWith("/hr") || pathname.startsWith("/settings")) {
+	if (pathname === "/" || pathname.startsWith("/dashboard") || pathname.startsWith("/finance") || pathname.startsWith("/crm") || pathname.startsWith("/projects") || pathname.startsWith("/hr") || pathname.startsWith("/settings") || pathname.startsWith("/vault") || pathname.startsWith("/profile")) {
 		// If no session cookie, redirect to login
 		if (!sessionCookie) {
 			const loginUrl = new URL("/auth/login", request.url);
@@ -39,21 +39,9 @@ export function middleware(request: NextRequest) {
 			return NextResponse.redirect(loginUrl);
 		}
 
-		// Authenticated - handle redirects
+		// Authenticated - handle root redirect
 		if (pathname === "/") {
-			url.pathname = "/finance";
-			return NextResponse.redirect(url);
-		}
-
-		if (pathname === "/dashboard" || pathname === "/dashboard/") {
-			url.pathname = "/finance";
-			return NextResponse.redirect(url);
-		}
-
-		if (pathname.startsWith("/dashboard/")) {
-			const nextPath = pathname.replace("/dashboard", "") || "/";
-			url.pathname = nextPath === "/" ? "/finance" : nextPath;
-			url.search = request.nextUrl.search;
+			url.pathname = "/dashboard";
 			return NextResponse.redirect(url);
 		}
 	}

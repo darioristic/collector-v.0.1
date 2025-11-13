@@ -29,6 +29,7 @@ import type { LucideIcon } from "./nav-icons";
 import {
   ArchiveRestoreIcon,
   BadgeDollarSignIcon,
+  BarChart3Icon,
   BrainCircuitIcon,
   ChartBarDecreasingIcon,
   ClipboardCheckIcon,
@@ -68,7 +69,7 @@ export const navItems: NavGroup[] = [
     items: [
       {
         title: "Dashboard",
-        href: "/finance",
+        href: "/dashboard",
         icon: WalletMinimalIcon
       },
       {
@@ -120,7 +121,7 @@ export const navItems: NavGroup[] = [
           { title: "Leads", href: "/crm/leads" },
           { title: "Deals", href: "/crm/deals" },
           { title: "Activities", href: "/crm/activities" },
-          { title: "Reports", href: "/crm?tab=reports" }
+          { title: "Reports", href: "/crm/reports" }
         ]
       },
       {
@@ -140,11 +141,11 @@ export const navItems: NavGroup[] = [
     items: [
       {
         title: "Projects",
-        href: "/project-management",
+        href: "/projects",
         icon: FolderDotIcon,
         items: [
-          { title: "Dashboard", href: "/project-management" },
-          { title: "Project List", href: "/project-list" }
+          { title: "Dashboard", href: "/projects" },
+          { title: "Project List", href: "/projects/list" }
         ]
       },
       {
@@ -153,14 +154,12 @@ export const navItems: NavGroup[] = [
         icon: UsersIcon,
         items: [
           { title: "Employees", href: "/hr/employees" },
-          { title: "Dashboard", href: "/employee-dashboard" },
-          { title: "Departments", href: "/employee-dashboard?tab=departments" },
-          { title: "Payroll", href: "/employee-dashboard?tab=payroll" }
+          { title: "Dashboard", href: "/hr/dashboard" }
         ]
       },
       {
         title: "Vault",
-        href: "/file-manager",
+        href: "/vault",
         icon: ArchiveRestoreIcon
       },
       {
@@ -171,29 +170,40 @@ export const navItems: NavGroup[] = [
     ]
   },
   {
+    title: "Reports & Analytics",
+    items: [
+      {
+        title: "Reports",
+        href: "/reports",
+        icon: BarChart3Icon,
+        items: [
+          { title: "Sales", href: "/reports/sales" },
+          { title: "CRM", href: "/reports/crm" },
+          { title: "HR", href: "/reports/hr" },
+          { title: "Projects", href: "/reports/projects" },
+          { title: "Finance", href: "/reports/finance" }
+        ]
+      }
+    ]
+  },
+  {
     title: "Settings",
     items: [
       {
         title: "Profile",
-        href: "/pages/profile",
+        href: "/profile",
         icon: UserIcon
       },
       {
         title: "Settings",
         href: "/settings",
-        icon: SettingsIcon
-      },
-      {
-        title: "Legacy Settings",
-        href: "/pages/settings",
-        icon: SlidersHorizontalIcon,
+        icon: SettingsIcon,
         items: [
-          { title: "Profile", href: "/pages/settings" },
-          { title: "Account", href: "/pages/settings/account" },
-          { title: "Billing", href: "/pages/settings/billing" },
-          { title: "Appearance", href: "/pages/settings/appearance" },
-          { title: "Notifications", href: "/pages/settings/notifications" },
-          { title: "Display", href: "/pages/settings/display" },
+          { title: "Account", href: "/settings/account" },
+          { title: "Billing", href: "/settings/billing" },
+          { title: "Appearance", href: "/settings/appearance" },
+          { title: "Notifications", href: "/settings/notifications" },
+          { title: "Display", href: "/settings/display" },
           { title: "Api Keys", href: "/apps/api-keys", icon: KeyIcon }
         ]
       },

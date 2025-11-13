@@ -17,4 +17,24 @@ metadata:
 spec:
   lookupPolicy:
     local: true
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: chat-service
+  labels:
+    app: chat-service
+spec:
+  lookupPolicy:
+    local: true
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: notification-service
+  labels:
+    app: notification-service
+spec:
+  lookupPolicy:
+    local: true
 

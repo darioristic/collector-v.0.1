@@ -3,7 +3,7 @@ import CRMReportsPage from "./reports-page-client";
 
 export async function generateMetadata() {
 	return generateMeta({
-		title: "CRM Reports",
+		title: "Reports - Collector Dashboard",
 		description:
 			"Performance analytics and visual reports for the CRM dashboard.",
 		canonical: "/crm/reports",

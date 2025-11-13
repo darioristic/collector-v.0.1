@@ -1,0 +1,75 @@
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: chat-service
+  labels:
+    app: chat-service
+spec:
+  replicas: 2
+  selector:
+    app: chat-service
+    deploymentconfig: chat-service
+  strategy:
+    type: Rolling
+  template:
+    metadata:
+      labels:
+        app: chat-service
+        deploymentconfig: chat-service
+    spec:
+      containers:
+        - name: chat-service
+          image: image-registry.openshift-image-registry.svc:5000/$(NAMESPACE)/chat-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 4001
+              protocol: TCP
+              name: http
+          envFrom:
+            - secretRef:
+                name: collector-chat-service-secrets
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "4001"
+            - name: HOST
+              value: "0.0.0.0"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4001
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4001
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      restartPolicy: Always
+  triggers:
+    - type: ConfigChange
+    - type: ImageChange
+      imageChangeParams:
+        automatic: true
+        containerNames:
+          - chat-service
+        from:
+          kind: ImageStreamTag
+          name: chat-service:latest
+

@@ -1,0 +1,75 @@
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  name: notification-service
+  labels:
+    app: notification-service
+spec:
+  replicas: 2
+  selector:
+    app: notification-service
+    deploymentconfig: notification-service
+  strategy:
+    type: Rolling
+  template:
+    metadata:
+      labels:
+        app: notification-service
+        deploymentconfig: notification-service
+    spec:
+      containers:
+        - name: notification-service
+          image: image-registry.openshift-image-registry.svc:5000/$(NAMESPACE)/notification-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 4002
+              protocol: TCP
+              name: http
+          envFrom:
+            - secretRef:
+                name: collector-notification-service-secrets
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "4002"
+            - name: HOST
+              value: "0.0.0.0"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4002
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4002
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      restartPolicy: Always
+  triggers:
+    - type: ConfigChange
+    - type: ImageChange
+      imageChangeParams:
+        automatic: true
+        containerNames:
+          - notification-service
+        from:
+          kind: ImageStreamTag
+          name: notification-service:latest
+

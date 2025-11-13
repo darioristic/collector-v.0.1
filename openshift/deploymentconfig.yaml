@@ -32,13 +32,34 @@ spec:
               path: /api/health
               port: 4000
               scheme: HTTP
-            initialDelaySeconds: 5
+            initialDelaySeconds: 10
             periodSeconds: 10
+            timeoutSeconds: 5
             failureThreshold: 3
             successThreshold: 1
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 4000
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
           env:
             - name: NODE_ENV
               value: production
+            - name: PORT
+              value: "4000"
+            - name: HOST
+              value: "0.0.0.0"
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
       restartPolicy: Always
   triggers:
     - type: ConfigChange
@@ -80,9 +101,37 @@ spec:
           envFrom:
             - configMapRef:
                 name: dashboard-theme-config
+            - configMapRef:
+                name: dashboard-config
           env:
             - name: NODE_ENV
               value: production
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
       restartPolicy: Always
   triggers:
     - type: ConfigChange

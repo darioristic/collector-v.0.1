@@ -5,7 +5,7 @@ import AIChatSidebar from "./components/ai-chat-sidebar";
 
 export async function generateMetadata(): Promise<Metadata> {
 	return generateMeta({
-		title: "AI Chat V2",
+		title: "AI Chat - Collector Dashboard",
 		description:
 			"AI chatbot is an app ui template that allows users to interact with an AI for messaging and assistance. Built with shadcn/ui, Next.js and Tailwind CSS.",
 		canonical: "/apps/ai-chat-v2",

@@ -9,6 +9,8 @@
  * - Starts dev servers with proper orchestration
  * - Provides beautiful progress tracking
  * - Handles errors gracefully with recovery
+ * - Verifies seed data and frontend display
+ * - Waits for all services to be ready before continuing
  */
 
 import { spawn } from "node:child_process";
@@ -17,7 +19,7 @@ import { dirname, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { config as loadEnv } from "dotenv";
-import * as readline from "node:readline";
+// Removed readline import - no longer needed
 
 // ============================================================================
 // CONFIGURATION
@@ -42,6 +44,9 @@ const DEFAULT_PORTS = {
 	postgres: 5432,
 	redis: 6379,
 };
+
+const MAX_WAIT_TIME = 120000; // 2 minutes max wait for services
+const HEALTH_CHECK_INTERVAL = 2000; // Check every 2 seconds
 
 // ============================================================================
 // LOGGER
@@ -116,10 +121,13 @@ const logger = new DevLogger();
 
 type ServiceState = {
 	name: string;
-	status: "pending" | "starting" | "running" | "failed";
+	status: "pending" | "starting" | "running" | "failed" | "ready";
 	port?: number;
 	pid?: number;
 	startTime?: number;
+	healthCheckUrl?: string;
+	logBuffer: string[];
+	errorPatterns: RegExp[];
 };
 
 class StateManager {
@@ -128,12 +136,20 @@ class StateManager {
 	dockerStarted = false;
 	isShuttingDown = false;
 
-	addService(name: string, port?: number): void {
+	addService(
+		name: string,
+		port?: number,
+		healthCheckUrl?: string,
+		errorPatterns: RegExp[] = [],
+	): void {
 		this.services.set(name, {
 			name,
 			status: "pending",
 			port,
 			startTime: Date.now(),
+			healthCheckUrl,
+			logBuffer: [],
+			errorPatterns,
 		});
 	}
 
@@ -142,6 +158,59 @@ class StateManager {
 		if (current) {
 			this.services.set(name, { ...current, ...updates });
 		}
+	}
+
+	appendLog(name: string, data: string): void {
+		const service = this.services.get(name);
+		if (service) {
+			service.logBuffer.push(data);
+			// Keep only last 100 lines
+			if (service.logBuffer.length > 100) {
+				service.logBuffer.shift();
+			}
+		}
+	}
+
+	checkForErrors(name: string): string[] {
+		const service = this.services.get(name);
+		if (!service) return [];
+
+		const errors: string[] = [];
+		const recentLogs = service.logBuffer.slice(-20).join("\n");
+
+		for (const pattern of service.errorPatterns) {
+			const matches = recentLogs.match(pattern);
+			if (matches) {
+				errors.push(pattern.toString());
+			}
+		}
+
+		// Common error patterns
+		const commonErrors = [
+			/EADDRINUSE/,
+			/ECONNREFUSED/,
+			/ENOTFOUND/,
+			/ETIMEDOUT/,
+			/Cannot find module/,
+			/Module not found/,
+			/SyntaxError/,
+			/TypeError/,
+			/ReferenceError/,
+			/Failed to connect/,
+			/Connection refused/,
+			/Port.*already in use/,
+		];
+
+		for (const pattern of commonErrors) {
+			if (pattern.test(recentLogs)) {
+				const match = recentLogs.match(new RegExp(pattern.source + ".*", "i"));
+				if (match) {
+					errors.push(match[0].substring(0, 100));
+				}
+			}
+		}
+
+		return errors;
 	}
 
 	getStatus(): ServiceState[] {
@@ -155,6 +224,7 @@ class StateManager {
 				pending: "⏳",
 				starting: "🔄",
 				running: "✅",
+				ready: "✅",
 				failed: "❌",
 			}[service.status];
 
@@ -168,7 +238,7 @@ class StateManager {
 				label: `${statusEmoji} ${service.name}`,
 				value: `${service.status}${portInfo}${uptimeInfo}`,
 				status:
-					service.status === "running"
+					service.status === "running" || service.status === "ready"
 						? ("ok" as const)
 						: service.status === "failed"
 							? ("error" as const)
@@ -181,6 +251,348 @@ class StateManager {
 }
 
 const state = new StateManager();
+
+// ============================================================================
+// HEALTH CHECKS
+// ============================================================================
+
+async function checkHealth(url: string, timeout = 5000): Promise<boolean> {
+	try {
+		const controller = new AbortController();
+		const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+		const response = await fetch(url, {
+			method: "GET",
+			signal: controller.signal,
+			headers: {
+				Accept: "application/json",
+			},
+		});
+
+		clearTimeout(timeoutId);
+		return response.ok || response.status === 401 || response.status === 403; // 401/403 means server is up
+	} catch (error) {
+		return false;
+	}
+}
+
+async function waitForService(
+	name: string,
+	healthCheckUrl?: string,
+	maxWait = MAX_WAIT_TIME,
+): Promise<void> {
+	const service = state.services.get(name);
+	if (!service) {
+		throw new Error(`Service ${name} not found`);
+	}
+
+	const startTime = Date.now();
+	logger.info(`Waiting for ${name} to be ready...`);
+
+	let consecutiveHealthyChecks = 0;
+	const requiredHealthyChecks = 2; // Need 2 consecutive healthy checks
+
+	while (Date.now() - startTime < maxWait) {
+		// Refresh service state (it may have been updated by spawnDevProcess)
+		const currentService = state.services.get(name);
+		if (!currentService) {
+			throw new Error(`Service ${name} not found`);
+		}
+		
+		// Check for errors in logs
+		const errors = state.checkForErrors(name);
+		if (errors.length > 0 && (currentService.status === "starting" || currentService.status === "pending")) {
+			logger.error(`${name} has errors in logs:`);
+			errors.forEach((err) => logger.error(`  - ${err}`));
+			state.updateService(name, { status: "failed" });
+			throw new Error(
+				`${name} failed to start. Check logs above for details.`,
+			);
+		}
+
+		// If health check URL is provided, use it
+		if (healthCheckUrl) {
+			// Try health check even if status is "starting" or "pending" (service may have started)
+			if (currentService.status === "running" || currentService.status === "ready" || currentService.status === "starting" || currentService.status === "pending") {
+				const isHealthy = await checkHealth(healthCheckUrl);
+				if (isHealthy) {
+					// If healthy, mark as running first
+					if (currentService.status !== "running" && currentService.status !== "ready") {
+						state.updateService(name, { status: "running" });
+					}
+					consecutiveHealthyChecks++;
+					if (consecutiveHealthyChecks >= requiredHealthyChecks) {
+						state.updateService(name, { status: "ready" });
+						logger.success(`${name} is ready and healthy`);
+						return;
+					}
+				} else {
+					consecutiveHealthyChecks = 0;
+				}
+			}
+		} else {
+			// If service is marked as running and no health check, wait a bit then mark ready
+			if (currentService.status === "running") {
+				// Give it more time to fully initialize
+				await delay(3000);
+				state.updateService(name, { status: "ready" });
+				logger.success(`${name} is ready`);
+				return;
+			}
+		}
+
+		if (currentService.status === "failed") {
+			throw new Error(`${name} failed to start`);
+		}
+
+		await delay(HEALTH_CHECK_INTERVAL);
+	}
+
+	throw new Error(
+		`${name} did not become ready within ${maxWait / 1000}s`,
+	);
+}
+
+async function waitForAllServices(): Promise<void> {
+	logger.step("Waiting for all services to be ready...");
+
+	// Include services that are starting, running, or still pending (should be starting)
+	// Exclude PostgreSQL if it's already ready (external service)
+	const servicesToWait = Array.from(state.services.values()).filter(
+		(s) => 
+			s.status === "starting" || 
+			s.status === "running" ||
+			(s.status === "pending" && s.name !== "PostgreSQL"),
+	);
+
+	if (servicesToWait.length === 0) {
+		logger.warn("No services to wait for");
+		return;
+	}
+	
+	logger.info(`Waiting for ${servicesToWait.length} service(s): ${servicesToWait.map(s => s.name).join(", ")}`);
+
+	const results: Array<{ name: string; success: boolean; error?: string }> = [];
+
+	for (const service of servicesToWait) {
+		// If service is still pending, mark it as starting (it should have been started)
+		if (service.status === "pending") {
+			logger.info(`${service.name} is still pending, marking as starting...`);
+			state.updateService(service.name, { status: "starting" });
+		}
+		
+		try {
+			await waitForService(service.name, service.healthCheckUrl);
+			results.push({ name: service.name, success: true });
+		} catch (error) {
+			const errorMsg = error instanceof Error ? error.message : String(error);
+			logger.error(`Failed to wait for ${service.name}: ${errorMsg}`);
+			results.push({ name: service.name, success: false, error: errorMsg });
+		}
+	}
+
+	const successful = results.filter((r) => r.success).length;
+	const failed = results.filter((r) => !r.success);
+
+	if (failed.length > 0) {
+		logger.warn(
+			`${failed.length} service(s) failed to become ready: ${failed.map((f) => f.name).join(", ")}`,
+		);
+		for (const fail of failed) {
+			logger.error(`  - ${fail.name}: ${fail.error}`);
+		}
+	}
+
+	if (successful === servicesToWait.length) {
+		logger.success(`All ${successful} services are ready`);
+	} else {
+		logger.warn(
+			`Only ${successful}/${servicesToWait.length} services are ready. Some features may not work.`,
+		);
+	}
+}
+
+// ============================================================================
+// DATABASE VERIFICATION
+// ============================================================================
+
+async function verifySeedData(connectionString: string): Promise<{
+	employees: number;
+	teamMembers: number;
+	companies: number;
+	users: number;
+}> {
+	try {
+		const { stdout: employeesCount } = await runCommand(
+			"psql",
+			[
+				"--dbname",
+				connectionString,
+				"-tAc",
+				"SELECT COUNT(*) FROM employees;",
+			],
+			rootDir,
+			{ print: false },
+		);
+
+		const { stdout: teamMembersCount } = await runCommand(
+			"psql",
+			[
+				"--dbname",
+				connectionString,
+				"-tAc",
+				"SELECT COUNT(*) FROM team_members;",
+			],
+			rootDir,
+			{ print: false },
+		);
+
+		const { stdout: companiesCount } = await runCommand(
+			"psql",
+			[
+				"--dbname",
+				connectionString,
+				"-tAc",
+				"SELECT COUNT(*) FROM companies;",
+			],
+			rootDir,
+			{ print: false },
+		);
+
+		const { stdout: usersCount } = await runCommand(
+			"psql",
+			[
+				"--dbname",
+				connectionString,
+				"-tAc",
+				"SELECT COUNT(*) FROM users;",
+			],
+			rootDir,
+			{ print: false },
+		);
+
+		return {
+			employees: parseInt(employeesCount.trim(), 10) || 0,
+			teamMembers: parseInt(teamMembersCount.trim(), 10) || 0,
+			companies: parseInt(companiesCount.trim(), 10) || 0,
+			users: parseInt(usersCount.trim(), 10) || 0,
+		};
+	} catch (error) {
+		logger.warn(
+			`Could not verify seed data: ${error instanceof Error ? error.message : String(error)}`,
+		);
+		return { employees: 0, teamMembers: 0, companies: 0, users: 0 };
+	}
+}
+
+async function verifyApiSeedData(connectionString: string): Promise<{
+	employees: number;
+	notifications: number;
+}> {
+	try {
+		const { stdout: employeesCount } = await runCommand(
+			"psql",
+			[
+				"--dbname",
+				connectionString,
+				"-tAc",
+				"SELECT COUNT(*) FROM employees;",
+			],
+			rootDir,
+			{ print: false },
+		);
+
+		const { stdout: notificationsCount } = await runCommand(
+			"psql",
+			[
+				"--dbname",
+				connectionString,
+				"-tAc",
+				"SELECT COUNT(*) FROM notifications;",
+			],
+			rootDir,
+			{ print: false },
+		);
+
+		return {
+			employees: parseInt(employeesCount.trim(), 10) || 0,
+			notifications: parseInt(notificationsCount.trim(), 10) || 0,
+		};
+	} catch (error) {
+		logger.warn(
+			`Could not verify API seed data: ${error instanceof Error ? error.message : String(error)}`,
+		);
+		return { employees: 0, notifications: 0 };
+	}
+}
+
+// ============================================================================
+// FRONTEND VERIFICATION
+// ============================================================================
+
+async function verifyFrontendData(
+	frontendUrl: string,
+	apiUrl: string,
+): Promise<{
+	employeesAvailable: boolean;
+	teamMembersAvailable: boolean;
+}> {
+	try {
+		// Check employees endpoint (in Dashboard Next.js app)
+		let employeesAvailable = false;
+		try {
+			const employeesResponse = await fetch(
+				`${frontendUrl}/api/employees?limit=1`,
+				{
+					method: "GET",
+					headers: {
+						Accept: "application/json",
+					},
+				},
+			);
+
+			if (employeesResponse.ok) {
+				const data = await employeesResponse.json();
+				employeesAvailable =
+					Array.isArray(data.data) && data.data.length > 0;
+			}
+		} catch (error) {
+			// Endpoint might not be available yet
+		}
+
+		// Check team members endpoint (in Dashboard Next.js app)
+		let teamMembersAvailable = false;
+		try {
+			const teamMembersResponse = await fetch(
+				`${frontendUrl}/api/settings/team-members?limit=1`,
+				{
+					method: "GET",
+					headers: {
+						Accept: "application/json",
+					},
+				},
+			);
+
+			if (teamMembersResponse.ok) {
+				const data = await teamMembersResponse.json();
+				teamMembersAvailable =
+					Array.isArray(data.data) && data.data.length > 0;
+			}
+		} catch (error) {
+			// Endpoint might not be available yet
+		}
+
+		return {
+			employeesAvailable,
+			teamMembersAvailable,
+		};
+	} catch (error) {
+		logger.warn(
+			`Could not verify frontend data: ${error instanceof Error ? error.message : String(error)}`,
+		);
+		return { employeesAvailable: false, teamMembersAvailable: false };
+	}
+}
 
 // ============================================================================
 // ENVIRONMENT
@@ -229,8 +641,8 @@ Seeding Options:
   --quick           Quick start (skip seed if data exists)
   --only=<modules>  Seed only specific modules (comma-separated)
                     Example: --only=auth,accounts,employees
-                    API modules: auth,accounts,products,crm,sales,projects,settings
-                    Dashboard modules: employees,vault
+                    API modules: auth,accounts,products,crm,sales,projects,settings,hr,notifications
+                    Dashboard modules: companies,users,company,employees,vault,deals,team-members,notifications,teamchat,chat
   --skip=<modules>  Skip specific seed modules (comma-separated)
                     Example: --skip=crm,projects,vault
 
@@ -481,6 +893,31 @@ async function checkDatabaseHasData(
 	}
 }
 
+async function checkEmployeesExist(
+	connectionString: string,
+): Promise<boolean> {
+	try {
+		// Check if employees table exists and has data
+		const result = await runCommand(
+			"psql",
+			[
+				"--dbname",
+				connectionString,
+				"-tAc",
+				"SELECT COUNT(*) FROM employees;",
+			],
+			rootDir,
+			{ print: false },
+		);
+
+		const count = parseInt(result.stdout.trim(), 10);
+		return count > 0;
+	} catch {
+		// Table doesn't exist or error - employees don't exist
+		return false;
+	}
+}
+
 async function ensureDatabaseExists(connectionString: string): Promise<void> {
 	const { database, adminConnectionString } =
 		parseDatabaseUrl(connectionString);
@@ -520,9 +957,7 @@ async function ensureDatabaseExists(connectionString: string): Promise<void> {
 
 async function cleanupEmployeesTable(connectionString: string): Promise<void> {
 	try {
-		// Check if user_id column exists in employees table and if it's NOT referenced by API schema
-		// Only remove it if it exists and is not part of the expected schema
-		// This prevents Drizzle from asking if it's created or renamed
+		// Check if user_id column exists in employees table
 		const checkResult = await runCommand(
 			"psql",
 			[
@@ -534,11 +969,11 @@ async function cleanupEmployeesTable(connectionString: string): Promise<void> {
 			rootDir,
 			{ print: false },
 		);
-		
+
 		const columnExists = parseInt(checkResult.stdout.trim(), 10) > 0;
-		
+
 		if (columnExists) {
-			// Only remove if it's not referenced by any foreign key (API schema uses it)
+			// Check if it has foreign key constraint (API schema uses it)
 			const fkCheck = await runCommand(
 				"psql",
 				[
@@ -550,22 +985,13 @@ async function cleanupEmployeesTable(connectionString: string): Promise<void> {
 				rootDir,
 				{ print: false },
 			);
-			
+
 			const hasForeignKey = parseInt(fkCheck.stdout.trim(), 10) > 0;
-			
-			// If user_id exists but has no foreign key, it's likely from dashboard schema and should be removed
+
+			// API schema expects user_id with foreign key, so we should keep it
+			// But if it exists without FK, it might cause issues - leave it for API to handle
 			if (!hasForeignKey) {
-				await runCommand(
-					"psql",
-					[
-						"--dbname",
-						connectionString,
-						"-c",
-						"ALTER TABLE employees DROP COLUMN IF EXISTS user_id;",
-					],
-					rootDir,
-					{ print: false },
-				);
+				logger.info("Employees table has user_id column without foreign key. API will add FK constraint.");
 			}
 		}
 	} catch (error) {
@@ -584,9 +1010,14 @@ async function runMigrations(): Promise<void> {
 	await cleanupEmployeesTable(connectionString);
 
 	try {
-		// Run API migrations (--force flag is already in package.json)
-		await runCommand("bun", ["run", "db:push"], apiDir);
-		logger.success("API migrations completed");
+		// Skip API db:push for now - API and Dashboard use different employees schemas
+		// API employees has: id (uuid), user_id, employee_number, status, department
+		// Dashboard employees has: id (serial), first_name, last_name, email, hashed_password, etc.
+		// They are incompatible, so we skip API push to avoid interactive prompts
+		logger.info("Skipping API db:push (API and Dashboard use different employees schemas)");
+		logger.info("💡 API employees schema is different from Dashboard employees schema.");
+		logger.info("💡 API will use its own employees table structure when needed.");
+		// If you need API migrations, run them separately: cd apps/api && bun run db:push
 	} catch (error) {
 		logger.warn(
 			`API migration error: ${error instanceof Error ? error.message : String(error)}`,
@@ -620,19 +1051,7 @@ async function runMigrations(): Promise<void> {
 	}
 }
 
-async function askYesNo(question: string): Promise<boolean> {
-	const rl = readline.createInterface({
-		input: process.stdin,
-		output: process.stdout,
-	});
-
-	return new Promise((resolve) => {
-		rl.question(`${question} (y/n): `, (answer) => {
-			rl.close();
-			resolve(answer.toLowerCase().trim() === "y" || answer.toLowerCase().trim() === "yes");
-		});
-	});
-}
+// Removed askYesNo - no longer needed, seed runs automatically
 
 async function runSeed(options: {
 	only?: string;
@@ -674,7 +1093,19 @@ async function runSeed(options: {
 		if (options.only) {
 			const onlyModules = options.only.split(",");
 			const dashboardModules = onlyModules.filter((m) =>
-				["employees", "vault", "deals", "team-members", "notifications", "teamchat", "chat", "users-companies"].includes(m.trim()),
+				[
+					"employees",
+					"vault",
+					"deals",
+					"team-members",
+					"notifications",
+					"teamchat",
+					"chat",
+					"users-companies",
+					"companies",
+					"users",
+					"company",
+				].includes(m.trim()),
 			);
 			if (dashboardModules.length > 0) {
 				dashboardSeedArgs.push(`--only=${dashboardModules.join(",")}`);
@@ -806,19 +1237,61 @@ function spawnDevProcess(
 	const prefix = `[\x1b[35m${name}\x1b[0m]`;
 
 	child.stdout?.on("data", (data) => {
-		// Check for successful start indicators
 		const output = data.toString();
+		state.appendLog(name, output);
+
+		// Check for successful start indicators
 		if (
 			output.includes("ready") ||
 			output.includes("listening") ||
-			output.includes("started")
+			output.includes("started") ||
+			output.includes("Local:") ||
+			output.includes("compiled") ||
+			output.includes("Server listening") ||
+			output.includes("Socket.IO path") ||
+			(name === "Chat Service" && output.includes("[chat-service] Server listening")) ||
+			(name === "Chat Service" && output.includes("Server listening on")) ||
+			(name === "API" && output.includes("Server listening")) ||
+			(name === "Notification Service" && output.includes("Server listening")) ||
+			(name === "Frontend" && output.includes("Ready in"))
 		) {
 			state.updateService(name, { status: "running" });
 		}
+
 		process.stdout.write(`${prefix} ${data}`);
 	});
 
 	child.stderr?.on("data", (data) => {
+		const output = data.toString();
+		state.appendLog(name, output);
+		
+		// Check for errors that indicate service failure
+		if (
+			output.includes("Error") ||
+			output.includes("error") ||
+			output.includes("Failed") ||
+			output.includes("failed") ||
+			output.includes("ECONNREFUSED") ||
+			output.includes("EADDRINUSE") ||
+			output.includes("Cannot connect") ||
+			output.includes("Connection refused") ||
+			output.includes("process.exit") ||
+			output.includes("exited with code")
+		) {
+			// Log error and mark as failed if it's a critical error
+			logger.warn(`${name} error detected: ${output.substring(0, 200)}`);
+			
+			// If it's a critical error (exit, connection refused, etc.), mark as failed
+			if (
+				output.includes("process.exit") ||
+				output.includes("exited with code") ||
+				output.includes("ECONNREFUSED") ||
+				output.includes("Connection refused")
+			) {
+				state.updateService(name, { status: "failed" });
+			}
+		}
+		
 		process.stderr.write(`${prefix} ${data}`);
 	});
 
@@ -828,7 +1301,24 @@ function spawnDevProcess(
 
 		if (code !== 0) {
 			logger.error(`${name} exited with code ${code}`);
-			shutdown(code ?? 1);
+			logger.error(`${name} process terminated unexpectedly. Check logs above for errors.`);
+			
+			// Show recent logs for debugging
+			const service = state.services.get(name);
+			if (service && service.logBuffer.length > 0) {
+				const recentLogs = service.logBuffer.slice(-20).join("\n");
+				logger.error(`${name} recent logs before exit:`);
+				logger.error(recentLogs);
+			}
+			
+			// Don't shutdown immediately for chat service - it might be a transient error
+			if (name === "Chat Service") {
+				logger.warn("Chat service exited. This may be due to Redis or database connection issues.");
+				logger.info("💡 Check Redis: redis-cli ping");
+				logger.info("💡 Check database connection");
+			} else {
+				shutdown(code ?? 1);
+			}
 		}
 	});
 
@@ -963,12 +1453,57 @@ async function runLocalWorkflow(
 		process.env.WEB_PORT = String(fallback);
 	}
 
-	state.addService("PostgreSQL", apiPort);
-	state.addService("API", apiPort);
-	state.addService("Frontend", webPort);
+	// Add services with health check URLs and error patterns
+	// Note: PostgreSQL is external, we'll check it separately
+	state.addService("API", apiPort, `http://localhost:${apiPort}/api/health`, [
+		/EADDRINUSE/,
+		/Cannot find module/,
+		/Port.*already in use/,
+	]);
+	state.addService("Frontend", webPort, `http://localhost:${webPort}`, [
+		/EADDRINUSE/,
+		/Port.*already in use/,
+	]);
 	state.addService("Socket.IO", socketPort);
-	state.addService("Notification Service", notificationPort);
-	state.addService("Chat Service", chatPort);
+	state.addService(
+		"Notification Service",
+		notificationPort,
+		`http://localhost:${notificationPort}/health`,
+	);
+	state.addService(
+		"Chat Service",
+		chatPort,
+		`http://localhost:${chatPort}/health`,
+		[
+			/ECONNREFUSED/,
+			/Connection refused/,
+			/Cannot connect to Redis/,
+			/Redis connection error/,
+			/Failed to connect to database/,
+			/Database connection error/,
+			/EADDRINUSE/,
+			/Port.*already in use/,
+		],
+	);
+	
+	// Check PostgreSQL availability (external service)
+	logger.step("Checking PostgreSQL availability...");
+	try {
+		await runCommand(
+			"psql",
+			["--dbname", connectionString, "-c", "SELECT 1"],
+			rootDir,
+			{ print: false },
+		);
+		state.addService("PostgreSQL", DEFAULT_PORTS.postgres);
+		state.updateService("PostgreSQL", { status: "ready" });
+		logger.success("PostgreSQL is available");
+	} catch (error) {
+		logger.warn("PostgreSQL connection check failed - service may not be running");
+		logger.info("💡 Start PostgreSQL with: brew services start postgresql");
+		logger.info("   Or use Docker: docker-compose up -d postgres");
+		// Don't add PostgreSQL to services if it's not available
+	}
 
 	// Check and free ports
 	logger.step("Checking ports...");
@@ -982,10 +1517,12 @@ async function runLocalWorkflow(
 	logger.step("Setting up database...");
 	await ensureDatabaseExists(connectionString);
 
+	// Check if we have essential data (employees)
+	const hasEmployees = await checkEmployeesExist(connectionString);
 	const hasData = await checkDatabaseHasData(connectionString);
 
-	if (hasData && opts.quick) {
-		logger.info("Database has data, skipping migrations and seed (quick mode)");
+	if (hasEmployees && opts.quick) {
+		logger.info("Employees exist, skipping migrations and seed (quick mode)");
 	} else {
 		let migrationsSuccessful = false;
 		try {
@@ -1023,45 +1560,162 @@ async function runLocalWorkflow(
 				}
 			}
 
-			// Check if database has data and ask user if they want to overwrite
-			if (hasData && !seedOpts.force) {
-				logger.info("Baza podataka već sadrži podatke.");
-				const shouldOverwrite = await askYesNo(
-					"Da li želiš da pregaziš postojeće podatke?",
-				);
-				if (shouldOverwrite) {
-					seedOpts.force = true;
-					logger.info("Pregazićemo postojeće podatke...");
-				} else {
-					logger.info("Preskačemo seed (podaci već postoje).");
-					logger.info("Koristi --force ili -f da pregaziš podatke.");
-				}
+			// Always run seed if employees don't exist, or if --force is specified
+			if (!hasEmployees) {
+				logger.info("No employees found. Running seed to create employees and other data...");
+				await runSeed(seedOpts);
+			} else if (seedOpts.force) {
+				logger.info("Force flag set. Running seed to overwrite existing data...");
+				await runSeed(seedOpts);
+			} else {
+				logger.info("Employees already exist. Skipping seed.");
+				logger.info("Use --force to re-seed all data.");
 			}
 
-			if (!hasData || seedOpts.force) {
-				await runSeed(seedOpts);
+			// Always verify seed data, even if we skipped seeding
+			logger.step("Verifying seed data...");
+			const dashboardData = await verifySeedData(connectionString);
+			const apiData = await verifyApiSeedData(connectionString);
+
+			logger.summary([
+				{
+					label: "Dashboard Employees",
+					value: String(dashboardData.employees),
+					status:
+						dashboardData.employees > 0 ? "ok" : "warn",
+				},
+				{
+					label: "Dashboard Team Members",
+					value: String(dashboardData.teamMembers),
+					status:
+						dashboardData.teamMembers > 0 ? "ok" : "warn",
+				},
+				{
+					label: "Dashboard Companies",
+					value: String(dashboardData.companies),
+					status:
+						dashboardData.companies > 0 ? "ok" : "warn",
+				},
+				{
+					label: "Dashboard Users",
+					value: String(dashboardData.users),
+					status: dashboardData.users > 0 ? "ok" : "warn",
+				},
+				{
+					label: "API Employees",
+					value: String(apiData.employees),
+					status: apiData.employees > 0 ? "ok" : "warn",
+				},
+				{
+					label: "API Notifications",
+					value: String(apiData.notifications),
+					status: apiData.notifications > 0 ? "ok" : "warn",
+				},
+			]);
+
+			if (dashboardData.employees === 0) {
+				logger.warn(
+					"⚠ No employees found in database. Frontend will show 'No employees yet'.",
+				);
+				logger.info(
+					"💡 Employees seed may have failed. Check seed logs above.",
+				);
+				logger.info(
+					"💡 Try running manually: cd apps/dashboard && bun run db:seed --only=employees",
+				);
+			} else {
+				logger.success(
+					`✓ Found ${dashboardData.employees} employees in database`,
+				);
+			}
+
+			if (dashboardData.teamMembers === 0) {
+				logger.warn(
+					"⚠ No team members found in database. Team features may not work.",
+				);
+				logger.info(
+					"💡 Team members seed may have failed. Check seed logs above.",
+				);
+				logger.info(
+					"💡 Try running manually: cd apps/dashboard && bun run db:seed --only=team-members",
+				);
+			} else {
+				logger.success(
+					`✓ Found ${dashboardData.teamMembers} team members in database`,
+				);
+			}
+
+			if (dashboardData.companies === 0) {
+				logger.error(
+					"❌ No companies found in database. This will cause issues with team members and other features.",
+				);
+				logger.info(
+					"💡 Try running: cd apps/dashboard && bun run db:seed --only=companies",
+				);
+			} else {
+				logger.success(
+					`✓ Found ${dashboardData.companies} companies in database`,
+				);
+			}
+
+			if (dashboardData.users === 0 && dashboardData.employees > 0) {
+				logger.warn(
+					"⚠ No users found but employees exist. Users should be created from employees.",
+				);
+				logger.info(
+					"💡 Try running: cd apps/dashboard && bun run db:seed --only=users",
+				);
+			} else if (dashboardData.users > 0) {
+				logger.success(
+					`✓ Found ${dashboardData.users} users in database`,
+				);
 			}
 		} else {
 			logger.info("Skipping database seed (--skip-seed)");
 		}
 	}
 
+	// Check Redis before starting chat service
+	logger.step("Checking Redis availability...");
+	const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+	try {
+		// Try to connect to Redis using redis-cli if available
+		const { stdout } = await runCommand(
+			"redis-cli",
+			["ping"],
+			rootDir,
+			{ print: false },
+		);
+		if (stdout.trim().toLowerCase() === "pong") {
+			logger.success("Redis is available");
+		} else {
+			logger.warn("Redis ping returned unexpected response");
+		}
+	} catch (error) {
+		logger.warn(
+			"⚠ Redis may not be running. Chat service requires Redis.",
+		);
+		logger.info("💡 Start Redis with: brew services start redis");
+		logger.info("   Or use Docker: docker-compose up -d redis");
+		logger.info("   Continuing anyway, but chat service may fail...");
+	}
+
 	// Start services
 	logger.step("Starting development servers...");
 
-	spawnDevProcess("api", "bun", ["run", "dev"], apiDir, {
+	spawnDevProcess("API", "bun", ["run", "dev"], apiDir, {
 		PORT: String(apiPort),
 		API_PORT: String(apiPort),
 	});
 
-	spawnDevProcess("socket", "bun", ["socket-server.ts"], dashboardDir, {
+	spawnDevProcess("Socket.IO", "bun", ["socket-server.ts"], dashboardDir, {
 		SOCKET_PORT: String(socketPort),
 		SOCKET_HOST: "0.0.0.0",
 		NODE_ENV: process.env.NODE_ENV || "development",
 	});
 
 	spawnDevProcess(
-		"notification",
+		"Notification Service",
 		"bun",
 		["run", "dev"],
 		notificationServiceDir,
@@ -1072,18 +1726,26 @@ async function runLocalWorkflow(
 		},
 	);
 
-	spawnDevProcess("chat", "bun", ["run", "dev"], chatServiceDir, {
+	logger.info(`Starting chat service on port ${chatPort}...`);
+	logger.info(`  - Database: ${connectionString.split("@")[1] || "configured"}`);
+	logger.info(`  - Redis: ${redisUrl}`);
+	
+	spawnDevProcess("Chat Service", "bun", ["run", "dev"], chatServiceDir, {
 		PORT: String(chatPort),
 		HOST: "0.0.0.0",
 		DATABASE_URL: connectionString,
-		REDIS_URL: process.env.REDIS_URL || "redis://localhost:6379",
+		REDIS_URL: redisUrl,
 		JWT_SECRET: process.env.JWT_SECRET || "dev-secret-change-in-production",
 		NODE_ENV: process.env.NODE_ENV || "development",
 	});
 
+	// Give chat service extra time to start (it needs Redis and DB)
+	logger.info("Waiting for chat service to initialize (needs Redis and DB)...");
+	await delay(5000);
+
 	// Use Next.js with Turbopack for faster hot reload
 	spawnDevProcess(
-		"web",
+		"Frontend",
 		"bunx",
 		["next", "dev", "--turbo", "-p", String(webPort)],
 		dashboardDir,
@@ -1096,8 +1758,169 @@ async function runLocalWorkflow(
 		},
 	);
 
-	// Wait a bit for services to start
+	// Wait for all services to be ready - THIS IS CRITICAL
+	logger.step("Waiting for all services to be ready...");
+	logger.info("This may take a moment. Please wait...");
+
+	// Give services initial time to start (especially chat service which needs Redis)
+	// This allows spawnDevProcess to update status from "pending" to "starting" to "running"
+	await delay(3000);
+
+	// Wait for all services - this will NOT continue until services are ready
+	try {
+		await waitForAllServices();
+	} catch (error) {
+		logger.error(
+			`Critical: Services failed to start: ${error instanceof Error ? error.message : String(error)}`,
+		);
+		
+		// Check specifically for chat service errors
+		const chatService = state.services.get("Chat Service");
+		if (chatService && chatService.status === "failed") {
+			const errors = state.checkForErrors("Chat Service");
+			if (errors.length > 0) {
+				logger.error("Chat service errors:");
+				errors.forEach((err) => logger.error(`  - ${err}`));
+			}
+			logger.error("Chat service failed to start. Check logs above.");
+			logger.info("Common issues:");
+			logger.info("  - Redis not running: brew services start redis (or docker-compose up redis)");
+			logger.info("  - Database connection issues: Check DATABASE_URL");
+			logger.info("  - Port 4001 already in use: Check with 'lsof -i:4001'");
+		}
+		
+		logger.error("Cannot continue - services must be ready before proceeding");
+		throw error;
+	}
+
+	// Give services additional time to fully initialize after health checks pass
+	logger.info("Services are ready. Finalizing initialization...");
 	await delay(2000);
+
+	// Verify chat service socket connection - CRITICAL CHECK
+	logger.step("Verifying chat service socket connection...");
+	const chatServiceUrl = `http://localhost:${chatPort}`;
+	let chatServiceReady = false;
+	
+	// More attempts and longer wait for chat service
+	for (let attempt = 1; attempt <= 10; attempt++) {
+		try {
+			const isHealthy = await checkHealth(`${chatServiceUrl}/health`);
+			if (isHealthy) {
+				chatServiceReady = true;
+				logger.success("Chat service is ready and healthy");
+				break;
+			}
+		} catch (error) {
+			// Log error for debugging
+			if (attempt === 1 || attempt % 3 === 0) {
+				logger.info(
+					`Chat service health check failed (attempt ${attempt}/10): ${error instanceof Error ? error.message : String(error)}`,
+				);
+			}
+		}
+		if (attempt < 10) {
+			await delay(3000); // Wait 3 seconds between attempts
+		}
+	}
+
+	if (!chatServiceReady) {
+		logger.error(
+			"❌ Chat service is NOT ready. Socket connections will fail.",
+		);
+		
+		// Check for specific errors
+		const chatService = state.services.get("Chat Service");
+		if (chatService) {
+			const errors = state.checkForErrors("Chat Service");
+			if (errors.length > 0) {
+				logger.error("Chat service errors detected:");
+				errors.forEach((err) => logger.error(`  - ${err}`));
+			}
+			
+			// Show recent logs
+			const recentLogs = chatService.logBuffer.slice(-10).join("\n");
+			if (recentLogs) {
+				logger.info("Recent chat service logs:");
+				logger.info(recentLogs);
+			}
+		}
+		
+		logger.info(
+			"💡 Troubleshooting steps:",
+		);
+		logger.info("  1. Check Redis: redis-cli ping (should return PONG)");
+		logger.info("  2. Check database: psql $DATABASE_URL -c 'SELECT 1'");
+		logger.info(`  3. Check port: lsof -i:${chatPort}`);
+		logger.info(`  4. Manual health check: curl http://localhost:${chatPort}/health`);
+		logger.info("  5. Check chat service logs above for errors");
+		
+		// Don't throw error, but warn strongly
+		logger.warn("⚠ Continuing anyway, but chat will not work until service is ready.");
+	}
+
+	// Verify frontend can access data
+	logger.step("Verifying frontend data access...");
+	const frontendUrl = `http://localhost:${webPort}`;
+	const apiUrl = `http://localhost:${apiPort}`;
+
+	// Try multiple times with retries
+	let frontendData = { employeesAvailable: false, teamMembersAvailable: false };
+	for (let attempt = 1; attempt <= 3; attempt++) {
+		logger.info(`Verifying frontend data (attempt ${attempt}/3)...`);
+		frontendData = await verifyFrontendData(frontendUrl, apiUrl);
+
+		if (frontendData.employeesAvailable && frontendData.teamMembersAvailable) {
+			break;
+		}
+
+		if (attempt < 3) {
+			logger.info("Waiting before retry...");
+			await delay(3000);
+		}
+	}
+
+	if (!frontendData.employeesAvailable) {
+		logger.warn(
+			"⚠ Employees endpoint not accessible or empty. Frontend will show 'No employees yet'.",
+		);
+		logger.info(
+			"💡 Check that frontend is running and employees seed completed successfully.",
+		);
+		logger.info(
+			`💡 Verify: curl http://localhost:${webPort}/api/employees?limit=1`,
+		);
+	} else {
+		logger.success("✓ Employees are accessible via frontend API");
+	}
+
+	if (!frontendData.teamMembersAvailable) {
+		logger.warn(
+			"⚠ Team members endpoint not accessible or empty. Team features may not work.",
+		);
+		logger.info(
+			"💡 Check that frontend is running and team-members seed completed successfully.",
+		);
+		logger.info(
+			`💡 Verify: curl http://localhost:${webPort}/api/settings/team-members?limit=1`,
+		);
+	} else {
+		logger.success("✓ Team members are accessible via frontend API");
+	}
+
+	if (!chatServiceReady) {
+		logger.warn(
+			"⚠ Chat service not ready. Socket connections will fail with 'Connection error'.",
+		);
+		logger.info(
+			`💡 Check chat service logs. Verify: curl http://localhost:${chatPort}/health`,
+		);
+		logger.info(
+			`💡 Chat socket path should be: http://localhost:${chatPort}/socket/teamchat`,
+		);
+	} else {
+		logger.success("✓ Chat service is ready for socket connections");
+	}
 
 	// Print final status
 	logger.section("Development Environment Ready");
@@ -1118,9 +1941,24 @@ async function runLocalWorkflow(
 		{
 			label: "Chat Service",
 			value: `http://localhost:${chatPort}`,
-			status: "ok",
+			status: chatServiceReady ? "ok" : "warn",
 		},
 		{ label: "Database", value: database, status: "ok" },
+		{
+			label: "Employees Available",
+			value: frontendData.employeesAvailable ? "Yes" : "No",
+			status: frontendData.employeesAvailable ? "ok" : "warn",
+		},
+		{
+			label: "Team Members Available",
+			value: frontendData.teamMembersAvailable ? "Yes" : "No",
+			status: frontendData.teamMembersAvailable ? "ok" : "warn",
+		},
+		{
+			label: "Chat Socket Ready",
+			value: chatServiceReady ? "Yes" : "No",
+			status: chatServiceReady ? "ok" : "warn",
+		},
 	]);
 
 	state.printStatus();
@@ -1135,9 +1973,15 @@ ${"\x1b[32m"}║${"\x1b[0m"}  Socket.IO: ${"\x1b[36m"}http://localhost:${socketP
 ${"\x1b[32m"}║${"\x1b[0m"}  Notifications: ${"\x1b[36m"}http://localhost:${notificationPort}${"\x1b[0m"}                  ${"\x1b[32m"}║${"\x1b[0m"}
 ${"\x1b[32m"}║${"\x1b[0m"}  Chat Service: ${"\x1b[36m"}http://localhost:${chatPort}${"\x1b[0m"}                  ${"\x1b[32m"}║${"\x1b[0m"}
 ${"\x1b[32m"}╠═══════════════════════════════════════════════════════════╣${"\x1b[0m"}
+${"\x1b[32m"}║${"\x1b[0m"}  ${chatServiceReady ? "✓" : "⚠"} Chat Socket: ${"\x1b[36m"}http://localhost:${chatPort}/socket/teamchat${"\x1b[0m"}  ${"\x1b[32m"}║${"\x1b[0m"}
+${"\x1b[32m"}╠═══════════════════════════════════════════════════════════╣${"\x1b[0m"}
 ${"\x1b[32m"}║${"\x1b[0m"}  Press ${"\x1b[1m"}Ctrl+C${"\x1b[0m"} to stop all services                    ${"\x1b[32m"}║${"\x1b[0m"}
 ${"\x1b[32m"}╚═══════════════════════════════════════════════════════════╝${"\x1b[0m"}
 `);
+
+	// Keep script running - don't exit
+	logger.info("All services are running. Logs will continue below...");
+	logger.info("Press Ctrl+C to stop all services");
 }
 
 // ============================================================================

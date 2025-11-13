@@ -9,7 +9,7 @@ import UpgradePlanCard from "./upgrade-plan-card";
 
 export async function generateMetadata() {
 	return generateMeta({
-		title: "Api Keys",
+		title: "API Keys - Collector Dashboard",
 		description:
 			"A template for listing and managing your API keys. Easily create, organize and control the API keys you use in your projects. Built with shadcn/ui.",
 		canonical: "/apps/api-keys",

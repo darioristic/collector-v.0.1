@@ -1,31 +1,55 @@
 version: "3.9"
 
+networks:
+  collector-network:
+    driver: bridge
+
 services:
   postgres:
     image: postgres:17.2-alpine
+    container_name: collector-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: collector
       POSTGRES_USER: collector
       POSTGRES_PASSWORD: collector
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - collector-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U collector -d collector"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   redis:
     image: redis:7-alpine
+    container_name: collector-redis
     restart: unless-stopped
-    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning", "--appendonly", "yes"]
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    networks:
+      - collector-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
 
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile.prod
+    container_name: collector-api
     restart: unless-stopped
     environment:
       HOST: 0.0.0.0
@@ -33,16 +57,28 @@ services:
       DATABASE_URL: postgresql://collector:collector@postgres:5432/collector
       REDIS_URL: redis://redis:6379
       NODE_ENV: production
+      LOG_LEVEL: info
     ports:
       - "4000:4000"
+    networks:
+      - collector-network
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   chat-service:
     build:
       context: .
       dockerfile: services/chat-service/Dockerfile
+    container_name: collector-chat-service
     restart: unless-stopped
     environment:
       PORT: 4001
@@ -52,21 +88,28 @@ services:
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
       NODE_ENV: production
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
+      LOG_LEVEL: info
     ports:
       - "4001:4001"
+    networks:
+      - collector-network
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4001/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
 
   notification-service:
     build:
       context: .
       dockerfile: services/notification-service/Dockerfile
+    container_name: collector-notification-service
     restart: unless-stopped
     environment:
       PORT: 4002
@@ -76,18 +119,53 @@ services:
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
       NODE_ENV: production
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
+      LOG_LEVEL: info
     ports:
       - "4002:4002"
+    networks:
+      - collector-network
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4002/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: apps/dashboard/Dockerfile.prod
+    container_name: collector-dashboard
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+      NEXT_PUBLIC_CHAT_SERVICE_URL: ${NEXT_PUBLIC_CHAT_SERVICE_URL:-http://localhost:4001}
+      NEXT_PUBLIC_NOTIFICATION_SERVICE_URL: ${NEXT_PUBLIC_NOTIFICATION_SERVICE_URL:-http://localhost:4002}
+      NEXT_TELEMETRY_DISABLED: 1
+    ports:
+      - "3000:3000"
+    networks:
+      - collector-network
+    depends_on:
+      - api
+      - chat-service
+      - notification-service
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
 volumes:
   postgres_data:
+    driver: local
   redis_data:
+    driver: local
 

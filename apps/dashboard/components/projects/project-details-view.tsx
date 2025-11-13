@@ -81,7 +81,7 @@ export function ProjectDetailsView({ projectId }: ProjectDetailsViewProps) {
 
 	const updateProjectMutation = useUpdateProject(projectId);
 	const deleteProjectMutation = useDeleteProject(projectId, {
-		onDeleted: () => router.push("/project-list"),
+		onDeleted: () => router.push("/projects/list"),
 	});
 	const updateTaskMutation = useUpdateProjectTask(projectId);
 	const deleteTaskMutation = useDeleteProjectTask(projectId);

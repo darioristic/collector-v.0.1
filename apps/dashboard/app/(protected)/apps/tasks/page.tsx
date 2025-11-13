@@ -8,7 +8,7 @@ import { taskSchema } from "./data/schema";
 
 export async function generateMetadata() {
 	return generateMeta({
-		title: "Tasks",
+		title: "Tasks - Collector Dashboard",
 		description: "A task and issue tracker build using Tanstack Table.",
 		canonical: "/apps/tasks",
 	});

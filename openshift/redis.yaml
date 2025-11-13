@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: collector-redis
+  labels:
+    app: collector-redis
+spec:
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+      protocol: TCP
+  selector:
+    app: collector-redis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: collector-redis
+  labels:
+    app: collector-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: collector-redis
+  template:
+    metadata:
+      labels:
+        app: collector-redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 6379
+              name: redis
+          command:
+            - redis-server
+          args:
+            - --save
+            - "60"
+            - "1"
+            - --loglevel
+            - "warning"
+            - --appendonly
+            - "yes"
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+      volumes:
+        - name: redis-data
+          emptyDir: {}
+      restartPolicy: Always
+

@@ -27,13 +27,13 @@ import {
 import { Input } from "@/components/ui/input";
 
 const loginSchema = z.object({
-	email: z.string().email("Unesite validan email."),
-	password: z.string().min(8, "Lozinka mora imati najmanje 8 karaktera."),
+	email: z.string().email("Please enter a valid email."),
+	password: z.string().min(8, "Password must be at least 8 characters."),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-const DEFAULT_REDIRECT = "/finance";
+const DEFAULT_REDIRECT = "/dashboard";
 
 const formError = (message: string) =>
 	({
@@ -62,11 +62,11 @@ const SocialButtons = () => (
 					d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
 				/>
 			</svg>
-			Google (uskoro)
+			Google (coming soon)
 		</Button>
 		<Button variant="outline" className="w-full" disabled>
 			<GitHubLogoIcon />
-			GitHub (uskoro)
+			GitHub (coming soon)
 		</Button>
 	</div>
 );
@@ -115,13 +115,13 @@ export default function LoginPage() {
 					typeof payload === "object" &&
 					"message" in payload &&
 					payload.message) ||
-				"Prijava nije uspela. Proverite podatke i pokušajte ponovo.";
+				"Login failed. Please check your credentials and try again.";
 
 			form.setError("root", formError(message as string));
 			return;
 		}
 
-		toast.success("Dobro došli nazad! 🥳");
+		toast.success("Welcome back! 🥳");
 		router.push(redirectTo);
 	};
 
@@ -129,19 +129,19 @@ export default function LoginPage() {
 		<div className="flex items-center justify-center py-4 lg:h-screen">
 			<Card className="mx-auto w-full max-w-md">
 				<CardHeader>
-					<CardTitle className="text-2xl">Prijava</CardTitle>
+					<CardTitle className="text-2xl">Login</CardTitle>
 					<CardDescription>
-						Unesite email i lozinku kako biste pristupili kontrolnoj tabli.
+						Enter your email and password to access the dashboard.
 					</CardDescription>
 					{isDevelopment && (
 						<div className="mt-4 rounded-md bg-muted p-3 text-xs">
-							<p className="font-semibold mb-2">Test korisnici:</p>
+							<p className="font-semibold mb-2">Test users:</p>
 							<ul className="space-y-1 text-muted-foreground">
 								<li>• dario@collectorlabs.test (admin)</li>
 								<li>• miha@collectorlabs.test (manager)</li>
 								<li>• tara@collectorlabs.test (user)</li>
 							</ul>
-							<p className="mt-2 text-muted-foreground">Lozinka: Collector!2025</p>
+							<p className="mt-2 text-muted-foreground">Password: Collector!2025</p>
 						</div>
 					)}
 				</CardHeader>
@@ -153,7 +153,7 @@ export default function LoginPage() {
 								name="email"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Email adresa</FormLabel>
+										<FormLabel>Email address</FormLabel>
 										<FormControl>
 											<Input
 												type="email"
@@ -173,12 +173,12 @@ export default function LoginPage() {
 								render={({ field }) => (
 									<FormItem>
 										<div className="flex items-center">
-											<FormLabel>Lozinka</FormLabel>
+											<FormLabel>Password</FormLabel>
 											<Link
 												href="/auth/forgot-password"
 												className="ml-auto text-sm underline"
 											>
-												Zaboravljena lozinka?
+												Forgot password?
 											</Link>
 										</div>
 										<FormControl>
@@ -205,8 +205,8 @@ export default function LoginPage() {
 								disabled={form.formState.isSubmitting}
 							>
 								{form.formState.isSubmitting
-									? "Prijavljivanje..."
-									: "Prijavi se"}
+									? "Signing in..."
+									: "Sign in"}
 							</Button>
 						</form>
 					</Form>
@@ -215,7 +215,7 @@ export default function LoginPage() {
 						<div className="flex items-center gap-3">
 							<div className="w-full border-t" />
 							<span className="shrink-0 text-sm text-muted-foreground">
-								ili nastavi sa
+								or continue with
 							</span>
 							<div className="w-full border-t" />
 						</div>
@@ -224,9 +224,9 @@ export default function LoginPage() {
 					<SocialButtons />
 
 					<div className="mt-4 text-center text-sm">
-						Nemaš nalog?{" "}
+						Don't have an account?{" "}
 						<Link href="/auth/register" className="underline">
-							Registruj se
+							Sign up
 						</Link>
 					</div>
 				</CardContent>

@@ -151,7 +151,10 @@ export default function EmployeesTable({
 								<TableCell>{employee.department ?? "—"}</TableCell>
 								<TableCell>{employee.employmentType}</TableCell>
 								<TableCell>
-									<Badge variant={statusVariantMap[employee.status]}>
+									<Badge 
+										variant={statusVariantMap[employee.status]}
+										className="text-xs px-2.5 py-0.5"
+									>
 										{employee.status}
 									</Badge>
 								</TableCell>
@@ -238,7 +241,10 @@ export default function EmployeesTable({
 									</span>
 								</div>
 							</button>
-							<Badge variant={statusVariantMap[employee.status]}>
+							<Badge 
+								variant={statusVariantMap[employee.status]}
+								className="text-xs px-2.5 py-0.5"
+							>
 								{employee.status}
 							</Badge>
 						</div>

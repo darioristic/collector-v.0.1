@@ -7,7 +7,7 @@ import type { CompanyRow } from "./data-table";
 
 export async function generateMetadata() {
 	return generateMeta({
-		title: "Companies",
+		title: "Companies - Collector Dashboard",
 		description:
 			"View and manage all company accounts in your CRM with key business information and contacts.",
 		canonical: "/accounts/companies",

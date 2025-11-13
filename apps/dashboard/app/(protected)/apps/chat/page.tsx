@@ -5,7 +5,7 @@ import { generateMeta } from "@/lib/utils";
 
 export async function generateMetadata(): Promise<Metadata> {
 	return generateMeta({
-		title: "Chat",
+		title: "Chat - Collector Dashboard",
 		description:
 			"Pregled privatnih razgovora sa kontaktnim osobama vaše kompanije. Organizujte chat i arhivirajte poruke.",
 		canonical: "/apps/chat",

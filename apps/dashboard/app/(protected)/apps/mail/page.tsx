@@ -6,7 +6,7 @@ import { accounts, mails } from "./data";
 
 export async function generateMetadata() {
 	return generateMeta({
-		title: "Mail App",
+		title: "Mail - Collector Dashboard",
 		description:
 			"Easily organize incoming and outgoing mail with the mail management template. Built with shadcn/ui, Next.js and Tailwind CSS.",
 		canonical: "/apps/mail",

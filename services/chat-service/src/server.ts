@@ -56,10 +56,25 @@ async function buildServer() {
 
 	// Setup Redis
 	const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+	console.log(`[chat-service] Connecting to Redis at ${redisUrl}...`);
 	const pubClient = createClient({ url: redisUrl }) as RedisClientType;
 	const subClient = pubClient.duplicate() as RedisClientType;
+	
+	pubClient.on("error", (err) => {
+		console.error("[chat-service] Redis pub client error:", err);
+	});
+	
+	subClient.on("error", (err) => {
+		console.error("[chat-service] Redis sub client error:", err);
+	});
 
-	await Promise.all([pubClient.connect(), subClient.connect()]);
+	try {
+		await Promise.all([pubClient.connect(), subClient.connect()]);
+		console.log("[chat-service] Redis connected successfully");
+	} catch (error) {
+		console.error("[chat-service] Failed to connect to Redis:", error);
+		throw new Error(`Redis connection failed: ${error instanceof Error ? error.message : String(error)}`);
+	}
 
 	// Setup Socket.IO with Redis adapter
 	const io = new SocketIOServer(httpServer, {
@@ -127,24 +142,50 @@ async function buildServer() {
 	});
 
 	// Attach Fastify to HTTP server
-	await fastify.ready();
+	try {
+		await fastify.ready();
+		console.log("[chat-service] Fastify is ready");
+	} catch (error) {
+		console.error("[chat-service] Fastify ready error:", error);
+		throw error;
+	}
+	
 	httpServer.on("request", (req, res) => {
 		fastify.server.emit("request", req, res);
 	});
 
+	console.log("[chat-service] Server setup complete");
 	return { httpServer, fastify, io, redis: pubClient };
 }
 
 async function start() {
 	try {
+		console.log(`[chat-service] Starting server on ${host}:${port}...`);
+		console.log(`[chat-service] Redis URL: ${process.env.REDIS_URL || "redis://localhost:6379"}`);
+		console.log(`[chat-service] Database URL: ${process.env.DATABASE_URL ? "configured" : "not set"}`);
+		
 		const { httpServer } = await buildServer();
+		
+		console.log(`[chat-service] Server built successfully, starting HTTP server...`);
 
 		httpServer.listen(port, host, () => {
 			console.log(`[chat-service] Server listening on http://${host}:${port}`);
 			console.log(`[chat-service] Socket.IO path: /socket/teamchat`);
 		});
+		
+		httpServer.on("error", (error: Error) => {
+			console.error("[chat-service] HTTP server error:", error);
+			if ((error as any).code === "EADDRINUSE") {
+				console.error(`[chat-service] Port ${port} is already in use`);
+			}
+			process.exit(1);
+		});
 	} catch (error) {
 		console.error("[chat-service] Failed to start server:", error);
+		if (error instanceof Error) {
+			console.error("[chat-service] Error message:", error.message);
+			console.error("[chat-service] Error stack:", error.stack);
+		}
 		process.exit(1);
 	}
 }

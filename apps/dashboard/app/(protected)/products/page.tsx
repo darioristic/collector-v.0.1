@@ -18,7 +18,7 @@ import { type Product as ApiProduct, fetchProducts } from "./api";
 
 export async function generateMetadata(): Promise<Metadata> {
 	return generateMeta({
-		title: "Product List",
+		title: "Products - Collector Dashboard",
 		description:
 			"Product list page created using Tanstack Table. List or filter products. Built with shadcn/ui, Tailwind CSS and Next.js.",
 		canonical: "/products",

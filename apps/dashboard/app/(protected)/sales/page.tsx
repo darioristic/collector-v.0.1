@@ -14,7 +14,7 @@ import { generateMeta } from "@/lib/utils";
 
 export async function generateMetadata() {
 	return generateMeta({
-		title: "Sales Admin Dashboard",
+		title: "Sales - Collector Dashboard",
 		description:
 			"A modern and elegant responsive sales admin Dashboard. Easily manage, analyze, and report your sales data. Built with shadcn/ui, Tailwind CSS, Next.js.",
 		canonical: "/sales",

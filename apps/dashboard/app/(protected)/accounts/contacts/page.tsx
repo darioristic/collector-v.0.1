@@ -7,7 +7,7 @@ import type { Contact } from "./data-table";
 
 export async function generateMetadata() {
 	return generateMeta({
-		title: "Contacts",
+		title: "Contacts - Collector Dashboard",
 		description:
 			"Manage contacts and quickly access their related companies with a TanStack Table experience built with Tailwind CSS, shadcn/ui, and Next.js.",
 		canonical: "/accounts/contacts",

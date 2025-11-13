@@ -7,6 +7,7 @@ import type { LucideIcon } from "lucide-react";
 import {
 	ArchiveRestoreIcon,
 	BadgeDollarSignIcon,
+	BarChart3Icon,
 	BrainCircuitIcon,
 	ChartBarDecreasingIcon,
 	ClipboardCheckIcon,
@@ -28,6 +29,7 @@ export type { LucideIcon };
 export {
 	ArchiveRestoreIcon,
 	BadgeDollarSignIcon,
+	BarChart3Icon,
 	BrainCircuitIcon,
 	ChartBarDecreasingIcon,
 	ClipboardCheckIcon,

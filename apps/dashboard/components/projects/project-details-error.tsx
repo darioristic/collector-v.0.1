@@ -96,7 +96,7 @@ export function ProjectDetailsNotFoundState({
 			actions={
 				<Fragment>
 					<Button
-						onClick={() => router.push("/project-list")}
+						onClick={() => router.push("/projects/list")}
 						className="gap-2"
 					>
 						<Undo2 className="size-4" />
@@ -161,7 +161,7 @@ function ProjectDetailsErrorState({
 			actions={
 				<Fragment>
 					<Button
-						onClick={() => router.push("/project-list")}
+						onClick={() => router.push("/projects/list")}
 						className="gap-2"
 					>
 						<Undo2 className="size-4" />
@@ -254,7 +254,7 @@ function ProjectStatusShell({
 			<div className="text-xs text-muted-foreground/70">
 				Potreban ti je drugačiji pogled na projekte?{" "}
 				<Link
-					href="/project-list"
+					href="/projects/list"
 					className="font-medium text-foreground underline underline-offset-4"
 				>
 					Otvori listu projekata

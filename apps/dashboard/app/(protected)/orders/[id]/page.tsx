@@ -51,10 +51,10 @@ interface Order {
 
 export async function generateMetadata({ params }: { params: { id: string } }) {
 	return generateMeta({
-		title: "Order Detail Page",
+		title: "Order Details - Collector Dashboard",
 		description:
 			"View and track your order details quickly on this page built with shadcn/ui, Tailwind CSS, and Next.js. Access comprehensive order information at a glance.",
-		canonical: `/sales/orders/${params.id}`,
+		canonical: `/orders/${params.id}`,
 	});
 }
 

@@ -4,7 +4,7 @@ import KanbanBoard from "./components/kanban-board";
 
 export async function generateMetadata() {
 	return generateMeta({
-		title: "Kanban Board",
+		title: "Kanban - Collector Dashboard",
 		description:
 			"Create a layout where you can easily manage your projects and tasks with the Kanban template. Built with shadcn/ui, React, Next.js and Tailwind CSS.",
 		canonical: "/apps/kanban",

@@ -3,7 +3,7 @@ import { generateMeta } from "@/lib/utils";
 
 export async function generateMetadata() {
 	return generateMeta({
-		title: "Accounts",
+		title: "Accounts - Collector Dashboard",
 		description: "Browse contacts and companies within your CRM accounts.",
 		canonical: "/accounts/companies",
 	});

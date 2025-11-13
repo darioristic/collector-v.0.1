@@ -18,6 +18,10 @@ import {
 	fetchTeamMembers,
 	type TeamMember,
 } from "@/app/(protected)/settings/teams/api";
+import {
+	fetchEmployees,
+	type Employee,
+} from "@/app/(protected)/hr/employees/api";
 import { useAuth } from "@/components/providers/auth-provider";
 import {
 	Avatar,
@@ -81,16 +85,86 @@ export function ChatSidebar() {
 					.toLowerCase()
 					.includes("failed to fetch")));
 
-	const teamMembersQuery = useQuery({
-		queryKey: ["team-members", "chat"],
-		queryFn: () => fetchTeamMembers({}),
+	// Fetch employees instead of team members for chat
+	const employeesQuery = useQuery({
+		queryKey: ["employees", "chat"],
+		queryFn: async () => {
+			// Fetch employees with valid parameters (max limit is 100)
+			const response = await fetchEmployees({
+				query: {
+					limit: 100, // Maximum allowed by API
+					sortField: "name",
+					sortOrder: "asc",
+				},
+			});
+			return response.data || [];
+		},
 		staleTime: 30_000,
 		retry: 1,
 		throwOnError: false,
 	});
 
+	// Fetch users to match with employees by email
+	const usersQuery = useQuery({
+		queryKey: ["users", "chat"],
+		queryFn: async () => {
+			try {
+				const response = await fetch("/api/users", {
+					method: "GET",
+					headers: {
+						"Content-Type": "application/json",
+						Accept: "application/json",
+					},
+					cache: "no-store",
+					credentials: "include",
+				});
+				if (!response.ok) {
+					return [];
+				}
+				const data = await response.json();
+				return Array.isArray(data.data) ? data.data : [];
+			} catch {
+				return [];
+			}
+		},
+		staleTime: 30_000,
+		retry: 1,
+		throwOnError: false,
+	});
+
+	// Map employees to TeamMember-like format and match with users by email
+	const teamMembers = React.useMemo(() => {
+		const employees = employeesQuery.data || [];
+		const users = usersQuery.data || [];
+		
+		// Create email to userId map
+		const emailToUserIdMap = new Map<string, string>();
+		users.forEach((u: { email: string; id: string }) => {
+			if (u.email) {
+				emailToUserIdMap.set(u.email.toLowerCase(), u.id);
+			}
+		});
+
+		return employees.map((emp: Employee) => {
+			const userId = emailToUserIdMap.get(emp.email.toLowerCase()) || null;
+			return {
+				id: String(emp.id),
+				firstName: emp.firstName,
+				lastName: emp.lastName,
+				fullName: emp.fullName,
+				email: emp.email,
+				role: emp.role || "Employee",
+				status: emp.status === "Active" ? "online" : "offline",
+				avatarUrl: null,
+				userId, // Matched from users table by email
+				companyId: null,
+				createdAt: emp.createdAt,
+				updatedAt: emp.updatedAt,
+			};
+		}) as TeamMember[];
+	}, [employeesQuery.data, usersQuery.data]);
+
 	const conversations = conversationsQuery.data || [];
-	const teamMembers = teamMembersQuery.data || [];
 	const currentUserId = user?.id;
 
 	const filteredConversations = React.useMemo(() => {
@@ -570,7 +644,7 @@ export function ChatSidebar() {
 						</div>
 					)}
 					{conversationsQuery.isLoading &&
-						teamMembersQuery.isLoading &&
+						(employeesQuery.isLoading || usersQuery.isLoading) &&
 						!isChatServiceUnavailable && (
 							<div className="text-muted-foreground mt-4 text-center text-sm">
 								Učitavanje konverzacija...
@@ -616,7 +690,7 @@ export function ChatSidebar() {
 								<div className="flex items-center gap-2">
 									<Users className="text-muted-foreground size-4" />
 									<span className="text-muted-foreground text-sm font-medium">
-										Kolege iz tima
+										Kolege (Zaposleni)
 									</span>
 								</div>
 							</div>
@@ -728,8 +802,10 @@ export function ChatSidebar() {
 					)}
 					{!conversationsQuery.isLoading &&
 						!conversationsQuery.isError &&
-						!teamMembersQuery.isLoading &&
-						!teamMembersQuery.isError &&
+						!employeesQuery.isLoading &&
+						!employeesQuery.isError &&
+						!usersQuery.isLoading &&
+						!usersQuery.isError &&
 						chatItems.length === 0 &&
 						filteredTeamMembers.length === 0 && (
 							<div className="text-muted-foreground mt-4 space-y-2 px-6 text-center text-sm">
@@ -737,38 +813,38 @@ export function ChatSidebar() {
 								{teamMembers.length > 0 ? (
 									<div className="space-y-1 text-xs">
 										<div>
-											Pronađeno {teamMembers.length} članova tima, ali nijedan
+											Pronađeno {teamMembers.length} zaposlenih, ali nijedan
 											nije dostupan za chat.
 										</div>
 										{teamMembers.filter((m) => !m.userId).length > 0 && (
 											<div className="text-amber-600 dark:text-amber-400">
-												{teamMembers.filter((m) => !m.userId).length} član(ova)
+												{teamMembers.filter((m) => !m.userId).length} zaposlenih
 												nije registrovan u sistemu. Registrujte ih da biste
 												mogli da započnete chat.
 											</div>
 										)}
 										{teamMembers.filter((m) => m.userId).length > 0 && (
 											<div>
-												{teamMembers.filter((m) => m.userId).length} član(ova)
+												{teamMembers.filter((m) => m.userId).length} zaposlenih
 												je već u konverzacijama.
 											</div>
 										)}
 									</div>
 								) : (
 									<div className="text-xs">
-										Nema članova tima. Dodajte članove tima u Settings → Teams.
+										Nema zaposlenih. Dodajte zaposlene u HR → Employees.
 									</div>
 								)}
 							</div>
 						)}
-					{teamMembersQuery.isError && (
+					{employeesQuery.isError && (
 						<div className="text-destructive mt-4 space-y-2 px-6 text-center text-sm">
-							<div>Greška pri učitavanju tima.</div>
-							{teamMembersQuery.error instanceof Error && (
-								<div className="text-xs">{teamMembersQuery.error.message}</div>
+							<div>Greška pri učitavanju zaposlenih.</div>
+							{employeesQuery.error instanceof Error && (
+								<div className="text-xs">{employeesQuery.error.message}</div>
 							)}
 							<div className="text-muted-foreground text-xs">
-								Proverite da li imate podešenu kompaniju u Settings.
+								Proverite da li imate zaposlene u HR → Employees.
 							</div>
 						</div>
 					)}

@@ -1,9 +1,19 @@
 import { getCurrentAuth } from "@/lib/auth";
 import { ensureTeamChatSchemaReady } from "@/lib/teamchat/repository";
 import { cn } from "@/lib/utils";
+import { generateMeta } from "@/lib/utils";
 
 import type { BootstrapResponse } from "./api";
 import { TeamChatClient } from "./team-chat-client";
+
+export async function generateMetadata() {
+	return generateMeta({
+		title: "Team Chat - Collector Dashboard",
+		description:
+			"Team chat application for real-time communication with channels and direct messages. Built with shadcn/ui, Next.js and Tailwind CSS.",
+		canonical: "/apps/teamchat",
+	});
+}
 
 export default async function TeamChatPage() {
   const auth = await getCurrentAuth();

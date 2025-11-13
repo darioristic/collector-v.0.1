@@ -5,8 +5,32 @@ metadata:
 type: Opaque
 stringData:
   DATABASE_URL: postgresql://collector:collector@collector-postgres:5432/collector_dashboard
+  REDIS_URL: redis://collector-redis:6379
   CRM_API_KEY: replace-with-crm-api-key
   ANALYTICS_API_KEY: replace-with-analytics-api-key
+  JWT_SECRET: replace-with-jwt-secret
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: collector-chat-service-secrets
+type: Opaque
+stringData:
+  DATABASE_URL: postgresql://collector:collector@collector-postgres:5432/collector_dashboard
+  REDIS_URL: redis://collector-redis:6379
+  JWT_SECRET: replace-with-jwt-secret
+  ALLOWED_ORIGINS: "*"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: collector-notification-service-secrets
+type: Opaque
+stringData:
+  DATABASE_URL: postgresql://collector:collector@collector-postgres:5432/collector_dashboard
+  REDIS_URL: redis://collector-redis:6379
+  JWT_SECRET: replace-with-jwt-secret
+  ALLOWED_ORIGINS: "*"
 ---
 apiVersion: v1
 kind: Secret
@@ -28,4 +52,13 @@ data:
   THEME_RADIUS_COOKIE: theme_radius
   THEME_CONTENT_LAYOUT_COOKIE: theme_content_layout
   THEME_SIDEBAR_MODE_COOKIE: theme_sidebar_mode
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dashboard-config
+data:
+  NEXT_PUBLIC_API_URL: http://api:4000
+  NEXT_PUBLIC_CHAT_SERVICE_URL: http://chat-service:4001
+  NEXT_PUBLIC_NOTIFICATION_SERVICE_URL: http://notification-service:4002
 

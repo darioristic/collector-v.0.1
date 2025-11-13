@@ -7,7 +7,7 @@ export const revalidate = 0;
 
 export async function generateMetadata() {
 	return generateMeta({
-		title: "Employees",
+		title: "Employees - Collector Dashboard",
 		description:
 			"Manage your workforce with powerful search, filters, and detailed employee insights.",
 		canonical: "/hr/employees",

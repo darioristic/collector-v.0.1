@@ -6,7 +6,7 @@ import DealsPageClient from "./deals-page-client";
 
 export async function generateMetadata() {
 	return generateMeta({
-		title: "Deals",
+		title: "Deals - Collector Dashboard",
 		description: "Manage your sales pipeline and track deal progress.",
 		canonical: "/crm/deals",
 	});
