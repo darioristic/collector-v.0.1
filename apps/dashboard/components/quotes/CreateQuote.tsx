@@ -1,32 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useForm, FormProvider, useWatch, useFieldArray } from "react-hook-form";
-import { useRouter } from "next/navigation";
-import {
-	Building2,
-	FileText,
-	Globe,
-	Home,
-	Mail,
-	MapPin,
-	Phone,
-} from "lucide-react";
-import type { QuoteItemCreateInput, Account } from "@crm/types";
+import type { Account, QuoteItemCreateInput } from "@crm/types";
 import { QUOTE_STATUSES } from "@crm/types";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { useQuery } from "@tanstack/react-query";
+import { Building2, FileText, Globe, Mail, MapPin, Phone } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { FormProvider, useFieldArray, useForm } from "react-hook-form";
+import { CompanyAutocomplete } from "@/components/forms/CompanyAutocomplete";
+import Logo from "@/components/layout/logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-	Sheet,
-	SheetContent,
-	SheetTitle,
-} from "@/components/ui/sheet";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import {
 	Table,
 	TableBody,
@@ -36,15 +30,13 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import { useContacts } from "@/src/hooks/useContacts";
 import { useCreateQuote } from "@/src/hooks/useQuotes";
-import { CompanyAutocomplete } from "@/components/forms/CompanyAutocomplete";
-import { QuoteActions } from "./QuoteActions";
-import Logo from "@/components/layout/logo";
-import { useQuery } from "@tanstack/react-query";
 import { ensureResponse } from "@/src/lib/fetch-utils";
+import { QuoteActions } from "./QuoteActions";
 
 type QuoteFormData = {
 	quoteNumber: string;
@@ -58,7 +50,13 @@ type QuoteFormData = {
 	items: QuoteItemCreateInput[];
 };
 
-const STATUS_COLORS: Record<string, { variant: "warning" | "info" | "success" | "destructive"; icon: React.ReactNode }> = {
+const STATUS_COLORS: Record<
+	string,
+	{
+		variant: "warning" | "info" | "success" | "destructive";
+		icon: React.ReactNode;
+	}
+> = {
 	draft: {
 		variant: "warning",
 		icon: <FileText className="size-3" />,
@@ -79,7 +77,7 @@ const STATUS_COLORS: Record<string, { variant: "warning" | "info" | "success" | 
 
 const getCountryName = (code: string | null | undefined): string => {
 	if (!code) return "—";
-	
+
 	const countryMap: Record<string, string> = {
 		RS: "Serbia",
 		US: "United States",
@@ -118,7 +116,7 @@ const getCountryName = (code: string | null | undefined): string => {
 		IL: "Israel",
 		NZ: "New Zealand",
 	};
-	
+
 	return countryMap[code.toUpperCase()] || code;
 };
 
@@ -164,7 +162,7 @@ export function CreateQuote() {
 			currency: "EUR",
 			status: "draft",
 			notes: "",
-			items: [{ description: "", quantity: 1, unitPrice: 0, discount: 0, taxRate: 20 }],
+			items: [{ description: "", quantity: 1, unitPrice: 0 }],
 		},
 	});
 
@@ -198,21 +196,14 @@ export function CreateQuote() {
 	const selectedContact = filteredContacts.find((c) => c.id === contactId);
 
 	const totals = useMemo(() => {
-		const amountBeforeDiscount = items.reduce(
+		const subtotal = items.reduce(
 			(sum, item) => sum + (item.quantity || 0) * (item.unitPrice || 0),
 			0,
 		);
-		const discount = items.reduce(
-			(sum, item) => sum + ((item.discount || 0) / 100) * (item.quantity || 0) * (item.unitPrice || 0),
-			0,
-		);
-		const subtotal = amountBeforeDiscount - discount;
 		const tax = subtotal * 0.2;
 		const total = subtotal + tax;
 
 		return {
-			amountBeforeDiscount,
-			discount,
 			subtotal,
 			tax,
 			total,
@@ -259,7 +250,8 @@ export function CreateQuote() {
 		} catch (error) {
 			toast({
 				title: "Error",
-				description: error instanceof Error ? error.message : "Failed to create quote",
+				description:
+					error instanceof Error ? error.message : "Failed to create quote",
 				variant: "destructive",
 			});
 		}
@@ -289,7 +281,8 @@ export function CreateQuote() {
 		} catch (error) {
 			toast({
 				title: "Error",
-				description: error instanceof Error ? error.message : "Failed to save draft",
+				description:
+					error instanceof Error ? error.message : "Failed to save draft",
 				variant: "destructive",
 			});
 		}
@@ -305,12 +298,15 @@ export function CreateQuote() {
 					<SheetTitle>Create New Quote</SheetTitle>
 				</VisuallyHidden>
 				<div className="flex h-full flex-col">
-					<header className="sticky top-0 z-10 bg-background">
-					</header>
+					<header className="bg-background sticky top-0 z-10"></header>
 
 					<div className="flex-1 overflow-y-auto px-3 py-3 pb-20">
 						<FormProvider {...methods}>
-							<form onSubmit={handleSubmit(onSubmit)}>
+							<form
+								onSubmit={handleSubmit((data) =>
+									onSubmit(data as QuoteFormData),
+								)}
+							>
 								<div className="space-y-8">
 									<section className="space-y-4">
 										<div className="border-border/60 bg-muted/40 rounded-lg border p-3">
@@ -320,19 +316,29 @@ export function CreateQuote() {
 														<h2 className="text-xl leading-tight font-semibold">
 															{quoteNumber}
 														</h2>
-														<Popover open={statusPopoverOpen} onOpenChange={setStatusPopoverOpen}>
+														<Popover
+															open={statusPopoverOpen}
+															onOpenChange={setStatusPopoverOpen}
+														>
 															<PopoverTrigger asChild>
 																<button type="button">
 																	<Badge
-																		variant={STATUS_COLORS[selectedStatus]?.variant || "secondary"}
+																		variant={
+																			STATUS_COLORS[selectedStatus]?.variant ||
+																			"secondary"
+																		}
 																		icon={STATUS_COLORS[selectedStatus]?.icon}
-																		className="capitalize cursor-pointer"
+																		className="cursor-pointer capitalize"
 																	>
-																		{selectedStatus.charAt(0).toUpperCase() + selectedStatus.slice(1)}
+																		{selectedStatus.charAt(0).toUpperCase() +
+																			selectedStatus.slice(1)}
 																	</Badge>
 																</button>
 															</PopoverTrigger>
-															<PopoverContent className="w-auto p-0" align="start">
+															<PopoverContent
+																className="w-auto p-0"
+																align="start"
+															>
 																<div className="p-2">
 																	{QUOTE_STATUSES.map((status) => (
 																		<button
@@ -343,11 +349,13 @@ export function CreateQuote() {
 																				setStatusPopoverOpen(false);
 																			}}
 																			className={cn(
-																				"w-full px-3 py-2 text-left text-sm rounded-md hover:bg-accent",
-																				selectedStatus === status && "bg-accent",
+																				"hover:bg-accent w-full rounded-md px-3 py-2 text-left text-sm",
+																				selectedStatus === status &&
+																					"bg-accent",
 																			)}
 																		>
-																			{status.charAt(0).toUpperCase() + status.slice(1)}
+																			{status.charAt(0).toUpperCase() +
+																				status.slice(1)}
 																		</button>
 																	))}
 																</div>
@@ -362,11 +370,15 @@ export function CreateQuote() {
 												</div>
 												<div className="flex flex-wrap items-center gap-2 text-sm">
 													<p className="text-muted-foreground">
-														<span className="font-medium">Updated:</span> {formatDate(new Date())}
+														<span className="font-medium">Updated:</span>{" "}
+														{formatDate(new Date())}
 													</p>
 													<span className="text-muted-foreground">•</span>
 													<p className="text-muted-foreground">
-														<Popover open={issueDateOpen} onOpenChange={setIssueDateOpen}>
+														<Popover
+															open={issueDateOpen}
+															onOpenChange={setIssueDateOpen}
+														>
 															<PopoverTrigger asChild>
 																<button
 																	type="button"
@@ -375,13 +387,19 @@ export function CreateQuote() {
 																	Issued on {formatDate(new Date(issueDate))}
 																</button>
 															</PopoverTrigger>
-															<PopoverContent className="w-auto p-0" align="start">
+															<PopoverContent
+																className="w-auto p-0"
+																align="start"
+															>
 																<Calendar
 																	mode="single"
 																	selected={new Date(issueDate)}
 																	onSelect={(date) => {
 																		if (date) {
-																			setValue("issueDate", date.toISOString().split("T")[0]);
+																			setValue(
+																				"issueDate",
+																				date.toISOString().split("T")[0],
+																			);
 																			setIssueDateOpen(false);
 																		}
 																	}}
@@ -392,22 +410,32 @@ export function CreateQuote() {
 														{expiryDate ? (
 															<>
 																{" • "}
-																<Popover open={expiryDateOpen} onOpenChange={setExpiryDateOpen}>
+																<Popover
+																	open={expiryDateOpen}
+																	onOpenChange={setExpiryDateOpen}
+																>
 																	<PopoverTrigger asChild>
 																		<button
 																			type="button"
 																			className="text-muted-foreground hover:text-foreground inline"
 																		>
-																			Expires on {formatDate(new Date(expiryDate))}
+																			Expires on{" "}
+																			{formatDate(new Date(expiryDate))}
 																		</button>
 																	</PopoverTrigger>
-																	<PopoverContent className="w-auto p-0" align="start">
+																	<PopoverContent
+																		className="w-auto p-0"
+																		align="start"
+																	>
 																		<Calendar
 																			mode="single"
 																			selected={new Date(expiryDate)}
 																			onSelect={(date) => {
 																				if (date) {
-																					setValue("expiryDate", date.toISOString().split("T")[0]);
+																					setValue(
+																						"expiryDate",
+																						date.toISOString().split("T")[0],
+																					);
 																					setExpiryDateOpen(false);
 																				}
 																			}}
@@ -419,7 +447,10 @@ export function CreateQuote() {
 														) : (
 															<>
 																{" • "}
-																<Popover open={expiryDateOpen} onOpenChange={setExpiryDateOpen}>
+																<Popover
+																	open={expiryDateOpen}
+																	onOpenChange={setExpiryDateOpen}
+																>
 																	<PopoverTrigger asChild>
 																		<button
 																			type="button"
@@ -428,12 +459,18 @@ export function CreateQuote() {
 																			Add expiry date
 																		</button>
 																	</PopoverTrigger>
-																	<PopoverContent className="w-auto p-0" align="start">
+																	<PopoverContent
+																		className="w-auto p-0"
+																		align="start"
+																	>
 																		<Calendar
 																			mode="single"
 																			onSelect={(date) => {
 																				if (date) {
-																					setValue("expiryDate", date.toISOString().split("T")[0]);
+																					setValue(
+																						"expiryDate",
+																						date.toISOString().split("T")[0],
+																					);
 																					setExpiryDateOpen(false);
 																				}
 																			}}
@@ -450,7 +487,10 @@ export function CreateQuote() {
 												<div className="flex-1 space-y-4">
 													<div className="space-y-2">
 														<div className="text-muted-foreground flex items-center gap-2 text-sm font-medium tracking-wide uppercase">
-															<Building2 className="h-4 w-4" aria-hidden="true" />
+															<Building2
+																className="h-4 w-4"
+																aria-hidden="true"
+															/>
 															Company
 														</div>
 														{!selectedCompanyId ? (
@@ -476,38 +516,46 @@ export function CreateQuote() {
 																		{company.name}
 																	</p>
 																</div>
-																<div className="flex items-center gap-6 flex-wrap">
-																	<div className="inline-flex items-center gap-2">
-																		<Home className="h-4 w-4" aria-hidden="true" />
-																		<span>
-																			<span className="font-medium">Address:</span>{" "}
-																			<span className="text-muted-foreground">
-																				{company.address || "Not provided"}
-																			</span>
-																		</span>
-																	</div>
+																<div className="flex flex-wrap items-center gap-6">
+																	{/* Address removed - Account type doesn't have address property */}
 																	{company.country && (
 																		<div className="inline-flex items-center gap-2">
-																			<MapPin className="h-4 w-4" aria-hidden="true" />
-																			<span>{getCountryName(company.country)}</span>
+																			<MapPin
+																				className="h-4 w-4"
+																				aria-hidden="true"
+																			/>
+																			<span>
+																				{getCountryName(company.country)}
+																			</span>
 																		</div>
 																	)}
-																	<div className="inline-flex items-center gap-2 text-muted-foreground">
-																		<Mail className="h-4 w-4" aria-hidden="true" />
+																	<div className="text-muted-foreground inline-flex items-center gap-2">
+																		<Mail
+																			className="h-4 w-4"
+																			aria-hidden="true"
+																		/>
 																		<span>{company.email}</span>
 																	</div>
 																	{company.phone && (
-																		<div className="inline-flex items-center gap-2 text-muted-foreground">
-																			<Phone className="h-4 w-4" aria-hidden="true" />
+																		<div className="text-muted-foreground inline-flex items-center gap-2">
+																			<Phone
+																				className="h-4 w-4"
+																				aria-hidden="true"
+																			/>
 																			<span>{company.phone}</span>
 																		</div>
 																	)}
 																</div>
 																{company.website && (
-																	<div className="flex items-center gap-2 text-muted-foreground">
-																		<Globe className="h-4 w-4" aria-hidden="true" />
+																	<div className="text-muted-foreground flex items-center gap-2">
+																		<Globe
+																			className="h-4 w-4"
+																			aria-hidden="true"
+																		/>
 																		<span className="font-medium">web</span>
-																		<span className="truncate">{company.website}</span>
+																		<span className="truncate">
+																			{company.website}
+																		</span>
 																	</div>
 																)}
 															</div>
@@ -525,7 +573,10 @@ export function CreateQuote() {
 																	Totals
 																</p>
 																<p className="text-foreground text-base font-semibold">
-																	{formatCurrency(totals.total, selectedCurrency)}
+																	{formatCurrency(
+																		totals.total,
+																		selectedCurrency,
+																	)}
 																</p>
 															</div>
 															<div className="text-center">
@@ -537,7 +588,10 @@ export function CreateQuote() {
 																		{selectedContact.name}
 																	</p>
 																) : (
-																	<Popover open={contactPopoverOpen} onOpenChange={setContactPopoverOpen}>
+																	<Popover
+																		open={contactPopoverOpen}
+																		onOpenChange={setContactPopoverOpen}
+																	>
 																		<PopoverTrigger asChild>
 																			<button
 																				type="button"
@@ -547,7 +601,10 @@ export function CreateQuote() {
 																				—
 																			</button>
 																		</PopoverTrigger>
-																		<PopoverContent className="w-auto p-0" align="center">
+																		<PopoverContent
+																			className="w-auto p-0"
+																			align="center"
+																		>
 																			<div className="p-2">
 																				{filteredContacts.length > 0 ? (
 																					filteredContacts.map((contact) => (
@@ -555,16 +612,19 @@ export function CreateQuote() {
 																							key={contact.id}
 																							type="button"
 																							onClick={() => {
-																								setValue("contactId", contact.id);
+																								setValue(
+																									"contactId",
+																									contact.id,
+																								);
 																								setContactPopoverOpen(false);
 																							}}
-																							className="w-full px-3 py-2 text-left text-sm rounded-md hover:bg-accent"
+																							className="hover:bg-accent w-full rounded-md px-3 py-2 text-left text-sm"
 																						>
 																							{contact.name}
 																						</button>
 																					))
 																				) : (
-																					<p className="px-3 py-2 text-sm text-muted-foreground">
+																					<p className="text-muted-foreground px-3 py-2 text-sm">
 																						No contacts available
 																					</p>
 																				)}
@@ -577,7 +637,10 @@ export function CreateQuote() {
 																<p className="text-muted-foreground text-sm font-medium">
 																	Currency
 																</p>
-																<Popover open={currencyPopoverOpen} onOpenChange={setCurrencyPopoverOpen}>
+																<Popover
+																	open={currencyPopoverOpen}
+																	onOpenChange={setCurrencyPopoverOpen}
+																>
 																	<PopoverTrigger asChild>
 																		<button
 																			type="button"
@@ -586,7 +649,10 @@ export function CreateQuote() {
 																			{selectedCurrency}
 																		</button>
 																	</PopoverTrigger>
-																	<PopoverContent className="w-auto p-0" align="end">
+																	<PopoverContent
+																		className="w-auto p-0"
+																		align="end"
+																	>
 																		<div className="p-2">
 																			{["EUR", "USD", "GBP"].map((currency) => (
 																				<button
@@ -597,8 +663,9 @@ export function CreateQuote() {
 																						setCurrencyPopoverOpen(false);
 																					}}
 																					className={cn(
-																						"w-full px-3 py-2 text-left text-sm rounded-md hover:bg-accent",
-																						selectedCurrency === currency && "bg-accent",
+																						"hover:bg-accent w-full rounded-md px-3 py-2 text-left text-sm",
+																						selectedCurrency === currency &&
+																							"bg-accent",
 																					)}
 																				>
 																					{currency}
@@ -633,10 +700,15 @@ export function CreateQuote() {
 															<TableHead>Description</TableHead>
 															<TableHead className="text-right">Qty</TableHead>
 															<TableHead className="text-right">Unit</TableHead>
-															<TableHead className="text-right">Unit Price</TableHead>
-															<TableHead className="text-right">Disc %</TableHead>
-															<TableHead className="text-right">VAT %</TableHead>
-															<TableHead className="text-right!">Amount</TableHead>
+															<TableHead className="text-right">
+																Unit Price
+															</TableHead>
+															<TableHead className="text-right">
+																VAT %
+															</TableHead>
+															<TableHead className="text-right!">
+																Amount
+															</TableHead>
 															<TableHead className="w-[40px]"></TableHead>
 														</TableRow>
 													</TableHeader>
@@ -644,12 +716,10 @@ export function CreateQuote() {
 														{fields.map((field, index) => {
 															const item = items[index];
 															const itemTotal =
-																(item?.quantity || 0) *
-																(item?.unitPrice || 0) *
-																(1 - (item?.discount || 0) / 100);
+																(item?.quantity || 0) * (item?.unitPrice || 0);
 															return (
 																<TableRow key={field.id}>
-																	<TableCell className="text-muted-foreground text-sm align-top">
+																	<TableCell className="text-muted-foreground align-top text-sm">
 																		{index + 1}
 																	</TableCell>
 																	<TableCell className="align-top">
@@ -658,13 +728,16 @@ export function CreateQuote() {
 																				placeholder="Item description"
 																				value={item?.description || ""}
 																				onChange={(e) =>
-																					setValue(`items.${index}.description`, e.target.value)
+																					setValue(
+																						`items.${index}.description`,
+																						e.target.value,
+																					)
 																				}
-																				className="h-auto border-0 bg-transparent p-0 font-medium shadow-none focus-visible:ring-0 hover:bg-muted/50 rounded px-1 -mx-1"
+																				className="hover:bg-muted/50 -mx-1 h-auto rounded border-0 bg-transparent p-0 px-1 font-medium shadow-none focus-visible:ring-0"
 																			/>
 																		</div>
 																	</TableCell>
-																	<TableCell className="text-right text-sm align-top">
+																	<TableCell className="text-right align-top text-sm">
 																		<Input
 																			type="number"
 																			min="1"
@@ -672,16 +745,17 @@ export function CreateQuote() {
 																			onChange={(e) =>
 																				setValue(
 																					`items.${index}.quantity`,
-																					Number.parseInt(e.target.value) || 1,
+																					Number.parseInt(e.target.value, 10) ||
+																						1,
 																				)
 																			}
-																			className="h-auto w-auto min-w-[2ch] border-0 bg-transparent p-0 text-right shadow-none focus-visible:ring-0 hover:bg-muted/50 rounded px-1 -mx-1"
+																			className="hover:bg-muted/50 -mx-1 h-auto w-auto min-w-[2ch] rounded border-0 bg-transparent p-0 px-1 text-right shadow-none focus-visible:ring-0"
 																		/>
 																	</TableCell>
-																	<TableCell className="text-right text-sm align-top">
+																	<TableCell className="text-right align-top text-sm">
 																		pcs
 																	</TableCell>
-																	<TableCell className="text-right text-sm align-top">
+																	<TableCell className="text-right align-top text-sm">
 																		<Input
 																			type="number"
 																			min="0"
@@ -690,32 +764,21 @@ export function CreateQuote() {
 																			onChange={(e) =>
 																				setValue(
 																					`items.${index}.unitPrice`,
-																					Number.parseFloat(e.target.value) || 0,
+																					Number.parseFloat(e.target.value) ||
+																						0,
 																				)
 																			}
-																			className="h-auto w-auto min-w-[4ch] border-0 bg-transparent p-0 text-right shadow-none focus-visible:ring-0 hover:bg-muted/50 rounded px-1 -mx-1"
+																			className="hover:bg-muted/50 -mx-1 h-auto w-auto min-w-[4ch] rounded border-0 bg-transparent p-0 px-1 text-right shadow-none focus-visible:ring-0"
 																		/>
 																	</TableCell>
-																	<TableCell className="text-right text-sm align-top">
-																		<Input
-																			type="number"
-																			min="0"
-																			max="100"
-																			value={item?.discount || 0}
-																			onChange={(e) =>
-																				setValue(
-																					`items.${index}.discount`,
-																					Number.parseFloat(e.target.value) || 0,
-																				)
-																			}
-																			className="h-auto w-auto min-w-[2ch] border-0 bg-transparent p-0 text-right shadow-none focus-visible:ring-0 hover:bg-muted/50 rounded px-1 -mx-1"
-																		/>
-																	</TableCell>
-																	<TableCell className="text-right text-sm align-top">
+																	<TableCell className="text-right align-top text-sm">
 																		20%
 																	</TableCell>
-																	<TableCell className="text-right! font-medium align-top">
-																		{formatCurrency(itemTotal, selectedCurrency)}
+																	<TableCell className="text-right! align-top font-medium">
+																		{formatCurrency(
+																			itemTotal,
+																			selectedCurrency,
+																		)}
 																	</TableCell>
 																	<TableCell className="align-top">
 																		{fields.length > 1 && (
@@ -724,7 +787,7 @@ export function CreateQuote() {
 																				variant="ghost"
 																				size="sm"
 																				onClick={() => remove(index)}
-																				className="h-8 w-8 p-0 text-destructive"
+																				className="text-destructive h-8 w-8 p-0"
 																			>
 																				×
 																			</Button>
@@ -736,43 +799,38 @@ export function CreateQuote() {
 													</TableBody>
 													<TableFooter>
 														<TableRow className="bg-background">
-															<TableCell colSpan={7} className="text-right font-semibold text-foreground">
-																Amount before discount
-															</TableCell>
-															<TableCell className="text-right! font-semibold text-foreground">
-																{formatCurrency(totals.amountBeforeDiscount, selectedCurrency)}
-															</TableCell>
-														</TableRow>
-														<TableRow className="bg-background">
-															<TableCell colSpan={7} className="text-right font-semibold text-foreground">
-																Discount
-															</TableCell>
-															<TableCell className="text-right! font-semibold text-destructive">
-																{totals.discount > 0 ? "-" : ""}
-																{formatCurrency(Math.abs(totals.discount), selectedCurrency)}
-															</TableCell>
-														</TableRow>
-														<TableRow className="bg-background">
-															<TableCell colSpan={7} className="text-right font-semibold text-foreground">
+															<TableCell
+																colSpan={6}
+																className="text-foreground text-right font-semibold"
+															>
 																Subtotal
 															</TableCell>
-															<TableCell className="text-right! font-semibold text-foreground">
-																{formatCurrency(totals.subtotal, selectedCurrency)}
+															<TableCell className="text-foreground text-right! font-semibold">
+																{formatCurrency(
+																	totals.subtotal,
+																	selectedCurrency,
+																)}
 															</TableCell>
 														</TableRow>
 														<TableRow className="bg-background">
-															<TableCell colSpan={7} className="text-right font-semibold text-foreground">
+															<TableCell
+																colSpan={6}
+																className="text-foreground text-right font-semibold"
+															>
 																VAT Amount (20%)
 															</TableCell>
-															<TableCell className="text-right! font-semibold text-foreground">
+															<TableCell className="text-foreground text-right! font-semibold">
 																{formatCurrency(totals.tax, selectedCurrency)}
 															</TableCell>
 														</TableRow>
-														<TableRow className="bg-muted/80 border-t-2 border-foreground/10">
-															<TableCell colSpan={7} className="text-right font-bold text-foreground text-base">
+														<TableRow className="bg-muted/80 border-foreground/10 border-t-2">
+															<TableCell
+																colSpan={6}
+																className="text-foreground text-right text-base font-bold"
+															>
 																Total
 															</TableCell>
-															<TableCell className="text-right! font-bold text-foreground text-base">
+															<TableCell className="text-foreground text-right! text-base font-bold">
 																{formatCurrency(totals.total, selectedCurrency)}
 															</TableCell>
 														</TableRow>
@@ -789,7 +847,7 @@ export function CreateQuote() {
 											variant="secondary"
 											size="sm"
 											onClick={() => {
-												append({ description: "", quantity: 1, unitPrice: 0, discount: 0, taxRate: 20 });
+												append({ description: "", quantity: 1, unitPrice: 0 });
 											}}
 											className="mt-4"
 										>
@@ -797,30 +855,28 @@ export function CreateQuote() {
 										</Button>
 									</section>
 
-									{notes || true ? (
-										<section className="space-y-4">
-											<div className="border-border/60 bg-muted/40 rounded-lg border p-3">
-												<div className="space-y-2">
-													<div className="text-muted-foreground flex items-center gap-2 text-sm font-medium tracking-wide uppercase">
-														<FileText className="h-4 w-4" aria-hidden="true" />
-														Notes
-													</div>
-													<Textarea
-														placeholder="Add notes…"
-														value={notes || ""}
-														onChange={(e) => setValue("notes", e.target.value)}
-														className="min-h-[100px] border-0 bg-transparent p-0 text-sm leading-relaxed shadow-none focus-visible:ring-0"
-													/>
+									<section className="space-y-4">
+										<div className="border-border/60 bg-muted/40 rounded-lg border p-3">
+											<div className="space-y-2">
+												<div className="text-muted-foreground flex items-center gap-2 text-sm font-medium tracking-wide uppercase">
+													<FileText className="h-4 w-4" aria-hidden="true" />
+													Notes
 												</div>
+												<Textarea
+													placeholder="Add notes…"
+													value={notes || ""}
+													onChange={(e) => setValue("notes", e.target.value)}
+													className="min-h-[100px] border-0 bg-transparent p-0 text-sm leading-relaxed shadow-none focus-visible:ring-0"
+												/>
 											</div>
-										</section>
-									) : null}
+										</div>
+									</section>
 								</div>
 							</form>
 						</FormProvider>
 					</div>
 
-					<div className="fixed bottom-8 right-6 z-50">
+					<div className="fixed right-6 bottom-8 z-50">
 						<QuoteActions
 							onSaveDraft={handleSaveDraft}
 							onCancel={() => router.push("/quotes")}

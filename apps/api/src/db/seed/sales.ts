@@ -1,4 +1,4 @@
-import { inArray } from "drizzle-orm";
+import { inArray, sql } from "drizzle-orm";
 
 import { db as defaultDb } from "../index";
 import { accountContacts, accounts } from "../schema/accounts.schema";
@@ -9,9 +9,12 @@ import {
   orders,
   payments,
   quoteItems,
-  quotes
+  quotes,
+  salesDeals
 } from "../schema/sales.schema";
-import { productCategories, products } from "../schema/products.schema";
+import { products } from "../schema/products.schema";
+import { opportunities } from "../schema/crm.schema";
+import { users } from "../schema/settings.schema";
 
 const formatMoney = (value: number): string => value.toFixed(2);
 const formatRate = (value: number): string => value.toFixed(2);
@@ -22,128 +25,6 @@ const addDays = (date: Date, days: number): Date => {
 };
 
 const formatDate = (date: Date): string => date.toISOString().substring(0, 10);
-
-const categorySeeds: Array<{
-  id: string;
-  name: string;
-  description: string;
-}> = [
-  {
-    id: "00000000-0000-0000-0000-000000010001",
-    name: "Construction Services",
-    description: "Consulting and execution services for large construction projects"
-  },
-  {
-    id: "00000000-0000-0000-0000-000000010002",
-    name: "Industrial Equipment",
-    description: "Heavy machinery, safety systems and monitoring equipment"
-  },
-  {
-    id: "00000000-0000-0000-0000-000000010003",
-    name: "Software & Automation",
-    description: "Software licenses, automation suites and integrations"
-  },
-  {
-    id: "00000000-0000-0000-0000-000000010004",
-    name: "Logistics",
-    description: "Freight, warehousing and logistics management"
-  },
-  {
-    id: "00000000-0000-0000-0000-000000010005",
-    name: "Energy Solutions",
-    description: "Power management, renewable energy and grid maintenance"
-  }
-] ;
-
-const productSeeds: Array<{
-  id: string;
-  sku: string;
-  name: string;
-  description: string;
-  categoryId: string;
-  unitPrice: number;
-}> = [
-  {
-    id: "00000000-0000-0000-0000-000000020001",
-    sku: "PROD-001",
-    name: "Project Planning Suite",
-    description: "Software for detailed construction project planning",
-    categoryId: categorySeeds[2].id,
-    unitPrice: 3200
-  },
-  {
-    id: "00000000-0000-0000-0000-000000020002",
-    sku: "PROD-002",
-    name: "Safety Monitoring Sensors",
-    description: "IoT sensors for on-site safety monitoring",
-    categoryId: categorySeeds[1].id,
-    unitPrice: 980
-  },
-  {
-    id: "00000000-0000-0000-0000-000000020003",
-    sku: "PROD-003",
-    name: "Crane Rental (per week)",
-    description: "Heavy-duty crane rental including operator",
-    categoryId: categorySeeds[0].id,
-    unitPrice: 8500
-  },
-  {
-    id: "00000000-0000-0000-0000-000000020004",
-    sku: "PROD-004",
-    name: "Steel Support Beams",
-    description: "Reinforced steel beams (set of 10)",
-    categoryId: categorySeeds[1].id,
-    unitPrice: 1250
-  },
-  {
-    id: "00000000-0000-0000-0000-000000020005",
-    sku: "PROD-005",
-    name: "Site Logistics Package",
-    description: "In-field logistics coordination and warehousing",
-    categoryId: categorySeeds[3].id,
-    unitPrice: 4100
-  },
-  {
-    id: "00000000-0000-0000-0000-000000020006",
-    sku: "PROD-006",
-    name: "Renewable Power Unit",
-    description: "Hybrid solar/wind mobile power station",
-    categoryId: categorySeeds[4].id,
-    unitPrice: 6700
-  },
-  {
-    id: "00000000-0000-0000-0000-000000020007",
-    sku: "PROD-007",
-    name: "Concrete Delivery",
-    description: "High-volume concrete delivery (25m³)",
-    categoryId: categorySeeds[0].id,
-    unitPrice: 2200
-  },
-  {
-    id: "00000000-0000-0000-0000-000000020008",
-    sku: "PROD-008",
-    name: "Structural Engineering Consulting",
-    description: "Senior engineering consulting retainer (per month)",
-    categoryId: categorySeeds[0].id,
-    unitPrice: 5400
-  },
-  {
-    id: "00000000-0000-0000-0000-000000020009",
-    sku: "PROD-009",
-    name: "Automation Integrations",
-    description: "Industrial automation software integration",
-    categoryId: categorySeeds[2].id,
-    unitPrice: 3800
-  },
-  {
-    id: "00000000-0000-0000-0000-000000020010",
-    sku: "PROD-010",
-    name: "Warm Shell Fit-out",
-    description: "Interior warm shell construction works",
-    categoryId: categorySeeds[0].id,
-    unitPrice: 15200
-  }
-] ;
 
 const orderStatuses = ["pending", "processing", "shipped", "completed", "cancelled"] as const;
 const invoiceStatuses = ["draft", "sent", "paid", "overdue", "unpaid"] as const;
@@ -176,67 +57,31 @@ export const seedSales = async (database = defaultDb) => {
 
     // Clean previous sales data
     await tx.delete(payments);
+    await tx.delete(salesDeals);
     await tx.delete(invoiceItems);
     await tx.delete(invoices);
     await tx.delete(orderItems);
     await tx.delete(orders);
+    // Clean previous offers (quotes) data
     await tx.delete(quoteItems);
     await tx.delete(quotes);
 
-    // Upsert product categories
-    await tx
-      .insert(productCategories)
-      .values(categorySeeds)
-      .onConflictDoUpdate({
-        target: productCategories.id,
-        set: {
-          name: productCategories.name,
-          description: productCategories.description
-        }
-      });
-
-    const categoryRecords = await tx
-      .select({ id: productCategories.id, name: productCategories.name })
-      .from(productCategories)
-      .where(inArray(productCategories.id, categorySeeds.map((category) => category.id)));
-    const categoryLookup = new Map(categoryRecords.map((category) => [category.id, category.id]));
-
-    // Upsert products
-    await tx
-      .insert(products)
-      .values(
-        productSeeds.map((product) => ({
-          id: product.id,
-          sku: product.sku,
-          name: product.name,
-          description: product.description,
-          categoryId: categoryLookup.get(product.categoryId) ?? null,
-          unitPrice: formatMoney(product.unitPrice)
-        }))
-      )
-      .onConflictDoUpdate({
-        target: products.sku,
-        set: {
-          name: products.name,
-          description: products.description,
-          categoryId: products.categoryId,
-          unitPrice: products.unitPrice
-        }
-      });
-
+    // Get existing products from database (seeded by products.ts)
+    // If products don't exist, throw error - products seed must run first
     const productRecords = await tx
       .select({ id: products.id, sku: products.sku, name: products.name, unitPrice: products.unitPrice })
       .from(products)
-      .where(inArray(products.sku, productSeeds.map((product) => product.sku)));
+      .limit(100);
+
+    if (productRecords.length < 2) {
+      throw new Error("Not enough products in database. Please run products seed first: bun run db:seed --only=products");
+    }
+
     const productsByIndex = productRecords.map((product) => ({
       id: product.id,
       name: product.name,
       unitPrice: Number(product.unitPrice)
     }));
-
-    if (productsByIndex.length < 2) {
-      throw new Error("Not enough products to seed sales data");
-    }
 
     const contactByAccount = existingContacts.reduce<Map<string, typeof existingContacts[number][]>>(
       (map, contact) => {
@@ -250,7 +95,9 @@ export const seedSales = async (database = defaultDb) => {
 
     const baseDate = new Date(2025, 0, 8);
 
+    // Create 50 offers (quotes) with companies from database
     for (let index = 0; index < 50; index += 1) {
+      // Use all companies from database, cycling through them
       const account = existingAccounts[index % existingAccounts.length];
       const contactsForAccount = contactByAccount.get(account.id) ?? existingContacts;
       const contact = contactsForAccount[index % contactsForAccount.length];
@@ -460,6 +307,66 @@ export const seedSales = async (database = defaultDb) => {
           invoiceId
         }))
       );
+
+      // Create payment for paid and overdue invoices
+      if (invoiceStatus === "paid" || invoiceStatus === "overdue") {
+        const paymentDate = invoiceStatus === "paid" 
+          ? addDays(issuedAt, Math.floor(Math.random() * 15) + 1)
+          : addDays(dueDate, Math.floor(Math.random() * 30) + 1);
+
+        await tx.insert(payments).values({
+          invoiceId: invoiceId,
+          companyId: account.id,
+          contactId: contact.id,
+          status: invoiceStatus === "paid" ? "completed" : "pending",
+          amount: formatMoney(amountPaid),
+          currency,
+          method: invoiceStatus === "paid" ? "bank_transfer" : "bank_transfer",
+          reference: `PAY-${invoiceRow.invoiceNumber}-${index + 1}`,
+          notes: invoiceStatus === "paid" 
+            ? `Plaćeno ${formatDate(paymentDate)}`
+            : `Delimično plaćeno - preostalo ${formatMoney(invoiceTotal - amountPaid)}`,
+          paymentDate: formatDate(paymentDate)
+        });
+      }
+    }
+
+    // Create sales deals from opportunities (if they exist)
+    const existingOpportunities = await tx
+      .select({ 
+        id: opportunities.id, 
+        accountId: opportunities.accountId,
+        ownerId: opportunities.ownerId,
+        value: opportunities.value,
+        stage: opportunities.stage,
+        closeDate: opportunities.closeDate
+      })
+      .from(opportunities)
+      .limit(30);
+
+    const existingUsers = await tx
+      .select({ id: users.id })
+      .from(users)
+      .limit(10);
+
+    if (existingOpportunities.length > 0 && existingUsers.length > 0) {
+      const dealsToCreate = existingOpportunities.slice(0, Math.min(25, existingOpportunities.length));
+      
+      for (let i = 0; i < dealsToCreate.length; i++) {
+        const opp = dealsToCreate[i];
+        const owner = existingUsers[i % existingUsers.length];
+
+        // Only create deals for opportunities that are closed or in negotiation
+        if (opp.stage === "closedWon" || opp.stage === "closedLost" || opp.stage === "negotiation") {
+          await tx.insert(salesDeals).values({
+            opportunityId: opp.id,
+            ownerId: owner.id,
+            description: `Sales deal for opportunity ${opp.id}`,
+            closedAt: opp.closeDate || (opp.stage === "closedWon" || opp.stage === "closedLost" ? new Date() : null),
+            createdAt: new Date()
+          }).onConflictDoNothing();
+        }
+      }
     }
   });
 };

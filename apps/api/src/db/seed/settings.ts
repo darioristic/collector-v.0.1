@@ -1,9 +1,9 @@
-import { eq, isNull } from "drizzle-orm";
+import { eq, inArray, isNull } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 
 import { db as defaultDb } from "../index";
 import { companies } from "../schema/auth.schema";
-import { teamMembers, users } from "../schema/settings.schema";
+import { integrations, permissions, roles, teamMembers, users } from "../schema/settings.schema";
 
 type SeedTeamMember = {
   firstName: string;
@@ -242,6 +242,130 @@ export const seedSettings = async (database = defaultDb) => {
           })
       )
     );
+
+    // Create permissions for roles
+    const existingRoles = await tx
+      .select({ id: roles.id, key: roles.key })
+      .from(roles);
+
+    const roleMap = new Map(existingRoles.map((r) => [r.key, r.id]));
+
+    const permissionsData = [
+      // Admin permissions - full access
+      { roleKey: "admin", resource: "accounts", action: "create" },
+      { roleKey: "admin", resource: "accounts", action: "read" },
+      { roleKey: "admin", resource: "accounts", action: "update" },
+      { roleKey: "admin", resource: "accounts", action: "delete" },
+      { roleKey: "admin", resource: "users", action: "create" },
+      { roleKey: "admin", resource: "users", action: "read" },
+      { roleKey: "admin", resource: "users", action: "update" },
+      { roleKey: "admin", resource: "users", action: "delete" },
+      { roleKey: "admin", resource: "projects", action: "create" },
+      { roleKey: "admin", resource: "projects", action: "read" },
+      { roleKey: "admin", resource: "projects", action: "update" },
+      { roleKey: "admin", resource: "projects", action: "delete" },
+      { roleKey: "admin", resource: "sales", action: "create" },
+      { roleKey: "admin", resource: "sales", action: "read" },
+      { roleKey: "admin", resource: "sales", action: "update" },
+      { roleKey: "admin", resource: "sales", action: "delete" },
+      { roleKey: "admin", resource: "settings", action: "read" },
+      { roleKey: "admin", resource: "settings", action: "update" },
+      
+      // Manager permissions - most access except user management
+      { roleKey: "manager", resource: "accounts", action: "create" },
+      { roleKey: "manager", resource: "accounts", action: "read" },
+      { roleKey: "manager", resource: "accounts", action: "update" },
+      { roleKey: "manager", resource: "projects", action: "create" },
+      { roleKey: "manager", resource: "projects", action: "read" },
+      { roleKey: "manager", resource: "projects", action: "update" },
+      { roleKey: "manager", resource: "sales", action: "create" },
+      { roleKey: "manager", resource: "sales", action: "read" },
+      { roleKey: "manager", resource: "sales", action: "update" },
+      { roleKey: "manager", resource: "settings", action: "read" },
+      
+      // User permissions - read and limited create
+      { roleKey: "user", resource: "accounts", action: "read" },
+      { roleKey: "user", resource: "projects", action: "read" },
+      { roleKey: "user", resource: "projects", action: "create" },
+      { roleKey: "user", resource: "sales", action: "read" },
+      { roleKey: "user", resource: "settings", action: "read" },
+    ];
+
+    if (permissionsData.length > 0) {
+      await Promise.all(
+        permissionsData.map((perm) => {
+          const roleId = roleMap.get(perm.roleKey);
+          if (!roleId) return Promise.resolve();
+
+          return tx
+            .insert(permissions)
+            .values({
+              roleId,
+              resource: perm.resource,
+              action: perm.action
+            })
+            .onConflictDoNothing();
+        })
+      );
+    }
+
+    // Create integrations
+    const integrationsData = [
+      {
+        provider: "hubspot" as const,
+        status: "connected" as const,
+        externalId: "hubspot-12345",
+        settings: JSON.stringify({ apiKey: "demo-key", syncEnabled: true })
+      },
+      {
+        provider: "salesforce" as const,
+        status: "disconnected" as const,
+        externalId: null,
+        settings: null
+      },
+      {
+        provider: "slack" as const,
+        status: "connected" as const,
+        externalId: "slack-workspace-abc",
+        settings: JSON.stringify({ webhookUrl: "https://hooks.slack.com/...", channel: "#notifications" })
+      },
+      {
+        provider: "google" as const,
+        status: "connected" as const,
+        externalId: "google-oauth-xyz",
+        settings: JSON.stringify({ calendarSync: true, driveSync: false })
+      }
+    ];
+
+    if (integrationsData.length > 0) {
+      // Check existing integrations by provider
+      const existingIntegrations = await tx
+        .select({ id: integrations.id, provider: integrations.provider })
+        .from(integrations);
+
+      const existingProviders = new Set(existingIntegrations.map((i) => i.provider));
+
+      for (const integration of integrationsData) {
+        if (existingProviders.has(integration.provider)) {
+          // Update existing integration
+          const existing = existingIntegrations.find((i) => i.provider === integration.provider);
+          if (existing) {
+            await tx
+              .update(integrations)
+              .set({
+                status: integration.status,
+                externalId: integration.externalId,
+                settings: integration.settings,
+                updatedAt: sql`NOW()`
+              })
+              .where(eq(integrations.id, existing.id));
+          }
+        } else {
+          // Insert new integration
+          await tx.insert(integrations).values(integration);
+        }
+      }
+    }
   });
 };
 

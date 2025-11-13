@@ -9,6 +9,8 @@ import {
   projectMembers,
   projectMilestones,
   projectTasks,
+  projectTeams,
+  projectTimeEntries,
   projects
 } from "../schema/projects.schema";
 import { users } from "../schema/settings.schema";
@@ -211,10 +213,12 @@ export const seedProjects = async (database = defaultDb) => {
 
     // Clean previous data to keep deterministic dataset
     await Promise.all([
+      tx.delete(projectTimeEntries),
       tx.delete(projectBudgetCategories),
       tx.delete(projectTasks),
       tx.delete(projectMilestones),
       tx.delete(projectMembers),
+      tx.delete(projectTeams),
       tx.delete(projects)
     ]);
 
@@ -270,10 +274,45 @@ export const seedProjects = async (database = defaultDb) => {
         memberCandidates.set(candidate.id, candidate);
       }
 
+      // Create project teams (1-2 teams per project)
+      const teamCount = index % 3 === 0 ? 2 : 1;
+      const teamRows = [];
+      
+      for (let teamIndex = 0; teamIndex < teamCount; teamIndex++) {
+        const [teamRow] = await tx
+          .insert(projectTeams)
+          .values({
+            projectId,
+            name: teamIndex === 0 ? `Core Team` : `Support Team ${teamIndex}`,
+            goal: teamIndex === 0 
+              ? `Primary development team for ${projectRow.name}`
+              : `Supporting team for specialized tasks`
+          })
+          .returning();
+        
+        if (teamRow) {
+          teamRows.push(teamRow);
+        }
+      }
+
+      // Project members (owner + additional teammates)
+      const shuffledUsers = faker.helpers.shuffle(userRows);
+      const memberCandidates = new Map<string, { id: string; name: string; email: string }>();
+      memberCandidates.set(owner.id, owner);
+
+      for (const candidate of shuffledUsers) {
+        if (memberCandidates.size >= TEAM_MEMBERS_PER_PROJECT) {
+          break;
+        }
+
+        memberCandidates.set(candidate.id, candidate);
+      }
+
       await tx.insert(projectMembers).values(
         Array.from(memberCandidates.values()).map((member, memberIndex) => ({
           projectId,
           userId: member.id,
+          teamId: teamRows.length > 0 ? teamRows[memberIndex % teamRows.length]?.id ?? null : null,
           role: memberIndex === 0 ? "owner" : "contributor"
         }))
       );
@@ -332,7 +371,37 @@ export const seedProjects = async (database = defaultDb) => {
         };
       });
 
-      await tx.insert(projectTasks).values(tasksPayload);
+      const insertedTasks = await tx.insert(projectTasks).values(tasksPayload).returning();
+
+      // Create time entries for tasks
+      const timeEntriesData = [];
+      const tasksForTimeEntries = insertedTasks.slice(0, Math.min(20, insertedTasks.length));
+
+      for (const task of tasksForTimeEntries) {
+        // Create 1-3 time entries per task
+        const entryCount = (task.id.charCodeAt(0) % 3) + 1;
+        
+        for (let entryIndex = 0; entryIndex < entryCount; entryIndex++) {
+          const entryDate = new Date(startDate);
+          entryDate.setDate(startDate.getDate() + Math.floor(Math.random() * 60));
+          entryDate.setHours(9 + Math.floor(Math.random() * 8), Math.floor(Math.random() * 60), 0, 0);
+
+          const hours = 2 + Math.random() * 6; // 2-8 hours
+
+          timeEntriesData.push({
+            projectId,
+            userId: task.assigneeId || owner.id,
+            taskId: task.id,
+            hours: formatCurrency(hours),
+            date: entryDate,
+            description: faker.lorem.sentence()
+          });
+        }
+      }
+
+      if (timeEntriesData.length > 0) {
+        await tx.insert(projectTimeEntries).values(timeEntriesData);
+      }
     }
   });
 };

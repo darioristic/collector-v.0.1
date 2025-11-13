@@ -23,7 +23,7 @@ const seedModules: SeedModule[] = [
   },
   {
     name: "accounts",
-    description: "Accounts: companies and contacts (50 companies, 100 contacts)",
+    description: "Accounts: companies, contacts, and addresses (50 companies, 100 contacts, ~65 addresses)",
     dependencies: [],
     seedFn: seedAccounts
   },
@@ -35,25 +35,25 @@ const seedModules: SeedModule[] = [
   },
   {
     name: "crm",
-    description: "CRM: leads, activities, deals (60 leads, 60 activities, 50 deals)",
+    description: "CRM: leads, opportunities, activities, deals, notes (60 leads, 45 opportunities, 35 activities, 60 client activities, 50 deals, 30 notes)",
     dependencies: ["auth", "accounts"],
     seedFn: seedCrm
   },
   {
     name: "sales",
-    description: "Sales: quotes, orders, invoices with items (50 of each)",
-    dependencies: ["accounts", "products"],
+    description: "Sales: quotes, orders, invoices, payments, deals (50 quotes, 50 orders, 50 invoices, ~30 payments, ~25 sales deals)",
+    dependencies: ["accounts", "products", "crm"],
     seedFn: seedSales
   },
   {
     name: "projects",
-    description: "Projects: projects with tasks, milestones, budget (10 projects)",
+    description: "Projects: projects with teams, tasks, milestones, budget, time entries (10 projects, ~15 teams, 250 tasks, 50 milestones, ~200 time entries)",
     dependencies: ["auth", "accounts"],
     seedFn: seedProjects
   },
   {
     name: "settings",
-    description: "Settings: team members (8 members)",
+    description: "Settings: team members, permissions, integrations (8 members, ~25 permissions, 4 integrations)",
     dependencies: ["auth"],
     seedFn: seedSettings
   },

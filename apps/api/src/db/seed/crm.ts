@@ -4,7 +4,7 @@ import { sql } from "drizzle-orm";
 
 import { db as defaultDb } from "../index";
 import { accounts } from "../schema/accounts.schema";
-import { clientActivities, deals, leads } from "../schema/crm.schema";
+import { activities, clientActivities, crmNotes, deals, leads, opportunities } from "../schema/crm.schema";
 import { users } from "../schema/settings.schema";
 
 const formatSeedUuid = (value: number) =>
@@ -399,6 +399,123 @@ export const seedCrm = async (database = defaultDb) => {
 						updatedAt: sql`NOW()`,
 					},
 				});
+		}
+
+		// Create opportunities from leads
+		const insertedLeads = await tx
+			.select({ id: leads.id, accountId: leads.accountId, email: leads.email, name: leads.name })
+			.from(leads)
+			.limit(50);
+
+		const opportunityStages = ["prospecting", "qualification", "proposal", "negotiation", "closedWon", "closedLost"] as const;
+		const opportunitiesData = [];
+
+		for (let i = 0; i < Math.min(45, insertedLeads.length); i++) {
+			const lead = insertedLeads[i];
+			const accountId = lead.accountId || accountIds[i % accountIds.length];
+			const ownerId = userIds.length > 0 ? userIds[i % userIds.length] : null;
+			const stage = opportunityStages[i % opportunityStages.length];
+			const value = 10000 + (i * 1500) + faker.number.int({ min: 0, max: 10000 });
+			const probability = stage === "closedWon" ? 100 : stage === "closedLost" ? 0 : (i % 4) * 25 + 25;
+
+			const closeDate = stage === "closedWon" || stage === "closedLost"
+				? addDays(new Date(), -faker.number.int({ min: 1, max: 90 }))
+				: addDays(new Date(), faker.number.int({ min: 30, max: 120 }));
+
+			const createdAt = addDays(new Date(), -faker.number.int({ min: 10, max: 180 }));
+
+			opportunitiesData.push({
+				id: faker.string.uuid(),
+				accountId,
+				leadId: lead.id,
+				ownerId,
+				title: `${lead.name} - Opportunity #${i + 1}`,
+				stage,
+				value: value.toFixed(2),
+				probability: probability.toFixed(2),
+				closeDate,
+				createdAt,
+				updatedAt: addDays(createdAt, faker.number.int({ min: 1, max: 30 }))
+			});
+		}
+
+		if (opportunitiesData.length > 0) {
+			await tx.insert(opportunities).values(opportunitiesData);
+		}
+
+		// Create activities for leads and opportunities
+		const insertedOpportunities = await tx
+			.select({ id: opportunities.id, title: opportunities.title })
+			.from(opportunities)
+			.limit(40);
+
+		const activityTypes = ["call", "email", "meeting", "task"] as const;
+		const activitiesData = [];
+
+		for (let i = 0; i < 35; i++) {
+			const isForOpportunity = i % 2 === 0 && insertedOpportunities.length > 0;
+			const relatedId = isForOpportunity
+				? insertedOpportunities[i % insertedOpportunities.length]?.id
+				: insertedLeads[i % insertedLeads.length]?.id;
+
+			if (!relatedId) continue;
+
+			const ownerId = userIds.length > 0 ? userIds[i % userIds.length] : null;
+			const type = activityTypes[i % activityTypes.length];
+			const date = addDays(new Date(), -faker.number.int({ min: 0, max: 60 }));
+
+			activitiesData.push({
+				id: faker.string.uuid(),
+				type,
+				subject: faker.helpers.arrayElement(ACTIVITY_TITLES),
+				notes: i % 3 === 0 ? faker.lorem.sentence() : null,
+				date,
+				ownerId,
+				relatedTo: isForOpportunity ? `opportunity:${relatedId}` : `lead:${relatedId}`,
+				createdAt: addDays(date, -faker.number.int({ min: 1, max: 5 })),
+				updatedAt: date
+			});
+		}
+
+		if (activitiesData.length > 0) {
+			await tx.insert(activities).values(activitiesData);
+		}
+
+		// Create CRM notes for leads and opportunities
+		const notesData = [];
+
+		// Notes for leads
+		for (let i = 0; i < Math.min(15, insertedLeads.length); i++) {
+			const lead = insertedLeads[i];
+			const authorId = userIds.length > 0 ? userIds[i % userIds.length] : null;
+
+			notesData.push({
+				id: faker.string.uuid(),
+				leadId: lead.id,
+				opportunityId: null,
+				authorId,
+				body: faker.lorem.paragraph(),
+				createdAt: addDays(new Date(), -faker.number.int({ min: 1, max: 30 }))
+			});
+		}
+
+		// Notes for opportunities
+		for (let i = 0; i < Math.min(15, insertedOpportunities.length); i++) {
+			const opp = insertedOpportunities[i];
+			const authorId = userIds.length > 0 ? userIds[i % userIds.length] : null;
+
+			notesData.push({
+				id: faker.string.uuid(),
+				leadId: null,
+				opportunityId: opp.id,
+				authorId,
+				body: faker.lorem.paragraph(),
+				createdAt: addDays(new Date(), -faker.number.int({ min: 1, max: 30 }))
+			});
+		}
+
+		if (notesData.length > 0) {
+			await tx.insert(crmNotes).values(notesData);
 		}
 	});
 };

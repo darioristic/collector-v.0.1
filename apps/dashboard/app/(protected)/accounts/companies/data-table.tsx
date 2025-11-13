@@ -89,7 +89,8 @@ import { Separator } from "@/components/ui/separator";
 import {
 	Sheet,
 	SheetContent,
-	SheetDescription,
+	SheetFooter,
+	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
 import {
@@ -123,7 +124,10 @@ const ACCOUNT_TAG_OPTIONS = ["customer", "partner", "vendor"] as const;
 const formSchema = z.object({
 	name: z.string().trim().min(2, "Name is required."),
 	email: z.string().trim().email("Provide a valid email address."),
-	billingEmail: z.string().trim().email("Provide a valid email address.").optional().or(z.literal("")),
+	billingEmail: z.union([
+		z.string().trim().email("Provide a valid email address."),
+		z.literal(""),
+	]).optional(),
 	phone: z.string().trim().optional().or(z.literal("")),
 	website: z.string().trim().optional().or(z.literal("")),
 	contactPerson: z.string().trim().optional().or(z.literal("")),
@@ -1203,7 +1207,7 @@ const CompaniesDataTable = React.forwardRef<
 				</SheetContent>
 			</Sheet>
 
-			<Dialog
+			<Sheet
 				open={isDialogOpen}
 				onOpenChange={(open) => {
 					setIsDialogOpen(open);
@@ -1214,176 +1218,257 @@ const CompaniesDataTable = React.forwardRef<
 					}
 				}}
 			>
-				<DialogContent className="max-w-lg">
-					<DialogHeader>
-						<DialogTitle>
+				<SheetContent className="flex h-full flex-col gap-0 p-0 sm:max-w-lg">
+					<SheetHeader className="px-6 pt-6 pb-4">
+						<SheetTitle className="text-lg font-semibold">
 							{dialogMode === "create"
-								? "Add new company"
-								: "Edit company details"}
-						</DialogTitle>
-						<DialogDescription>
-							{dialogMode === "create"
-								? "Enter the company information to add it to your accounts."
-								: `Update the information for ${editingCompany?.name ?? "the selected company"}.`}
-						</DialogDescription>
-					</DialogHeader>
+								? "Create Customer"
+								: "Edit Customer"}
+						</SheetTitle>
+					</SheetHeader>
 
-					<Form {...form}>
-						<form
-							onSubmit={handleDialogSubmit}
-							className="space-y-6"
-							aria-live="polite"
+					<ScrollArea className="flex-1 px-6">
+						<Form {...form}>
+							<form
+								id="company-form"
+								onSubmit={handleDialogSubmit}
+								className="space-y-4"
+								aria-live="polite"
+							>
+								<Accordion type="single" collapsible defaultValue="general" className="w-full">
+									<AccordionItem value="general" className="border-none">
+										<AccordionTrigger className="py-2.5 text-sm font-medium hover:no-underline">General</AccordionTrigger>
+										<AccordionContent className="pt-0 pb-2.5">
+											<div className="space-y-3">
+												<FormField
+													control={form.control}
+													name="name"
+													render={({ field }) => (
+														<FormItem className="space-y-2">
+															<FormLabel className="text-sm">Name</FormLabel>
+															<FormControl>
+																<Input
+																	{...field}
+																	placeholder="Acme Inc"
+																	autoFocus
+																	className="h-9"
+																/>
+															</FormControl>
+															<FormMessage />
+														</FormItem>
+													)}
+												/>
+
+												<FormField
+													control={form.control}
+													name="email"
+													render={({ field }) => (
+														<FormItem className="space-y-2">
+															<FormLabel className="text-sm">Email</FormLabel>
+															<FormControl>
+																<Input
+																	{...field}
+																	type="email"
+																	placeholder="acme@example.com"
+																	className="h-9"
+																/>
+															</FormControl>
+															<FormMessage />
+														</FormItem>
+													)}
+												/>
+
+												<FormField
+													control={form.control}
+													name="billingEmail"
+													render={({ field }) => (
+														<FormItem className="space-y-2">
+															<FormLabel className="text-sm">Billing Email</FormLabel>
+															<FormControl>
+																<Input
+																	{...field}
+																	type="email"
+																	placeholder="finance@example.com"
+																	className="h-9"
+																/>
+															</FormControl>
+															<p className="text-muted-foreground text-xs leading-relaxed">
+																This is an additional email that will be used to send invoices to.
+															</p>
+															<FormMessage />
+														</FormItem>
+													)}
+												/>
+
+												<FormField
+													control={form.control}
+													name="phone"
+													render={({ field }) => (
+														<FormItem className="space-y-2">
+															<FormLabel className="text-sm">Phone</FormLabel>
+															<FormControl>
+																<Input
+																	{...field}
+																	placeholder="+1 (555) 123-4567"
+																	inputMode="tel"
+																	className="h-9"
+																/>
+															</FormControl>
+															<FormMessage />
+														</FormItem>
+													)}
+												/>
+
+												<FormField
+													control={form.control}
+													name="website"
+													render={({ field }) => (
+														<FormItem className="space-y-2">
+															<FormLabel className="text-sm">Website</FormLabel>
+															<FormControl>
+																<Input
+																	{...field}
+																	type="url"
+																	placeholder="acme.com"
+																	className="h-9"
+																/>
+															</FormControl>
+															<FormMessage />
+														</FormItem>
+													)}
+												/>
+
+												<FormField
+													control={form.control}
+													name="contactPerson"
+													render={({ field }) => (
+														<FormItem className="space-y-2">
+															<FormLabel className="text-sm">Contact person</FormLabel>
+															<FormControl>
+																<Input
+																	{...field}
+																	placeholder="John Doe"
+																	className="h-9"
+																/>
+															</FormControl>
+															<FormMessage />
+														</FormItem>
+													)}
+												/>
+											</div>
+										</AccordionContent>
+									</AccordionItem>
+
+									<AccordionItem value="details" className="border-none">
+										<AccordionTrigger className="py-2.5 text-sm font-medium hover:no-underline">Details</AccordionTrigger>
+										<AccordionContent className="pt-0 pb-2.5">
+											<div className="space-y-3">
+												<FormField
+													control={form.control}
+													name="type"
+													render={({ field }) => (
+														<FormItem className="space-y-2">
+															<FormLabel className="text-sm">Tag</FormLabel>
+															<Select
+																onValueChange={field.onChange}
+																value={field.value}
+															>
+																<FormControl>
+																	<SelectTrigger className="h-9">
+																		<SelectValue placeholder="Select type" />
+																	</SelectTrigger>
+																</FormControl>
+																<SelectContent>
+																	{ACCOUNT_TAG_OPTIONS.map((option) => (
+																		<SelectItem key={option} value={option}>
+																			{formatTag(option)}
+																		</SelectItem>
+																	))}
+																</SelectContent>
+															</Select>
+															<FormMessage />
+														</FormItem>
+													)}
+												/>
+
+												<FormField
+													control={form.control}
+													name="taxId"
+													render={({ field }) => (
+														<FormItem className="space-y-2">
+															<FormLabel className="text-sm">Tax ID</FormLabel>
+															<FormControl>
+																<Input {...field} placeholder="RS123456789" className="h-9" />
+															</FormControl>
+															<FormMessage />
+														</FormItem>
+													)}
+												/>
+
+												<FormField
+													control={form.control}
+													name="country"
+													render={({ field }) => (
+														<FormItem className="space-y-2">
+															<FormLabel className="text-sm">Country (ISO)</FormLabel>
+															<FormControl>
+																<Input
+																	{...field}
+																	placeholder="RS"
+																	maxLength={3}
+																	className="h-9"
+																	onChange={(event) =>
+																		field.onChange(event.target.value.toUpperCase())
+																	}
+																/>
+															</FormControl>
+															<FormMessage />
+														</FormItem>
+													)}
+												/>
+											</div>
+										</AccordionContent>
+									</AccordionItem>
+								</Accordion>
+							</form>
+						</Form>
+					</ScrollArea>
+
+					<SheetFooter className="flex flex-col gap-2 border-t px-6 pt-3 pb-4 sm:flex-row sm:justify-end">
+						<Button
+							type="button"
+							variant="outline"
+							disabled={isSubmitting}
+							onClick={() => {
+								setIsDialogOpen(false);
+								setEditingCompany(null);
+								setDialogMode("create");
+								form.reset({ ...DEFAULT_FORM_VALUES });
+							}}
+							className="h-9 w-full sm:w-auto"
 						>
-							<div className="grid gap-4 sm:grid-cols-2">
-								<FormField
-									control={form.control}
-									name="name"
-									render={({ field }) => (
-										<FormItem className="sm:col-span-2">
-											<FormLabel>Company name</FormLabel>
-											<FormControl>
-												<Input
-													{...field}
-													placeholder="Acme Industries"
-													autoFocus
-												/>
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={form.control}
-									name="email"
-									render={({ field }) => (
-										<FormItem className="sm:col-span-2">
-											<FormLabel>Company email</FormLabel>
-											<FormControl>
-												<Input
-													{...field}
-													type="email"
-													placeholder="info@company.com"
-												/>
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={form.control}
-									name="phone"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Phone</FormLabel>
-											<FormControl>
-												<Input
-													{...field}
-													placeholder="+381601234567"
-													inputMode="tel"
-												/>
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={form.control}
-									name="type"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Tag</FormLabel>
-											<Select
-												onValueChange={field.onChange}
-												value={field.value}
-											>
-												<FormControl>
-													<SelectTrigger>
-														<SelectValue placeholder="Select type" />
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent>
-													{ACCOUNT_TAG_OPTIONS.map((option) => (
-														<SelectItem key={option} value={option}>
-															{formatTag(option)}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={form.control}
-									name="taxId"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Tax ID</FormLabel>
-											<FormControl>
-												<Input {...field} placeholder="RS123456789" />
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={form.control}
-									name="country"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Country (ISO)</FormLabel>
-											<FormControl>
-												<Input
-													{...field}
-													placeholder="RS"
-													maxLength={3}
-													onChange={(event) =>
-														field.onChange(event.target.value.toUpperCase())
-													}
-												/>
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-							</div>
-
-							<DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-								<Button
-									type="button"
-									variant="outline"
-									disabled={isSubmitting}
-									onClick={() => {
-										setIsDialogOpen(false);
-										setEditingCompany(null);
-										setDialogMode("create");
-										form.reset({ ...DEFAULT_FORM_VALUES });
-									}}
-								>
-									Cancel
-								</Button>
-								<Button type="submit" disabled={isSubmitting}>
-									{isSubmitting ? (
-										<>
-											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-											Saving…
-										</>
-									) : dialogMode === "create" ? (
-										"Create company"
-									) : (
-										"Save changes"
-									)}
-								</Button>
-							</DialogFooter>
-						</form>
-					</Form>
-				</DialogContent>
-			</Dialog>
+							Cancel
+						</Button>
+						<Button
+							type="submit"
+							disabled={isSubmitting}
+							form="company-form"
+							className="h-9 w-full sm:w-auto"
+						>
+							{isSubmitting ? (
+								<>
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+									Saving…
+								</>
+							) : dialogMode === "create" ? (
+								"Create"
+							) : (
+								"Save changes"
+							)}
+						</Button>
+					</SheetFooter>
+				</SheetContent>
+			</Sheet>
 
 			<AlertDialog
 				open={isDeleteDialogOpen}

@@ -1,7 +1,8 @@
+import { faker } from "@faker-js/faker";
 import { sql } from "drizzle-orm";
 
 import { db as defaultDb } from "../index";
-import { accountContacts, accounts } from "../schema/accounts.schema";
+import { accountAddresses, accountContacts, accounts } from "../schema/accounts.schema";
 
 const COMPANY_COUNT = 50;
 const COMPANY_ID_OFFSET = 1;
@@ -108,5 +109,49 @@ export const seedAccounts = async (database = defaultDb) => {
           })
       )
     );
+
+    // Create addresses for accounts (1-2 addresses per account)
+    const addressesData = [];
+    faker.seed(2025);
+
+    for (let index = 0; index < COMPANY_COUNT; index++) {
+      const account = accountsSeedData[index];
+      const addressCount = index % 3 === 0 ? 2 : 1; // Every third account has 2 addresses
+
+      for (let addrIndex = 0; addrIndex < addressCount; addrIndex++) {
+        addressesData.push({
+          id: formatSeedUuid(1000 + index * 10 + addrIndex),
+          accountId: account.id,
+          label: addrIndex === 0 ? "primary" : "billing",
+          street: faker.location.streetAddress(),
+          city: faker.location.city(),
+          state: "Srbija",
+          postalCode: faker.location.zipCode("#####"),
+          country: "RS"
+        });
+      }
+    }
+
+    if (addressesData.length > 0) {
+      await Promise.all(
+        addressesData.map((address) =>
+          tx
+            .insert(accountAddresses)
+            .values(address)
+            .onConflictDoUpdate({
+              target: accountAddresses.id,
+              set: {
+                accountId: address.accountId,
+                label: address.label,
+                street: address.street,
+                city: address.city,
+                state: address.state,
+                postalCode: address.postalCode,
+                country: address.country
+              }
+            })
+        )
+      );
+    }
   });
 };

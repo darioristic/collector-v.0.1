@@ -33,12 +33,14 @@ bun run db:setup
 | Module     | Description                                           | Dependencies        |
 |------------|-------------------------------------------------------|---------------------|
 | auth       | Authentication: roles, companies, users               | None                |
-| accounts   | Accounts: companies and contacts (50 + 100)           | None                |
+| accounts   | Accounts: companies, contacts, addresses (50 + 100 + ~65) | None                |
 | products   | Products: categories, locations, products, inventory  | None                |
-| crm        | CRM: leads, activities, deals (60 + 60 + 50)          | auth, accounts      |
-| sales      | Sales: quotes, orders, invoices (50 each)             | accounts, products  |
-| projects   | Projects: projects with tasks, milestones (10)        | auth, accounts      |
-| settings   | Settings: team members (8)                            | None                |
+| crm        | CRM: leads, opportunities, activities, deals, notes (60 + 45 + 35 + 50 + 30) | auth, accounts      |
+| sales      | Sales: quotes, orders, invoices, payments, deals (50 + 50 + 50 + ~30 + ~25) | accounts, products, crm |
+| projects   | Projects: projects, teams, tasks, milestones, time entries (10 + ~15 + 250 + 50 + ~200) | auth, accounts      |
+| settings   | Settings: team members, permissions, integrations (8 + ~25 + 4) | auth                |
+| hr         | HR: employees, role assignments, attendance, time off, payroll | auth                |
+| notifications | Notifications: various notification types for users | auth                |
 
 ## Command Line Options
 
@@ -55,6 +57,35 @@ Options:
 - `--continue-on-error` - Continue seeding even if a module fails
 - `--verbose, -v` - Show verbose logging including debug messages
 - `--help, -h` - Show help message
+
+### Interactive Development Script
+
+For a better development experience with interactive seed selection:
+
+```bash
+# From project root
+bun run dev:interactive
+```
+
+**Features:**
+- **Infrastructure Setup**: Automatically starts Docker services (PostgreSQL, Redis) or uses local services
+- **Interactive Seed Menu**: Choose which modules to seed with a user-friendly menu
+- **Dependency Resolution**: Automatically includes required dependencies
+- **Confirmation**: Review and confirm before seeding
+- **Dev Server Startup**: Starts API and Frontend servers after seeding
+
+**Interactive Menu Options:**
+- Enter module numbers (e.g., `1,2,3`) or names (e.g., `auth,accounts`)
+- Type `a` or `all` to seed all modules
+- Type `s` or `skip` to skip seeding
+- Type `q` or `quit` to exit
+
+**Example Workflow:**
+1. Run `bun run dev:interactive` from project root
+2. Choose infrastructure (Docker or local)
+3. Select seed modules from the menu
+4. Review and confirm selected modules (including dependencies)
+5. Script seeds database and starts dev servers
 
 ## Examples
 
