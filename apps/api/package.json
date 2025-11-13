@@ -14,6 +14,7 @@
     "db:push": "bunx drizzle-kit push --config drizzle.config.ts --force",
     "db:studio": "bunx drizzle-kit studio --config drizzle.config.ts",
     "db:migrate": "bun src/db/migrate.ts",
+    "db:apply-project-tables": "bun scripts/apply-project-tables.ts",
     "db:seed": "bun src/db/seed/index.ts",
     "db:seed:help": "bun src/db/seed/index.ts --help",
     "db:reset": "bun scripts/migrate-and-seed.ts --drop",

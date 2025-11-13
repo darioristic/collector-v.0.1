@@ -4,19 +4,29 @@ import type { Account, Quote } from "@crm/types";
 import { useQuery } from "@tanstack/react-query";
 import {
 	Building2,
+	CheckCircle2,
 	FileEdit,
+	FileText,
 	Globe,
 	Mail,
+	MapPin,
 	Phone,
-	Trash2,
+	Send,
 	X,
+	XCircle,
+	Home,
 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import {
+	Sheet,
+	SheetContent,
+	SheetTitle,
+} from "@/components/ui/sheet";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import {
 	Table,
 	TableBody,
@@ -26,18 +36,80 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
 import { useQuote } from "@/src/hooks/useQuotes";
 import { ensureResponse } from "@/src/lib/fetch-utils";
+import Logo from "@/components/layout/logo";
+import { QuoteActions } from "@/components/quotes/quote-actions";
 
-const statusVariants: Record<
-	string,
-	"default" | "secondary" | "destructive" | "outline"
-> = {
-	draft: "secondary",
-	sent: "default",
-	accepted: "default",
-	rejected: "destructive",
+// Mapiranje country kodova u pun naziv
+const getCountryName = (code: string | null | undefined): string => {
+	if (!code) return "—";
+	
+	const countryMap: Record<string, string> = {
+		RS: "Serbia",
+		US: "United States",
+		GB: "United Kingdom",
+		DE: "Germany",
+		FR: "France",
+		IT: "Italy",
+		ES: "Spain",
+		NL: "Netherlands",
+		BE: "Belgium",
+		CH: "Switzerland",
+		AT: "Austria",
+		PL: "Poland",
+		HR: "Croatia",
+		BA: "Bosnia and Herzegovina",
+		ME: "Montenegro",
+		MK: "North Macedonia",
+		SI: "Slovenia",
+		HU: "Hungary",
+		RO: "Romania",
+		BG: "Bulgaria",
+		GR: "Greece",
+		TR: "Turkey",
+		CN: "China",
+		JP: "Japan",
+		KR: "South Korea",
+		IN: "India",
+		AU: "Australia",
+		CA: "Canada",
+		MX: "Mexico",
+		BR: "Brazil",
+		AR: "Argentina",
+		ZA: "South Africa",
+		AE: "United Arab Emirates",
+		SA: "Saudi Arabia",
+		IL: "Israel",
+		NZ: "New Zealand",
+	};
+	
+	return countryMap[code.toUpperCase()] || code;
+};
+
+type StatusConfig = {
+	variant: "warning" | "info" | "success" | "destructive";
+	icon: React.ReactNode;
+};
+
+const statusConfig: Record<string, StatusConfig> = {
+	draft: {
+		variant: "warning",
+		icon: <FileEdit className="size-3" />,
+	},
+	sent: {
+		variant: "info",
+		icon: <Send className="size-3" />,
+	},
+	accepted: {
+		variant: "success",
+		icon: <CheckCircle2 className="size-3" />,
+	},
+	rejected: {
+		variant: "destructive",
+		icon: <XCircle className="size-3" />,
+	},
 };
 
 type QuoteDetailProps = {
@@ -79,12 +151,45 @@ export function QuoteDetail({
 
 	const companyId = quote?.companyId ?? null;
 
-	const { data: company, isLoading: isCompanyLoading } = useQuery({
+	const {
+		data: company,
+		isLoading: isCompanyLoading,
+		isError: isCompanyError,
+		error: companyError,
+	} = useQuery({
 		queryKey: ["account", companyId],
-		queryFn: () => fetchAccount(companyId as string),
+		queryFn: () => {
+			if (!companyId) {
+				throw new Error("No companyId provided");
+			}
+			console.log("[QuoteDetail] Fetching account:", companyId);
+			return fetchAccount(companyId);
+		},
 		enabled: open && Boolean(companyId),
 		staleTime: 1000 * 60 * 5,
+		retry: 1,
 	});
+
+	React.useEffect(() => {
+		if (open && quote) {
+			console.log("[QuoteDetail] Quote data:", {
+				id: quote.id,
+				companyId: quote.companyId,
+				companyName: quote.companyName,
+				contactId: quote.contactId,
+				contactName: quote.contactName,
+			});
+		}
+	}, [open, quote]);
+
+	React.useEffect(() => {
+		if (isCompanyError) {
+			console.error("[QuoteDetail] Company fetch error:", companyError);
+		}
+		if (company) {
+			console.log("[QuoteDetail] Company loaded:", company);
+		}
+	}, [isCompanyError, companyError, company]);
 
 	React.useEffect(() => {
 		if (!open) {
@@ -113,307 +218,381 @@ export function QuoteDetail({
 	}, [open]);
 
 	return (
-		<AnimatePresence>
-			{open ? (
-				<>
-					<motion.div
-						className="fixed inset-0 z-60 bg-black/30 backdrop-blur-sm"
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						exit={{ opacity: 0 }}
-						transition={{ duration: 0.2 }}
-						onClick={onClose}
-					/>
-					<motion.aside
-						className="bg-background fixed inset-y-0 right-0 z-70 h-screen w-full border border-gray-200/40 shadow-xl md:w-[45vw] md:rounded-l-2xl"
-						initial={{ x: "100%" }}
-						animate={{ x: 0 }}
-						exit={{ x: "100%" }}
-						transition={{ duration: 0.3, ease: "easeOut" }}
-					>
-						<div className="flex h-full flex-col">
-							<header className="bg-background/95 supports-backdrop-filter:bg-background/75 sticky top-0 z-10 border-b px-6 py-5 backdrop-blur">
-								<button
-									type="button"
-									onClick={onClose}
-									className="text-muted-foreground hover:border-border hover:text-foreground focus-visible:ring-ring absolute top-5 right-6 rounded-full border border-transparent p-2 transition focus-visible:ring-2 focus-visible:outline-hidden"
-									aria-label="Close quote details"
-								>
-									<X className="h-5 w-5" aria-hidden="true" />
-								</button>
+		<Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+			<SheetContent
+				side="right"
+				className="w-full p-0 md:w-[calc(50vw)] md:max-w-[900px] [&>button]:hidden"
+			>
+				<VisuallyHidden>
+					<SheetTitle>
+						{quote?.quoteNumber ? `Quote ${quote.quoteNumber}` : "Quote Details"}
+					</SheetTitle>
+				</VisuallyHidden>
+				<div className="flex h-full flex-col">
+					<header className="sticky top-0 z-10 bg-background">
+					</header>
 
-								<div className="space-y-3 pr-12">
-									<div className="flex flex-wrap items-center gap-3">
-										<h2 className="text-2xl leading-tight font-semibold">
-											Quote {quote?.quoteNumber ?? "—"}
-										</h2>
-										{quote ? (
-											<Badge
-												variant={statusVariants[quote.status]}
-												className="capitalize"
-											>
-												{quote.status}
-											</Badge>
-										) : null}
-									</div>
-									<p className="text-muted-foreground text-sm">
-										{quote
-											? `Issued on ${quote.issueDate}${
-													quote.expiryDate
-														? ` • Expires on ${quote.expiryDate}`
-														: ""
-												}`
-											: "Loading quote metadata..."}
-									</p>
-									{(onEdit || onDelete) && quote ? (
-										<div className="flex flex-wrap gap-2 pt-1">
-											{onEdit ? (
-												<Button
-													onClick={() => onEdit(quote)}
-													size="sm"
-													variant="outline"
-												>
-													<FileEdit className="mr-2 h-4 w-4" />
-													Edit
-												</Button>
-											) : null}
-											{onDelete ? (
-												<Button
-													onClick={() => onDelete(quote.id)}
-													size="sm"
-													variant="outline"
-													className="text-destructive"
-												>
-													<Trash2 className="mr-2 h-4 w-4" />
-													Delete
-												</Button>
-											) : null}
-										</div>
-									) : null}
-								</div>
-							</header>
-
-							<div className="flex-1 overflow-y-auto px-6 py-6 pb-10">
-								{isLoading ? (
-									<div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-										Loading quote details...
-									</div>
-								) : isError ? (
-									<div className="flex h-full flex-col items-center justify-center gap-2 text-center">
-										<p className="text-destructive text-sm font-medium">
-											Failed to load quote details.
-										</p>
-										<p className="text-muted-foreground text-xs">
-											{error instanceof Error
-												? error.message
-												: "An unexpected error occurred."}
-										</p>
-									</div>
-								) : !quote ? (
-									<div className="text-muted-foreground flex h-full items-center justify-center text-sm">
-										Quote not found.
-									</div>
-								) : (
-									<div className="space-y-8">
-										<section className="space-y-4">
-											<div className="border-border/60 bg-muted/40 rounded-xl border p-4">
-												<div className="flex items-start justify-between gap-4">
-													<div className="space-y-2">
-														<div className="text-muted-foreground flex items-center gap-2 text-sm font-medium tracking-wide uppercase">
-															<Building2
-																className="h-4 w-4"
-																aria-hidden="true"
-															/>
-															Company
-														</div>
-														{companyId ? (
-															isCompanyLoading ? (
-																<p className="text-muted-foreground text-sm">
-																	Loading company information…
-																</p>
-															) : company ? (
-																<div className="space-y-3 text-sm">
-																	<p className="text-foreground text-base font-semibold">
-																		{company.name}
-																	</p>
-																	<div className="text-muted-foreground grid gap-2 sm:grid-cols-2">
-																		<div className="inline-flex items-center gap-2">
-																			<Mail
-																				className="h-4 w-4"
-																				aria-hidden="true"
-																			/>
-																			<span>{company.email}</span>
-																		</div>
-																		{company.phone ? (
-																			<div className="inline-flex items-center gap-2">
-																				<Phone
-																					className="h-4 w-4"
-																					aria-hidden="true"
-																				/>
-																				<span>{company.phone}</span>
-																			</div>
-																		) : null}
-																		{company.website ? (
-																			<div className="inline-flex items-center gap-2">
-																				<Globe
-																					className="h-4 w-4"
-																					aria-hidden="true"
-																				/>
-																				<span className="truncate">
-																					{company.website}
-																				</span>
-																			</div>
-																		) : null}
-																		<div className="inline-flex items-center gap-2">
-																			<span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-																				Country
-																			</span>
-																			<span>{company.country}</span>
-																		</div>
-																	</div>
-																</div>
-															) : (
-																<p className="text-muted-foreground text-sm">
-																	Company details unavailable.
-																</p>
-															)
-														) : (
-															<p className="text-muted-foreground text-sm">
-																This quote is not linked to a company.
-															</p>
-														)}
+					<div className="flex-1 overflow-y-auto px-3 py-3 pb-20">
+						{isLoading ? (
+							<div className="text-muted-foreground flex h-full items-center justify-center text-sm">
+								Loading quote details...
+							</div>
+						) : isError ? (
+							<div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+								<p className="text-destructive text-sm font-medium">
+									Failed to load quote details.
+								</p>
+								<p className="text-muted-foreground text-xs">
+									{error instanceof Error
+										? error.message
+										: "An unexpected error occurred."}
+								</p>
+							</div>
+						) : !quote ? (
+							<div className="text-muted-foreground flex h-full items-center justify-center text-sm">
+								Quote not found.
+							</div>
+						) : (
+							<div className="space-y-8">
+								<section className="space-y-4">
+									<div className="border-border/60 bg-muted/40 rounded-lg border p-3">
+										<div className="mb-4 space-y-4 pb-4">
+											<div className="flex items-center justify-between gap-3">
+												<div className="flex flex-wrap items-center gap-3">
+													<h2 className="text-xl leading-tight font-semibold">
+														{quote.quoteNumber}
+													</h2>
+													<Badge
+														variant={statusConfig[quote.status]?.variant || "secondary"}
+														icon={statusConfig[quote.status]?.icon}
+														className="capitalize"
+													>
+														{quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
+													</Badge>
+												</div>
+												<div className="shrink-0">
+													<div className="scale-[1.4]">
+														<Logo />
 													</div>
 												</div>
 											</div>
-
-											<div className="grid gap-4 text-sm sm:grid-cols-2">
-												<div>
-													<p className="text-muted-foreground font-medium">
-														Currency
-													</p>
-													<p className="text-foreground text-base font-semibold">
-														{quote.currency}
-													</p>
-												</div>
-												<div>
-													<p className="text-muted-foreground font-medium">
-														Totals
-													</p>
-													<p className="text-foreground text-base font-semibold">
-														{formatCurrency(quote.total, quote.currency)}
-													</p>
-												</div>
-											</div>
-
-											{quote.notes ? (
-												<div>
-													<p className="text-muted-foreground text-sm font-medium">
-														Notes
-													</p>
-													<p className="text-foreground text-sm leading-relaxed">
-														{quote.notes}
-													</p>
-												</div>
-											) : null}
-										</section>
-
-										<Separator />
-
-										<section className="space-y-4">
-											<div className="flex items-center justify-between">
-												<h3 className="text-lg font-semibold">Items</h3>
-												<p className="text-muted-foreground text-xs tracking-wide uppercase">
-													{quote.items?.length ?? 0} line items
+											<div className="flex flex-wrap items-center gap-2 text-sm">
+												<p className="text-muted-foreground">
+													<span className="font-medium">Updated:</span>{" "}
+													{formatDate(quote.updatedAt)}
+												</p>
+												<span className="text-muted-foreground">•</span>
+												<p className="text-muted-foreground">
+													{`Issued on ${formatDate(quote.issueDate)}${
+														quote.expiryDate
+															? ` • Expires on ${formatDate(quote.expiryDate)}`
+															: ""
+													}`}
 												</p>
 											</div>
-											{quote.items && quote.items.length > 0 ? (
-												<div className="overflow-hidden rounded-xl border">
-													<Table>
-														<TableHeader>
-															<TableRow>
-																<TableHead className="w-[50%]">
-																	Description
-																</TableHead>
-																<TableHead className="text-right">
-																	Qty
-																</TableHead>
-																<TableHead className="text-right">
-																	Unit Price
-																</TableHead>
-																<TableHead className="text-right">
-																	Total
-																</TableHead>
-															</TableRow>
-														</TableHeader>
-														<TableBody>
-															{quote.items.map((item) => (
-																<TableRow key={item.id}>
-																	<TableCell>
-																		<div className="space-y-1">
-																			<p className="font-medium">
-																				{item.description || "—"}
-																			</p>
-																			{item.productId ? (
-																				<span className="text-muted-foreground text-xs">
-																					Product ID: {item.productId}
-																				</span>
-																			) : null}
+										</div>
+										<div className="flex items-start justify-between gap-4">
+											<div className="flex-1 space-y-4">
+												<div className="space-y-2">
+													<div className="text-muted-foreground flex items-center gap-2 text-sm font-medium tracking-wide uppercase">
+														<Building2
+															className="h-4 w-4"
+															aria-hidden="true"
+														/>
+														Company
+													</div>
+													{companyId ? (
+														isCompanyLoading ? (
+															<p className="text-muted-foreground text-sm">
+																Loading company information…
+															</p>
+														) : isCompanyError ? (
+															<div className="space-y-2">
+																{quote.companyName ? (
+																	<p className="text-foreground text-base font-semibold">
+																		{quote.companyName}
+																	</p>
+																) : null}
+																<p className="text-muted-foreground text-sm">
+																	Failed to load company details.
+																	{companyError instanceof Error
+																		? ` ${companyError.message}`
+																		: ""}
+																</p>
+															</div>
+														) : company ? (
+															<div className="space-y-3 text-sm">
+																<div>
+																	<p className="text-foreground text-base font-semibold">
+																		{company.name}
+																	</p>
+																</div>
+																<div className="flex items-center gap-6 flex-wrap">
+																	<div className="inline-flex items-center gap-2">
+																		<Home
+																			className="h-4 w-4"
+																			aria-hidden="true"
+																		/>
+																		<span>
+																			<span className="font-medium">Address:</span>{" "}
+																			<span className="text-muted-foreground">
+																				Not provided
+																			</span>
+																		</span>
+																	</div>
+																	{company.country && (
+																		<div className="inline-flex items-center gap-2">
+																			<MapPin
+																				className="h-4 w-4"
+																				aria-hidden="true"
+																			/>
+																			<span>{getCountryName(company.country)}</span>
 																		</div>
-																	</TableCell>
-																	<TableCell className="text-right text-sm">
-																		{item.quantity}
-																	</TableCell>
-																	<TableCell className="text-right text-sm">
-																		{formatCurrency(
-																			item.unitPrice,
-																			quote.currency,
-																		)}
-																	</TableCell>
-																	<TableCell className="text-right font-medium">
-																		{formatCurrency(item.total, quote.currency)}
-																	</TableCell>
-																</TableRow>
-															))}
-														</TableBody>
-														<TableFooter>
-															<TableRow>
-																<TableCell
-																	colSpan={3}
-																	className="text-right font-medium"
-																>
-																	Subtotal
-																</TableCell>
-																<TableCell className="text-right font-medium">
-																	{formatCurrency(
-																		quote.subtotal,
-																		quote.currency,
 																	)}
-																</TableCell>
-															</TableRow>
-															<TableRow>
-																<TableCell
-																	colSpan={3}
-																	className="text-right font-medium"
-																>
-																	Tax
-																</TableCell>
-																<TableCell className="text-right font-medium">
-																	{formatCurrency(quote.tax, quote.currency)}
-																</TableCell>
-															</TableRow>
-															<TableRow>
-																<TableCell
-																	colSpan={3}
-																	className="text-right font-bold"
-																>
-																	Total
-																</TableCell>
-																<TableCell className="text-right font-bold">
-																	{formatCurrency(quote.total, quote.currency)}
-																</TableCell>
-															</TableRow>
-														</TableFooter>
-													</Table>
+																	<div className="inline-flex items-center gap-2 text-muted-foreground">
+																		<Mail
+																			className="h-4 w-4"
+																			aria-hidden="true"
+																		/>
+																		<span>{company.email}</span>
+																	</div>
+																	{company.phone && (
+																		<div className="inline-flex items-center gap-2 text-muted-foreground">
+																			<Phone
+																				className="h-4 w-4"
+																				aria-hidden="true"
+																			/>
+																			<span>{company.phone}</span>
+																		</div>
+																	)}
+																</div>
+																{company.website && (
+																	<div className="flex items-center gap-2 text-muted-foreground">
+																		<Globe
+																			className="h-4 w-4"
+																			aria-hidden="true"
+																		/>
+																		<span className="font-medium">web</span>
+																		<span className="truncate">
+																			{company.website}
+																		</span>
+																	</div>
+																)}
+															</div>
+														) : (
+															<div className="space-y-2">
+																{quote.companyName ? (
+																	<p className="text-foreground text-base font-semibold">
+																		{quote.companyName}
+																	</p>
+																) : null}
+																<p className="text-muted-foreground text-sm">
+																	Company details unavailable.
+																</p>
+															</div>
+														)
+													) : quote.companyName ? (
+														<p className="text-foreground text-base font-semibold">
+															{quote.companyName}
+														</p>
+													) : (
+														<p className="text-muted-foreground text-sm">
+															This quote is not linked to a company.
+														</p>
+													)}
+												</div>
+
+												<div className="border-t pt-4">
+													<div className="flex items-start justify-between gap-4">
+														<div>
+															<p className="text-muted-foreground text-sm font-medium">
+																Totals
+															</p>
+															<p className="text-foreground text-base font-semibold">
+																{formatCurrency(quote.total, quote.currency)}
+															</p>
+														</div>
+														<div className="text-center">
+															<p className="text-muted-foreground text-sm font-medium">
+																Billing contact:
+															</p>
+															<p className="text-foreground text-base font-semibold">
+																{quote.contactName || "—"}
+															</p>
+														</div>
+														<div>
+															<p className="text-muted-foreground text-sm font-medium">
+																Currency
+															</p>
+															<p className="text-foreground text-base font-semibold">
+																{quote.currency}
+															</p>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</section>
+
+								<Separator />
+
+								<section className="space-y-4">
+									<div className="flex items-center justify-between">
+										<h3 className="text-lg font-semibold">Items</h3>
+										<p className="text-muted-foreground text-xs tracking-wide uppercase">
+											{quote.items?.length ?? 0} line items
+										</p>
+									</div>
+									{quote.items && quote.items.length > 0 ? (
+										<div className="relative overflow-x-auto rounded-xl border">
+											<Table>
+												<TableHeader>
+													<TableRow>
+														<TableHead className="w-[40px]">
+															#
+														</TableHead>
+														<TableHead>
+															Description
+														</TableHead>
+														<TableHead className="text-right">
+															Qty
+														</TableHead>
+														<TableHead className="text-right">
+															Unit
+														</TableHead>
+														<TableHead className="text-right">
+															Unit Price
+														</TableHead>
+														<TableHead className="text-right">
+															Disc %
+														</TableHead>
+														<TableHead className="text-right">
+															VAT %
+														</TableHead>
+														<TableHead className="text-right!">
+															Amount
+														</TableHead>
+													</TableRow>
+												</TableHeader>
+												<TableBody>
+													{quote.items.map((item, index) => (
+														<TableRow key={item.id}>
+															<TableCell className="text-muted-foreground text-sm align-top">
+																{index + 1}
+															</TableCell>
+															<TableCell className="align-top">
+																<div className="space-y-1">
+																	<p className="font-medium">
+																		{item.description || "—"}
+																	</p>
+																	{item.productId && (
+																		<span className="text-muted-foreground text-xs">
+																			Product ID: {item.productId}
+																		</span>
+																	)}
+																</div>
+															</TableCell>
+															<TableCell className="text-right text-sm align-top">
+																{item.quantity}
+															</TableCell>
+															<TableCell className="text-right text-sm align-top">
+																{"pcs"}
+															</TableCell>
+															<TableCell className="text-right text-sm align-top">
+																{formatCurrency(
+																	item.unitPrice,
+																	quote.currency,
+																)}
+															</TableCell>
+															<TableCell className="text-right text-sm align-top">
+																{"0%"}
+															</TableCell>
+															<TableCell className="text-right text-sm align-top">
+																{"20%"}
+															</TableCell>
+															<TableCell className="text-right! font-medium align-top">
+																{formatCurrency(item.total, quote.currency)}
+															</TableCell>
+														</TableRow>
+													))}
+												</TableBody>
+												<TableFooter>
+													{(() => {
+														const amountBeforeDiscount = quote.items?.reduce(
+															(sum, item) => sum + item.unitPrice * item.quantity,
+															0,
+														) ?? 0;
+														const discount = amountBeforeDiscount - quote.subtotal;
+														return (
+															<>
+																		<TableRow className="bg-background">
+																			<TableCell
+																				colSpan={7}
+																				className="text-right font-semibold text-foreground"
+																			>
+																				Amount before discount
+																			</TableCell>
+																			<TableCell className="text-right! font-semibold text-foreground">
+																				{formatCurrency(
+																					amountBeforeDiscount,
+																					quote.currency,
+																				)}
+																			</TableCell>
+																		</TableRow>
+																		<TableRow className="bg-background">
+																			<TableCell
+																				colSpan={7}
+																				className="text-right font-semibold text-foreground"
+																			>
+																				Discount
+																			</TableCell>
+																			<TableCell className="text-right! font-semibold text-destructive">
+																				{discount > 0 ? "-" : ""}
+																				{formatCurrency(Math.abs(discount), quote.currency)}
+																			</TableCell>
+																		</TableRow>
+																		<TableRow className="bg-background">
+																			<TableCell
+																				colSpan={7}
+																				className="text-right font-semibold text-foreground"
+																			>
+																				Subtotal
+																			</TableCell>
+																			<TableCell className="text-right! font-semibold text-foreground">
+																				{formatCurrency(
+																					quote.subtotal,
+																					quote.currency,
+																				)}
+																			</TableCell>
+																		</TableRow>
+																		<TableRow className="bg-background">
+																			<TableCell
+																				colSpan={7}
+																				className="text-right font-semibold text-foreground"
+																			>
+																				VAT Amount (20%)
+																			</TableCell>
+																			<TableCell className="text-right! font-semibold text-foreground">
+																				{formatCurrency(quote.tax, quote.currency)}
+																			</TableCell>
+																		</TableRow>
+																		<TableRow className="bg-muted/80 border-t-2 border-foreground/10">
+																			<TableCell
+																				colSpan={7}
+																				className="text-right font-bold text-foreground text-base"
+																			>
+																				Total
+																			</TableCell>
+																			<TableCell className="text-right! font-bold text-foreground text-base">
+																				{formatCurrency(quote.total, quote.currency)}
+																			</TableCell>
+																		</TableRow>
+															</>
+														);
+													})()}
+												</TableFooter>
+											</Table>
 												</div>
 											) : (
 												<p className="text-muted-foreground text-sm">
@@ -422,25 +601,39 @@ export function QuoteDetail({
 											)}
 										</section>
 
-										<Separator />
-
-										<section className="text-muted-foreground grid gap-4 text-sm sm:grid-cols-2">
-											<div>
-												<span className="font-medium">Created:</span>{" "}
-												{new Date(quote.createdAt).toLocaleString()}
+								{quote.notes ? (
+									<section className="space-y-4">
+										<div className="border-border/60 bg-muted/40 rounded-lg border p-3">
+											<div className="space-y-2">
+												<div className="text-muted-foreground flex items-center gap-2 text-sm font-medium tracking-wide uppercase">
+													<FileText
+														className="h-4 w-4"
+														aria-hidden="true"
+													/>
+													Notes
+												</div>
+												<p className="text-foreground text-sm leading-relaxed">
+													{quote.notes}
+												</p>
 											</div>
-											<div>
-												<span className="font-medium">Updated:</span>{" "}
-												{new Date(quote.updatedAt).toLocaleString()}
-											</div>
-										</section>
-									</div>
-								)}
+										</div>
+									</section>
+								) : null}
 							</div>
+						)}
+					</div>
+
+					{quote ? (
+						<div className="fixed bottom-8 right-6 z-50">
+							<QuoteActions
+								quote={quote}
+								onEdit={onEdit}
+								onDelete={onDelete}
+							/>
 						</div>
-					</motion.aside>
-				</>
-			) : null}
-		</AnimatePresence>
+					) : null}
+				</div>
+			</SheetContent>
+		</Sheet>
 	);
 }

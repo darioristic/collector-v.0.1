@@ -7,6 +7,8 @@ import {
   projectTasks,
   projects,
   projectStatus,
+  projectTeams,
+  projectTimeEntries,
   taskStatus
 } from "../../db/schema/projects.schema";
 import { users } from "../../db/schema/settings.schema";
@@ -14,6 +16,8 @@ import type {
   AddTeamMemberInput,
   CreateBudgetCategoryInput,
   CreateTaskInput,
+  CreateTeamInput,
+  CreateTimeEntryInput,
   CreateTimelineEventInput,
   ProjectBudgetCategory,
   ProjectBudgetSummary,
@@ -21,6 +25,8 @@ import type {
   ProjectDetails,
   ProjectSummary,
   ProjectTask,
+  ProjectTeam,
+  ProjectTimeEntry,
   ProjectTimelineEvent,
   ProjectTeamMember,
   ProjectUpdateInput,
@@ -28,15 +34,20 @@ import type {
   UpdateBudgetCategoryInput,
   UpdateBudgetSummaryInput,
   UpdateTaskInput,
+  UpdateTeamInput,
+  UpdateTimeEntryInput,
   UpdateTimelineEventInput
 } from "./projects.types";
 import type { CacheService } from "../../lib/cache.service";
+import { DEFAULT_PROJECT_TASKS, generateTasksFromTemplates } from "./project-templates";
 
 type ProjectsTableRow = typeof projects.$inferSelect;
 type TasksTableRow = typeof projectTasks.$inferSelect;
 type TimelineTableRow = typeof projectMilestones.$inferSelect;
 type TeamTableRow = typeof projectMembers.$inferSelect;
+type TeamEntityRow = typeof projectTeams.$inferSelect;
 type BudgetCategoryRow = typeof projectBudgetCategories.$inferSelect;
+type TimeEntryRow = typeof projectTimeEntries.$inferSelect;
 type UserRow = typeof users.$inferSelect;
 
 const DAY_IN_MS = 86_400_000;
@@ -275,6 +286,27 @@ export class ProjectsService {
       throw new Error("Failed to create project");
     }
 
+    // Automatically create default tasks for the project
+    try {
+      const taskTemplates = generateTasksFromTemplates(
+        DEFAULT_PROJECT_TASKS,
+        row.ownerId,
+        row.startDate
+      );
+
+      for (const taskInput of taskTemplates) {
+        try {
+          await this.createTask(row.id, taskInput);
+        } catch (error) {
+          // Log error but don't fail project creation
+          console.error(`Failed to create default task "${taskInput.title}" for project ${row.id}:`, error);
+        }
+      }
+    } catch (error) {
+      // Log error but don't fail project creation
+      console.error(`Failed to create default tasks for project ${row.id}:`, error);
+    }
+
     await this.invalidateProjectCaches(row.id);
 
     return this.getProjectDetails(row.id) as Promise<ProjectDetails>;
@@ -403,11 +435,13 @@ export class ProjectsService {
       return null;
     }
 
-    const [tasks, timeline, team, budgetCategories] = await Promise.all([
+    const [tasks, timeline, teams, team, budgetCategories, timeEntries] = await Promise.all([
       this.fetchProjectTasks(id),
       this.fetchProjectTimeline(id),
+      this.fetchProjectTeams(id),
       this.fetchProjectTeam(id),
-      this.fetchBudgetCategories(id)
+      this.fetchBudgetCategories(id),
+      this.fetchProjectTimeEntries(id)
     ]);
 
     const totalTasks = tasks.length;
@@ -420,7 +454,7 @@ export class ProjectsService {
       completed: completedTasks
     });
 
-    const budget = this.composeBudgetSummary(projectRow.project, budgetCategories);
+    const budget = this.composeBudgetSummary(projectRow.project, budgetCategories, timeEntries);
 
     const details: ProjectDetails = {
       ...summary,
@@ -431,7 +465,9 @@ export class ProjectsService {
       budget,
       tasks,
       timeline,
+      teams,
       team,
+      timeEntries,
       quickStats: {
         totalTasks,
         completedTasks,
@@ -592,6 +628,79 @@ export class ProjectsService {
     return this.fetchProjectTeam(projectId);
   }
 
+  async listTeams(projectId: string): Promise<ProjectTeam[]> {
+    return this.fetchProjectTeams(projectId);
+  }
+
+  async createTeam(projectId: string, input: CreateTeamInput): Promise<ProjectTeam> {
+    const payload: typeof projectTeams.$inferInsert = {
+      projectId,
+      name: input.name,
+      goal: input.goal ?? null
+    };
+
+    const [row] = await this.database.insert(projectTeams).values(payload).returning();
+
+    if (!row) {
+      throw new Error("Failed to create team");
+    }
+
+    const team = this.mapTeam(row);
+
+    await this.invalidateProjectCaches(projectId);
+
+    return team;
+  }
+
+  async updateTeam(projectId: string, teamId: string, input: UpdateTeamInput): Promise<ProjectTeam | null> {
+    const existing = await this.database
+      .select()
+      .from(projectTeams)
+      .where(and(eq(projectTeams.id, teamId), eq(projectTeams.projectId, projectId)))
+      .limit(1);
+
+    if (existing.length === 0) {
+      return null;
+    }
+
+    const payload: Partial<typeof projectTeams.$inferInsert> = {
+      updatedAt: new Date()
+    };
+
+    if (input.name !== undefined) payload.name = input.name;
+    if (input.goal !== undefined) payload.goal = input.goal ?? null;
+
+    await this.database.update(projectTeams).set(payload).where(eq(projectTeams.id, teamId));
+
+    const [row] = await this.database
+      .select()
+      .from(projectTeams)
+      .where(eq(projectTeams.id, teamId))
+      .limit(1);
+
+    const updated = row ? this.mapTeam(row) : null;
+
+    if (updated) {
+      await this.invalidateProjectCaches(projectId);
+    }
+
+    return updated;
+  }
+
+  async deleteTeam(projectId: string, teamId: string): Promise<boolean> {
+    const deleted = await this.database
+      .delete(projectTeams)
+      .where(and(eq(projectTeams.id, teamId), eq(projectTeams.projectId, projectId)))
+      .returning();
+    const success = deleted.length > 0;
+
+    if (success) {
+      await this.invalidateProjectCaches(projectId);
+    }
+
+    return success;
+  }
+
   async addTeamMember(projectId: string, input: AddTeamMemberInput): Promise<ProjectTeamMember | null> {
     const [user] = await this.database
       .select()
@@ -603,9 +712,22 @@ export class ProjectsService {
       return null;
     }
 
+    if (input.teamId) {
+      const [team] = await this.database
+        .select()
+        .from(projectTeams)
+        .where(and(eq(projectTeams.id, input.teamId), eq(projectTeams.projectId, projectId)))
+        .limit(1);
+
+      if (!team) {
+        return null;
+      }
+    }
+
     const payload: typeof projectMembers.$inferInsert = {
       projectId,
       userId: input.userId,
+      teamId: input.teamId ?? null,
       role: input.role ?? "contributor"
     };
 
@@ -624,6 +746,7 @@ export class ProjectsService {
     const member: ProjectTeamMember = {
       projectId: row.projectId,
       userId: row.userId,
+      teamId: row.teamId ?? null,
       role: row.role,
       name: user.name,
       email: user.email,
@@ -796,9 +919,83 @@ export class ProjectsService {
     };
   }
 
+  async listTimeEntries(projectId: string): Promise<ProjectTimeEntry[]> {
+    return this.fetchProjectTimeEntries(projectId);
+  }
+
+  async createTimeEntry(projectId: string, input: CreateTimeEntryInput): Promise<ProjectTimeEntry> {
+    const payload: typeof projectTimeEntries.$inferInsert = {
+      projectId,
+      userId: input.userId,
+      taskId: input.taskId ?? null,
+      hours: input.hours.toString(),
+      date: toDateOrNull(input.date) ?? new Date(),
+      description: input.description ?? null
+    };
+
+    const [row] = await this.database.insert(projectTimeEntries).values(payload).returning();
+
+    if (!row) {
+      throw new Error("Failed to create time entry");
+    }
+
+    const entry = await this.getTimeEntryById(row.id);
+
+    if (!entry) {
+      throw new Error("Failed to load created time entry");
+    }
+
+    await this.invalidateProjectCaches(projectId);
+
+    return entry;
+  }
+
+  async updateTimeEntry(
+    projectId: string,
+    entryId: string,
+    input: UpdateTimeEntryInput
+  ): Promise<ProjectTimeEntry | null> {
+    const existing = await this.getTimeEntryById(entryId);
+
+    if (!existing || existing.projectId !== projectId) {
+      return null;
+    }
+
+    const payload: Partial<typeof projectTimeEntries.$inferInsert> = {
+      updatedAt: new Date()
+    };
+
+    if (input.userId !== undefined) payload.userId = input.userId;
+    if (input.taskId !== undefined) payload.taskId = input.taskId ?? null;
+    if (input.hours !== undefined) payload.hours = input.hours.toString();
+    if (input.date !== undefined) payload.date = toDateOrNull(input.date) ?? new Date();
+    if (input.description !== undefined) payload.description = input.description ?? null;
+
+    await this.database.update(projectTimeEntries).set(payload).where(eq(projectTimeEntries.id, entryId));
+
+    await this.invalidateProjectCaches(projectId);
+
+    return this.getTimeEntryById(entryId);
+  }
+
+  async deleteTimeEntry(projectId: string, entryId: string): Promise<boolean> {
+    const deleted = await this.database
+      .delete(projectTimeEntries)
+      .where(and(eq(projectTimeEntries.id, entryId), eq(projectTimeEntries.projectId, projectId)))
+      .returning();
+    const success = deleted.length > 0;
+
+    if (success) {
+      await this.invalidateProjectCaches(projectId);
+    }
+
+    return success;
+  }
+
   private composeBudgetSummary(
     project: ProjectsTableRow,
-    categories: ProjectBudgetCategory[]
+    categories: ProjectBudgetCategory[],
+    timeEntries: ProjectTimeEntry[]
   ): ProjectBudgetSummary {
     const totalProjectBudget = toNumber(project.budgetTotal, 0);
     const spentProjectBudget = toNumber(project.budgetSpent, 0);
@@ -806,6 +1003,8 @@ export class ProjectsService {
 
     const categoriesAllocated = categories.reduce((acc, item) => acc + item.allocated, 0);
     const categoriesSpent = categories.reduce((acc, item) => acc + item.spent, 0);
+
+    const totalHours = timeEntries.reduce((acc, entry) => acc + entry.hours, 0);
 
     const total =
       totalProjectBudget > 0
@@ -826,6 +1025,7 @@ export class ProjectsService {
       total,
       spent,
       remaining: Math.max(total - spent, 0),
+      totalHours,
       categories
     };
   }
@@ -932,6 +1132,20 @@ export class ProjectsService {
     };
   }
 
+  private async fetchProjectTeams(projectId: string): Promise<ProjectTeam[]> {
+    if (!isUuid(projectId)) {
+      return [];
+    }
+
+    const rows = await this.database
+      .select()
+      .from(projectTeams)
+      .where(eq(projectTeams.projectId, projectId))
+      .orderBy(asc(projectTeams.name));
+
+    return rows.map((row) => this.mapTeam(row));
+  }
+
   private async fetchProjectTeam(projectId: string): Promise<ProjectTeamMember[]> {
     if (!isUuid(projectId)) {
       return [];
@@ -950,11 +1164,95 @@ export class ProjectsService {
     return rows.map(({ membership, user }) => ({
       projectId: membership.projectId,
       userId: membership.userId,
+      teamId: membership.teamId ?? null,
       role: membership.role,
       name: user?.name ?? null,
       email: user?.email ?? null,
       addedAt: toIsoString(membership.addedAt) ?? new Date().toISOString()
     }));
+  }
+
+  private async fetchProjectTimeEntries(projectId: string): Promise<ProjectTimeEntry[]> {
+    if (!isUuid(projectId)) {
+      return [];
+    }
+
+    const rows = await this.database
+      .select({
+        entry: projectTimeEntries,
+        user: {
+          id: users.id,
+          name: users.name,
+          email: users.email
+        },
+        task: {
+          id: projectTasks.id,
+          title: projectTasks.title
+        }
+      })
+      .from(projectTimeEntries)
+      .leftJoin(users, eq(projectTimeEntries.userId, users.id))
+      .leftJoin(projectTasks, eq(projectTimeEntries.taskId, projectTasks.id))
+      .where(eq(projectTimeEntries.projectId, projectId))
+      .orderBy(desc(projectTimeEntries.date), desc(projectTimeEntries.createdAt));
+
+    return rows.map(({ entry, user, task }) => this.mapTimeEntry(entry, user ?? undefined, task ?? undefined));
+  }
+
+  private async getTimeEntryById(entryId: string): Promise<ProjectTimeEntry | null> {
+    if (!isUuid(entryId)) {
+      return null;
+    }
+
+    const [row] = await this.database
+      .select({
+        entry: projectTimeEntries,
+        user: users,
+        task: projectTasks
+      })
+      .from(projectTimeEntries)
+      .leftJoin(users, eq(projectTimeEntries.userId, users.id))
+      .leftJoin(projectTasks, eq(projectTimeEntries.taskId, projectTasks.id))
+      .where(eq(projectTimeEntries.id, entryId))
+      .limit(1);
+
+    if (!row) {
+      return null;
+    }
+
+    return this.mapTimeEntry(row.entry, row.user ?? undefined, row.task ?? undefined);
+  }
+
+  private mapTeam(row: TeamEntityRow): ProjectTeam {
+    return {
+      id: row.id,
+      projectId: row.projectId,
+      name: row.name,
+      goal: row.goal ?? null,
+      createdAt: toIsoString(row.createdAt) ?? new Date().toISOString(),
+      updatedAt: toIsoString(row.updatedAt) ?? new Date().toISOString()
+    };
+  }
+
+  private mapTimeEntry(
+    entry: TimeEntryRow,
+    user?: BasicUserInfo | UserRow,
+    task?: { id: string; title: string }
+  ): ProjectTimeEntry {
+    return {
+      id: entry.id,
+      projectId: entry.projectId,
+      userId: entry.userId,
+      taskId: entry.taskId ?? null,
+      hours: toNumber(entry.hours),
+      date: toIsoString(entry.date) ?? new Date().toISOString(),
+      description: entry.description ?? null,
+      userName: user?.name ?? null,
+      userEmail: user?.email ?? null,
+      taskTitle: task?.title ?? null,
+      createdAt: toIsoString(entry.createdAt) ?? new Date().toISOString(),
+      updatedAt: toIsoString(entry.updatedAt) ?? new Date().toISOString()
+    };
   }
 
   private async fetchBudgetCategories(projectId: string): Promise<ProjectBudgetCategory[]> {

@@ -86,11 +86,18 @@ export const listAccountsSchema: FastifySchema = {
   tags: ["accounts"],
   summary: "List all accounts",
   description: "Vraća listu svih klijentskih naloga sa osnovnim informacijama. Rezultati se mogu filtrirati i sortirati.",
+  querystring: {
+    type: "object",
+    properties: {
+      search: { type: "string", minLength: 1 }
+    },
+    additionalProperties: false
+  },
   response: {
     200: {
       type: "array",
       items: accountResponseSchema,
-      description: "Lista svih naloga"
+      description: "Lista svih naloga (filtrirana po search parametru ako je prosleđen)"
     }
   }
 };

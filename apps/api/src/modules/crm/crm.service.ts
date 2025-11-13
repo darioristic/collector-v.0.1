@@ -324,6 +324,20 @@ class DrizzleCRMService implements CRMService {
   }
 
   async updateLead(id: string, input: LeadUpdateInput): Promise<Lead | undefined> {
+    // Get current lead to check if status is changing to "qualified"
+    const [currentLead] = await this.database
+      .select()
+      .from(leads)
+      .where(eq(leads.id, id))
+      .limit(1);
+
+    if (!currentLead) {
+      return undefined;
+    }
+
+    const wasQualified = currentLead.status === "qualified";
+    const willBeQualified = input.status === "qualified";
+
     const payload: Partial<typeof leads.$inferInsert> = {
       updatedAt: input.updatedAt ? new Date(input.updatedAt) : new Date()
     };
@@ -350,7 +364,32 @@ class DrizzleCRMService implements CRMService {
       .where(eq(leads.id, id))
       .returning();
 
-    return updated ? mapLeadRow(updated) : undefined;
+    if (!updated) {
+      return undefined;
+    }
+
+    // Automatically create Opportunity when lead status changes to "qualified"
+    if (!wasQualified && willBeQualified && updated.accountId) {
+      try {
+        const opportunityTitle = updated.name || updated.email || `Opportunity for ${updated.email}`;
+        
+        await this.createOpportunity({
+          accountId: updated.accountId,
+          leadId: updated.id,
+          title: opportunityTitle,
+          stage: "qualification",
+          value: 0,
+          probability: 50,
+          closeDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+          ownerId: updated.ownerId ?? undefined
+        });
+      } catch (error) {
+        // Log error but don't fail the lead update
+        console.error("Failed to automatically create opportunity for qualified lead:", error);
+      }
+    }
+
+    return mapLeadRow(updated);
   }
 
   async deleteLead(id: string): Promise<boolean> {
@@ -389,7 +428,7 @@ class DrizzleCRMService implements CRMService {
     return row ? mapOpportunityRow(row) : undefined;
   }
 
-  async createOpportunity(input: OpportunityCreateInput): Promise<Opportunity> {
+  async createOpportunity(input: OpportunityCreateInput & { leadId?: string; ownerId?: string }): Promise<Opportunity> {
     const createdAt = input.createdAt ? new Date(input.createdAt) : new Date();
     const updatedAt = input.updatedAt ? new Date(input.updatedAt) : createdAt;
 
@@ -398,6 +437,8 @@ class DrizzleCRMService implements CRMService {
       .values({
         id: randomUUID(),
         accountId: input.accountId,
+        leadId: input.leadId ?? null,
+        ownerId: input.ownerId ?? null,
         title: input.title,
         stage: input.stage,
         value: input.value.toString(),

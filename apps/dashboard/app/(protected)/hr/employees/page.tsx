@@ -15,11 +15,12 @@ export async function generateMetadata() {
 }
 
 interface EmployeesPageProps {
-	searchParams: Record<string, string | string[] | undefined>;
+	searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default function EmployeesPage({ searchParams }: EmployeesPageProps) {
-	const initialQuery = parseEmployeesQueryState(searchParams);
+export default async function EmployeesPage({ searchParams }: EmployeesPageProps) {
+	const params = await searchParams;
+	const initialQuery = parseEmployeesQueryState(params);
 
 	return <EmployeesPageClient initialQuery={initialQuery} />;
 }

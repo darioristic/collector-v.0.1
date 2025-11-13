@@ -49,13 +49,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
+	Accordion,
+	AccordionContent,
+	AccordionItem,
+	AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
@@ -125,7 +123,10 @@ const ACCOUNT_TAG_OPTIONS = ["customer", "partner", "vendor"] as const;
 const formSchema = z.object({
 	name: z.string().trim().min(2, "Name is required."),
 	email: z.string().trim().email("Provide a valid email address."),
+	billingEmail: z.string().trim().email("Provide a valid email address.").optional().or(z.literal("")),
 	phone: z.string().trim().optional().or(z.literal("")),
+	website: z.string().trim().optional().or(z.literal("")),
+	contactPerson: z.string().trim().optional().or(z.literal("")),
 	type: z.enum(ACCOUNT_TAG_OPTIONS),
 	taxId: z.string().trim().min(1, "Tax ID is required."),
 	country: z
@@ -140,7 +141,10 @@ type CompanyFormValues = z.infer<typeof formSchema>;
 const DEFAULT_FORM_VALUES: CompanyFormValues = {
 	name: "",
 	email: "",
+	billingEmail: "",
 	phone: "",
+	website: "",
+	contactPerson: "",
 	type: ACCOUNT_TAG_OPTIONS[0],
 	taxId: "",
 	country: "RS",
@@ -297,7 +301,10 @@ const CompaniesDataTable = React.forwardRef<
 			form.reset({
 				name: company.name ?? "",
 				email: company.email ?? "",
+				billingEmail: "",
 				phone: company.phone ?? "",
+				website: company.website ?? "",
+				contactPerson: "",
 				type: company.type ?? ACCOUNT_TAG_OPTIONS[0],
 				taxId: company.taxId ?? "",
 				country: company.country ?? "",
@@ -344,6 +351,7 @@ const CompaniesDataTable = React.forwardRef<
 			name: values.name.trim(),
 			email: values.email.trim(),
 			phone: values.phone?.trim() ? values.phone.trim() : undefined,
+			website: values.website?.trim() ? values.website.trim() : undefined,
 			type: values.type,
 			taxId: values.taxId.trim(),
 			country: values.country.trim().toUpperCase(),

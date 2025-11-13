@@ -79,6 +79,26 @@ const teamParams = {
   additionalProperties: false
 } as const;
 
+const teamEntityParams = {
+  type: "object",
+  properties: {
+    id: uuidSchema,
+    teamId: uuidSchema
+  },
+  required: ["id", "teamId"],
+  additionalProperties: false
+} as const;
+
+const timeEntryParams = {
+  type: "object",
+  properties: {
+    id: uuidSchema,
+    entryId: uuidSchema
+  },
+  required: ["id", "entryId"],
+  additionalProperties: false
+} as const;
+
 const categoryParams = {
   type: "object",
   properties: {
@@ -191,11 +211,26 @@ const timelineEventSchema = {
   additionalProperties: false
 } as const;
 
+const teamSchema = {
+  type: "object",
+  properties: {
+    id: { type: "string", minLength: 1 },
+    projectId: { type: "string", minLength: 1 },
+    name: { type: "string", minLength: 1 },
+    goal: nullableString,
+    createdAt: { type: "string" },
+    updatedAt: { type: "string" }
+  },
+  required: ["id", "projectId", "name", "createdAt", "updatedAt"],
+  additionalProperties: false
+} as const;
+
 const teamMemberSchema = {
   type: "object",
   properties: {
     projectId: { type: "string", minLength: 1 },
     userId: { type: "string", minLength: 1 },
+    teamId: nullableString,
     role: { type: "string" },
     name: nullableString,
     email: nullableString,
@@ -220,6 +255,26 @@ const budgetCategorySchema = {
   additionalProperties: false
 } as const;
 
+const timeEntrySchema = {
+  type: "object",
+  properties: {
+    id: { type: "string", minLength: 1 },
+    projectId: { type: "string", minLength: 1 },
+    userId: { type: "string", minLength: 1 },
+    taskId: nullableString,
+    hours: { type: "number" },
+    date: { type: "string" },
+    description: nullableString,
+    userName: nullableString,
+    userEmail: nullableString,
+    taskTitle: nullableString,
+    createdAt: { type: "string" },
+    updatedAt: { type: "string" }
+  },
+  required: ["id", "projectId", "userId", "hours", "date", "createdAt", "updatedAt"],
+  additionalProperties: false
+} as const;
+
 const budgetSummarySchema = {
   type: "object",
   properties: {
@@ -227,12 +282,13 @@ const budgetSummarySchema = {
     total: { type: "number" },
     spent: { type: "number" },
     remaining: { type: "number" },
+    totalHours: { type: "number" },
     categories: {
       type: "array",
       items: budgetCategorySchema
     }
   },
-  required: ["currency", "total", "spent", "remaining", "categories"],
+  required: ["currency", "total", "spent", "remaining", "totalHours", "categories"],
   additionalProperties: false
 } as const;
 
@@ -249,9 +305,17 @@ const projectDetailsSchema = {
       type: "array",
       items: timelineEventSchema
     },
+    teams: {
+      type: "array",
+      items: teamSchema
+    },
     team: {
       type: "array",
       items: teamMemberSchema
+    },
+    timeEntries: {
+      type: "array",
+      items: timeEntrySchema
     },
     quickStats: {
       type: "object",
@@ -270,7 +334,9 @@ const projectDetailsSchema = {
     "budget",
     "tasks",
     "timeline",
+    "teams",
     "team",
+    "timeEntries",
     "quickStats"
   ],
   additionalProperties: false
@@ -322,7 +388,21 @@ const timelinePayloadProperties = {
 
 const teamPayloadProperties = {
   userId: { type: "string", minLength: 1 },
+  teamId: nullableString,
   role: nullableString
+} as const;
+
+const teamEntityPayloadProperties = {
+  name: { type: "string", minLength: 1 },
+  goal: nullableString
+} as const;
+
+const timeEntryPayloadProperties = {
+  userId: { type: "string", minLength: 1 },
+  taskId: nullableString,
+  hours: { type: "number", minimum: 0 },
+  date: { type: "string" },
+  description: nullableString
 } as const;
 
 const budgetPayloadProperties = {
@@ -644,6 +724,146 @@ export const deleteBudgetCategorySchema: FastifySchema = {
   params: categoryParams,
   response: {
     204: { type: "null" },
+    ...notFoundErrorResponse
+  }
+};
+
+export const listTeamsSchema: FastifySchema = {
+  tags: ["project-teams"],
+  summary: "List project teams",
+  description: "Vraća listu svih timova za konkretan projekt.",
+  params: projectParams,
+  response: {
+    200: {
+      ...dataEnvelope({
+        type: "array",
+        items: teamSchema
+      }),
+      description: "Lista timova"
+    },
+    ...defaultErrorResponses
+  }
+};
+
+export const createTeamSchema: FastifySchema = {
+  tags: ["project-teams"],
+  summary: "Create a new team",
+  description: "Kreira novi tim unutar projekta. Ime tima je obavezno.",
+  params: projectParams,
+  body: {
+    type: "object",
+    properties: teamEntityPayloadProperties,
+    required: ["name"],
+    additionalProperties: false
+  },
+  response: {
+    201: {
+      ...dataEnvelope(teamSchema),
+      description: "Kreiran tim"
+    },
+    ...notFoundErrorResponse
+  }
+};
+
+export const updateTeamSchema: FastifySchema = {
+  tags: ["project-teams"],
+  summary: "Update a team",
+  description: "Ažurira postojeći tim. Mogu se ažurirati svi podaci osim ID-a.",
+  params: teamEntityParams,
+  body: {
+    type: "object",
+    properties: teamEntityPayloadProperties,
+    additionalProperties: false
+  },
+  response: {
+    200: {
+      ...dataEnvelope(teamSchema),
+      description: "Ažuriran tim"
+    },
+    ...notFoundErrorResponse
+  }
+};
+
+export const deleteTeamSchema: FastifySchema = {
+  tags: ["project-teams"],
+  summary: "Delete a team",
+  description: "Briše tim iz projekta. Operacija je trajna.",
+  params: teamEntityParams,
+  response: {
+    204: {
+      type: "null",
+      description: "Tim je uspešno obrisan"
+    },
+    ...notFoundErrorResponse
+  }
+};
+
+export const listTimeEntriesSchema: FastifySchema = {
+  tags: ["project-time-entries"],
+  summary: "List project time entries",
+  description: "Vraća listu svih unosa vremena za konkretan projekt.",
+  params: projectParams,
+  response: {
+    200: {
+      ...dataEnvelope({
+        type: "array",
+        items: timeEntrySchema
+      }),
+      description: "Lista unosa vremena"
+    },
+    ...defaultErrorResponses
+  }
+};
+
+export const createTimeEntrySchema: FastifySchema = {
+  tags: ["project-time-entries"],
+  summary: "Create a new time entry",
+  description: "Kreira novi unos vremena unutar projekta. Korisnik, sati i datum su obavezni.",
+  params: projectParams,
+  body: {
+    type: "object",
+    properties: timeEntryPayloadProperties,
+    required: ["userId", "hours", "date"],
+    additionalProperties: false
+  },
+  response: {
+    201: {
+      ...dataEnvelope(timeEntrySchema),
+      description: "Kreiran unos vremena"
+    },
+    ...notFoundErrorResponse
+  }
+};
+
+export const updateTimeEntrySchema: FastifySchema = {
+  tags: ["project-time-entries"],
+  summary: "Update a time entry",
+  description: "Ažurira postojeći unos vremena. Mogu se ažurirati svi podaci osim ID-a.",
+  params: timeEntryParams,
+  body: {
+    type: "object",
+    properties: timeEntryPayloadProperties,
+    additionalProperties: false
+  },
+  response: {
+    200: {
+      ...dataEnvelope(timeEntrySchema),
+      description: "Ažuriran unos vremena"
+    },
+    ...notFoundErrorResponse
+  }
+};
+
+export const deleteTimeEntrySchema: FastifySchema = {
+  tags: ["project-time-entries"],
+  summary: "Delete a time entry",
+  description: "Briše unos vremena iz projekta. Operacija je trajna.",
+  params: timeEntryParams,
+  response: {
+    204: {
+      type: "null",
+      description: "Unos vremena je uspešno obrisan"
+    },
     ...notFoundErrorResponse
   }
 };

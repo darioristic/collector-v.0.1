@@ -12,6 +12,7 @@ import {
 	addTeamMember,
 	createBudgetCategory,
 	createProject,
+	createProjectFromTemplate,
 	createProjectTask,
 	createTimelineEvent,
 	deleteBudgetCategory,
@@ -32,6 +33,7 @@ import {
 	updateProjectTask,
 	updateTimelineEvent,
 } from "@/src/queries/projects";
+import type { ProjectTemplate } from "@/lib/data/projectTemplates";
 import type {
 	AddTeamMemberPayload,
 	CreateBudgetCategoryPayload,
@@ -76,12 +78,14 @@ export function useProjectDetails(
 			queryKey: projectKeys.detail(projectId),
 			queryFn: async () => {
 				try {
-					return await fetchProject(projectId);
+					const project = await fetchProject(projectId);
+					return project;
 				} catch (error) {
 					console.error("[useProjectDetails] Error fetching project:", {
 						projectId,
 						error: error instanceof Error ? error.message : String(error),
 						stack: error instanceof Error ? error.stack : undefined,
+						errorType: error instanceof Error ? error.constructor.name : typeof error,
 					});
 					throw error;
 				}
@@ -104,12 +108,14 @@ export function useProjectDetails(
 		queryKey: projectKeys.detail(projectId),
 		queryFn: async () => {
 			try {
-				return await fetchProject(projectId);
+				const project = await fetchProject(projectId);
+				return project;
 			} catch (error) {
 				console.error("[useProjectDetails] Error fetching project:", {
 					projectId,
 					error: error instanceof Error ? error.message : String(error),
 					stack: error instanceof Error ? error.stack : undefined,
+					errorType: error instanceof Error ? error.constructor.name : typeof error,
 				});
 				throw error;
 			}
@@ -679,6 +685,43 @@ export function useDeleteBudgetCategory(projectId: string) {
 					error instanceof Error
 						? error.message
 						: "Greška pri brisanju kategorije.",
+			});
+		},
+	});
+}
+
+export function useCreateProjectFromTemplate() {
+	const queryClient = useQueryClient();
+	const { toast } = useToast();
+
+	return useMutation({
+		mutationFn: ({
+			template,
+			projectData,
+		}: {
+			template: ProjectTemplate;
+			projectData: ProjectUpdatePayload;
+		}) => createProjectFromTemplate(template, projectData),
+		onSuccess: async (project) => {
+			await Promise.all([
+				queryClient.invalidateQueries({ queryKey: projectKeys.lists() }),
+				queryClient.invalidateQueries({
+					queryKey: projectKeys.detail(project.id),
+				}),
+			]);
+			toast({
+				title: "Projekat kreiran",
+				description: "Novi projekat je uspešno kreiran iz template-a.",
+			});
+		},
+		onError: (error) => {
+			toast({
+				variant: "destructive",
+				title: "Kreiranje neuspešno",
+				description:
+					error instanceof Error
+						? error.message
+						: "Greška pri kreiranju projekta iz template-a.",
 			});
 		},
 	});

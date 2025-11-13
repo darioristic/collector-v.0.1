@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, ilike, or } from "drizzle-orm";
 
 import { db as defaultDb } from "../../db";
 import {
@@ -19,9 +19,10 @@ export interface AccountsRepository {
   /**
    * Vraća listu svih naloga sortiranih po datumu kreiranja (najstariji prvi).
    * 
+   * @param search - Opcioni search string za filtriranje po imenu ili email-u
    * @returns Promise koji se razrešava u niz naloga
    */
-  list(): Promise<Account[]>;
+  list(search?: string): Promise<Account[]>;
   
   /**
    * Vraća listu svih kontakata povezanih sa nalozima.
@@ -132,8 +133,26 @@ class DrizzleAccountsRepository implements AccountsRepository {
    */
   constructor(private readonly database: Database = defaultDb) {}
 
-  async list(): Promise<Account[]> {
-    const rows = await this.database.select().from(accountsTable).orderBy(asc(accountsTable.createdAt));
+  async list(search?: string): Promise<Account[]> {
+    const whereConditions = [];
+
+    if (search && search.trim().length > 0) {
+      const searchPattern = `%${search.trim()}%`;
+      whereConditions.push(
+        or(
+          ilike(accountsTable.name, searchPattern),
+          ilike(accountsTable.email, searchPattern)
+        )
+      );
+    }
+
+    let query = this.database.select().from(accountsTable);
+
+    if (whereConditions.length > 0) {
+      query = query.where(and(...whereConditions));
+    }
+
+    const rows = await query.orderBy(asc(accountsTable.createdAt));
     return rows.map(mapAccount);
   }
 
@@ -318,8 +337,17 @@ export const createInMemoryAccountsRepository = (): AccountsRepository => {
   const contactsState: AccountContact[] = inMemoryContactsSeed();
 
   return {
-    async list() {
-      return [...accountsState];
+    async list(search?: string) {
+      if (!search || search.trim().length === 0) {
+        return [...accountsState];
+      }
+
+      const searchLower = search.trim().toLowerCase();
+      return accountsState.filter(
+        (account) =>
+          account.name.toLowerCase().includes(searchLower) ||
+          account.email.toLowerCase().includes(searchLower)
+      );
     },
 
     async listContacts() {

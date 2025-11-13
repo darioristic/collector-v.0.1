@@ -10,6 +10,30 @@ export const employmentStatus = pgEnum("employment_status", [
   "contractor"
 ]);
 
+export const candidateStatus = pgEnum("candidate_status", [
+  "applied",
+  "screening",
+  "interview",
+  "offer",
+  "hired",
+  "rejected"
+]);
+
+export const interviewStatus = pgEnum("interview_status", [
+  "scheduled",
+  "completed",
+  "cancelled",
+  "rescheduled"
+]);
+
+export const interviewType = pgEnum("interview_type", [
+  "phone",
+  "video",
+  "onsite",
+  "technical",
+  "hr"
+]);
+
 export const employees = pgTable(
   "employees",
   {
@@ -107,6 +131,74 @@ export const payrollEntries = pgTable(
   })
 );
 
+export const performanceReviews = pgTable(
+  "performance_reviews",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "cascade" }),
+    reviewDate: timestamp("review_date", { withTimezone: true }).notNull(),
+    periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
+    periodEnd: timestamp("period_end", { withTimezone: true }).notNull(),
+    reviewerId: uuid("reviewer_id").references(() => users.id, { onDelete: "set null" }),
+    rating: integer("rating"),
+    comments: text("comments"),
+    goals: text("goals"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
+  },
+  (table) => ({
+    employeeIdx: index("performance_reviews_employee_idx").on(table.employeeId),
+    reviewerIdx: index("performance_reviews_reviewer_idx").on(table.reviewerId),
+    reviewDateIdx: index("performance_reviews_review_date_idx").on(table.reviewDate)
+  })
+);
+
+export const recruitmentCandidates = pgTable(
+  "recruitment_candidates",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    firstName: text("first_name").notNull(),
+    lastName: text("last_name").notNull(),
+    email: text("email").notNull(),
+    phone: text("phone"),
+    position: text("position").notNull(),
+    status: candidateStatus("status").default("applied").notNull(),
+    source: text("source"),
+    resumeUrl: text("resume_url"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
+  },
+  (table) => ({
+    emailIdx: index("recruitment_candidates_email_idx").on(table.email),
+    statusIdx: index("recruitment_candidates_status_idx").on(table.status)
+  })
+);
+
+export const recruitmentInterviews = pgTable(
+  "recruitment_interviews",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    candidateId: uuid("candidate_id")
+      .notNull()
+      .references(() => recruitmentCandidates.id, { onDelete: "cascade" }),
+    interviewerId: uuid("interviewer_id").references(() => users.id, { onDelete: "set null" }),
+    scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull(),
+    type: interviewType("type").notNull(),
+    status: interviewStatus("status").default("scheduled").notNull(),
+    notes: text("notes"),
+    rating: integer("rating"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
+  },
+  (table) => ({
+    candidateIdx: index("recruitment_interviews_candidate_idx").on(table.candidateId),
+    interviewerIdx: index("recruitment_interviews_interviewer_idx").on(table.interviewerId),
+    scheduledAtIdx: index("recruitment_interviews_scheduled_at_idx").on(table.scheduledAt)
+  })
+);
+
 export const employeesRelations = relations(employees, ({ one, many }) => ({
   user: one(users, {
     fields: [employees.userId],
@@ -123,7 +215,8 @@ export const employeesRelations = relations(employees, ({ one, many }) => ({
   roles: many(employeeRoleAssignments),
   attendance: many(attendanceRecords),
   timeOffRequests: many(timeOffRequests),
-  payrollEntries: many(payrollEntries)
+  payrollEntries: many(payrollEntries),
+  performanceReviews: many(performanceReviews)
 }));
 
 export const employeeRoleAssignmentsRelations = relations(employeeRoleAssignments, ({ one }) => ({
@@ -159,6 +252,32 @@ export const payrollEntriesRelations = relations(payrollEntries, ({ one }) => ({
   employee: one(employees, {
     fields: [payrollEntries.employeeId],
     references: [employees.id]
+  })
+}));
+
+export const performanceReviewsRelations = relations(performanceReviews, ({ one }) => ({
+  employee: one(employees, {
+    fields: [performanceReviews.employeeId],
+    references: [employees.id]
+  }),
+  reviewer: one(users, {
+    fields: [performanceReviews.reviewerId],
+    references: [users.id]
+  })
+}));
+
+export const recruitmentCandidatesRelations = relations(recruitmentCandidates, ({ many }) => ({
+  interviews: many(recruitmentInterviews)
+}));
+
+export const recruitmentInterviewsRelations = relations(recruitmentInterviews, ({ one }) => ({
+  candidate: one(recruitmentCandidates, {
+    fields: [recruitmentInterviews.candidateId],
+    references: [recruitmentCandidates.id]
+  }),
+  interviewer: one(users, {
+    fields: [recruitmentInterviews.interviewerId],
+    references: [users.id]
   })
 }));
 

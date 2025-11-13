@@ -49,9 +49,19 @@ export interface ProjectTimelineEvent {
   createdAt: string;
 }
 
+export interface ProjectTeam {
+  id: string;
+  projectId: string;
+  name: string;
+  goal: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ProjectTeamMember {
   projectId: string;
   userId: string;
+  teamId: string | null;
   role: string;
   name: string | null;
   email: string | null;
@@ -68,11 +78,27 @@ export interface ProjectBudgetCategory {
   updatedAt: string;
 }
 
+export interface ProjectTimeEntry {
+  id: string;
+  projectId: string;
+  userId: string;
+  taskId: string | null;
+  hours: number;
+  date: string;
+  description: string | null;
+  userName: string | null;
+  userEmail: string | null;
+  taskTitle: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ProjectBudgetSummary {
   currency: string;
   total: number;
   spent: number;
   remaining: number;
+  totalHours: number;
   categories: ProjectBudgetCategory[];
 }
 
@@ -80,7 +106,9 @@ export interface ProjectDetails extends ProjectSummary {
   budget: ProjectBudgetSummary;
   tasks: ProjectTask[];
   timeline: ProjectTimelineEvent[];
+  teams: ProjectTeam[];
   team: ProjectTeamMember[];
+  timeEntries: ProjectTimeEntry[];
   quickStats: {
     totalTasks: number;
     completedTasks: number;
@@ -126,8 +154,16 @@ export interface CreateTimelineEventInput {
 
 export interface UpdateTimelineEventInput extends Partial<CreateTimelineEventInput> {}
 
+export interface CreateTeamInput {
+  name: string;
+  goal?: string | null;
+}
+
+export interface UpdateTeamInput extends Partial<CreateTeamInput> {}
+
 export interface AddTeamMemberInput {
   userId: string;
+  teamId?: string | null;
   role?: string | null;
 }
 
@@ -144,4 +180,14 @@ export interface CreateBudgetCategoryInput {
 }
 
 export interface UpdateBudgetCategoryInput extends Partial<CreateBudgetCategoryInput> {}
+
+export interface CreateTimeEntryInput {
+  userId: string;
+  taskId?: string | null;
+  hours: number;
+  date: string;
+  description?: string | null;
+}
+
+export interface UpdateTimeEntryInput extends Partial<CreateTimeEntryInput> {}
 

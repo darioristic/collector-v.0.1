@@ -30,6 +30,8 @@ import { seedCrm } from "../src/db/seed/crm";
 import { seedSales } from "../src/db/seed/sales";
 import { seedProjects } from "../src/db/seed/projects";
 import { seedSettings } from "../src/db/seed/settings";
+import { seedHr } from "../src/db/seed/hr";
+import { seedNotifications } from "../src/db/seed/notifications";
 
 type Options = {
   drop: boolean;
@@ -80,8 +82,20 @@ const seedModules: SeedModule[] = [
   {
     name: "settings",
     description: "Settings: team members",
-    dependencies: [],
+    dependencies: ["auth"],
     seedFn: seedSettings
+  },
+  {
+    name: "hr",
+    description: "HR: employees, recruitment, performance reviews, leave management, payroll",
+    dependencies: ["auth"],
+    seedFn: seedHr
+  },
+  {
+    name: "notifications",
+    description: "Notifications: various notification types for users",
+    dependencies: ["auth"],
+    seedFn: seedNotifications
   }
 ];
 

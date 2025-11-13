@@ -40,6 +40,23 @@ export const projects = pgTable(
   })
 );
 
+export const projectTeams = pgTable(
+  "project_teams",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    goal: text("goal"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
+  },
+  (table) => ({
+    projectIdx: index("project_teams_project_idx").on(table.projectId)
+  })
+);
+
 export const projectMembers = pgTable(
   "project_members",
   {
@@ -49,11 +66,13 @@ export const projectMembers = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    teamId: uuid("team_id").references(() => projectTeams.id, { onDelete: "set null" }),
     role: text("role").default("contributor").notNull(),
     addedAt: timestamp("added_at", { withTimezone: true }).defaultNow().notNull()
   },
   (table) => ({
-    pk: uniqueIndex("project_members_project_user_key").on(table.projectId, table.userId)
+    pk: uniqueIndex("project_members_project_user_key").on(table.projectId, table.userId),
+    teamIdx: index("project_members_team_idx").on(table.teamId)
   })
 );
 
@@ -119,6 +138,31 @@ export const projectBudgetCategories = pgTable(
   })
 );
 
+export const projectTimeEntries = pgTable(
+  "project_time_entries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    taskId: uuid("task_id").references(() => projectTasks.id, { onDelete: "set null" }),
+    hours: numeric("hours", { precision: 10, scale: 2 }).notNull(),
+    date: timestamp("date", { withTimezone: true }).notNull(),
+    description: text("description"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
+  },
+  (table) => ({
+    projectIdx: index("project_time_entries_project_idx").on(table.projectId),
+    userIdx: index("project_time_entries_user_idx").on(table.userId),
+    taskIdx: index("project_time_entries_task_idx").on(table.taskId),
+    dateIdx: index("project_time_entries_date_idx").on(table.date)
+  })
+);
+
 export const projectsRelations = relations(projects, ({ one, many }) => ({
   account: one(accounts, {
     fields: [projects.accountId],
@@ -128,10 +172,20 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
     fields: [projects.ownerId],
     references: [users.id]
   }),
+  teams: many(projectTeams),
   members: many(projectMembers),
   milestones: many(projectMilestones),
   tasks: many(projectTasks),
-  budgetCategories: many(projectBudgetCategories)
+  budgetCategories: many(projectBudgetCategories),
+  timeEntries: many(projectTimeEntries)
+}));
+
+export const projectTeamsRelations = relations(projectTeams, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [projectTeams.projectId],
+    references: [projects.id]
+  }),
+  members: many(projectMembers)
 }));
 
 export const projectMembersRelations = relations(projectMembers, ({ one }) => ({
@@ -142,6 +196,10 @@ export const projectMembersRelations = relations(projectMembers, ({ one }) => ({
   user: one(users, {
     fields: [projectMembers.userId],
     references: [users.id]
+  }),
+  team: one(projectTeams, {
+    fields: [projectMembers.teamId],
+    references: [projectTeams.id]
   })
 }));
 
@@ -172,6 +230,21 @@ export const projectBudgetCategoriesRelations = relations(projectBudgetCategorie
   project: one(projects, {
     fields: [projectBudgetCategories.projectId],
     references: [projects.id]
+  })
+}));
+
+export const projectTimeEntriesRelations = relations(projectTimeEntries, ({ one }) => ({
+  project: one(projects, {
+    fields: [projectTimeEntries.projectId],
+    references: [projects.id]
+  }),
+  user: one(users, {
+    fields: [projectTimeEntries.userId],
+    references: [users.id]
+  }),
+  task: one(projectTasks, {
+    fields: [projectTimeEntries.taskId],
+    references: [projectTasks.id]
   })
 }));
 

@@ -235,6 +235,12 @@ export function ProjectBudget({
 							</span>
 						</div>
 						<Separator className="my-2" />
+						<div className="flex items-center justify-between">
+							<span className="text-muted-foreground">Ukupno sati</span>
+							<span className="font-medium">
+								{budget.totalHours.toFixed(1)}h
+							</span>
+						</div>
 						<div className="flex items-center justify-between text-sm">
 							<span className="text-muted-foreground">Iskorišćenost</span>
 							<Badge variant="outline" className="rounded-full px-3 py-1">

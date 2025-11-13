@@ -46,9 +46,19 @@ export type ProjectTimelineEvent = {
 	createdAt: string;
 };
 
+export type ProjectTeam = {
+	id: string;
+	projectId: string;
+	name: string;
+	goal: string | null;
+	createdAt: string;
+	updatedAt: string;
+};
+
 export type ProjectTeamMember = {
 	projectId: string;
 	userId: string;
+	teamId: string | null;
 	role: string;
 	name: string | null;
 	email: string | null;
@@ -65,11 +75,27 @@ export type ProjectBudgetCategory = {
 	updatedAt: string;
 };
 
+export type ProjectTimeEntry = {
+	id: string;
+	projectId: string;
+	userId: string;
+	taskId: string | null;
+	hours: number;
+	date: string;
+	description: string | null;
+	userName: string | null;
+	userEmail: string | null;
+	taskTitle: string | null;
+	createdAt: string;
+	updatedAt: string;
+};
+
 export type ProjectBudgetSummary = {
 	currency: string;
 	total: number;
 	spent: number;
 	remaining: number;
+	totalHours: number;
 	categories: ProjectBudgetCategory[];
 };
 
@@ -84,7 +110,9 @@ export type ProjectDetails = ProjectSummary & {
 	budget: ProjectBudgetSummary;
 	tasks: ProjectTask[];
 	timeline: ProjectTimelineEvent[];
+	teams: ProjectTeam[];
 	team: ProjectTeamMember[];
+	timeEntries: ProjectTimeEntry[];
 	quickStats: ProjectQuickStats;
 };
 
@@ -125,10 +153,28 @@ export type CreateTimelinePayload = {
 
 export type UpdateTimelinePayload = Partial<CreateTimelinePayload>;
 
+export type CreateTeamPayload = {
+	name: string;
+	goal?: string | null;
+};
+
+export type UpdateTeamPayload = Partial<CreateTeamPayload>;
+
 export type AddTeamMemberPayload = {
 	userId: string;
+	teamId?: string | null;
 	role?: string | null;
 };
+
+export type CreateTimeEntryPayload = {
+	userId: string;
+	taskId?: string | null;
+	hours: number;
+	date: string;
+	description?: string | null;
+};
+
+export type UpdateTimeEntryPayload = Partial<CreateTimeEntryPayload>;
 
 export type UpdateBudgetPayload = {
 	total?: number | null;

@@ -5,22 +5,30 @@ import {
   createBudgetCategorySchema,
   createProjectSchema,
   createTaskSchema,
+  createTeamSchema,
+  createTimeEntrySchema,
   createTimelineSchema,
   deleteBudgetCategorySchema,
   deleteProjectSchema,
   deleteTaskSchema,
+  deleteTeamSchema,
+  deleteTimeEntrySchema,
   deleteTimelineSchema,
   getBudgetSchema,
   getProjectSchema,
   listProjectsSchema,
   listTasksSchema,
-  listTimelineSchema,
   listTeamSchema,
+  listTeamsSchema,
+  listTimeEntriesSchema,
+  listTimelineSchema,
   removeTeamMemberSchema,
   updateBudgetCategorySchema,
   updateBudgetSchema,
   updateProjectSchema,
   updateTaskSchema,
+  updateTeamSchema,
+  updateTimeEntrySchema,
   updateTimelineSchema
 } from "./projects.schema";
 import {
@@ -44,9 +52,19 @@ import {
 } from "./milestones.controller";
 import {
   addProjectTeamMemberHandler,
+  createProjectTeamHandler,
+  deleteProjectTeamHandler,
   listProjectTeamHandler,
-  removeProjectTeamMemberHandler
+  listProjectTeamsHandler,
+  removeProjectTeamMemberHandler,
+  updateProjectTeamHandler
 } from "./team.controller";
+import {
+  createProjectTimeEntryHandler,
+  deleteProjectTimeEntryHandler,
+  listProjectTimeEntriesHandler,
+  updateProjectTimeEntryHandler
+} from "./time-entries.controller";
 import {
   createBudgetCategoryHandler,
   deleteBudgetCategoryHandler,
@@ -76,9 +94,19 @@ const projectsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.patch("/:id/timeline/:eventId", { schema: updateTimelineSchema }, updateProjectMilestoneHandler);
   fastify.delete("/:id/timeline/:eventId", { schema: deleteTimelineSchema }, deleteProjectMilestoneHandler);
 
+  fastify.get("/:id/teams", { schema: listTeamsSchema }, listProjectTeamsHandler);
+  fastify.post("/:id/teams", { schema: createTeamSchema }, createProjectTeamHandler);
+  fastify.patch("/:id/teams/:teamId", { schema: updateTeamSchema }, updateProjectTeamHandler);
+  fastify.delete("/:id/teams/:teamId", { schema: deleteTeamSchema }, deleteProjectTeamHandler);
+
   fastify.get("/:id/team", { schema: listTeamSchema }, listProjectTeamHandler);
   fastify.post("/:id/team", { schema: addTeamMemberSchema }, addProjectTeamMemberHandler);
   fastify.delete("/:id/team/:userId", { schema: removeTeamMemberSchema }, removeProjectTeamMemberHandler);
+
+  fastify.get("/:id/time-entries", { schema: listTimeEntriesSchema }, listProjectTimeEntriesHandler);
+  fastify.post("/:id/time-entries", { schema: createTimeEntrySchema }, createProjectTimeEntryHandler);
+  fastify.patch("/:id/time-entries/:entryId", { schema: updateTimeEntrySchema }, updateProjectTimeEntryHandler);
+  fastify.delete("/:id/time-entries/:entryId", { schema: deleteTimeEntrySchema }, deleteProjectTimeEntryHandler);
 
   fastify.get("/:id/budget", { schema: getBudgetSchema }, getProjectBudgetHandler);
   fastify.patch("/:id/budget", { schema: updateBudgetSchema }, updateProjectBudgetHandler);

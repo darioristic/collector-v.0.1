@@ -4,6 +4,8 @@ import { and, count, desc, eq, ilike, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db";
 import { type Deal, deals } from "@/lib/db/schema/deals";
+import { getApiUrl, ensureResponse } from "@/src/lib/fetch-utils";
+import type { OrderCreateInput } from "@crm/types";
 
 import { DEAL_STAGES, type DealStage } from "./constants";
 import {
@@ -181,13 +183,41 @@ export async function updateDealStage(args: Record<string, unknown>) {
 	const db = await dbPromise;
 	const payload = stageUpdateSchema.parse(args);
 
+	// Get current deal to check if stage is changing to "Closed Won"
+	const [currentDeal] = await db
+		.select()
+		.from(deals)
+		.where(eq(deals.id, payload.id))
+		.limit(1);
+
+	if (!currentDeal) {
+		throw new Error("Deal not found");
+	}
+
+	const wasClosedWon = currentDeal.stage === "Closed Won";
+	const willBeClosedWon = payload.stage === "Closed Won";
+
 	const [deal] = await db
 		.update(deals)
 		.set({ stage: payload.stage, updatedAt: new Date() })
 		.where(eq(deals.id, payload.id))
 		.returning();
 
+	if (!deal) {
+		throw new Error("Failed to update deal");
+	}
+
 	revalidateDeals();
+
+	// Automatically create Order when deal stage changes to "Closed Won"
+	if (!wasClosedWon && willBeClosedWon) {
+		try {
+			await createOrderFromDeal(deal);
+		} catch (error) {
+			// Log error but don't fail the deal update
+			console.error("Failed to automatically create order for closed won deal:", error);
+		}
+	}
 
 	return deal;
 }
@@ -205,13 +235,33 @@ export async function bulkUpdateDealStages(
 	const result = await db.transaction(async (tx) => {
 		const updated: Deal[] = [];
 		for (const item of parsed) {
+			const [currentDeal] = await tx
+				.select()
+				.from(deals)
+				.where(eq(deals.id, item.id))
+				.limit(1);
+
+			const wasClosedWon = currentDeal?.stage === "Closed Won";
+			const willBeClosedWon = item.stage === "Closed Won";
+
 			const [deal] = await tx
 				.update(deals)
 				.set({ stage: item.stage, updatedAt: new Date() })
 				.where(eq(deals.id, item.id))
 				.returning();
+			
 			if (deal) {
 				updated.push(deal);
+
+				// Automatically create Order when deal stage changes to "Closed Won"
+				if (!wasClosedWon && willBeClosedWon) {
+					try {
+						await createOrderFromDeal(deal);
+					} catch (error) {
+						// Log error but don't fail the deal update
+						console.error(`Failed to automatically create order for deal ${deal.id}:`, error);
+					}
+				}
 			}
 		}
 		return updated;
@@ -220,4 +270,71 @@ export async function bulkUpdateDealStages(
 	revalidateDeals();
 
 	return result;
+}
+
+/**
+ * Helper function to create an Order from a Deal
+ */
+async function createOrderFromDeal(deal: Deal): Promise<void> {
+	// Try to find account by company name
+	let companyId: string | undefined;
+	try {
+		const accountsResponse = await fetch(getApiUrl("accounts"), {
+			method: "GET",
+			headers: { "Content-Type": "application/json" },
+		});
+
+		if (accountsResponse.ok) {
+			const accountsData = await accountsResponse.json();
+			const account = Array.isArray(accountsData.data)
+				? accountsData.data.find((acc: { name: string }) => 
+						acc.name.toLowerCase() === deal.company.toLowerCase()
+					)
+				: null;
+			
+			if (account) {
+				companyId = account.id;
+			}
+		}
+	} catch (error) {
+		console.warn("Failed to find account by company name:", error);
+	}
+
+	// Calculate totals from deal value (tax = 20%)
+	const subtotal = deal.value;
+	const tax = subtotal * 0.2;
+	const total = subtotal + tax;
+
+	// Generate order number
+	const orderNumber = `ORD-${Date.now()}-${deal.id.slice(0, 8).toUpperCase()}`;
+
+	// Create order input
+	const orderInput: OrderCreateInput = {
+		orderNumber,
+		companyId,
+		orderDate: new Date().toISOString().split("T")[0],
+		currency: "EUR",
+		status: "pending",
+		notes: `Auto-generated from deal: ${deal.title}`,
+		items: [
+			{
+				description: deal.title,
+				quantity: 1,
+				unitPrice: subtotal,
+			},
+		],
+	};
+
+	// Create order via API
+	const response = await ensureResponse(
+		fetch(getApiUrl("sales/orders"), {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(orderInput),
+		}),
+	);
+
+	if (!response.ok) {
+		throw new Error(`Failed to create order: ${response.statusText}`);
+	}
 }

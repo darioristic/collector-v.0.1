@@ -145,7 +145,10 @@ export const navItems: NavGroup[] = [
         icon: FolderDotIcon,
         items: [
           { title: "Dashboard", href: "/projects" },
-          { title: "Project List", href: "/projects/list" }
+          { title: "Project List", href: "/projects/list" },
+          { title: "Templates", href: "/projects/templates" },
+          { title: "Teams", href: "/projects/teams" },
+          { title: "Time Tracking", href: "/projects/time-tracking" }
         ]
       },
       {
@@ -154,7 +157,11 @@ export const navItems: NavGroup[] = [
         icon: UsersIcon,
         items: [
           { title: "Employees", href: "/hr/employees" },
-          { title: "Dashboard", href: "/hr/dashboard" }
+          { title: "Dashboard", href: "/hr/dashboard" },
+          { title: "Recruitment", href: "/hr/recruitment" },
+          { title: "Performance Reviews", href: "/hr/performance-reviews" },
+          { title: "Leave Management", href: "/hr/leave-management" },
+          { title: "Payroll", href: "/hr/payroll" }
         ]
       },
       {

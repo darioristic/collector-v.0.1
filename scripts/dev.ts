@@ -1017,6 +1017,19 @@ async function runMigrations(): Promise<void> {
 		logger.info("Skipping API db:push (API and Dashboard use different employees schemas)");
 		logger.info("💡 API employees schema is different from Dashboard employees schema.");
 		logger.info("💡 API will use its own employees table structure when needed.");
+		
+		// Apply project tables migration (project_teams, project_time_entries)
+		logger.info("Applying project tables migration...");
+		try {
+			await runCommand("bun", ["run", "db:apply-project-tables"], apiDir);
+			logger.success("Project tables migration completed");
+		} catch (error) {
+			logger.warn(
+				`Project tables migration error: ${error instanceof Error ? error.message : String(error)}`,
+			);
+			logger.info("💡 If tables already exist, this is normal. Continuing...");
+		}
+		
 		// If you need API migrations, run them separately: cd apps/api && bun run db:push
 	} catch (error) {
 		logger.warn(
@@ -1776,17 +1789,33 @@ async function runLocalWorkflow(
 		
 		// Check specifically for chat service errors
 		const chatService = state.services.get("Chat Service");
-		if (chatService && chatService.status === "failed") {
-			const errors = state.checkForErrors("Chat Service");
-			if (errors.length > 0) {
-				logger.error("Chat service errors:");
-				errors.forEach((err) => logger.error(`  - ${err}`));
+		if (chatService) {
+			if (chatService.status === "failed") {
+				const errors = state.checkForErrors("Chat Service");
+				if (errors.length > 0) {
+					logger.error("Chat service errors detected:");
+					errors.forEach((err) => logger.error(`  - ${err}`));
+				}
+				
+				// Show all logs for failed service
+				if (chatService.logBuffer.length > 0) {
+					logger.error("Chat service full logs:");
+					logger.error(chatService.logBuffer.join("\n"));
+				}
+				
+				logger.error("Chat service failed to start. Check logs above.");
+				logger.info("Common issues:");
+				logger.info("  - Redis not running: brew services start redis (or docker-compose up redis)");
+				logger.info("  - Database connection issues: Check DATABASE_URL");
+				logger.info("  - Port 4001 already in use: Check with 'lsof -i:4001'");
+			} else if (chatService.status === "starting" || chatService.status === "pending") {
+				logger.warn("Chat service is still starting or pending. Showing recent logs:");
+				if (chatService.logBuffer.length > 0) {
+					logger.info(chatService.logBuffer.slice(-20).join("\n"));
+				} else {
+					logger.warn("No logs from chat service yet. Service may not have started.");
+				}
 			}
-			logger.error("Chat service failed to start. Check logs above.");
-			logger.info("Common issues:");
-			logger.info("  - Redis not running: brew services start redis (or docker-compose up redis)");
-			logger.info("  - Database connection issues: Check DATABASE_URL");
-			logger.info("  - Port 4001 already in use: Check with 'lsof -i:4001'");
 		}
 		
 		logger.error("Cannot continue - services must be ready before proceeding");
@@ -1838,12 +1867,14 @@ async function runLocalWorkflow(
 				errors.forEach((err) => logger.error(`  - ${err}`));
 			}
 			
-			// Show recent logs
-			const recentLogs = chatService.logBuffer.slice(-10).join("\n");
-			if (recentLogs) {
-				logger.info("Recent chat service logs:");
-				logger.info(recentLogs);
-			}
+		// Show recent logs (more lines for debugging)
+		const recentLogs = chatService.logBuffer.slice(-30).join("\n");
+		if (recentLogs) {
+			logger.error("Recent chat service logs (last 30 lines):");
+			logger.error(recentLogs);
+		} else {
+			logger.error("No logs available from chat service. Service may not have started.");
+		}
 		}
 		
 		logger.info(

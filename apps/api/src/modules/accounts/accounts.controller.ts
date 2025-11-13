@@ -21,6 +21,10 @@ declare module "fastify" {
   }
 }
 
+export type ListAccountsQuery = {
+  search?: string;
+};
+
 export type ListAccountsReply = Account[];
 export type ListContactsReply = AccountContact[];
 export type GetAccountParams = { id: string };
@@ -37,10 +41,14 @@ export type DeleteAccountReply = ApiReply<void>;
  * Handler za listanje svih naloga.
  * 
  * @route GET /api/accounts
- * @returns Lista svih naloga sortiranih po datumu kreiranja
+ * @param request.query.search - Opcioni search string za filtriranje po imenu ili email-u
+ * @returns Lista svih naloga sortiranih po datumu kreiranja (filtrirana po search-u ako je prosleđen)
  */
-export const listAccountsHandler: RouteHandler<{ Reply: ListAccountsReply }> = async (request) => {
-  return request.accountsRepository.list();
+export const listAccountsHandler: RouteHandler<{
+  Querystring: ListAccountsQuery;
+  Reply: ListAccountsReply;
+}> = async (request) => {
+  return request.accountsRepository.list(request.query.search);
 };
 
 /**

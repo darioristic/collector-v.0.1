@@ -24,12 +24,11 @@ export default function QuotesPage() {
 	};
 
 	const handleDeleteQuote = async (quoteId: number) => {
-		if (confirm("Are you sure you want to delete this quote?")) {
-			await deleteQuote.mutateAsync(quoteId);
-			if (selectedQuoteId === quoteId) {
-				setSelectedQuoteId(null);
-				setIsDrawerOpen(false);
-			}
+		// Confirm se već radi u QuoteActions komponenti
+		await deleteQuote.mutateAsync(quoteId);
+		if (selectedQuoteId === quoteId) {
+			setSelectedQuoteId(null);
+			setIsDrawerOpen(false);
 		}
 	};
 
@@ -42,8 +41,8 @@ export default function QuotesPage() {
 		<div className="space-y-8 py-6">
 			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<div className="space-y-1">
-					<h1 className="text-3xl font-bold tracking-tight">Quotes</h1>
-					<p className="text-muted-foreground text-sm">
+					<h1 className="text-2xl font-semibold tracking-tight">Quotes</h1>
+					<p className="text-base font-medium text-muted-foreground">
 						Manage and track your sales quotes across accounts and stakeholders.
 					</p>
 				</div>
