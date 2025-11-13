@@ -1,10 +1,12 @@
 import type { RedisClientType } from "redis";
 import type { Server as SocketIOServer } from "socket.io";
 import { createNotification } from "./repository.js";
+import type { CacheService } from "./cache.service.js";
 
 export function setupEventListener(
 	redis: RedisClientType,
 	io: SocketIOServer,
+	cache?: CacheService | null,
 ): void {
 	// Listen for new message events
 	redis.subscribe("events:new_message", async (message) => {
@@ -36,6 +38,7 @@ export function setupEventListener(
 						chatMessage?.content || "You have a new message",
 						"info",
 						`/apps/chat?conversation=${conversationId}`,
+						cache,
 					);
 
 					// Emit socket event if recipient comes online later
@@ -67,6 +70,7 @@ export function setupEventListener(
 								chatMessage?.content || "You have a new message",
 								"info",
 								channelId ? `/teamchat?channel=${channelId}` : undefined,
+								cache,
 							);
 
 							// Emit socket event if member comes online later

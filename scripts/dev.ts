@@ -17,6 +17,7 @@ import { dirname, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { config as loadEnv } from "dotenv";
+import * as readline from "node:readline";
 
 // ============================================================================
 // CONFIGURATION
@@ -517,32 +518,85 @@ async function ensureDatabaseExists(connectionString: string): Promise<void> {
 	}
 }
 
+async function cleanupEmployeesTable(connectionString: string): Promise<void> {
+	try {
+		// Check if user_id column exists in employees table and if it's NOT referenced by API schema
+		// Only remove it if it exists and is not part of the expected schema
+		// This prevents Drizzle from asking if it's created or renamed
+		const checkResult = await runCommand(
+			"psql",
+			[
+				"--dbname",
+				connectionString,
+				"-tAc",
+				"SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'employees' AND column_name = 'user_id';",
+			],
+			rootDir,
+			{ print: false },
+		);
+		
+		const columnExists = parseInt(checkResult.stdout.trim(), 10) > 0;
+		
+		if (columnExists) {
+			// Only remove if it's not referenced by any foreign key (API schema uses it)
+			const fkCheck = await runCommand(
+				"psql",
+				[
+					"--dbname",
+					connectionString,
+					"-tAc",
+					"SELECT COUNT(*) FROM information_schema.table_constraints tc JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name WHERE tc.table_name = 'employees' AND kcu.column_name = 'user_id' AND tc.constraint_type = 'FOREIGN KEY';",
+				],
+				rootDir,
+				{ print: false },
+			);
+			
+			const hasForeignKey = parseInt(fkCheck.stdout.trim(), 10) > 0;
+			
+			// If user_id exists but has no foreign key, it's likely from dashboard schema and should be removed
+			if (!hasForeignKey) {
+				await runCommand(
+					"psql",
+					[
+						"--dbname",
+						connectionString,
+						"-c",
+						"ALTER TABLE employees DROP COLUMN IF EXISTS user_id;",
+					],
+					rootDir,
+					{ print: false },
+				);
+			}
+		}
+	} catch (error) {
+		// Ignore errors - column might not exist or table might not exist yet
+	}
+}
+
 async function runMigrations(): Promise<void> {
 	logger.step("Running database migrations...");
 
+	// Cleanup user_id column from employees table in dashboard database BEFORE migrations
+	// This prevents Drizzle interactive prompts
+	const connectionString =
+		process.env.DATABASE_URL ||
+		"postgres://postgres:postgres@localhost:5432/collector_dashboard";
+	await cleanupEmployeesTable(connectionString);
+
 	try {
-		// Run API migrations
-		try {
-			await runCommand("bun", ["run", "db:push", "--yes"], apiDir);
-			logger.success("API migrations completed");
-		} catch {
-			// If --yes doesn't work, try without it
-			try {
-				await runCommand("bun", ["run", "db:push"], apiDir);
-				logger.success("API migrations completed");
-			} catch {
-				logger.warn("API migrations had issues, but continuing...");
-			}
-		}
+		// Run API migrations (--force flag is already in package.json)
+		await runCommand("bun", ["run", "db:push"], apiDir);
+		logger.success("API migrations completed");
 	} catch (error) {
 		logger.warn(
 			`API migration error: ${error instanceof Error ? error.message : String(error)}`,
 		);
+		// Continue even if API migrations fail
 	}
 
 	let dashboardMigrationsOk = false;
 	try {
-		// Run Dashboard migrations
+		// Run Dashboard migrations using db:migrate (non-interactive, uses existing SQL files)
 		await runCommand("bun", ["run", "db:migrate"], dashboardDir);
 		logger.success("Dashboard migrations completed");
 		dashboardMigrationsOk = true;
@@ -566,9 +620,24 @@ async function runMigrations(): Promise<void> {
 	}
 }
 
+async function askYesNo(question: string): Promise<boolean> {
+	const rl = readline.createInterface({
+		input: process.stdin,
+		output: process.stdout,
+	});
+
+	return new Promise((resolve) => {
+		rl.question(`${question} (y/n): `, (answer) => {
+			rl.close();
+			resolve(answer.toLowerCase().trim() === "y" || answer.toLowerCase().trim() === "yes");
+		});
+	});
+}
+
 async function runSeed(options: {
 	only?: string;
 	skip?: string;
+	force?: boolean;
 }): Promise<void> {
 	logger.step("Seeding database...");
 
@@ -580,6 +649,10 @@ async function runSeed(options: {
 
 	if (options.skip) {
 		seedArgs.push(`--skip=${options.skip}`);
+	}
+
+	if (options.force) {
+		seedArgs.push("--force");
 	}
 
 	try {
@@ -601,7 +674,7 @@ async function runSeed(options: {
 		if (options.only) {
 			const onlyModules = options.only.split(",");
 			const dashboardModules = onlyModules.filter((m) =>
-				["employees", "vault"].includes(m.trim()),
+				["employees", "vault", "deals", "team-members", "notifications", "teamchat", "chat", "users-companies"].includes(m.trim()),
 			);
 			if (dashboardModules.length > 0) {
 				dashboardSeedArgs.push(`--only=${dashboardModules.join(",")}`);
@@ -615,6 +688,10 @@ async function runSeed(options: {
 		// If --skip is specified, pass it through
 		if (options.skip) {
 			dashboardSeedArgs.push(`--skip=${options.skip}`);
+		}
+
+		if (options.force) {
+			dashboardSeedArgs.push("--force");
 		}
 
 		await runCommand("bun", dashboardSeedArgs, dashboardDir);
@@ -931,7 +1008,7 @@ async function runLocalWorkflow(
 				);
 			}
 
-			const seedOpts: { only?: string; skip?: string } = {};
+			const seedOpts: { only?: string; skip?: string; force?: boolean } = {};
 
 			// Parse --only and --skip arguments
 			for (const arg of process.argv.slice(2)) {
@@ -941,9 +1018,29 @@ async function runLocalWorkflow(
 				if (arg.startsWith("--skip=")) {
 					seedOpts.skip = arg.split("=")[1];
 				}
+				if (arg === "--force" || arg === "-f") {
+					seedOpts.force = true;
+				}
 			}
 
-			await runSeed(seedOpts);
+			// Check if database has data and ask user if they want to overwrite
+			if (hasData && !seedOpts.force) {
+				logger.info("Baza podataka već sadrži podatke.");
+				const shouldOverwrite = await askYesNo(
+					"Da li želiš da pregaziš postojeće podatke?",
+				);
+				if (shouldOverwrite) {
+					seedOpts.force = true;
+					logger.info("Pregazićemo postojeće podatke...");
+				} else {
+					logger.info("Preskačemo seed (podaci već postoje).");
+					logger.info("Koristi --force ili -f da pregaziš podatke.");
+				}
+			}
+
+			if (!hasData || seedOpts.force) {
+				await runSeed(seedOpts);
+			}
 		} else {
 			logger.info("Skipping database seed (--skip-seed)");
 		}

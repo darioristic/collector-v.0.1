@@ -124,12 +124,14 @@ const bootstrapRoutes: FastifyPluginAsync = async (fastify) => {
 			}
 
 			// Get channels
-			const channels = await listChannels(company.id, user.id);
+			const cache = (fastify as any).cache;
+			const channels = await listChannels(company.id, user.id, cache);
 
 			// Get direct message targets
 			const directMessageTargets = await listDirectMessageTargets(
 				company.id,
 				user.id,
+				cache,
 			);
 
 			return reply.send({

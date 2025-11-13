@@ -3,6 +3,9 @@ import type { FastifyPluginAsync } from "fastify";
 import { db } from "../db/index.js";
 import { teamchatUsers } from "../db/schema/teamchat.js";
 import { authMiddleware } from "../lib/auth.js";
+const CACHE_PREFIX = "chat:";
+const getUserStatusCacheKey2 = (companyId: string, userId: string) =>
+	`${CACHE_PREFIX}user:status:${companyId}:${userId}`;
 
 const usersRoutes: FastifyPluginAsync = async (fastify) => {
 	fastify.addHook("onRequest", authMiddleware);
@@ -18,6 +21,17 @@ const usersRoutes: FastifyPluginAsync = async (fastify) => {
 			const { id: userId } = request.params;
 
 			try {
+				const cache = (fastify as any).cache;
+				const cacheKey = getUserStatusCacheKey2(request.user.companyId, userId);
+
+				// Try cache first
+				if (cache) {
+					const cached = await cache.get<{ userId: string; status: string }>(cacheKey);
+					if (cached) {
+						return reply.send(cached);
+					}
+				}
+
 				const [user] = await db
 					.select({
 						id: teamchatUsers.id,
@@ -37,10 +51,17 @@ const usersRoutes: FastifyPluginAsync = async (fastify) => {
 					return reply.code(404).send({ error: "User not found" });
 				}
 
-				return reply.send({
+				const result = {
 					userId: user.id,
 					status: user.status,
-				});
+				};
+
+				// Cache result (TTL: 1 minute - status changes frequently)
+				if (cache) {
+					await cache.set(cacheKey, result, { ttl: 60 });
+				}
+
+				return reply.send(result);
 			} catch (error) {
 				request.log.error(error, "Failed to fetch user status");
 				return reply.code(500).send({ error: "Failed to fetch user status" });
@@ -63,7 +84,28 @@ const usersRoutes: FastifyPluginAsync = async (fastify) => {
 			}
 
 			try {
-				const users = await db
+				const cache = (fastify as any).cache;
+				const cacheKeys = body.userIds.map((id) => getUserStatusCacheKey2(request.user.companyId, id));
+
+				// Try to get from cache first
+				const cachedStatuses: Record<string, string> = {};
+				const uncachedIds: string[] = [];
+
+				if (cache) {
+					for (let i = 0; i < body.userIds.length; i++) {
+						const cached = await cache.get<{ userId: string; status: string }>(cacheKeys[i]);
+						if (cached) {
+							cachedStatuses[body.userIds[i]] = cached.status;
+						} else {
+							uncachedIds.push(body.userIds[i]);
+						}
+					}
+				} else {
+					uncachedIds.push(...body.userIds);
+				}
+
+				// Fetch uncached users
+				const users = uncachedIds.length > 0 ? await db
 					.select({
 						id: teamchatUsers.id,
 						status: teamchatUsers.status,
@@ -73,17 +115,20 @@ const usersRoutes: FastifyPluginAsync = async (fastify) => {
 					.where(
 						and(
 							eq(teamchatUsers.companyId, request.user.companyId),
-							inArray(teamchatUsers.id, body.userIds),
+							inArray(teamchatUsers.id, uncachedIds),
 						),
-					);
+					) : [];
 
-				const statusMap = users.reduce(
-					(acc, user) => {
-						acc[user.id] = user.status;
-						return acc;
-					},
-					{} as Record<string, string>,
-				);
+				// Combine cached and fetched statuses
+				const statusMap: Record<string, string> = { ...cachedStatuses };
+				for (const user of users) {
+					statusMap[user.id] = user.status;
+					// Cache fetched status
+					if (cache) {
+						const key = getUserStatusCacheKey2(request.user.companyId, user.id);
+						await cache.set(key, { userId: user.id, status: user.status }, { ttl: 60 });
+					}
+				}
 
 				return reply.send({ statuses: statusMap });
 			} catch (error) {

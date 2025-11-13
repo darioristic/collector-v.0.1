@@ -1,257 +1,323 @@
-import Redis from 'ioredis';
-import type { FastifyInstance } from 'fastify';
-import type { MetricsService } from './metrics.service';
+import Redis from "ioredis";
+import type { FastifyInstance } from "fastify";
+import type { MetricsService } from "./metrics.service";
 
 export interface CacheOptions {
-  ttl?: number; // Time to live in seconds (default: 300 = 5 minutes)
+	ttl?: number; // Time to live in seconds (default: 300 = 5 minutes)
 }
 
 export class CacheService {
-  private redis: Redis | null = null;
-  private enabled: boolean = false;
-  private metrics?: MetricsService;
+	private redis: Redis | null = null;
+	private enabled: boolean = false;
+	private metrics?: MetricsService;
 
-  constructor(private logger?: FastifyInstance['log'], metrics?: MetricsService) {
-    this.metrics = metrics;
-    this.initialize();
-  }
+	constructor(
+		private logger?: FastifyInstance["log"],
+		metrics?: MetricsService,
+	) {
+		this.metrics = metrics;
+		this.initialize();
+	}
 
-  private initialize() {
-    try {
-      const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+	private initialize() {
+		try {
+			const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
 
-      this.redis = new Redis(redisUrl, {
-        maxRetriesPerRequest: 3,
-        retryStrategy(times) {
-          const delay = Math.min(times * 50, 2000);
-          return delay;
-        },
-        reconnectOnError(err) {
-          const targetErrors = ['READONLY', 'ECONNREFUSED'];
-          return targetErrors.some(targetError => err.message.includes(targetError));
-        }
-      });
+			this.redis = new Redis(redisUrl, {
+				maxRetriesPerRequest: 3,
+				retryStrategy(times) {
+					const delay = Math.min(times * 50, 2000);
+					return delay;
+				},
+				reconnectOnError(err) {
+					const targetErrors = ["READONLY", "ECONNREFUSED"];
+					return targetErrors.some((targetError) =>
+						err.message.includes(targetError),
+					);
+				},
+			});
 
-      this.redis.on('connect', () => {
-        this.enabled = true;
-        this.logger?.info('Redis connected successfully');
-      });
+			this.redis.on("connect", () => {
+				this.enabled = true;
+				this.logger?.info("Redis connected successfully");
+			});
 
-      this.redis.on('error', (err) => {
-        this.enabled = false;
-        this.logger?.warn({ err }, 'Redis connection error - caching disabled');
-      });
+			this.redis.on("error", (err) => {
+				this.enabled = false;
+				this.logger?.warn({ err }, "Redis connection error - caching disabled");
+			});
+		} catch (error) {
+			this.logger?.warn(
+				{ error },
+				"Redis initialization failed - caching disabled",
+			);
+			this.enabled = false;
+		}
+	}
 
-    } catch (error) {
-      this.logger?.warn({ error }, 'Redis initialization failed - caching disabled');
-      this.enabled = false;
-    }
-  }
+	/**
+	 * Get value from cache
+	 */
+	async get<T>(key: string): Promise<T | null> {
+		if (!this.enabled || !this.redis) {
+			return null;
+		}
 
-  /**
-   * Get value from cache
-   */
-  async get<T>(key: string): Promise<T | null> {
-    if (!this.enabled || !this.redis) {
-      return null;
-    }
+		try {
+			const value = await this.redis.get(key);
+			if (!value) {
+				// Record cache miss if metrics available
+				if (this.metrics) {
+					this.metrics.recordCacheMiss(key);
+				}
+				return null;
+			}
 
-    try {
-      const value = await this.redis.get(key);
-      if (!value) {
-        // Record cache miss if metrics available
-        if (this.metrics) {
-          this.metrics.recordCacheMiss(key);
-        }
-        return null;
-      }
+			// Record cache hit if metrics available
+			if (this.metrics) {
+				this.metrics.recordCacheHit(key);
+			}
+			return JSON.parse(value) as T;
+		} catch (error) {
+			this.logger?.warn({ error, key }, "Cache get error");
+			if (this.metrics) {
+				this.metrics.recordCacheMiss(key);
+			}
+			return null;
+		}
+	}
 
-      // Record cache hit if metrics available
-      if (this.metrics) {
-        this.metrics.recordCacheHit(key);
-      }
-      return JSON.parse(value) as T;
-    } catch (error) {
-      this.logger?.warn({ error, key }, 'Cache get error');
-      if (this.metrics) {
-        this.metrics.recordCacheMiss(key);
-      }
-      return null;
-    }
-  }
+	/**
+	 * Set value in cache
+	 */
+	async set(
+		key: string,
+		value: unknown,
+		options?: CacheOptions,
+	): Promise<boolean> {
+		if (!this.enabled || !this.redis) {
+			return false;
+		}
 
-  /**
-   * Set value in cache
-   */
-  async set(key: string, value: unknown, options?: CacheOptions): Promise<boolean> {
-    if (!this.enabled || !this.redis) {
-      return false;
-    }
+		try {
+			const ttl = options?.ttl ?? 300; // Default 5 minutes
+			const serialized = JSON.stringify(value);
 
-    try {
-      const ttl = options?.ttl ?? 300; // Default 5 minutes
-      const serialized = JSON.stringify(value);
+			await this.redis.setex(key, ttl, serialized);
+			return true;
+		} catch (error) {
+			this.logger?.warn({ error, key }, "Cache set error");
+			return false;
+		}
+	}
 
-      await this.redis.setex(key, ttl, serialized);
-      return true;
-    } catch (error) {
-      this.logger?.warn({ error, key }, 'Cache set error');
-      return false;
-    }
-  }
+	/**
+	 * Delete specific key(s) from cache
+	 */
+	async delete(...keys: string[]): Promise<boolean> {
+		if (!this.enabled || !this.redis || keys.length === 0) {
+			return false;
+		}
 
-  /**
-   * Delete specific key(s) from cache
-   */
-  async delete(...keys: string[]): Promise<boolean> {
-    if (!this.enabled || !this.redis || keys.length === 0) {
-      return false;
-    }
+		try {
+			await this.redis.del(...keys);
+			return true;
+		} catch (error) {
+			this.logger?.warn({ error, keys }, "Cache delete error");
+			return false;
+		}
+	}
 
-    try {
-      await this.redis.del(...keys);
-      return true;
-    } catch (error) {
-      this.logger?.warn({ error, keys }, 'Cache delete error');
-      return false;
-    }
-  }
+	/**
+	 * Delete all keys matching pattern
+	 * Uses SCAN instead of KEYS for better performance on large Redis instances
+	 */
+	async deletePattern(pattern: string): Promise<boolean> {
+		if (!this.enabled || !this.redis) {
+			return false;
+		}
 
-  /**
-   * Delete all keys matching pattern
-   */
-  async deletePattern(pattern: string): Promise<boolean> {
-    if (!this.enabled || !this.redis) {
-      return false;
-    }
+		try {
+			const keys: string[] = [];
+			let cursor = "0";
 
-    try {
-      const keys = await this.redis.keys(pattern);
-      if (keys.length > 0) {
-        await this.redis.del(...keys);
-      }
-      return true;
-    } catch (error) {
-      this.logger?.warn({ error, pattern }, 'Cache delete pattern error');
-      return false;
-    }
-  }
+			do {
+				const result = await this.redis.scan(
+					cursor,
+					"MATCH",
+					pattern,
+					"COUNT",
+					100,
+				);
+				cursor = result[0];
+				keys.push(...result[1]);
+			} while (cursor !== "0");
 
-  /**
-   * Wrapper for cache-aside pattern
-   * Tries to get from cache, if miss, calls fetcher and caches result
-   */
-  async getOrSet<T>(
-    key: string,
-    fetcher: () => Promise<T>,
-    options?: CacheOptions
-  ): Promise<T> {
-    // Try to get from cache
-    const cached = await this.get<T>(key);
-    if (cached !== null) {
-      this.logger?.debug({ key }, 'Cache hit');
-      return cached;
-    }
+			// Delete in batches to avoid overwhelming Redis
+			if (keys.length > 0) {
+				const batchSize = 100;
+				for (let i = 0; i < keys.length; i += batchSize) {
+					const batch = keys.slice(i, i + batchSize);
+					await this.redis.del(...batch);
+				}
+			}
+			return true;
+		} catch (error) {
+			this.logger?.warn({ error, pattern }, "Cache delete pattern error");
+			return false;
+		}
+	}
 
-    // Cache miss - fetch and cache
-    this.logger?.debug({ key }, 'Cache miss - fetching');
-    const value = await fetcher();
+	/**
+	 * Delete multiple keys in batch (more efficient than multiple delete calls)
+	 */
+	async deleteBatch(keys: string[]): Promise<boolean> {
+		if (!this.enabled || !this.redis || keys.length === 0) {
+			return false;
+		}
 
-    // Don't cache null/undefined values
-    if (value !== null && value !== undefined) {
-      await this.set(key, value, options);
-    }
+		try {
+			// Delete in batches to avoid overwhelming Redis
+			const batchSize = 100;
+			for (let i = 0; i < keys.length; i += batchSize) {
+				const batch = keys.slice(i, i + batchSize);
+				await this.redis.del(...batch);
+			}
+			return true;
+		} catch (error) {
+			this.logger?.warn({ error, keys }, "Cache delete batch error");
+			return false;
+		}
+	}
 
-    return value;
-  }
+	/**
+	 * Wrapper for cache-aside pattern
+	 * Tries to get from cache, if miss, calls fetcher and caches result
+	 */
+	async getOrSet<T>(
+		key: string,
+		fetcher: () => Promise<T>,
+		options?: CacheOptions,
+	): Promise<T> {
+		// Try to get from cache
+		const cached = await this.get<T>(key);
+		if (cached !== null) {
+			this.logger?.debug({ key }, "Cache hit");
+			return cached;
+		}
 
-  /**
-   * Close Redis connection
-   */
-  async close(): Promise<void> {
-    if (this.redis) {
-      await this.redis.quit();
-      this.enabled = false;
-    }
-  }
+		// Cache miss - fetch and cache
+		this.logger?.debug({ key }, "Cache miss - fetching");
+		const value = await fetcher();
 
-  /**
-   * Check if cache is available
-   */
-  isEnabled(): boolean {
-    return this.enabled;
-  }
+		// Don't cache null/undefined values
+		if (value !== null && value !== undefined) {
+			await this.set(key, value, options);
+		}
 
-  /**
-   * Check Redis health status
-   * Returns status and response time in milliseconds
-   */
-  async checkHealth(): Promise<{ status: "ok" | "down"; responseTime?: number; error?: string }> {
-    if (!this.enabled || !this.redis) {
-      return { status: "down", error: "Redis not enabled or not initialized" };
-    }
+		return value;
+	}
 
-    try {
-      const startTime = Date.now();
-      await Promise.race([
-        this.redis.ping(),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("Redis ping timeout")), 5000)
-        )
-      ]);
-      const responseTime = Date.now() - startTime;
-      return { status: "ok", responseTime };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      return { status: "down", error: errorMessage };
-    }
-  }
+	/**
+	 * Close Redis connection
+	 */
+	async close(): Promise<void> {
+		if (this.redis) {
+			await this.redis.quit();
+			this.enabled = false;
+		}
+	}
+
+	/**
+	 * Check if cache is available
+	 */
+	isEnabled(): boolean {
+		return this.enabled;
+	}
+
+	/**
+	 * Check Redis health status
+	 * Returns status and response time in milliseconds
+	 */
+	async checkHealth(): Promise<{
+		status: "ok" | "down";
+		responseTime?: number;
+		error?: string;
+	}> {
+		if (!this.enabled || !this.redis) {
+			return { status: "down", error: "Redis not enabled or not initialized" };
+		}
+
+		try {
+			const startTime = Date.now();
+			await Promise.race([
+				this.redis.ping(),
+				new Promise((_, reject) =>
+					setTimeout(() => reject(new Error("Redis ping timeout")), 5000),
+				),
+			]);
+			const responseTime = Date.now() - startTime;
+			return { status: "ok", responseTime };
+		} catch (error) {
+			const errorMessage =
+				error instanceof Error ? error.message : "Unknown error";
+			return { status: "down", error: errorMessage };
+		}
+	}
 }
 
 // Singleton instance
 let cacheInstance: CacheService | null = null;
 
-export const getCacheService = (logger?: FastifyInstance['log'], metrics?: MetricsService): CacheService => {
-  if (!cacheInstance) {
-    cacheInstance = new CacheService(logger, metrics);
-  } else if (metrics && !cacheInstance['metrics']) {
-    // Update metrics if not already set
-    cacheInstance['metrics'] = metrics;
-  }
-  return cacheInstance;
+export const getCacheService = (
+	logger?: FastifyInstance["log"],
+	metrics?: MetricsService,
+): CacheService => {
+	if (!cacheInstance) {
+		cacheInstance = new CacheService(logger, metrics);
+	} else if (metrics && !cacheInstance["metrics"]) {
+		// Update metrics if not already set
+		cacheInstance["metrics"] = metrics;
+	}
+	return cacheInstance;
 };
 
 // Fastify plugin
-import fp from 'fastify-plugin';
+import fp from "fastify-plugin";
 
-export const cachePlugin = fp(async (fastify: FastifyInstance) => {
-  // Get metrics if available (metrics plugin should be registered before cache plugin)
-  const metrics = fastify.hasDecorator('metrics') ? (fastify as any).metrics : undefined;
-  const cache = getCacheService(fastify.log, metrics);
+export const cachePlugin = fp(
+	async (fastify: FastifyInstance) => {
+		// Get metrics if available (metrics plugin should be registered before cache plugin)
+		const metrics = fastify.hasDecorator("metrics")
+			? (fastify as FastifyInstance & { metrics: MetricsService }).metrics
+			: undefined;
+		const cache = getCacheService(fastify.log, metrics);
 
-  fastify.decorate('cache', cache);
-  fastify.decorateRequest('cache', {
-    getter() {
-      return cache;
-    }
-  });
+		fastify.decorate("cache", cache);
+		fastify.decorateRequest("cache", {
+			getter() {
+				return cache;
+			},
+		});
 
-  fastify.addHook('onClose', async () => {
-    await cache.close();
-  });
-}, {
-  name: 'cache-plugin',
-  fastify: '4.x',
-  dependencies: [] // Note: metrics plugin should be registered first
-});
+		fastify.addHook("onClose", async () => {
+			await cache.close();
+		});
+	},
+	{
+		name: "cache-plugin",
+		fastify: "4.x",
+		dependencies: [], // Note: metrics plugin should be registered first
+	},
+);
 
 // TypeScript declarations
-declare module 'fastify' {
-  interface FastifyInstance {
-    cache: CacheService;
-  }
+declare module "fastify" {
+	interface FastifyInstance {
+		cache: CacheService;
+	}
 
-  interface FastifyRequest {
-    cache: CacheService;
-  }
+	interface FastifyRequest {
+		cache: CacheService;
+	}
 }

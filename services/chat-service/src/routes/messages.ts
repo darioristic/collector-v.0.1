@@ -109,6 +109,7 @@ const messagesRoutes: FastifyPluginAsync = async (fastify) => {
 				});
 			}
 
+			const cache = (fastify as any).cache;
 			const message = await createMessage({
 				conversationId,
 				senderId: request.user.userId,
@@ -116,6 +117,7 @@ const messagesRoutes: FastifyPluginAsync = async (fastify) => {
 				type,
 				fileUrl,
 				fileMetadata,
+				cache,
 			});
 
 			// Emit socket event

@@ -10,6 +10,7 @@ import {
 	passwordResetTokens,
 } from "../../db/schema/auth.schema";
 import { roles, userRoles, users } from "../../db/schema/settings.schema";
+import type { CacheService } from "../../lib/cache.service";
 import type {
 	AuthPayload,
 	AuthSession,
@@ -40,8 +41,20 @@ export class AuthServiceError extends Error {
 
 type DatabaseClient = AppDatabase;
 
+// Cache keys
+const CACHE_PREFIX = "auth:";
+const getUserProfileCacheKey = (userId: string, companyId?: string | null) =>
+	`${CACHE_PREFIX}user:profile:${userId}:${companyId ?? "default"}`;
+const getSessionCacheKey = (token: string) => `${CACHE_PREFIX}session:${token}`;
+const getSessionValidCacheKey = (token: string) => `${CACHE_PREFIX}session:valid:${token}`;
+const getPrimaryCompanyCacheKey = (userId: string, preferredCompanyId?: string | null) =>
+	`${CACHE_PREFIX}user:company:${userId}:${preferredCompanyId ?? "default"}`;
+
 export class AuthService {
-	constructor(private readonly database: AppDatabase = defaultDb) {}
+	constructor(
+		private readonly database: AppDatabase = defaultDb,
+		private readonly cache?: CacheService
+	) {}
 
 	async register(
 		input: RegisterInput,
@@ -193,9 +206,7 @@ export class AuthService {
 			);
 		}
 
-		console.log(
-			`[AuthService.login] User found: ${userRecord.email}, status: ${userRecord.status}, hasPassword: ${!!userRecord.hashedPassword}`,
-		);
+		// Security: Do NOT log user details or password match results
 
 		if (userRecord.status !== "active") {
 			console.error(
@@ -219,9 +230,7 @@ export class AuthService {
 				input.password,
 				userRecord.hashedPassword,
 			);
-			console.log(
-				`[AuthService.login] Password match result: ${passwordMatches}`,
-			);
+			// Security: NEVER log password match results
 		} catch (error) {
 			console.error(`[AuthService.login] Password compare error:`, error);
 			// If bcrypt compare fails (e.g., invalid hash format), treat as invalid credentials
@@ -269,10 +278,29 @@ export class AuthService {
 			companyId,
 		);
 
+		// Cache session validation for new login
+		if (this.cache && session.token) {
+			await this.cache.set(getSessionValidCacheKey(session.token), true, { ttl: 60 });
+			await this.cache.set(getSessionCacheKey(session.token), { user, session }, { ttl: 60 });
+		}
+
 		return { user, session };
 	}
 
 	async me(token: string): Promise<AuthPayload> {
+		// Try cache for session validation first
+		const sessionValidCacheKey = getSessionValidCacheKey(token);
+		if (this.cache) {
+			const cachedValid = await this.cache.get<boolean>(sessionValidCacheKey);
+			if (cachedValid === true) {
+				// Session is valid, get cached payload
+				const cachedPayload = await this.cache.get<AuthPayload>(getSessionCacheKey(token));
+				if (cachedPayload) {
+					return cachedPayload;
+				}
+			}
+		}
+
 		const [sessionRecord] = await this.database
 			.select({
 				id: authSessions.id,
@@ -314,13 +342,23 @@ export class AuthService {
 			companyId ?? undefined,
 		);
 
-		return {
+		const payload: AuthPayload = {
 			user,
 			session: {
 				token,
 				expiresAt: sessionRecord.expiresAt.toISOString(),
 			},
 		};
+
+		// Cache session validation and payload
+		if (this.cache) {
+			// Cache session as valid (TTL: 1 minute)
+			await this.cache.set(sessionValidCacheKey, true, { ttl: 60 });
+			// Cache full payload (TTL: 1 minute)
+			await this.cache.set(getSessionCacheKey(token), payload, { ttl: 60 });
+		}
+
+		return payload;
 	}
 
 	async logout(token: string): Promise<void> {
@@ -329,6 +367,14 @@ export class AuthService {
 				400,
 				"TOKEN_REQUIRED",
 				"Session token je obavezan.",
+			);
+		}
+
+		// Invalidate cache before logout
+		if (this.cache) {
+			await this.cache.delete(
+				getSessionValidCacheKey(token),
+				getSessionCacheKey(token)
 			);
 		}
 
@@ -448,6 +494,13 @@ export class AuthService {
 				.delete(authSessions)
 				.where(eq(authSessions.userId, tokenRecord.userId));
 
+			// Invalidate all user-related cache
+			if (this.cache) {
+				await this.cache.deletePattern(`${CACHE_PREFIX}user:profile:${tokenRecord.userId}:*`);
+				await this.cache.deletePattern(`${CACHE_PREFIX}user:company:${tokenRecord.userId}:*`);
+				await this.cache.deletePattern(`${CACHE_PREFIX}session:*`);
+			}
+
 			const companyId = await this.getPrimaryCompanyId(
 				tx,
 				tokenRecord.userId,
@@ -520,6 +573,16 @@ export class AuthService {
 		userId: string,
 		preferredCompanyId: string | null | undefined,
 	): Promise<string | null> {
+		const cacheKey = getPrimaryCompanyCacheKey(userId, preferredCompanyId);
+
+		// Try cache first
+		if (this.cache) {
+			const cached = await this.cache.get<string | null>(cacheKey);
+			if (cached !== null && cached !== undefined) {
+				return cached;
+			}
+		}
+
 		if (preferredCompanyId) {
 			const [membership] = await database
 				.select({ companyId: companyUsers.companyId })
@@ -543,7 +606,14 @@ export class AuthService {
 			.where(eq(companyUsers.userId, userId))
 			.limit(1);
 
-		return firstMembership?.companyId ?? null;
+		const result = firstMembership?.companyId ?? null;
+
+		// Cache company ID (TTL: 10 minutes)
+		if (this.cache) {
+			await this.cache.set(cacheKey, result, { ttl: 600 });
+		}
+
+		return result;
 	}
 
 	private async createSession(
@@ -577,6 +647,16 @@ export class AuthService {
 		userId: string,
 		companyId?: string | null,
 	): Promise<AuthUser> {
+		const cacheKey = getUserProfileCacheKey(userId, companyId);
+
+		// Try cache first
+		if (this.cache) {
+			const cached = await this.cache.get<AuthUser>(cacheKey);
+			if (cached) {
+				return cached;
+			}
+		}
+
 		const [userRecord] = await database
 			.select({
 				id: users.id,
@@ -630,7 +710,7 @@ export class AuthService {
 			}
 		}
 
-		return {
+		const result: AuthUser = {
 			id: userRecord.id,
 			email: userRecord.email,
 			name: userRecord.name,
@@ -638,5 +718,12 @@ export class AuthService {
 			defaultCompanyId: userRecord.defaultCompanyId,
 			company,
 		};
+
+		// Cache user profile (TTL: 5 minutes)
+		if (this.cache) {
+			await this.cache.set(cacheKey, result, { ttl: 300 });
+		}
+
+		return result;
 	}
 }

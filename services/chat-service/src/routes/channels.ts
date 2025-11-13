@@ -14,9 +14,11 @@ const channelsRoutes: FastifyPluginAsync = async (fastify) => {
 		}
 
 		try {
+			const cache = (fastify as any).cache;
 			const channels = await listChannels(
 				request.user.companyId,
 				request.user.userId,
+				cache,
 			);
 
 			return reply.send({ channels });

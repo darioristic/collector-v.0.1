@@ -8,6 +8,7 @@ import {
 	chatMessages,
 } from "../db/schema/chat.js";
 import { teamchatUsers } from "../db/schema/teamchat.js";
+import type { CacheService } from "./cache.service.js";
 
 const senderAlias = alias(teamchatUsers, "sender");
 const user1Alias = alias(teamchatUsers, "user1");
@@ -141,21 +142,51 @@ type ChatConversationWithUsers = Omit<
 	};
 };
 
+// Cache keys
+const CACHE_PREFIX = "chat:";
+const getConversationCacheKey = (companyId: string, userId1: string, userId2: string) =>
+	`${CACHE_PREFIX}conversation:${companyId}:${userId1 < userId2 ? userId1 : userId2}:${userId1 < userId2 ? userId2 : userId1}`;
+const getConversationsListCacheKey = (companyId: string, userId: string) =>
+	`${CACHE_PREFIX}conversations:${companyId}:${userId}`;
+const getUserStatusCacheKey = (companyId: string, userId: string) =>
+	`${CACHE_PREFIX}user:status:${companyId}:${userId}`;
+const getChannelMembershipCacheKey = (companyId: string, userId: string) =>
+	`${CACHE_PREFIX}channels:${companyId}:${userId}`;
+
+// Global cache instance (will be set by server)
+let globalCache: CacheService | null = null;
+
+export const setCacheService = (cache: CacheService | null) => {
+	globalCache = cache;
+};
+
 export const findOrCreateConversation = async ({
 	companyId,
 	currentUserId,
 	targetUserId,
+	cache,
 }: {
 	companyId: string;
 	currentUserId: string;
 	targetUserId: string;
+	cache?: CacheService | null;
 }): Promise<ChatConversationWithUsers> => {
+	const cacheService = cache || globalCache;
 	// Ensure both users exist in teamchat_users
 	// This is needed because chat service uses teamchat_users while API uses users
 	await ensureTeamchatUsers([currentUserId, targetUserId], companyId);
 
 	const userId1 = currentUserId < targetUserId ? currentUserId : targetUserId;
 	const userId2 = currentUserId < targetUserId ? targetUserId : currentUserId;
+
+	// Try cache first
+	const cacheKey = getConversationCacheKey(companyId, userId1, userId2);
+	if (cacheService) {
+		const cached = await cacheService.get<ChatConversationWithUsers>(cacheKey);
+		if (cached) {
+			return cached;
+		}
+	}
 
 	const [existing] = await db
 		.select({
@@ -211,7 +242,7 @@ export const findOrCreateConversation = async ({
 
 		const unreadCount = Number(unreadResult?.count) || 0;
 
-		return {
+		const result = {
 			id: existing.id,
 			userId1: existing.userId1,
 			userId2: existing.userId2,
@@ -242,6 +273,18 @@ export const findOrCreateConversation = async ({
 				status: existing.user2Status,
 			},
 		};
+
+		// Cache result (TTL: 5 minutes)
+		if (cacheService) {
+			await cacheService.set(cacheKey, result, { ttl: 300 });
+			// Also invalidate conversations list cache
+			await cacheService.delete(
+				getConversationsListCacheKey(companyId, currentUserId),
+				getConversationsListCacheKey(companyId, targetUserId)
+			);
+		}
+
+		return result;
 	}
 
 	const now = new Date();
@@ -298,7 +341,7 @@ export const findOrCreateConversation = async ({
 	// New conversation has no unread messages
 	const unreadCount = 0;
 
-	return {
+	const result = {
 		id: conversationWithUsers.id,
 		userId1: conversationWithUsers.userId1,
 		userId2: conversationWithUsers.userId2,
@@ -329,15 +372,39 @@ export const findOrCreateConversation = async ({
 			status: conversationWithUsers.user2Status,
 		},
 	};
+
+	// Cache new conversation (TTL: 5 minutes)
+	if (cacheService) {
+		await cacheService.set(cacheKey, result, { ttl: 300 });
+		// Invalidate conversations list cache
+		await cacheService.delete(
+			getConversationsListCacheKey(companyId, currentUserId),
+			getConversationsListCacheKey(companyId, targetUserId)
+		);
+	}
+
+	return result;
 };
 
 export const getConversations = async ({
 	companyId,
 	userId,
+	cache,
 }: {
 	companyId: string;
 	userId: string;
+	cache?: CacheService | null;
 }): Promise<ChatConversationWithUsers[]> => {
+	const cacheService = cache || globalCache;
+	const cacheKey = getConversationsListCacheKey(companyId, userId);
+
+	// Try cache first
+	if (cacheService) {
+		const cached = await cacheService.get<ChatConversationWithUsers[]>(cacheKey);
+		if (cached) {
+			return cached;
+		}
+	}
 	// Ensure current user exists in teamchat_users
 	await ensureTeamchatUsers([userId], companyId);
 
@@ -433,7 +500,7 @@ export const getConversations = async ({
 		unreadCountMap.set(item.conversationId, Number(item.count) || 0);
 	}
 
-	return rows.map((row) => ({
+	const result = rows.map((row) => ({
 		id: row.id,
 		userId1: row.userId1,
 		userId2: row.userId2,
@@ -462,6 +529,13 @@ export const getConversations = async ({
 			status: row.user2Status,
 		},
 	}));
+
+	// Cache result (TTL: 2 minutes - shorter because conversations change frequently)
+	if (cacheService) {
+		await cacheService.set(cacheKey, result, { ttl: 120 });
+	}
+
+	return result;
 };
 
 export const getConversationMessages = async ({
@@ -536,6 +610,7 @@ export const createMessage = async ({
 	type = "text",
 	fileUrl,
 	fileMetadata,
+	cache,
 }: {
 	conversationId: string;
 	senderId: string;
@@ -543,7 +618,9 @@ export const createMessage = async ({
 	type?: "text" | "file" | "image" | "video" | "sound";
 	fileUrl?: string | null;
 	fileMetadata?: string | null;
+	cache?: CacheService | null;
 }): Promise<ChatMessageWithSender> => {
+	const cacheService = cache || globalCache;
 	const now = new Date();
 
 	const [message] = await db
@@ -591,7 +668,7 @@ export const createMessage = async ({
 		throw new Error("Korisnik nije pronađen.");
 	}
 
-	return {
+	const result = {
 		id: message.id,
 		conversationId: message.conversationId,
 		senderId: message.senderId,
@@ -612,6 +689,32 @@ export const createMessage = async ({
 			avatarUrl: sender.avatarUrl,
 		},
 	};
+
+	// Invalidate conversation cache when new message is created
+	if (cacheService) {
+		// Get conversation to find both users
+		const [conv] = await db
+			.select({
+				userId1: chatConversations.userId1,
+				userId2: chatConversations.userId2,
+				companyId: chatConversations.companyId,
+			})
+			.from(chatConversations)
+			.where(eq(chatConversations.id, conversationId))
+			.limit(1);
+
+		if (conv) {
+			const userId1 = conv.userId1 < conv.userId2 ? conv.userId1 : conv.userId2;
+			const userId2 = conv.userId1 < conv.userId2 ? conv.userId2 : conv.userId1;
+			await cacheService.delete(
+				getConversationCacheKey(conv.companyId, userId1, userId2),
+				getConversationsListCacheKey(conv.companyId, conv.userId1),
+				getConversationsListCacheKey(conv.companyId, conv.userId2)
+			);
+		}
+	}
+
+	return result;
 };
 
 export const markMessagesAsRead = async ({

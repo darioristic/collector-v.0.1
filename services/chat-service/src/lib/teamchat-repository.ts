@@ -8,6 +8,23 @@ import {
 	teamchatMessages,
 	teamchatUsers,
 } from "../db/schema/teamchat.js";
+import type { CacheService } from "./cache.service.js";
+
+// Cache keys
+const CACHE_PREFIX = "chat:teamchat:";
+const getChannelsListCacheKey = (companyId: string, userId: string) =>
+	`${CACHE_PREFIX}channels:${companyId}:${userId}`;
+const getChannelMessagesCacheKey = (channelId: string, limit: number) =>
+	`${CACHE_PREFIX}messages:${channelId}:${limit}`;
+const getDirectMessageTargetsCacheKey = (companyId: string, userId: string) =>
+	`${CACHE_PREFIX}dm:targets:${companyId}:${userId}`;
+
+// Global cache instance (will be set by server)
+let globalCache: CacheService | null = null;
+
+export const setCacheService = (cache: CacheService | null) => {
+	globalCache = cache;
+};
 
 const parseMetadata = (
 	metadata: string | null,
@@ -110,7 +127,19 @@ const buildChannelSummary = (
 export const listChannels = async (
 	companyId: string,
 	userId: string,
+	cache?: CacheService | null,
 ): Promise<ChannelSummary[]> => {
+	const cacheService = cache || globalCache;
+	const cacheKey = getChannelsListCacheKey(companyId, userId);
+
+	// Try cache first
+	if (cacheService) {
+		const cached = await cacheService.get<ChannelSummary[]>(cacheKey);
+		if (cached) {
+			return cached;
+		}
+	}
+
 	const userChannels = await db
 		.select({
 			channel: teamchatChannels,
@@ -245,12 +274,31 @@ export const listChannels = async (
 		if (b.lastMessageAt) return 1;
 		return 0;
 	});
+
+	// Cache result (TTL: 2 minutes - channels change frequently)
+	if (cacheService) {
+		await cacheService.set(cacheKey, summaries, { ttl: 120 });
+	}
+
+	return summaries;
 };
 
 export const listDirectMessageTargets = async (
 	companyId: string,
 	userId: string,
+	cache?: CacheService | null,
 ): Promise<ChannelMemberSummary[]> => {
+	const cacheService = cache || globalCache;
+	const cacheKey = getDirectMessageTargetsCacheKey(companyId, userId);
+
+	// Try cache first
+	if (cacheService) {
+		const cached = await cacheService.get<ChannelMemberSummary[]>(cacheKey);
+		if (cached) {
+			return cached;
+		}
+	}
+
 	const users = await db
 		.select()
 		.from(teamchatUsers)
@@ -258,7 +306,7 @@ export const listDirectMessageTargets = async (
 			and(eq(teamchatUsers.companyId, companyId), ne(teamchatUsers.id, userId)),
 		);
 
-	return users.map((u) => ({
+	const result = users.map((u) => ({
 		id: u.id,
 		name:
 			u.displayName ||
@@ -268,13 +316,45 @@ export const listDirectMessageTargets = async (
 		avatarUrl: u.avatarUrl,
 		status: u.status,
 	}));
+
+	// Cache result (TTL: 5 minutes - users don't change frequently)
+	if (cacheService) {
+		await cacheService.set(cacheKey, result, { ttl: 300 });
+	}
+
+	return result;
 };
 
 export const getChannelMessages = async (
 	channelId: string,
 	userId: string,
 	limit = 50,
+	cache?: CacheService | null,
 ): Promise<MessageWithAuthor[]> => {
+	const cacheService = cache || globalCache;
+	const cacheKey = getChannelMessagesCacheKey(channelId, limit);
+
+	// Try cache first (but only if user has access - we'll verify below)
+	if (cacheService) {
+		const cached = await cacheService.get<MessageWithAuthor[]>(cacheKey);
+		if (cached) {
+			// Still verify access before returning cached messages
+			const [membership] = await db
+				.select()
+				.from(teamchatChannelMembers)
+				.where(
+					and(
+						eq(teamchatChannelMembers.channelId, channelId),
+						eq(teamchatChannelMembers.userId, userId),
+					),
+				)
+				.limit(1);
+			if (membership) {
+				return cached;
+			}
+		}
+	}
+
 	// Verify user has access to channel
 	const [membership] = await db
 		.select()
@@ -302,7 +382,7 @@ export const getChannelMessages = async (
 		.orderBy(desc(teamchatMessages.createdAt))
 		.limit(limit);
 
-	return messages.reverse().map((row) => ({
+	const result = messages.reverse().map((row) => ({
 		id: row.message.id,
 		content: row.message.content,
 		fileUrl: row.message.fileUrl,
@@ -317,6 +397,13 @@ export const getChannelMessages = async (
 		channelId: row.message.channelId,
 		createdAt: row.message.createdAt,
 	}));
+
+	// Cache result (TTL: 1 minute - messages change frequently)
+	if (cacheService) {
+		await cacheService.set(cacheKey, result, { ttl: 60 });
+	}
+
+	return result;
 };
 
 export const createMessage = async (
@@ -324,7 +411,9 @@ export const createMessage = async (
 	senderId: string,
 	content: string | null,
 	fileUrl: string | null,
+	cache?: CacheService | null,
 ): Promise<MessageWithAuthor> => {
+	const cacheService = cache || globalCache;
 	// Verify user has access to channel
 	const [membership] = await db
 		.select()
@@ -389,8 +478,39 @@ export const createMessage = async (
 		createdAt: message.createdAt,
 	};
 
+		// Invalidate cache for channel messages and channels list
+		if (cacheService) {
+			// Get channel info to invalidate user-specific channel lists
+			const [channel] = await db
+				.select({ companyId: teamchatChannels.companyId })
+				.from(teamchatChannels)
+				.where(eq(teamchatChannels.id, channelId))
+				.limit(1);
+
+			if (channel) {
+				// Get all members to invalidate their channel lists
+				const members = await db
+					.select({ userId: teamchatChannelMembers.userId })
+					.from(teamchatChannelMembers)
+					.where(eq(teamchatChannelMembers.channelId, channelId));
+
+				// Invalidate channel messages cache (all limits)
+				await cacheService.deletePattern(`${CACHE_PREFIX}messages:${channelId}:*`);
+
+				// Invalidate channels list for all members (batch delete)
+				if (members.length > 0) {
+					const cacheKeys = members.map((member) =>
+						getChannelsListCacheKey(channel.companyId, member.userId)
+					);
+					await cacheService.deleteBatch(cacheKeys);
+				}
+			}
+		}
+
 	return messageWithAuthor;
 };
+<｜tool▁call▁begin｜>
+read_file
 
 export const upsertDirectMessageChannel = async (
 	companyId: string,

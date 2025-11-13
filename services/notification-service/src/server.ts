@@ -8,6 +8,8 @@ import * as dotenv from "dotenv";
 import notificationsRoutes from "./routes/notifications.js";
 import { setupSocketHandlers } from "./socket/handler.js";
 import { setupEventListener } from "./lib/event-listener.js";
+import { getCacheService } from "./lib/cache.service.js";
+import { setCacheService } from "./lib/repository.js";
 
 dotenv.config();
 
@@ -65,11 +67,16 @@ async function buildServer() {
   (fastify as any).io = io;
   (fastify as any).redis = pubClient;
 
+  // Setup cache service
+  const cacheService = getCacheService(fastify.log);
+  setCacheService(cacheService);
+  (fastify as any).cache = cacheService;
+
   // Setup socket handlers
   setupSocketHandlers(io, pubClient);
 
   // Setup Redis event listener
-  setupEventListener(subClient, io);
+  setupEventListener(subClient, io, cacheService);
 
   // Register routes
   await fastify.register(notificationsRoutes, { prefix: "/api/notifications" });

@@ -29,7 +29,20 @@ const sendServiceError = (reply: FastifyReply, error: AuthServiceError) =>
   });
 
 const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (app, { service }) => {
-  app.post("/register", { schema: registerSchema }, async (request, reply) => {
+  app.post("/register", {
+    schema: registerSchema,
+    config: {
+      rateLimit: {
+        max: 3, // Max 3 registration attempts
+        timeWindow: '1 hour', // Per hour
+        errorResponseBuilder: () => ({
+          statusCode: 429,
+          error: 'RATE_LIMIT_EXCEEDED',
+          message: 'Previše pokušaja registracije. Pokušajte ponovo za 1 sat.'
+        })
+      }
+    }
+  }, async (request, reply) => {
     try {
       const body = request.body as RegisterInput;
       const metadata = createRequestMetadata(request);
@@ -44,7 +57,20 @@ const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (app, { service 
     }
   });
 
-  app.post("/login", { schema: loginSchema }, async (request, reply) => {
+  app.post("/login", {
+    schema: loginSchema,
+    config: {
+      rateLimit: {
+        max: 5, // Max 5 login attempts
+        timeWindow: '15 minutes', // Per 15 minutes
+        errorResponseBuilder: () => ({
+          statusCode: 429,
+          error: 'RATE_LIMIT_EXCEEDED',
+          message: 'Previše pokušaja prijave. Pokušajte ponovo za 15 minuta.'
+        })
+      }
+    }
+  }, async (request, reply) => {
     try {
       const body = request.body as LoginInput;
       const metadata = createRequestMetadata(request);
@@ -105,7 +131,20 @@ const authRoutes: FastifyPluginAsync<AuthRoutesOptions> = async (app, { service 
     }
   });
 
-  app.post("/forgot-password", { schema: forgotPasswordSchema }, async (request, reply) => {
+  app.post("/forgot-password", {
+    schema: forgotPasswordSchema,
+    config: {
+      rateLimit: {
+        max: 3, // Max 3 forgot password attempts
+        timeWindow: '1 hour', // Per hour
+        errorResponseBuilder: () => ({
+          statusCode: 429,
+          error: 'RATE_LIMIT_EXCEEDED',
+          message: 'Previše pokušaja resetovanja lozinke. Pokušajte ponovo za 1 sat.'
+        })
+      }
+    }
+  }, async (request, reply) => {
     try {
       const body = request.body as ForgotPasswordInput;
       const payload = await service.forgotPassword(body);

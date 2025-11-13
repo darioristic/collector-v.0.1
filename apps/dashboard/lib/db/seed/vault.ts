@@ -18,7 +18,13 @@ type VaultSeedResult = {
 
 export async function seedVault(
 	db: DashboardDatabase,
+	options: { force?: boolean } = {},
 ): Promise<VaultSeedResult> {
+	if (options.force) {
+		// Delete all existing root folders
+		await db.delete(vaultFolders).where(isNull(vaultFolders.parentId));
+	}
+
 	const existingFolders = await db
 		.select({ name: vaultFolders.name })
 		.from(vaultFolders)
@@ -31,7 +37,7 @@ export async function seedVault(
 		(name) => !existingNames.has(name.toLowerCase()),
 	);
 
-	if (foldersToInsert.length === 0) {
+	if (foldersToInsert.length === 0 && !options.force) {
 		return {
 			inserted: 0,
 			skipped: ROOT_FOLDER_NAMES.length,

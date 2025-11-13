@@ -25,10 +25,12 @@ const channelMessagesRoutes: FastifyPluginAsync = async (fastify) => {
 		}
 
 		try {
+			const cache = (fastify as any).cache;
 			const messages = await getChannelMessages(
 				channelId,
 				request.user.userId,
 				limit,
+				cache,
 			);
 
 			return reply.send({ messages });
@@ -62,11 +64,13 @@ const channelMessagesRoutes: FastifyPluginAsync = async (fastify) => {
 		}
 
 		try {
+			const cache = (fastify as any).cache;
 			const message = await createTeamChatMessage(
 				body.channelId,
 				request.user.userId,
 				body.content || null,
 				body.fileUrl || null,
+				cache,
 			);
 
 			// Emit socket event

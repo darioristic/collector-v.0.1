@@ -26,12 +26,14 @@ const notificationsRoutes: FastifyPluginAsync = async (fastify) => {
     const unreadOnly = request.query.unreadOnly === "true";
 
     try {
+      const cache = (fastify as any).cache;
       const result = await listNotifications(
         request.user.userId,
         request.user.companyId,
         limit,
         offset,
         unreadOnly,
+        cache,
       );
 
       return reply.send(result);
@@ -47,9 +49,11 @@ const notificationsRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     try {
+      const cache = (fastify as any).cache;
       const count = await getUnreadCount(
         request.user.userId,
         request.user.companyId,
+        cache,
       );
 
       return reply.send({ count });
@@ -73,20 +77,24 @@ const notificationsRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     try {
+      const cache = (fastify as any).cache;
       const result = await markAsRead(
         request.user.userId,
         request.user.companyId,
         ids,
+        cache,
       );
 
       // Emit socket event
       const io = (fastify as any).io;
       if (io) {
+        const cache = (fastify as any).cache;
         io.to(`user:${request.user.userId}`).emit("notification:read", {
           updatedIds: result.updatedIds,
           unreadCount: await getUnreadCount(
             request.user.userId,
             request.user.companyId,
+            cache,
           ),
         });
       }
@@ -98,6 +106,7 @@ const notificationsRoutes: FastifyPluginAsync = async (fastify) => {
         unreadCount: await getUnreadCount(
           request.user.userId,
           request.user.companyId,
+          cache,
         ),
       });
     } catch (error) {
@@ -122,6 +131,7 @@ const notificationsRoutes: FastifyPluginAsync = async (fastify) => {
     const { title, message, type = "info", link, recipientId } = request.body;
 
     try {
+      const cache = (fastify as any).cache;
       const notification = await createNotification(
         request.user.companyId,
         recipientId,
@@ -129,6 +139,7 @@ const notificationsRoutes: FastifyPluginAsync = async (fastify) => {
         message,
         type,
         link,
+        cache,
       );
 
       // Emit socket event

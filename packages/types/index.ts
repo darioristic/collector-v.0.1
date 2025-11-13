@@ -73,6 +73,23 @@ export type LeadUpdateInput = Partial<Omit<LeadCreateInput, "createdAt">> & {
   updatedAt?: string | null;
 };
 
+export type LeadListFilters = {
+  status?: LeadStatus;
+  source?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+};
+
+export type LeadListResult = {
+  data: Lead[];
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+  };
+};
+
 export const OPPORTUNITY_STAGES = [
   "prospecting",
   "qualification",

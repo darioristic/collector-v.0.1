@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 
 import { db } from "../../db";
 import {
@@ -21,6 +21,8 @@ import type {
   ActivityUpdateInput,
   Lead,
   LeadCreateInput,
+  LeadListFilters,
+  LeadListResult,
   LeadUpdateInput,
   Opportunity,
   OpportunityCreateInput,
@@ -37,11 +39,12 @@ import type {
  */
 export interface CRMService {
   /**
-   * Vraća listu svih leadova sortiranih po datumu kreiranja (najnoviji prvi).
+   * Vraća listu leadova sa filtriranjem i paginacijom na DB nivou.
    * 
-   * @returns Promise koji se razrešava u niz leadova
+   * @param filters - Filteri za filtriranje i paginaciju
+   * @returns Promise koji se razrešava u LeadListResult sa paginacijom
    */
-  listLeads(): Promise<Lead[]>;
+  listLeads(filters?: LeadListFilters): Promise<LeadListResult>;
   
   /**
    * Vraća lead po ID-u.
@@ -227,12 +230,72 @@ class DrizzleCRMService implements CRMService {
    * Kreira novu instancu DrizzleCRMService-a.
    * 
    * @param database - Drizzle database instanca (podrazumevano: globalna db)
+   * @param cache - Cache service instance (opcionalno)
    */
-  constructor(private readonly database: CRMDatabase = db) {}
+  constructor(
+    private readonly database: CRMDatabase = db,
+    private readonly cache?: import("../../lib/cache.service").CacheService
+  ) {}
 
-  async listLeads(): Promise<Lead[]> {
-    const rows = await this.database.select().from(leads).orderBy(desc(leads.createdAt));
-    return rows.map(mapLeadRow);
+  async listLeads(filters?: LeadListFilters): Promise<LeadListResult> {
+    const limit = filters?.limit ?? 50;
+    const offset = filters?.offset ?? 0;
+
+    // Build WHERE conditions
+    const whereConditions = [];
+
+    if (filters?.status) {
+      whereConditions.push(eq(leads.status, filters.status));
+    }
+
+    if (filters?.source) {
+      whereConditions.push(ilike(leads.source, `%${filters.source}%`));
+    }
+
+    if (filters?.search) {
+      whereConditions.push(
+        or(
+          ilike(leads.name, `%${filters.search}%`),
+          ilike(leads.email, `%${filters.search}%`)
+        )
+      );
+    }
+
+    // Build query with join for assignee (owner) and count(*) over() for total count
+    let query = this.database
+      .select({
+        lead: leads,
+        assignee: users,
+        totalCount: sql<number>`count(*) over()`.as('totalCount')
+      })
+      .from(leads)
+      .leftJoin(users, eq(leads.ownerId, users.id));
+
+    // Apply WHERE clause if we have conditions
+    if (whereConditions.length > 0) {
+      query = query.where(and(...whereConditions));
+    }
+
+    // Apply ORDER BY, LIMIT, and OFFSET
+    const results = await query
+      .orderBy(desc(leads.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    // Extract total count from first row (all rows have same totalCount)
+    const totalCount = results[0]?.totalCount ?? 0;
+
+    // Map results to Lead objects
+    const data = results.map((r) => mapLeadRow(r.lead));
+
+    return {
+      data,
+      pagination: {
+        total: totalCount,
+        limit,
+        offset
+      }
+    };
   }
 
   async getLead(id: string): Promise<Lead | undefined> {
@@ -297,8 +360,23 @@ class DrizzleCRMService implements CRMService {
   }
 
   async listOpportunities(): Promise<Opportunity[]> {
+    const cacheKey = "crm:opportunities:list";
+    
+    if (this.cache) {
+      const cached = await this.cache.get<Opportunity[]>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
     const rows = await this.database.select().from(opportunities).orderBy(desc(opportunities.createdAt));
-    return rows.map(mapOpportunityRow);
+    const result = rows.map(mapOpportunityRow);
+
+    if (this.cache) {
+      await this.cache.set(cacheKey, result, { ttl: 300 }); // 5 minutes
+    }
+
+    return result;
   }
 
   async getOpportunity(id: string): Promise<Opportunity | undefined> {
@@ -330,13 +408,24 @@ class DrizzleCRMService implements CRMService {
       })
       .returning();
 
-    return mapOpportunityRow(created);
+    const result = mapOpportunityRow(created);
+
+    // Invalidate cache
+    if (this.cache) {
+      await this.cache.delete("crm:opportunities:list");
+    }
+
+    return result;
   }
 
   async updateOpportunity(
     id: string,
     input: OpportunityUpdateInput
   ): Promise<Opportunity | undefined> {
+    // Invalidate cache before update
+    if (this.cache) {
+      await this.cache.delete("crm:opportunities:list");
+    }
     const payload: Partial<typeof opportunities.$inferInsert> = {
       updatedAt: input.updatedAt ? new Date(input.updatedAt) : new Date()
     };
@@ -381,6 +470,15 @@ class DrizzleCRMService implements CRMService {
   }
 
   async listActivities(): Promise<Activity[]> {
+    const cacheKey = "crm:activities:list";
+    
+    if (this.cache) {
+      const cached = await this.cache.get<Activity[]>(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
     const rows = await this.database
       .select({
         activity: clientActivities,
@@ -392,7 +490,13 @@ class DrizzleCRMService implements CRMService {
       .leftJoin(users, eq(clientActivities.assignedTo, users.id))
       .orderBy(desc(clientActivities.dueDate), desc(clientActivities.createdAt));
 
-    return rows.map(mapClientActivityRow);
+    const result = rows.map(mapClientActivityRow);
+
+    if (this.cache) {
+      await this.cache.set(cacheKey, result, { ttl: 300 }); // 5 minutes
+    }
+
+    return result;
   }
 
   async getActivity(id: string): Promise<Activity | undefined> {
@@ -412,6 +516,11 @@ class DrizzleCRMService implements CRMService {
   }
 
   async createActivity(input: ActivityCreateInput): Promise<Activity> {
+    // Invalidate cache before create
+    if (this.cache) {
+      await this.cache.delete("crm:activities:list");
+    }
+
     const now = new Date();
     const dueDate = new Date(input.dueDate);
 
@@ -443,6 +552,10 @@ class DrizzleCRMService implements CRMService {
   }
 
   async updateActivity(id: string, input: ActivityUpdateInput): Promise<Activity | undefined> {
+    // Invalidate cache before update
+    if (this.cache) {
+      await this.cache.delete("crm:activities:list");
+    }
     const payload: Partial<typeof clientActivities.$inferInsert> = {
       updatedAt: new Date()
     };
@@ -505,8 +618,11 @@ class DrizzleCRMService implements CRMService {
  * @param database - Opciona database instanca (podrazumevano: globalna db)
  * @returns Nova CRMService instanca
  */
-export const createCRMService = (database: CRMDatabase = db): CRMService => {
-  return new DrizzleCRMService(database);
+export const createCRMService = (
+  database: CRMDatabase = db,
+  cache?: import("../../lib/cache.service").CacheService
+): CRMService => {
+  return new DrizzleCRMService(database, cache);
 };
 
 declare module "fastify" {

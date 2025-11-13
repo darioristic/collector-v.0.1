@@ -1,6 +1,6 @@
-import { and, ilike, or, sql } from "drizzle-orm";
+import { ilike, or } from "drizzle-orm";
 import type { AppDatabase } from "../../db";
-import { companies, contacts } from "../../db/schema/accounts.schema";
+import { accounts as companies, accountContacts as contacts } from "../../db/schema/accounts.schema";
 import { orders } from "../../db/schema/sales.schema";
 import { quotes } from "../../db/schema/sales.schema";
 import { invoices } from "../../db/schema/sales.schema";
@@ -75,7 +75,7 @@ export class SearchService {
 					firstName: contacts.firstName,
 					lastName: contacts.lastName,
 					email: contacts.email,
-					companyId: contacts.companyId
+					accountId: contacts.accountId
 				})
 				.from(contacts)
 				.where(
@@ -95,7 +95,7 @@ export class SearchService {
 					title: `${contact.firstName} ${contact.lastName}`,
 					description: contact.email ?? undefined,
 					metadata: {
-						companyId: contact.companyId
+						accountId: contact.accountId
 					}
 				});
 			}
@@ -238,8 +238,7 @@ export class SearchService {
 				.where(
 					or(
 						ilike(leads.name, searchTerm),
-						ilike(leads.email, searchTerm),
-						ilike(leads.company, searchTerm)
+						ilike(leads.email, searchTerm)
 					)
 				)
 				.limit(limit);

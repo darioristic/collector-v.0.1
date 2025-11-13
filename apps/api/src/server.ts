@@ -7,11 +7,13 @@ import Fastify, {
 } from "fastify";
 
 import { type AppDatabase, db } from "./db/index.js";
+import "./lib/env"; // Validate environment variables FIRST (will exit if invalid)
 import { cachePlugin } from "./lib/cache.service";
 import metricsPlugin from "./plugins/metrics.plugin";
 import corsPlugin from "./plugins/cors";
 import errorHandlerPlugin from "./plugins/error-handler";
 import openApiPlugin from "./plugins/openapi";
+import rateLimitPlugin from "./plugins/rate-limit";
 import healthRoutes from "./routes/health";
 import metricsRoutes from "./routes/metrics";
 
@@ -153,6 +155,7 @@ export const buildServer = async () => {
 	await app.register(corsPlugin);
 	await app.register(metricsPlugin);
 	await app.register(cachePlugin);
+	await app.register(rateLimitPlugin); // Rate limiting - MUST be after cache (for Redis)
 	await app.register(errorHandlerPlugin);
 	await app.register(openApiPlugin);
 	await registerHealthcheck(app);

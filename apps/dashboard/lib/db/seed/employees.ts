@@ -354,7 +354,13 @@ type EmployeesSeedResult = {
 
 export async function seedEmployees(
 	db: DashboardDatabase,
+	options: { force?: boolean } = {},
 ): Promise<EmployeesSeedResult> {
+	if (options.force) {
+		// Delete all existing employees
+		await db.delete(employees);
+	}
+
 	let existingEmployees: Array<{ email: string }>;
 	try {
 		existingEmployees = await db
@@ -393,7 +399,7 @@ export async function seedEmployees(
 		(emp) => !existingEmails.has(emp.email.toLowerCase()),
 	);
 
-	if (employeesToInsert.length === 0) {
+	if (employeesToInsert.length === 0 && !options.force) {
 		return {
 			inserted: 0,
 			skipped: EMPLOYEES_DATA.length,

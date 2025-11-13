@@ -14,9 +14,11 @@ const conversationsRoutes: FastifyPluginAsync = async (fastify) => {
 		}
 
 		try {
+			const cache = (fastify as any).cache;
 			const conversations = await getConversations({
 				companyId: request.user.companyId,
 				userId: request.user.userId,
+				cache,
 			});
 
 			return reply.send({ conversations });
@@ -44,10 +46,12 @@ const conversationsRoutes: FastifyPluginAsync = async (fastify) => {
 		}
 
 		try {
+			const cache = (fastify as any).cache;
 			const conversation = await findOrCreateConversation({
 				companyId: request.user.companyId,
 				currentUserId: request.user.userId,
 				targetUserId: body.targetUserId,
+				cache,
 			});
 
 			return reply.send({ conversation });

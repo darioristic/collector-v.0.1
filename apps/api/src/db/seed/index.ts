@@ -3,6 +3,8 @@ import { logger } from "../../lib/logger";
 import { seedAuth } from "./auth";
 import { seedAccounts } from "./accounts";
 import { seedCrm } from "./crm";
+import { seedHr } from "./hr";
+import { seedNotifications } from "./notifications";
 import { seedProducts } from "./products";
 import { seedSales } from "./sales";
 import { seedProjects } from "./projects";
@@ -54,6 +56,18 @@ const seedModules: SeedModule[] = [
     description: "Settings: team members (8 members)",
     dependencies: ["auth"],
     seedFn: seedSettings
+  },
+  {
+    name: "hr",
+    description: "HR: employees, role assignments, attendance, time off, payroll",
+    dependencies: ["auth"],
+    seedFn: seedHr
+  },
+  {
+    name: "notifications",
+    description: "Notifications: various notification types for users",
+    dependencies: ["auth"],
+    seedFn: seedNotifications
   }
 ];
 

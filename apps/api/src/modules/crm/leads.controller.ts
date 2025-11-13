@@ -2,7 +2,7 @@ import type { RouteHandler } from "fastify";
 
 import { createHttpError, type ApiDataReply } from "../../lib/errors";
 
-import type { Lead, LeadCreateInput, LeadStatus, LeadUpdateInput } from "@crm/types";
+import type { Lead, LeadCreateInput, LeadListFilters, LeadStatus, LeadUpdateInput } from "@crm/types";
 
 export type ListLeadsQuery = {
   status?: LeadStatus;
@@ -13,7 +13,13 @@ export type ListLeadsQuery = {
 };
 type SqliteErrorLike = { code?: string };
 
-export type ListLeadsReply = ApiDataReply<Lead[]>;
+export type ListLeadsReply = ApiDataReply<Lead[]> & {
+  pagination?: {
+    total: number;
+    limit: number;
+    offset: number;
+  };
+};
 export type GetLeadParams = { id: string };
 export type GetLeadReply = ApiDataReply<Lead>;
 export type CreateLeadBody = LeadCreateInput;
@@ -39,39 +45,22 @@ const isUniqueConstraintError = (error: unknown) =>
 export const listLeads: RouteHandler<{ Querystring: ListLeadsQuery; Reply: ListLeadsReply }> = async (
   request
 ) => {
-  const leads = await request.crmService.listLeads();
+  // Build filters from query parameters
+  const filters: LeadListFilters = {
+    status: request.query.status,
+    source: request.query.source,
+    search: request.query.q,
+    limit: request.query.limit,
+    offset: request.query.offset
+  };
 
-  const filtered = leads.filter((lead) => {
-    if (request.query.status && lead.status !== request.query.status) {
-      return false;
-    }
+  // Call service with filters - filtering and pagination now happen at DB level
+  const result = await request.crmService.listLeads(filters);
 
-    if (request.query.source) {
-      const sourceMatch = lead.source.toLowerCase().includes(request.query.source.toLowerCase());
-
-      if (!sourceMatch) {
-        return false;
-      }
-    }
-
-    if (request.query.q) {
-      const query = request.query.q.toLowerCase();
-      const matchesSearch =
-        lead.name.toLowerCase().includes(query) || lead.email.toLowerCase().includes(query);
-
-      if (!matchesSearch) {
-        return false;
-      }
-    }
-
-    return true;
-  });
-
-  const offset = request.query.offset ?? 0;
-  const limit = request.query.limit ?? filtered.length;
-  const sliced = filtered.slice(offset, offset + limit);
-
-  return { data: sliced };
+  return {
+    data: result.data,
+    pagination: result.pagination
+  };
 };
 
 /**

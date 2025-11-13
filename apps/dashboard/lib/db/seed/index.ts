@@ -6,6 +6,15 @@ import postgres from "postgres";
 import { runSeeds, type SeedModule } from "./seed-runner";
 import { seedEmployees } from "./employees";
 import { seedVault } from "./vault";
+import { seedDeals } from "./deals";
+import { seedTeamMembers } from "./team-members";
+import { seedNotifications } from "./notifications";
+import { seedTeamchat } from "./teamchat";
+import { seedChat } from "./chat";
+import { seedUsersCompanies } from "./users-companies";
+import { seedCompanies } from "./companies";
+import { seedUsers } from "./users";
+import { seedCompany } from "./company";
 
 const DEFAULT_LOCAL_CONNECTION =
 	"postgres://postgres:postgres@localhost:5432/collector_dashboard";
@@ -42,11 +51,119 @@ const db = drizzlePostgresJs(client);
 
 const seedModules: SeedModule[] = [
 	{
+		name: "companies",
+		description: "Kreira osnovne kompanije (Collector Labs, TechFirm, Digital Solutions).",
+		dependencies: [],
+		seedFn: async (database, opts) => {
+			const result = await seedCompanies(database, opts);
+			return {
+				recordsCreated: result.inserted,
+				summary: `Preskočeno: ${result.skipped}`,
+			};
+		},
+	},
+	{
+		name: "users",
+		description: "Kreira korisnike na osnovu employees podataka.",
+		dependencies: ["employees", "companies"],
+		seedFn: async (database, opts) => {
+			const result = await seedUsers(database, opts);
+			return {
+				recordsCreated: result.inserted,
+				summary: `Preskočeno: ${result.skipped}`,
+			};
+		},
+	},
+	{
+		name: "company",
+		description: "Kreira detaljne informacije o kompaniji.",
+		dependencies: ["users", "companies"],
+		seedFn: async (database, opts) => {
+			const result = await seedCompany(database, opts);
+			return {
+				recordsCreated: result.inserted,
+				summary: `Preskočeno: ${result.skipped}`,
+			};
+		},
+	},
+	{
+		name: "users-companies",
+		description: "Kreira osnovne korisnike i kompanije.",
+		dependencies: [],
+		seedFn: async (database, opts) => {
+			const result = await seedUsersCompanies(database, opts);
+			return {
+				recordsCreated: result.usersInserted + result.companiesInserted,
+				summary: `Korisnici: ${result.usersInserted}, Kompanije: ${result.companiesInserted}, Preskočeno: ${result.skipped}`,
+			};
+		},
+	},
+	{
 		name: "employees",
 		description: "Kreira 24 zaposlena u različitim departmanima IT firme.",
 		dependencies: [],
-		seedFn: async (database) => {
-			const result = await seedEmployees(database);
+		seedFn: async (database, opts) => {
+			const result = await seedEmployees(database, opts);
+			return {
+				recordsCreated: result.inserted,
+				summary: `Preskočeno: ${result.skipped}`,
+			};
+		},
+	},
+	{
+		name: "team-members",
+		description: "Kreira članove tima sa različitim statusima i ulogama.",
+		dependencies: ["companies"],
+		seedFn: async (database, opts) => {
+			const result = await seedTeamMembers(database, opts);
+			return {
+				recordsCreated: result.inserted,
+				summary: `Preskočeno: ${result.skipped}`,
+			};
+		},
+	},
+	{
+		name: "teamchat",
+		description: "Kreira teamchat korisnike, kanale, članove i poruke.",
+		dependencies: ["companies", "users"],
+		seedFn: async (database, opts) => {
+			const result = await seedTeamchat(database, opts);
+			return {
+				recordsCreated: result.usersCreated + result.channelsCreated + result.messagesCreated,
+				summary: `Korisnici: ${result.usersCreated}, Kanali: ${result.channelsCreated}, Poruke: ${result.messagesCreated}`,
+			};
+		},
+	},
+	{
+		name: "chat",
+		description: "Kreira chat konverzacije i poruke između korisnika.",
+		dependencies: ["teamchat"],
+		seedFn: async (database, opts) => {
+			const result = await seedChat(database, opts);
+			return {
+				recordsCreated: result.conversationsCreated + result.messagesCreated,
+				summary: `Konverzacije: ${result.conversationsCreated}, Poruke: ${result.messagesCreated}`,
+			};
+		},
+	},
+	{
+		name: "notifications",
+		description: "Kreira različite tipove notifikacija za korisnike.",
+		dependencies: ["users", "companies"],
+		seedFn: async (database, opts) => {
+			const result = await seedNotifications(database, opts);
+			return {
+				recordsCreated: result.inserted,
+				summary: `Preskočeno: ${result.skipped}`,
+			};
+		},
+	},
+	{
+		name: "deals",
+		description: "Kreira 20 dealova sa različitim fazama i vrednostima.",
+		dependencies: [],
+		seedFn: async (database, opts) => {
+			const result = await seedDeals(database, opts);
 			return {
 				recordsCreated: result.inserted,
 				summary: `Preskočeno: ${result.skipped}`,
@@ -57,8 +174,8 @@ const seedModules: SeedModule[] = [
 		name: "vault",
 		description: "Kreira osnovne root foldere u digitalnom sefu.",
 		dependencies: [],
-		seedFn: async (database) => {
-			const result = await seedVault(database);
+		seedFn: async (database, opts) => {
+			const result = await seedVault(database, opts);
 			return {
 				recordsCreated: result.inserted,
 				summary: `Preskočeno: ${result.skipped}`,
@@ -72,6 +189,7 @@ type ParsedArgs = {
 	skip?: string[];
 	continueOnError: boolean;
 	verbose: boolean;
+	force: boolean;
 };
 
 function parseArgs(): ParsedArgs {
@@ -81,6 +199,7 @@ function parseArgs(): ParsedArgs {
 		skip: undefined,
 		continueOnError: false,
 		verbose: false,
+		force: false,
 	};
 
 	for (let index = 0; index < args.length; index++) {
@@ -96,6 +215,8 @@ function parseArgs(): ParsedArgs {
 			options.continueOnError = true;
 		} else if (arg === "--verbose" || arg === "-v") {
 			options.verbose = true;
+		} else if (arg === "--force" || arg === "-f") {
+			options.force = true;
 		} else if (arg === "--help" || arg === "-h") {
 			printHelp();
 			process.exit(0);
@@ -116,6 +237,7 @@ Options:
   --skip <modules>         Preskoči određene module
   --continue-on-error      Nastavi čak i ako modul padne
   --verbose, -v            Prikaži dodatne logove
+  --force, -f              Pregazi postojeće podatke
   --help, -h               Prikaži ovu poruku
 
 Dostupni moduli:

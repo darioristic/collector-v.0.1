@@ -11,10 +11,14 @@ import conversationsRoutes from "./routes/conversations.js";
 import messagesRoutes from "./routes/messages.js";
 import usersRoutes from "./routes/users.js";
 import { setupSocketHandlers } from "./socket/handler.js";
+import { getCacheService, setCacheService } from "./lib/cache.service.js";
+import { setCacheService as setRepositoryCache } from "./lib/repository.js";
+import { setCacheService as setTeamchatRepositoryCache } from "./lib/teamchat-repository.js";
 
 interface FastifyWithSocket extends FastifyInstance {
 	io?: SocketIOServer;
 	redis?: RedisClientType;
+	cache?: ReturnType<typeof getCacheService>;
 }
 
 dotenv.config();
@@ -87,6 +91,13 @@ async function buildServer() {
 	// Attach Socket.IO to Fastify instance
 	(fastify as FastifyWithSocket).io = io;
 	(fastify as FastifyWithSocket).redis = pubClient;
+
+	// Setup cache service
+	const cacheService = getCacheService(fastify.log);
+	setCacheService(cacheService);
+	setRepositoryCache(cacheService);
+	setTeamchatRepositoryCache(cacheService);
+	(fastify as FastifyWithSocket).cache = cacheService;
 
 	// Setup socket handlers
 	setupSocketHandlers(io, pubClient);

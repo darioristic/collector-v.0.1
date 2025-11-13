@@ -19,6 +19,7 @@ export type SeedOptions = {
 	skip?: string[];
 	continueOnError?: boolean;
 	verbose?: boolean;
+	force?: boolean;
 	database: DashboardDatabase;
 };
 
@@ -179,6 +180,7 @@ async function runModule(
 	module: SeedModule,
 	database: DashboardDatabase,
 	logger: SeedLogger,
+	options: SeedOptions,
 ): Promise<SeedResult> {
 	const start = Date.now();
 
@@ -186,7 +188,12 @@ async function runModule(
 	logger.info(`Pokrećem modul ${module.name}: ${module.description}`);
 
 	try {
-		const outcome = await module.seedFn(database);
+		// Pass force option to seed function if it accepts it
+		const seedFn = module.seedFn as (
+			db: DashboardDatabase,
+			opts?: { force?: boolean },
+		) => Promise<void | SeedModuleResult>;
+		const outcome = await seedFn(database, { force: options.force });
 		const duration = Date.now() - start;
 
 		logger.module(module.name, "end");
@@ -321,7 +328,7 @@ export async function runSeeds(
 	const results: SeedResult[] = [];
 
 	for (const module of activeModules) {
-		const result = await runModule(module, database, logger);
+		const result = await runModule(module, database, logger, options);
 		results.push(result);
 
 		if (result.status === "failed" && !options.continueOnError) {

@@ -15,6 +15,8 @@ export default defineConfig({
 	casing: "snake_case",
 	breakpoints: false,
 	strict: true,
+	// Disable interactive prompts
+	verbose: false,
 	dbCredentials: {
 		url: process.env.DATABASE_URL,
 	},

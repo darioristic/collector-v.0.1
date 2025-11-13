@@ -11,9 +11,11 @@ const directMessagesRoutes: FastifyPluginAsync = async (fastify) => {
 		}
 
 		try {
+			const cache = (fastify as any).cache;
 			const members = await listDirectMessageTargets(
 				request.user.companyId,
 				request.user.userId,
+				cache,
 			);
 
 			return reply.send({ members });
