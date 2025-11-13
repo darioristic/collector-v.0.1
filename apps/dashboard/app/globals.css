@@ -1,10 +1,9 @@
 @import "tailwindcss";
+@import "./themes.css";
 
 @plugin "tailwindcss-animate";
 
 @custom-variant dark (&:is(.dark *));
-
-@import "./themes.css";
 
 :root {
   --base-50: oklch(0.985 0.0013 286.84);
@@ -384,8 +383,8 @@
   [data-slot="dropdown-menu-trigger"],
   [data-slot="popover-trigger"],
   [data-slot="tooltip-trigger"],
-  [data-slot="collapsible-trigger"]{
-    @apply cursor-pointer!
+  [data-slot="collapsible-trigger"] {
+    @apply cursor-pointer!;
   }
 }
 

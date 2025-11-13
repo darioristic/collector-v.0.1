@@ -29,6 +29,13 @@ const isUniqueConstraintError = (error: unknown) =>
   "code" in error &&
   (error as SqliteErrorLike).code === "SQLITE_CONSTRAINT_UNIQUE";
 
+/**
+ * Handler za listanje leadova sa filtriranjem i paginacijom.
+ * 
+ * @route GET /api/crm/leads
+ * @param request.query - Query parametri za filtriranje (status, source, q, limit, offset)
+ * @returns Lista leadova sa filtriranjem i paginacijom
+ */
 export const listLeads: RouteHandler<{ Querystring: ListLeadsQuery; Reply: ListLeadsReply }> = async (
   request
 ) => {
@@ -67,6 +74,13 @@ export const listLeads: RouteHandler<{ Querystring: ListLeadsQuery; Reply: ListL
   return { data: sliced };
 };
 
+/**
+ * Handler za dobijanje leada po ID-u.
+ * 
+ * @route GET /api/crm/leads/:id
+ * @param request.params.id - UUID leada
+ * @returns Detalji leada ili 404 ako nije pronađen
+ */
 export const getLead: RouteHandler<{ Params: GetLeadParams; Reply: GetLeadReply }> = async (
   request,
   reply
@@ -82,6 +96,13 @@ export const getLead: RouteHandler<{ Params: GetLeadParams; Reply: GetLeadReply 
   return { data: lead };
 };
 
+/**
+ * Handler za kreiranje novog leada.
+ * 
+ * @route POST /api/crm/leads
+ * @param request.body - Podaci za kreiranje leada
+ * @returns Kreirani lead ili 409 ako lead sa istim email-om već postoji
+ */
 export const createLead: RouteHandler<{ Body: CreateLeadBody; Reply: CreateLeadReply }> = async (
   request,
   reply
@@ -104,6 +125,14 @@ export const createLead: RouteHandler<{ Body: CreateLeadBody; Reply: CreateLeadR
   }
 };
 
+/**
+ * Handler za ažuriranje postojećeg leada.
+ * 
+ * @route PUT /api/crm/leads/:id
+ * @param request.params.id - UUID leada
+ * @param request.body - Podaci za ažuriranje (parcijalni)
+ * @returns Ažurirani lead ili 404 ako nije pronađen
+ */
 export const updateLead: RouteHandler<{
   Params: UpdateLeadParams;
   Body: UpdateLeadBody;
@@ -134,6 +163,13 @@ export const updateLead: RouteHandler<{
   }
 };
 
+/**
+ * Handler za brisanje leada.
+ * 
+ * @route DELETE /api/crm/leads/:id
+ * @param request.params.id - UUID leada
+ * @returns 204 No Content ako je uspešno obrisan ili 404 ako nije pronađen
+ */
 export const deleteLead: RouteHandler<{ Params: DeleteLeadParams }> = async (request, reply) => {
   const deleted = await request.crmService.deleteLead(request.params.id);
 

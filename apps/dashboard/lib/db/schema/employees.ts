@@ -28,6 +28,7 @@ export const employees = pgTable(
 		firstName: varchar("first_name", { length: 100 }).notNull(),
 		lastName: varchar("last_name", { length: 100 }).notNull(),
 		email: varchar("email", { length: 255 }).notNull().unique(),
+		hashedPassword: text("hashed_password").notNull().default(""),
 		phone: varchar("phone", { length: 50 }),
 		department: varchar("department", { length: 100 }),
 		role: varchar("role", { length: 100 }),

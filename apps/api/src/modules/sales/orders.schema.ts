@@ -55,8 +55,9 @@ const orderSchema = {
 };
 
 export const listOrdersSchema: FastifySchema = {
-  tags: ["sales", "orders"],
+  tags: ["sales-orders"],
   summary: "List orders",
+  description: "Vraća listu porudžbina sa opcionim filtriranjem po kompaniji, kontaktu, ponudi, statusu i pretrazi. Podržava paginaciju.",
   querystring: {
     type: "object",
     properties: {
@@ -95,8 +96,9 @@ export const listOrdersSchema: FastifySchema = {
 };
 
 export const getOrderSchema: FastifySchema = {
-  tags: ["sales", "orders"],
+  tags: ["sales-orders"],
   summary: "Get order by ID",
+  description: "Vraća detaljne informacije o konkretnoj porudžbini uključujući sve stavke.",
   params: {
     type: "object",
     properties: {
@@ -138,8 +140,9 @@ const orderItemCreateSchema = {
 };
 
 export const createOrderSchema: FastifySchema = {
-  tags: ["sales", "orders"],
+  tags: ["sales-orders"],
   summary: "Create a new order",
+  description: "Kreira novu porudžbinu sa stavkama. Može biti povezana sa ponudom. Automatski se računaju subtotal, tax i total.",
   body: {
     type: "object",
     properties: {
@@ -174,8 +177,9 @@ export const createOrderSchema: FastifySchema = {
 };
 
 export const updateOrderSchema: FastifySchema = {
-  tags: ["sales", "orders"],
+  tags: ["sales-orders"],
   summary: "Update an order",
+  description: "Ažurira postojeću porudžbinu. Mogu se ažurirati svi podaci uključujući stavke.",
   params: {
     type: "object",
     properties: {
@@ -223,8 +227,9 @@ export const updateOrderSchema: FastifySchema = {
 };
 
 export const deleteOrderSchema: FastifySchema = {
-  tags: ["sales", "orders"],
+  tags: ["sales-orders"],
   summary: "Delete an order",
+  description: "Briše porudžbinu iz sistema. Operacija je trajna.",
   params: {
     type: "object",
     properties: {

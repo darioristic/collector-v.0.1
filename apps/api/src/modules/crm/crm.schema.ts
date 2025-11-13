@@ -236,70 +236,160 @@ const activityUpdateBody = {
 } as const;
 
 export const leadListSchema: FastifySchema = {
+  tags: ["crm"],
+  summary: "List leads",
+  description: "Vraća listu leadova sa opcionim filtriranjem po statusu, izvoru i pretrazi. Podržava paginaciju.",
   querystring: leadListQuery,
   response: {
-    200: dataEnvelope({
-      type: "array",
-      items: {
-        type: "object",
-        properties: leadProperties,
-        required: ["id", "name", "email", "status", "source", "createdAt"],
-        additionalProperties: false
-      }
-    })
+    200: {
+      ...dataEnvelope({
+        type: "array",
+        items: {
+          type: "object",
+          properties: leadProperties,
+          required: ["id", "name", "email", "status", "source", "createdAt"],
+          additionalProperties: false
+        }
+      }),
+      description: "Lista leadova"
+    }
   }
 };
 
 export const leadDetailSchema: FastifySchema = {
+  tags: ["crm"],
+  summary: "Get lead by ID",
+  description: "Vraća detaljne informacije o konkretnom leadu.",
   params: idParams,
   response: {
-    200: dataEnvelope({
+    200: {
+      ...dataEnvelope({
+        type: "object",
+        properties: leadProperties,
+        required: ["id", "name", "email", "status", "source", "createdAt"],
+        additionalProperties: false
+      }),
+      description: "Detalji leada"
+    },
+    404: {
       type: "object",
-      properties: leadProperties,
-      required: ["id", "name", "email", "status", "source", "createdAt"],
-      additionalProperties: false
-    })
+      properties: {
+        error: { type: "string" }
+      },
+      description: "Lead nije pronađen"
+    }
   }
 };
 
 export const leadCreateSchema: FastifySchema = {
+  tags: ["crm"],
+  summary: "Create a new lead",
+  description: "Kreira novi lead u CRM sistemu. Email mora biti validan i jedinstven.",
   body: leadCreateBody,
   response: {
-    201: dataEnvelope({
+    201: {
+      ...dataEnvelope({
+        type: "object",
+        properties: leadProperties,
+        required: ["id", "name", "email", "status", "source", "createdAt"],
+        additionalProperties: false
+      }),
+      description: "Kreiran lead"
+    },
+    400: {
       type: "object",
-      properties: leadProperties,
-      required: ["id", "name", "email", "status", "source", "createdAt"],
-      additionalProperties: false
-    })
+      properties: {
+        error: { type: "string" }
+      },
+      description: "Nevalidni podaci"
+    }
   }
 };
 
 export const leadUpdateSchema: FastifySchema = {
+  tags: ["crm"],
+  summary: "Update a lead",
+  description: "Ažurira postojeći lead. Mogu se ažurirati svi podaci osim ID-a.",
   params: idParams,
   body: leadUpdateBody,
   response: {
-    200: dataEnvelope({
+    200: {
+      ...dataEnvelope({
+        type: "object",
+        properties: leadProperties,
+        required: ["id", "name", "email", "status", "source", "createdAt"],
+        additionalProperties: false
+      }),
+      description: "Ažuriran lead"
+    },
+    404: {
       type: "object",
-      properties: leadProperties,
-      required: ["id", "name", "email", "status", "source", "createdAt"],
-      additionalProperties: false
-    })
+      properties: {
+        error: { type: "string" }
+      },
+      description: "Lead nije pronađen"
+    }
   }
 };
 
 export const leadDeleteSchema: FastifySchema = {
+  tags: ["crm"],
+  summary: "Delete a lead",
+  description: "Briše lead iz sistema. Operacija je trajna.",
   params: idParams,
   response: {
-    204: { type: "null" }
+    204: {
+      type: "null",
+      description: "Lead je uspešno obrisan"
+    },
+    404: {
+      type: "object",
+      properties: {
+        error: { type: "string" }
+      },
+      description: "Lead nije pronađen"
+    }
   }
 };
 
 export const opportunityListSchema: FastifySchema = {
+  tags: ["crm"],
+  summary: "List opportunities",
+  description: "Vraća listu prodajnih prilika sa opcionim filtriranjem po fazi, nalogu i verovatnoći. Podržava paginaciju.",
   querystring: opportunityListQuery,
   response: {
-    200: dataEnvelope({
-      type: "array",
-      items: {
+    200: {
+      ...dataEnvelope({
+        type: "array",
+        items: {
+          type: "object",
+          properties: opportunityProperties,
+          required: [
+            "id",
+            "accountId",
+            "title",
+            "stage",
+            "value",
+            "probability",
+            "closeDate",
+            "createdAt"
+          ],
+          additionalProperties: false
+        }
+      }),
+      description: "Lista prodajnih prilika"
+    }
+  }
+};
+
+export const opportunityDetailSchema: FastifySchema = {
+  tags: ["crm"],
+  summary: "Get opportunity by ID",
+  description: "Vraća detaljne informacije o konkretnoj prodajnoj prilici.",
+  params: idParams,
+  response: {
+    200: {
+      ...dataEnvelope({
         type: "object",
         properties: opportunityProperties,
         required: [
@@ -313,88 +403,148 @@ export const opportunityListSchema: FastifySchema = {
           "createdAt"
         ],
         additionalProperties: false
-      }
-    })
-  }
-};
-
-export const opportunityDetailSchema: FastifySchema = {
-  params: idParams,
-  response: {
-    200: dataEnvelope({
+      }),
+      description: "Detalji prodajne prilike"
+    },
+    404: {
       type: "object",
-      properties: opportunityProperties,
-      required: [
-        "id",
-        "accountId",
-        "title",
-        "stage",
-        "value",
-        "probability",
-        "closeDate",
-        "createdAt"
-      ],
-      additionalProperties: false
-    })
+      properties: {
+        error: { type: "string" }
+      },
+      description: "Prodajna prilika nije pronađena"
+    }
   }
 };
 
 export const opportunityCreateSchema: FastifySchema = {
+  tags: ["crm"],
+  summary: "Create a new opportunity",
+  description: "Kreira novu prodajnu priliku povezanu sa nalogom. Vrednost i verovatnoća su obavezni.",
   body: opportunityCreateBody,
   response: {
-    201: dataEnvelope({
+    201: {
+      ...dataEnvelope({
+        type: "object",
+        properties: opportunityProperties,
+        required: [
+          "id",
+          "accountId",
+          "title",
+          "stage",
+          "value",
+          "probability",
+          "closeDate",
+          "createdAt"
+        ],
+        additionalProperties: false
+      }),
+      description: "Kreirana prodajna prilika"
+    },
+    400: {
       type: "object",
-      properties: opportunityProperties,
-      required: [
-        "id",
-        "accountId",
-        "title",
-        "stage",
-        "value",
-        "probability",
-        "closeDate",
-        "createdAt"
-      ],
-      additionalProperties: false
-    })
+      properties: {
+        error: { type: "string" }
+      },
+      description: "Nevalidni podaci"
+    }
   }
 };
 
 export const opportunityUpdateSchema: FastifySchema = {
+  tags: ["crm"],
+  summary: "Update an opportunity",
+  description: "Ažurira postojeću prodajnu priliku. Mogu se ažurirati svi podaci osim ID-a.",
   params: idParams,
   body: opportunityUpdateBody,
   response: {
-    200: dataEnvelope({
+    200: {
+      ...dataEnvelope({
+        type: "object",
+        properties: opportunityProperties,
+        required: [
+          "id",
+          "accountId",
+          "title",
+          "stage",
+          "value",
+          "probability",
+          "closeDate",
+          "createdAt"
+        ],
+        additionalProperties: false
+      }),
+      description: "Ažurirana prodajna prilika"
+    },
+    404: {
       type: "object",
-      properties: opportunityProperties,
-      required: [
-        "id",
-        "accountId",
-        "title",
-        "stage",
-        "value",
-        "probability",
-        "closeDate",
-        "createdAt"
-      ],
-      additionalProperties: false
-    })
+      properties: {
+        error: { type: "string" }
+      },
+      description: "Prodajna prilika nije pronađena"
+    }
   }
 };
 
 export const opportunityDeleteSchema: FastifySchema = {
+  tags: ["crm"],
+  summary: "Delete an opportunity",
+  description: "Briše prodajnu priliku iz sistema. Operacija je trajna.",
   params: idParams,
   response: {
-    204: { type: "null" }
+    204: {
+      type: "null",
+      description: "Prodajna prilika je uspešno obrisana"
+    },
+    404: {
+      type: "object",
+      properties: {
+        error: { type: "string" }
+      },
+      description: "Prodajna prilika nije pronađena"
+    }
   }
 };
 
 export const activityListSchema: FastifySchema = {
+  tags: ["crm"],
+  summary: "List activities",
+  description: "Vraća listu aktivnosti sa opcionim filtriranjem po tipu, klijentu, dodeljenom korisniku, statusu, prioritetu i datumu. Podržava paginaciju.",
   querystring: activityListQuery,
   response: {
-    200: dataEnvelope({
-      type: "array",
-      items: {
+    200: {
+      ...dataEnvelope({
+        type: "array",
+        items: {
+          type: "object",
+          properties: activityProperties,
+          required: [
+            "id",
+            "title",
+            "clientId",
+            "clientName",
+            "type",
+            "dueDate",
+            "status",
+            "priority",
+            "createdAt",
+            "updatedAt"
+          ],
+          additionalProperties: false
+        }
+      }),
+      description: "Lista aktivnosti"
+    }
+  }
+};
+
+export const activityDetailSchema: FastifySchema = {
+  tags: ["crm"],
+  summary: "Get activity by ID",
+  description: "Vraća detaljne informacije o konkretnoj aktivnosti.",
+  params: idParams,
+  response: {
+    200: {
+      ...dataEnvelope({
         type: "object",
         properties: activityProperties,
         required: [
@@ -410,85 +560,109 @@ export const activityListSchema: FastifySchema = {
           "updatedAt"
         ],
         additionalProperties: false
-      }
-    })
-  }
-};
-
-export const activityDetailSchema: FastifySchema = {
-  params: idParams,
-  response: {
-    200: dataEnvelope({
+      }),
+      description: "Detalji aktivnosti"
+    },
+    404: {
       type: "object",
-      properties: activityProperties,
-      required: [
-        "id",
-        "title",
-        "clientId",
-        "clientName",
-        "type",
-        "dueDate",
-        "status",
-        "priority",
-        "createdAt",
-        "updatedAt"
-      ],
-      additionalProperties: false
-    })
+      properties: {
+        error: { type: "string" }
+      },
+      description: "Aktivnost nije pronađena"
+    }
   }
 };
 
 export const activityCreateSchema: FastifySchema = {
+  tags: ["crm"],
+  summary: "Create a new activity",
+  description: "Kreira novu aktivnost povezanu sa klijentom. Tip, status i prioritet su obavezni.",
   body: activityCreateBody,
   response: {
-    201: dataEnvelope({
+    201: {
+      ...dataEnvelope({
+        type: "object",
+        properties: activityProperties,
+        required: [
+          "id",
+          "title",
+          "clientId",
+          "clientName",
+          "type",
+          "dueDate",
+          "status",
+          "priority",
+          "createdAt",
+          "updatedAt"
+        ],
+        additionalProperties: false
+      }),
+      description: "Kreirana aktivnost"
+    },
+    400: {
       type: "object",
-      properties: activityProperties,
-      required: [
-        "id",
-        "title",
-        "clientId",
-        "clientName",
-        "type",
-        "dueDate",
-        "status",
-        "priority",
-        "createdAt",
-        "updatedAt"
-      ],
-      additionalProperties: false
-    })
+      properties: {
+        error: { type: "string" }
+      },
+      description: "Nevalidni podaci"
+    }
   }
 };
 
 export const activityUpdateSchema: FastifySchema = {
+  tags: ["crm"],
+  summary: "Update an activity",
+  description: "Ažurira postojeću aktivnost. Mogu se ažurirati svi podaci osim ID-a.",
   params: idParams,
   body: activityUpdateBody,
   response: {
-    200: dataEnvelope({
+    200: {
+      ...dataEnvelope({
+        type: "object",
+        properties: activityProperties,
+        required: [
+          "id",
+          "title",
+          "clientId",
+          "clientName",
+          "type",
+          "dueDate",
+          "status",
+          "priority",
+          "createdAt",
+          "updatedAt"
+        ],
+        additionalProperties: false
+      }),
+      description: "Ažurirana aktivnost"
+    },
+    404: {
       type: "object",
-      properties: activityProperties,
-      required: [
-        "id",
-        "title",
-        "clientId",
-        "clientName",
-        "type",
-        "dueDate",
-        "status",
-        "priority",
-        "createdAt",
-        "updatedAt"
-      ],
-      additionalProperties: false
-    })
+      properties: {
+        error: { type: "string" }
+      },
+      description: "Aktivnost nije pronađena"
+    }
   }
 };
 
 export const activityDeleteSchema: FastifySchema = {
+  tags: ["crm"],
+  summary: "Delete an activity",
+  description: "Briše aktivnost iz sistema. Operacija je trajna.",
   params: idParams,
   response: {
-    204: { type: "null" }
+    204: {
+      type: "null",
+      description: "Aktivnost je uspešno obrisana"
+    },
+    404: {
+      type: "object",
+      properties: {
+        error: { type: "string" }
+      },
+      description: "Aktivnost nije pronađena"
+    }
   }
 };
 

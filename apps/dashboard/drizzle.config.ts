@@ -14,6 +14,7 @@ export default defineConfig({
 	out: "./lib/db/migrations",
 	casing: "snake_case",
 	breakpoints: false,
+	strict: true,
 	dbCredentials: {
 		url: process.env.DATABASE_URL,
 	},

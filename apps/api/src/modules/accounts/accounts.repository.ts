@@ -9,13 +9,67 @@ import {
 } from "../../db/schema/accounts.schema";
 import type { Account, AccountContact, AccountCreateInput, AccountUpdateInput } from "./accounts.types";
 
+/**
+ * Interfejs za repozitorijum naloga (accounts).
+ * 
+ * Repozitorijum omogućava CRUD operacije nad klijentskim nalozima i kontaktima.
+ * Podržava i Drizzle ORM i in-memory implementacije za testiranje.
+ */
 export interface AccountsRepository {
+  /**
+   * Vraća listu svih naloga sortiranih po datumu kreiranja (najstariji prvi).
+   * 
+   * @returns Promise koji se razrešava u niz naloga
+   */
   list(): Promise<Account[]>;
+  
+  /**
+   * Vraća listu svih kontakata povezanih sa nalozima.
+   * 
+   * @returns Promise koji se razrešava u niz kontakata sa informacijama o nalozima
+   */
   listContacts(): Promise<AccountContact[]>;
+  
+  /**
+   * Pronalazi nalog po ID-u.
+   * 
+   * @param id - UUID naloga
+   * @returns Promise koji se razrešava u nalog ili undefined ako nije pronađen
+   */
   findById(id: string): Promise<Account | undefined>;
+  
+  /**
+   * Pronalazi nalog po email adresi.
+   * 
+   * @param email - Email adresa naloga
+   * @returns Promise koji se razrešava u nalog ili undefined ako nije pronađen
+   */
   findByEmail(email: string): Promise<Account | undefined>;
+  
+  /**
+   * Kreira novi nalog.
+   * 
+   * @param input - Podaci za kreiranje naloga
+   * @returns Promise koji se razrešava u kreirani nalog
+   * @throws Error ako kreiranje ne uspe
+   */
   create(input: AccountCreateInput): Promise<Account>;
+  
+  /**
+   * Ažurira postojeći nalog.
+   * 
+   * @param id - UUID naloga
+   * @param input - Podaci za ažuriranje (parcijalni)
+   * @returns Promise koji se razrešava u ažurirani nalog ili undefined ako nije pronađen
+   */
   update(id: string, input: AccountUpdateInput): Promise<Account | undefined>;
+  
+  /**
+   * Briše nalog iz sistema.
+   * 
+   * @param id - UUID naloga
+   * @returns Promise koji se razrešava u true ako je uspešno obrisan, false inače
+   */
   delete(id: string): Promise<boolean>;
 }
 
@@ -64,7 +118,18 @@ const mapAccountContact = (row: AccountContactsTableRow, accountName: string | n
   updatedAt: normalizeDate(row.updatedAt)
 });
 
+/**
+ * Drizzle implementacija AccountsRepository-a.
+ * 
+ * Koristi Drizzle ORM za pristup PostgreSQL bazi podataka.
+ * Automatski normalizuje datume i opcione vrednosti.
+ */
 class DrizzleAccountsRepository implements AccountsRepository {
+  /**
+   * Kreira novu instancu DrizzleAccountsRepository-a.
+   * 
+   * @param database - Drizzle database instanca (podrazumevano: globalna db)
+   */
   constructor(private readonly database: Database = defaultDb) {}
 
   async list(): Promise<Account[]> {
@@ -165,6 +230,12 @@ class DrizzleAccountsRepository implements AccountsRepository {
   }
 }
 
+/**
+ * Factory funkcija za kreiranje Drizzle AccountsRepository instance.
+ * 
+ * @param database - Opciona database instanca (podrazumevano: globalna db)
+ * @returns Nova AccountsRepository instanca
+ */
 export const createDrizzleAccountsRepository = (database?: Database): AccountsRepository =>
   new DrizzleAccountsRepository(database);
 
@@ -234,6 +305,14 @@ const inMemoryContactsSeed = (): AccountContact[] => {
   ];
 };
 
+/**
+ * Factory funkcija za kreiranje in-memory AccountsRepository instance.
+ * 
+ * Koristi se za testiranje bez potrebe za stvarnom bazom podataka.
+ * Inicijalizuje se sa seed podacima.
+ * 
+ * @returns Nova in-memory AccountsRepository instanca sa seed podacima
+ */
 export const createInMemoryAccountsRepository = (): AccountsRepository => {
   const accountsState: Account[] = inMemoryAccountsSeed();
   const contactsState: AccountContact[] = inMemoryContactsSeed();

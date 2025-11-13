@@ -1,7 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import type { User } from "@crm/types";
-import { Pool } from "pg";
-import Redis from "ioredis";
+import { sql } from "drizzle-orm";
 
 const systemUser: User = {
   id: "system",
@@ -16,18 +15,24 @@ interface HealthStatus {
   database?: {
     status: "ok" | "down";
     responseTime?: number;
+    error?: string;
   };
   redis?: {
     status: "ok" | "down";
     responseTime?: number;
+    error?: string;
   };
   dependencies?: {
     database: "ok" | "down";
     redis: "ok" | "down";
   };
+  details?: {
+    database?: string;
+    redis?: string;
+  };
 }
 
-const checkDatabase = async (): Promise<{ status: "ok" | "down"; responseTime?: number }> => {
+const checkDatabase = async (db: any): Promise<{ status: "ok" | "down"; responseTime?: number; error?: string }> => {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString || connectionString === "pg-mem") {
     return { status: "ok" }; // In-memory database is always available
@@ -35,39 +40,27 @@ const checkDatabase = async (): Promise<{ status: "ok" | "down"; responseTime?: 
 
   try {
     const startTime = Date.now();
-    const pool = new Pool({ connectionString, max: 1 });
-    const client = await pool.connect();
-    await client.query("SELECT 1");
-    client.release();
-    await pool.end();
+    await Promise.race([
+      db.execute(sql`SELECT 1`),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Database query timeout")), 5000)
+      )
+    ]);
     const responseTime = Date.now() - startTime;
 
     return { status: "ok", responseTime };
   } catch (error) {
-    return { status: "down" };
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    return { status: "down", error: errorMessage };
   }
 };
 
-const checkRedis = async (): Promise<{ status: "ok" | "down"; responseTime?: number }> => {
-  const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
-
-  try {
-    const startTime = Date.now();
-    const redis = new Redis(redisUrl, {
-      maxRetriesPerRequest: 1,
-      connectTimeout: 2000,
-      lazyConnect: true
-    });
-
-    await redis.connect();
-    await redis.ping();
-    const responseTime = Date.now() - startTime;
-    await redis.quit();
-
-    return { status: "ok", responseTime };
-  } catch (error) {
-    return { status: "down" };
+const checkRedis = async (cache: any): Promise<{ status: "ok" | "down"; responseTime?: number; error?: string }> => {
+  if (!cache || typeof cache.checkHealth !== "function") {
+    return { status: "down", error: "Cache service not available" };
   }
+
+  return await cache.checkHealth();
 };
 
 const healthRoutes: FastifyPluginAsync = async (app) => {
@@ -113,14 +106,16 @@ const healthRoutes: FastifyPluginAsync = async (app) => {
                 type: "object",
                 properties: {
                   status: { type: "string", enum: ["ok", "down"] },
-                  responseTime: { type: "number" }
+                  responseTime: { type: "number" },
+                  error: { type: "string" }
                 }
               },
               redis: {
                 type: "object",
                 properties: {
                   status: { type: "string", enum: ["ok", "down"] },
-                  responseTime: { type: "number" }
+                  responseTime: { type: "number" },
+                  error: { type: "string" }
                 }
               },
               dependencies: {
@@ -128,6 +123,13 @@ const healthRoutes: FastifyPluginAsync = async (app) => {
                 properties: {
                   database: { type: "string", enum: ["ok", "down"] },
                   redis: { type: "string", enum: ["ok", "down"] }
+                }
+              },
+              details: {
+                type: "object",
+                properties: {
+                  database: { type: "string" },
+                  redis: { type: "string" }
                 }
               }
             }
@@ -144,7 +146,10 @@ const healthRoutes: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      const [dbHealth, redisHealth] = await Promise.all([checkDatabase(), checkRedis()]);
+      const [dbHealth, redisHealth] = await Promise.all([
+        checkDatabase(app.db),
+        checkRedis(app.cache)
+      ]);
 
       const dependencies = {
         database: dbHealth.status,
@@ -164,7 +169,11 @@ const healthRoutes: FastifyPluginAsync = async (app) => {
         timestamp: new Date().toISOString(),
         database: dbHealth,
         redis: redisHealth,
-        dependencies
+        dependencies,
+        details: {
+          database: dbHealth.error,
+          redis: redisHealth.error
+        }
       };
 
       if (overallStatus === "down") {
@@ -172,6 +181,191 @@ const healthRoutes: FastifyPluginAsync = async (app) => {
       }
 
       return reply.status(200).send(healthStatus);
+    }
+  );
+
+  app.get(
+    "/health/database",
+    {
+      schema: {
+        tags: ["health", "monitoring"],
+        summary: "Database connection status",
+        description: "Check database connection health status",
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              status: { type: "string", enum: ["ok", "down"] },
+              responseTime: { type: "number" },
+              timestamp: { type: "string" }
+            },
+            required: ["status", "timestamp"]
+          },
+          503: {
+            type: "object",
+            properties: {
+              status: { type: "string", enum: ["down"] },
+              error: { type: "string" },
+              timestamp: { type: "string" }
+            },
+            required: ["status", "timestamp"]
+          }
+        }
+      }
+    },
+    async (request, reply) => {
+      const dbHealth = await checkDatabase(app.db);
+
+      const response = {
+        status: dbHealth.status,
+        timestamp: new Date().toISOString(),
+        ...(dbHealth.responseTime && { responseTime: dbHealth.responseTime }),
+        ...(dbHealth.error && { error: dbHealth.error })
+      };
+
+      if (dbHealth.status === "down") {
+        return reply.status(503).send(response);
+      }
+
+      return reply.status(200).send(response);
+    }
+  );
+
+  app.get(
+    "/health/redis",
+    {
+      schema: {
+        tags: ["health", "monitoring"],
+        summary: "Redis connection status",
+        description: "Check Redis connection health status",
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              status: { type: "string", enum: ["ok", "down"] },
+              responseTime: { type: "number" },
+              timestamp: { type: "string" }
+            },
+            required: ["status", "timestamp"]
+          },
+          503: {
+            type: "object",
+            properties: {
+              status: { type: "string", enum: ["down"] },
+              error: { type: "string" },
+              timestamp: { type: "string" }
+            },
+            required: ["status", "timestamp"]
+          }
+        }
+      }
+    },
+    async (request, reply) => {
+      const redisHealth = await checkRedis(app.cache);
+
+      const response = {
+        status: redisHealth.status,
+        timestamp: new Date().toISOString(),
+        ...(redisHealth.responseTime && { responseTime: redisHealth.responseTime }),
+        ...(redisHealth.error && { error: redisHealth.error })
+      };
+
+      if (redisHealth.status === "down") {
+        return reply.status(503).send(response);
+      }
+
+      return reply.status(200).send(response);
+    }
+  );
+
+  app.get(
+    "/health/dependencies",
+    {
+      schema: {
+        tags: ["health", "monitoring"],
+        summary: "Service dependencies status",
+        description: "Check status of all service dependencies (database, redis, etc.)",
+        response: {
+          200: {
+            type: "object",
+            properties: {
+              status: { type: "string", enum: ["ok", "degraded", "down"] },
+              timestamp: { type: "string" },
+              dependencies: {
+                type: "object",
+                properties: {
+                  database: {
+                    type: "object",
+                    properties: {
+                      status: { type: "string", enum: ["ok", "down"] },
+                      responseTime: { type: "number" },
+                      error: { type: "string" }
+                    }
+                  },
+                  redis: {
+                    type: "object",
+                    properties: {
+                      status: { type: "string", enum: ["ok", "down"] },
+                      responseTime: { type: "number" },
+                      error: { type: "string" }
+                    }
+                  }
+                }
+              }
+            },
+            required: ["status", "timestamp", "dependencies"]
+          },
+          503: {
+            type: "object",
+            properties: {
+              status: { type: "string", enum: ["down"] },
+              timestamp: { type: "string" },
+              dependencies: {
+                type: "object"
+              }
+            },
+            required: ["status", "timestamp"]
+          }
+        }
+      }
+    },
+    async (request, reply) => {
+      const [dbHealth, redisHealth] = await Promise.all([
+        checkDatabase(app.db),
+        checkRedis(app.cache)
+      ]);
+
+      const dependencies = {
+        database: {
+          status: dbHealth.status,
+          ...(dbHealth.responseTime && { responseTime: dbHealth.responseTime }),
+          ...(dbHealth.error && { error: dbHealth.error })
+        },
+        redis: {
+          status: redisHealth.status,
+          ...(redisHealth.responseTime && { responseTime: redisHealth.responseTime }),
+          ...(redisHealth.error && { error: redisHealth.error })
+        }
+      };
+
+      let overallStatus: "ok" | "degraded" | "down" = "ok";
+      if (dbHealth.status === "down") {
+        overallStatus = "down";
+      } else if (redisHealth.status === "down") {
+        overallStatus = "degraded"; // Redis is optional, so degraded not down
+      }
+
+      const response = {
+        status: overallStatus,
+        timestamp: new Date().toISOString(),
+        dependencies
+      };
+
+      if (overallStatus === "down") {
+        return reply.status(503).send(response);
+      }
+
+      return reply.status(200).send(response);
     }
   );
 
@@ -201,13 +395,14 @@ const healthRoutes: FastifyPluginAsync = async (app) => {
       }
     },
     async (request, reply) => {
-      const dbHealth = await checkDatabase();
+      const dbHealth = await checkDatabase(app.db);
 
       if (dbHealth.status === "down") {
         return reply.status(503).send({
           status: "not ready",
           ready: false,
-          reason: "Database unavailable"
+          reason: "Database unavailable",
+          error: dbHealth.error
         });
       }
 

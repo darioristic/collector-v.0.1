@@ -1,0 +1,15 @@
+{
+	"files": {
+		"ignoreUnknown": true
+	},
+	"linter": {
+		"rules": {
+			"suspicious": {
+				"noUnknownAtRules": "off"
+			},
+			"correctness": {
+				"noInvalidPositionAtImportRule": "off"
+			}
+		}
+	}
+}

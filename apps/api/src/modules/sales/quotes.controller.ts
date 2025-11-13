@@ -32,6 +32,13 @@ type DeleteRequest = FastifyRequest<{
   Params: { id: string };
 }>;
 
+/**
+ * Handler za listanje ponuda sa filtriranjem i paginacijom.
+ * 
+ * @route GET /api/sales/quotes
+ * @param request.query - Query parametri za filtriranje (companyId, contactId, status, search, limit, offset, sortField, sortOrder)
+ * @returns Lista ponuda sa paginacijom
+ */
 export const listQuotesHandler = async (request: ListRequest, reply: FastifyReply) => {
   const service = new QuotesService(request.db, request.cache);
   const filters = {
@@ -55,6 +62,13 @@ export const listQuotesHandler = async (request: ListRequest, reply: FastifyRepl
   });
 };
 
+/**
+ * Handler za dobijanje ponude po ID-u.
+ * 
+ * @route GET /api/sales/quotes/:id
+ * @param request.params.id - ID ponude (broj)
+ * @returns Detalji ponude ili 404 ako nije pronađena
+ */
 export const getQuoteHandler = async (request: GetRequest, reply: FastifyReply) => {
   const service = new QuotesService(request.db, request.cache);
   const id = Number.parseInt(request.params.id, 10);
@@ -72,12 +86,27 @@ export const getQuoteHandler = async (request: GetRequest, reply: FastifyReply) 
   await reply.status(200).send({ data: quote });
 };
 
+/**
+ * Handler za kreiranje nove ponude.
+ * 
+ * @route POST /api/sales/quotes
+ * @param request.body - Podaci za kreiranje ponude sa stavkama
+ * @returns Kreirana ponuda
+ */
 export const createQuoteHandler = async (request: CreateRequest, reply: FastifyReply) => {
   const service = new QuotesService(request.db, request.cache);
   const quote = await service.create(request.body);
   await reply.status(201).send({ data: quote });
 };
 
+/**
+ * Handler za ažuriranje postojeće ponude.
+ * 
+ * @route PATCH /api/sales/quotes/:id
+ * @param request.params.id - ID ponude (broj)
+ * @param request.body - Podaci za ažuriranje (parcijalni)
+ * @returns Ažurirana ponuda ili 404 ako nije pronađena
+ */
 export const updateQuoteHandler = async (request: UpdateRequest, reply: FastifyReply) => {
   const service = new QuotesService(request.db, request.cache);
   const id = Number.parseInt(request.params.id, 10);
@@ -95,6 +124,13 @@ export const updateQuoteHandler = async (request: UpdateRequest, reply: FastifyR
   await reply.status(200).send({ data: quote });
 };
 
+/**
+ * Handler za brisanje ponude.
+ * 
+ * @route DELETE /api/sales/quotes/:id
+ * @param request.params.id - ID ponude (broj)
+ * @returns 204 No Content ako je uspešno obrisana ili 404 ako nije pronađena
+ */
 export const deleteQuoteHandler = async (request: DeleteRequest, reply: FastifyReply) => {
   const service = new QuotesService(request.db, request.cache);
   const id = Number.parseInt(request.params.id, 10);

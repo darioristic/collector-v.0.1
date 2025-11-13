@@ -338,16 +338,25 @@ const budgetCategoryPayloadProperties = {
 } as const;
 
 export const listProjectsSchema: FastifySchema = {
+  tags: ["projects"],
+  summary: "List projects",
+  description: "Vraća listu svih projekata sa osnovnim informacijama uključujući status, napredak i vlasnika.",
   response: {
-    200: dataEnvelope({
-      type: "array",
-      items: projectSummarySchema
-    }),
+    200: {
+      ...dataEnvelope({
+        type: "array",
+        items: projectSummarySchema
+      }),
+      description: "Lista projekata"
+    },
     ...defaultErrorResponses
   }
 };
 
 export const createProjectSchema: FastifySchema = {
+  tags: ["projects"],
+  summary: "Create a new project",
+  description: "Kreira novi projekt. Naziv je obavezan. Opciono se mogu postaviti budžet, datumi i vlasnik.",
   body: {
     type: "object",
     properties: projectPayloadProperties,
@@ -355,20 +364,32 @@ export const createProjectSchema: FastifySchema = {
     additionalProperties: false
   },
   response: {
-    201: dataEnvelope(projectDetailsSchema),
+    201: {
+      ...dataEnvelope(projectDetailsSchema),
+      description: "Kreiran projekt"
+    },
     ...defaultErrorResponses
   }
 };
 
 export const getProjectSchema: FastifySchema = {
+  tags: ["projects"],
+  summary: "Get project by ID",
+  description: "Vraća detaljne informacije o projektu uključujući zadatke, timeline, tim i budžet.",
   params: projectParams,
   response: {
-    200: dataEnvelope(projectDetailsSchema),
+    200: {
+      ...dataEnvelope(projectDetailsSchema),
+      description: "Detalji projekta"
+    },
     ...notFoundErrorResponse
   }
 };
 
 export const updateProjectSchema: FastifySchema = {
+  tags: ["projects"],
+  summary: "Update a project",
+  description: "Ažurira postojeći projekt. Mogu se ažurirati svi podaci osim ID-a.",
   params: projectParams,
   body: {
     type: "object",
@@ -376,31 +397,49 @@ export const updateProjectSchema: FastifySchema = {
     additionalProperties: false
   },
   response: {
-    200: dataEnvelope(projectDetailsSchema),
+    200: {
+      ...dataEnvelope(projectDetailsSchema),
+      description: "Ažuriran projekt"
+    },
     ...notFoundErrorResponse
   }
 };
 
 export const deleteProjectSchema: FastifySchema = {
+  tags: ["projects"],
+  summary: "Delete a project",
+  description: "Briše projekt iz sistema. Operacija je trajna i briše sve povezane zadatke i podatke.",
   params: projectParams,
   response: {
-    204: { type: "null" },
+    204: {
+      type: "null",
+      description: "Projekt je uspešno obrisan"
+    },
     ...notFoundErrorResponse
   }
 };
 
 export const listTasksSchema: FastifySchema = {
+  tags: ["project-tasks"],
+  summary: "List project tasks",
+  description: "Vraća listu svih zadataka za konkretan projekt.",
   params: projectParams,
   response: {
-    200: dataEnvelope({
-      type: "array",
-      items: taskSchema
-    }),
+    200: {
+      ...dataEnvelope({
+        type: "array",
+        items: taskSchema
+      }),
+      description: "Lista zadataka"
+    },
     ...defaultErrorResponses
   }
 };
 
 export const createTaskSchema: FastifySchema = {
+  tags: ["project-tasks"],
+  summary: "Create a new task",
+  description: "Kreira novi zadatak unutar projekta. Naslov je obavezan.",
   params: projectParams,
   body: {
     type: "object",
@@ -409,12 +448,18 @@ export const createTaskSchema: FastifySchema = {
     additionalProperties: false
   },
   response: {
-    201: dataEnvelope(taskSchema),
+    201: {
+      ...dataEnvelope(taskSchema),
+      description: "Kreiran zadatak"
+    },
     ...notFoundErrorResponse
   }
 };
 
 export const updateTaskSchema: FastifySchema = {
+  tags: ["project-tasks"],
+  summary: "Update a task",
+  description: "Ažurira postojeći zadatak. Mogu se ažurirati svi podaci osim ID-a.",
   params: taskParams,
   body: {
     type: "object",
@@ -422,31 +467,49 @@ export const updateTaskSchema: FastifySchema = {
     additionalProperties: false
   },
   response: {
-    200: dataEnvelope(taskSchema),
+    200: {
+      ...dataEnvelope(taskSchema),
+      description: "Ažuriran zadatak"
+    },
     ...notFoundErrorResponse
   }
 };
 
 export const deleteTaskSchema: FastifySchema = {
+  tags: ["project-tasks"],
+  summary: "Delete a task",
+  description: "Briše zadatak iz projekta. Operacija je trajna.",
   params: taskParams,
   response: {
-    204: { type: "null" },
+    204: {
+      type: "null",
+      description: "Zadatak je uspešno obrisan"
+    },
     ...notFoundErrorResponse
   }
 };
 
 export const listTimelineSchema: FastifySchema = {
+  tags: ["project-milestones"],
+  summary: "List project timeline events",
+  description: "Vraća listu svih timeline događaja (milještoka) za konkretan projekt.",
   params: projectParams,
   response: {
-    200: dataEnvelope({
-      type: "array",
-      items: timelineEventSchema
-    }),
+    200: {
+      ...dataEnvelope({
+        type: "array",
+        items: timelineEventSchema
+      }),
+      description: "Lista timeline događaja"
+    },
     ...defaultErrorResponses
   }
 };
 
 export const createTimelineSchema: FastifySchema = {
+  tags: ["project-milestones"],
+  summary: "Create a new timeline event",
+  description: "Kreira novi timeline događaj (milještok) unutar projekta. Naslov je obavezan.",
   params: projectParams,
   body: {
     type: "object",
@@ -455,12 +518,18 @@ export const createTimelineSchema: FastifySchema = {
     additionalProperties: false
   },
   response: {
-    201: dataEnvelope(timelineEventSchema),
+    201: {
+      ...dataEnvelope(timelineEventSchema),
+      description: "Kreiran timeline događaj"
+    },
     ...notFoundErrorResponse
   }
 };
 
 export const updateTimelineSchema: FastifySchema = {
+  tags: ["project-milestones"],
+  summary: "Update a timeline event",
+  description: "Ažurira postojeći timeline događaj. Mogu se ažurirati svi podaci osim ID-a.",
   params: timelineParams,
   body: {
     type: "object",
@@ -468,15 +537,24 @@ export const updateTimelineSchema: FastifySchema = {
     additionalProperties: false
   },
   response: {
-    200: dataEnvelope(timelineEventSchema),
+    200: {
+      ...dataEnvelope(timelineEventSchema),
+      description: "Ažuriran timeline događaj"
+    },
     ...notFoundErrorResponse
   }
 };
 
 export const deleteTimelineSchema: FastifySchema = {
+  tags: ["project-milestones"],
+  summary: "Delete a timeline event",
+  description: "Briše timeline događaj iz projekta. Operacija je trajna.",
   params: timelineParams,
   response: {
-    204: { type: "null" },
+    204: {
+      type: "null",
+      description: "Timeline događaj je uspešno obrisan"
+    },
     ...notFoundErrorResponse
   }
 };

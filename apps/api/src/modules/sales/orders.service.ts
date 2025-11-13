@@ -11,14 +11,53 @@ import type {
 } from "@crm/types";
 import type { CacheService } from "../../lib/cache.service";
 
+/**
+ * OrdersService handles all order-related business logic
+ * 
+ * Features:
+ * - Optimized queries using window functions for pagination
+ * - Redis caching for improved performance (TTL: 5-10 minutes)
+ * - JOIN queries to avoid N+1 problem
+ * - Transaction support for data consistency
+ * 
+ * @example
+ * ```typescript
+ * const service = new OrdersService(db, cache);
+ * const orders = await service.list({ status: 'pending', limit: 10 });
+ * ```
+ */
 export class OrdersService {
+  /**
+   * Creates a new OrdersService instance
+   * 
+   * @param database - Drizzle database instance
+   * @param cache - Optional cache service for performance optimization
+   */
   constructor(
     private database: AppDatabase,
     private cache?: CacheService
   ) {}
 
   /**
-   * OPTIMIZED: Window function for count + caching
+   * List orders with optional filtering and pagination
+   * 
+   * OPTIMIZED: Uses window function for count (1 query instead of 2) + Redis caching
+   * 
+   * @param filters - Optional filters for orders
+   * @param filters.companyId - Filter by company ID
+   * @param filters.contactId - Filter by contact ID
+   * @param filters.quoteId - Filter by quote ID
+   * @param filters.status - Filter by order status
+   * @param filters.search - Search in order number and notes
+   * @param filters.limit - Maximum number of results (default: 50)
+   * @param filters.offset - Number of results to skip (default: 0)
+   * @returns Promise resolving to orders list with total count
+   * 
+   * @example
+   * ```typescript
+   * const result = await service.list({ status: 'pending', limit: 20 });
+   * console.log(`Found ${result.total} orders, showing ${result.data.length}`);
+   * ```
    */
   async list(filters?: {
     companyId?: string;
@@ -109,7 +148,20 @@ export class OrdersService {
   }
 
   /**
-   * OPTIMIZED: Single JOIN query instead of N+1 + caching
+   * Get order by ID with all items
+   * 
+   * OPTIMIZED: Uses single JOIN query instead of N+1 queries + Redis caching
+   * 
+   * @param id - Order ID
+   * @returns Promise resolving to order with items, or null if not found
+   * 
+   * @example
+   * ```typescript
+   * const order = await service.getById(123);
+   * if (order) {
+   *   console.log(`Order ${order.orderNumber} has ${order.items.length} items`);
+   * }
+   * ```
    */
   async getById(id: number): Promise<Order | null> {
     const cacheKey = `orders:${id}`;

@@ -2,13 +2,42 @@
 
 This repository is organised as a Bun workspace that contains the existing Next.js dashboard together with new backend and shared packages.
 
+## Quick Start
+
+```bash
+# Instaliraj zavisnosti
+bun install
+
+# Pokreni razvojno okruženje
+bun scripts/dev.ts
+```
+
+API je dostupan na `http://localhost:4000`, Dashboard na `http://localhost:3000`.
+
+## Dokumentacija
+
+- 📖 [Developer Guide](./docs/DEVELOPER_GUIDE.md) - Kompletan vodič za developere
+- 🔧 [API Development Guide](./docs/API_DEVELOPMENT.md) - Vodič za razvoj API-ja
+- 🏗️ [Architecture Overview](./docs/ARCHITECTURE.md) - Detaljan pregled arhitekture
+- 🤝 [Contributing Guidelines](./CONTRIBUTING.md) - Guidelines za doprinos projektu
+- 📚 [API README](./apps/api/README.md) - API dokumentacija
+- 🎨 [Dashboard README](./apps/dashboard/README.md) - Dashboard dokumentacija
+
+## API Dokumentacija
+
+Nakon pokretanja servera, interaktivna API dokumentacija je dostupna na:
+- **Swagger UI**: http://localhost:4000/api/docs
+- **OpenAPI JSON**: http://localhost:4000/api/docs/json
+
 ## Structure
 
-- `apps/dashboard` – existing Next.js + shadcn/ui application (left untouched apart from tsconfig inheritance).
-- `apps/api` – Fastify server written in TypeScript, exposes `/api/health`.
-- `packages/ui` – placeholder for shared shadcn/ui React components.
-- `packages/types` – shared TypeScript types (currently exports a sample `User` type).
-- `packages/config` – centralised ESLint, Tailwind and TypeScript configuration.
+- `apps/dashboard` – Next.js 16 + shadcn/ui frontend aplikacija
+- `apps/api` – Fastify backend server sa modularnom arhitekturom
+- `packages/ui` – Deljene shadcn/ui React komponente
+- `packages/types` – Deljeni TypeScript tipovi
+- `packages/config` – Centralizovane ESLint, Tailwind i TypeScript konfiguracije
+- `services/` – Mikroservisi (chat, notifications)
+- `docs/` – Dokumentacija projekta
 
 ## Getting Started
 
@@ -70,6 +99,18 @@ This repository is organised as a Bun workspace that contains the existing Next.
    ```sh
    bun run lint
    ```
+
+## Arhitektura
+
+Projekat koristi modularnu arhitekturu:
+
+- **Backend API** - Fastify server sa modulima za Accounts, Sales, CRM, Projects, HR, Settings
+- **Frontend Dashboard** - Next.js aplikacija sa App Router
+- **Database** - PostgreSQL sa Drizzle ORM
+- **Caching** - Redis za performance optimizaciju
+- **Mikroservisi** - Chat i Notification servisi
+
+Detaljniji pregled arhitekture u [Architecture Overview](./docs/ARCHITECTURE.md).
 
 ## Notes
 
@@ -213,6 +254,88 @@ Na taj način se build ne nastavlja ukoliko lint/test padnu, migracije se izvrš
 
 Sada će svaki push na `main` (ili granu definisanu u CEL filteru unutar `eventlistener.yaml`) automatski pokrenuti `crm-monorepo-pipeline` i odraditi build + rollout bez ručnog kucanja komandi.
 
-# collector-new-2025
-# collector-v.0.1
-# collector-v.0.1
+## Troubleshooting
+
+### Port već zauzet
+
+Ako port 4000 ili 3000 već koristi neki proces:
+
+```bash
+# Proveri koji proces koristi port
+lsof -ti:4000 | xargs kill -9
+lsof -ti:3000 | xargs kill -9
+```
+
+### Database konekcija
+
+Ako imaš probleme sa konekcijom na bazu:
+
+1. Proveri da li je PostgreSQL pokrenut:
+   ```bash
+   docker compose ps
+   ```
+
+2. Proveri `DATABASE_URL` u `.env.local`:
+   ```ini
+   DATABASE_URL=postgresql://collector:collector@localhost:5432/collector
+   ```
+
+3. Proveri logove:
+   ```bash
+   docker compose logs postgres
+   ```
+
+### Module nije registrovan
+
+Ako modul nije registrovan u API-ju:
+
+1. Proveri da li modul ima `index.ts` sa default export-om
+2. Proveri da li je modul folder u `apps/api/src/modules/`
+3. Proveri logove servera za greške
+
+### OpenAPI dokumentacija ne prikazuje rute
+
+1. Proveri da li rute imaju definisane `schema` objekte
+2. Proveri da li su `tags` pravilno definisani
+3. Restartuj server
+
+### Cache problemi
+
+Ako imaš probleme sa Redis cache-om:
+
+```bash
+# Resetuj Redis cache
+redis-cli FLUSHALL
+```
+
+Ili u kodu:
+
+```typescript
+await request.cache?.deletePattern("pattern:*");
+```
+
+### Build greške
+
+Ako build pada:
+
+1. Očisti node_modules i reinstaliraj:
+   ```bash
+   rm -rf node_modules apps/*/node_modules packages/*/node_modules
+   bun install
+   ```
+
+2. Očisti build artefakte:
+   ```bash
+   rm -rf apps/*/dist packages/*/dist
+   bun run build
+   ```
+
+Za više informacija, pogledaj [Developer Guide](./docs/DEVELOPER_GUIDE.md#troubleshooting).
+
+## Contributing
+
+Želimo tvoj doprinos! Pročitaj [Contributing Guidelines](./CONTRIBUTING.md) pre nego što kreneš.
+
+## License
+
+Proprietary - All rights reserved

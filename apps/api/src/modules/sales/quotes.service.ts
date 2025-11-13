@@ -13,7 +13,29 @@ import type {
 } from "@crm/types";
 import type { CacheService } from "../../lib/cache.service";
 
+/**
+ * QuotesService handles all quote-related business logic
+ * 
+ * Features:
+ * - Optimized queries using window functions for pagination
+ * - Redis caching for improved performance (TTL: 10-15 minutes)
+ * - JOIN queries to avoid N+1 problem
+ * - Transaction support for data consistency
+ * - Support for quote conversion to orders
+ * 
+ * @example
+ * ```typescript
+ * const service = new QuotesService(db, cache);
+ * const quotes = await service.list({ status: 'draft' });
+ * ```
+ */
 export class QuotesService {
+  /**
+   * Creates a new QuotesService instance
+   * 
+   * @param database - Drizzle database instance
+   * @param cache - Optional cache service for performance optimization
+   */
   constructor(
     private database: AppDatabase,
     private cache?: CacheService

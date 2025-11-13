@@ -2,6 +2,11 @@
 
 Next.js 16 aplikacija koja prikazuje prodajne, CRM, projekatske i HR panele za Collector platformu. UI je zasnovan na shadcn/ui komponentama, sa temama podešenim da prate smernice brenda (hladne palete, narandžasta rezervisana za CTA elemente).
 
+## Dokumentacija
+
+- 📖 [Developer Guide](../../docs/DEVELOPER_GUIDE.md) - Kompletan vodič za developere
+- 🏗️ [Architecture Overview](../../docs/ARCHITECTURE.md) - Pregled arhitekture sistema
+
 ## Pokretanje
 
 U korenu monorepa:
@@ -45,11 +50,125 @@ Logotip i meta podaci su prilagođeni Collector brendu (`Collector Dashboard`), 
 
 ## Struktura
 
-- `app/` – Next.js App Router stranice
-- `components/` – layout, sidebar, UI helperi i shadcn wrapper-i
-- `lib/` – teme, util funkcije, fontovi
+### App Router Struktura
+
+- `app/(protected)/` – Zaštićene rute koje zahtevaju autentifikaciju
+  - `accounts/` – Accounts stranice
+  - `sales/` – Sales stranice (quotes, orders, invoices)
+  - `crm/` – CRM stranice (leads, opportunities)
+  - `projects/` – Projects stranice
+  - `hr/` – HR stranice (employees, attendance)
+  - `settings/` – Settings stranice
+- `app/(public)/` – Javne rute (login, register)
+- `app/api/` – Next.js API rute (route handlers)
+
+### Komponente
+
+- `components/ui/` – shadcn/ui komponente
+- `components/layout/` – Layout komponente (sidebar, header, navigation)
+- `components/projects/` – Project-specifične komponente
+- `components/quotes/` – Quote komponente
+- `components/invoices/` – Invoice komponente
+- `components/orders/` – Order komponente
+- `components/payments/` – Payment komponente
+
+### State Management
+
+- **React Query** (`@tanstack/react-query`) – Server state management
+- **React Hook Form** – Form state management
+- **Zod** – Schema validacija
 
 Za deljeni kod koristimo `packages/ui` i `packages/types` pakete iz monorepa.
+
+## Best Practices
+
+### React Komponente
+
+1. **Server vs Client Components**
+   - Koristi Server Components gde je moguće (default u Next.js 13+)
+   - Koristi `"use client"` samo kada je potrebno (hooks, event handlers, browser APIs)
+
+2. **Component Organization**
+   - Jedna komponenta po fajlu
+   - Ime fajla = ime komponente (PascalCase)
+   - Eksportuj default komponentu
+
+3. **Props Typing**
+   - Uvek tipizuj props sa TypeScript interfejsima
+   - Koristi `React.FC` ili eksplicitno tipizuj funkciju
+
+```typescript
+// Dobro
+interface ButtonProps {
+  label: string;
+  onClick: () => void;
+}
+
+export default function Button({ label, onClick }: ButtonProps) {
+  return <button onClick={onClick}>{label}</button>;
+}
+```
+
+### Data Fetching
+
+1. **Server Components**
+   - Fetch podatke direktno u Server Components
+   - Koristi `fetch` sa Next.js caching opcijama
+
+2. **Client Components**
+   - Koristi React Query za server state
+   - Koristi `useInfiniteQuery` za paginaciju
+   - Implementiraj optimistične mutacije
+
+```typescript
+// Primer sa React Query
+import { useQuery } from "@tanstack/react-query";
+
+function AccountsList() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["accounts"],
+    queryFn: async () => {
+      const res = await fetch("/api/accounts");
+      return res.json();
+    }
+  });
+  
+  if (isLoading) return <div>Loading...</div>;
+  return <div>{/* render data */}</div>;
+}
+```
+
+### Form Handling
+
+- Koristi React Hook Form za form state
+- Validacija sa Zod schemas
+- Error handling i display
+
+```typescript
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+const schema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email")
+});
+
+function AccountForm() {
+  const form = useForm({
+    resolver: zodResolver(schema)
+  });
+  
+  // ...
+}
+```
+
+### Styling
+
+- Koristi Tailwind CSS utility classes
+- Koristi shadcn/ui komponente kao bazu
+- Custom komponente u `components/ui/`
+- Teme se definišu u `lib/themes/`
 
 ## HR Employees stranica
 
@@ -94,3 +213,56 @@ Seed data acts as a mock scenario for demos and QA, and you can refresh it at an
   bun run db:seed
   ```
 - U CI okruženju pokreti `bun run db:migrate` i `bun run db:seed` iz korena monorepa – skripte će izvršiti i API i dashboard migracije/seed u ispravnom redosledu.
+
+## Testing
+
+### Unit Testovi
+
+Testovi se nalaze u `__tests__/` folderu:
+
+```bash
+bun run test
+```
+
+### Testiranje Komponenti
+
+Koristi Vitest i React Testing Library:
+
+```typescript
+import { render, screen } from "@testing-library/react";
+import { test, expect } from "vitest";
+import Button from "./Button";
+
+test("renders button with label", () => {
+  render(<Button label="Click me" onClick={() => {}} />);
+  expect(screen.getByText("Click me")).toBeInTheDocument();
+});
+```
+
+## Troubleshooting
+
+### Build greške
+
+Ako build pada:
+
+```bash
+# Očisti Next.js cache
+rm -rf .next
+bun run build
+```
+
+### Styling problemi
+
+Ako Tailwind stilovi ne rade:
+
+1. Proveri `tailwind.config.js`
+2. Proveri da li su klase u `globals.css`
+3. Restartuj dev server
+
+### API konekcija
+
+Ako dashboard ne može da se poveže sa API-jem:
+
+1. Proveri `COLLECTOR_API_URL` u `.env.local`
+2. Proveri da li je API server pokrenut
+3. Proveri CORS podešavanja u API-ju

@@ -137,12 +137,49 @@ const mapOwner = (
 
 const PROJECT_LIST_CACHE_KEY = "projects:list:default";
 
+/**
+ * ProjectsService handles all project-related business logic
+ * 
+ * Features:
+ * - Aggregated queries with window functions for task statistics
+ * - Redis caching for improved performance (TTL: 15 minutes)
+ * - Cache invalidation on mutations
+ * - Support for tasks, milestones, team members, and budget tracking
+ * 
+ * @example
+ * ```typescript
+ * const service = new ProjectsService(db, cache);
+ * const projects = await service.list();
+ * const project = await service.getById(projectId);
+ * ```
+ */
 export class ProjectsService {
+  /**
+   * Creates a new ProjectsService instance
+   * 
+   * @param database - Drizzle database instance (defaults to global db)
+   * @param cache - Optional cache service for performance optimization
+   */
   constructor(
     private readonly database: AppDatabase = defaultDb,
     private readonly cache?: CacheService
   ) {}
 
+  /**
+   * List all projects with task statistics
+   * 
+   * OPTIMIZED: Uses aggregated queries with window functions + Redis caching
+   * 
+   * @returns Promise resolving to array of project summaries with task counts
+   * 
+   * @example
+   * ```typescript
+   * const projects = await service.list();
+   * projects.forEach(p => {
+   *   console.log(`${p.name}: ${p.completedTasks}/${p.totalTasks} tasks completed`);
+   * });
+   * ```
+   */
   async list(): Promise<ProjectSummary[]> {
     if (this.cache) {
       const cached = await this.cache.get<ProjectSummary[]>(PROJECT_LIST_CACHE_KEY);
@@ -189,6 +226,12 @@ export class ProjectsService {
     return summaries;
   }
 
+  /**
+   * Check if project exists by ID
+   * 
+   * @param id - Project UUID
+   * @returns Promise resolving to true if project exists, false otherwise
+   */
   async projectExists(id: string): Promise<boolean> {
     if (!isUuid(id)) {
       return false;
@@ -202,6 +245,15 @@ export class ProjectsService {
     return Boolean(row);
   }
 
+  /**
+   * Create a new project
+   * 
+   * Invalidates project list cache after creation
+   * 
+   * @param input - Project creation data
+   * @returns Promise resolving to created project details
+   * @throws Error if project creation fails
+   */
   async createProject(input: ProjectCreateInput): Promise<ProjectDetails> {
     const payload: typeof projects.$inferInsert = {
       name: input.name,
@@ -228,6 +280,15 @@ export class ProjectsService {
     return this.getProjectDetails(row.id) as Promise<ProjectDetails>;
   }
 
+  /**
+   * Update an existing project
+   * 
+   * Invalidates project caches after update
+   * 
+   * @param id - Project UUID
+   * @param input - Project update data
+   * @returns Promise resolving to updated project details, or null if not found
+   */
   async updateProject(id: string, input: ProjectUpdateInput): Promise<ProjectDetails | null> {
     if (!isUuid(id)) {
       return null;
@@ -295,6 +356,25 @@ export class ProjectsService {
     return success;
   }
 
+  /**
+   * Get project details by ID with all related data
+   * 
+   * OPTIMIZED: Uses aggregated queries + Redis caching
+   * Returns project with tasks, milestones, team members, and budget
+   * 
+   * @param id - Project UUID
+   * @returns Promise resolving to project details, or null if not found
+   * 
+   * @example
+   * ```typescript
+   * const project = await service.getProjectDetails(projectId);
+   * if (project) {
+   *   console.log(`Project: ${project.name}`);
+   *   console.log(`Tasks: ${project.tasks?.length ?? 0}`);
+   *   console.log(`Team: ${project.team?.length ?? 0} members`);
+   * }
+   * ```
+   */
   async getProjectDetails(id: string): Promise<ProjectDetails | null> {
     if (!isUuid(id)) {
       return null;

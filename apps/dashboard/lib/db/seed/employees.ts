@@ -1,5 +1,9 @@
+import { hash } from "bcryptjs";
+import { sql } from "drizzle-orm";
 import { employees } from "../schema/employees";
 import type { DashboardDatabase } from "./seed-runner";
+
+const SALT_ROUNDS = 12;
 
 type EmployeeSeedData = {
 	firstName: string;
@@ -398,16 +402,22 @@ export async function seedEmployees(
 
 	await db.transaction(async (tx) => {
 		await Promise.all(
-			employeesToInsert.map((emp) => {
+			employeesToInsert.map(async (emp) => {
 				// Normalize optional values to null instead of undefined
 				const phoneValue = emp.phone ? emp.phone : null;
 				const endDateValue = emp.endDate ? emp.endDate : null;
-				const salaryValue = emp.salary ? emp.salary.toString() : null;
+				const salaryValue = emp.salary !== undefined ? emp.salary : null;
+
+				// Set default password for employees (email as password for seed data)
+				// In production, employees should set their own passwords
+				const defaultPassword = emp.email.split("@")[0] || "password123";
+				const hashedPassword = await hash(defaultPassword, SALT_ROUNDS);
 
 				const values = {
 					firstName: emp.firstName,
 					lastName: emp.lastName,
 					email: emp.email,
+					hashedPassword,
 					phone: phoneValue,
 					department: emp.department,
 					role: emp.role,
@@ -435,6 +445,12 @@ export async function seedEmployees(
 							endDate: endDateValue,
 							salary: salaryValue,
 							updatedAt: new Date(),
+							// Only update password if it's empty (don't overwrite existing passwords)
+							hashedPassword: sql`CASE 
+								WHEN ${employees.hashedPassword} = '' OR ${employees.hashedPassword} IS NULL 
+								THEN ${hashedPassword} 
+								ELSE ${employees.hashedPassword} 
+							END`,
 						},
 					});
 			}),

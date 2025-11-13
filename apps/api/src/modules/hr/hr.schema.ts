@@ -53,56 +53,87 @@ const employeeCreateBody = {
 } as const;
 
 export const employeeListSchema: FastifySchema = {
+  tags: ["hr-employees"],
+  summary: "List employees",
+  description: "Vraća listu svih zaposlenih sa osnovnim informacijama uključujući poziciju, odeljenje i status aktivnosti.",
   response: {
-    200: dataEnvelope({
-      type: "array",
-      items: {
-        type: "object",
-        properties: employeeProperties,
-        required: ["id", "name", "email", "position", "department", "hireDate", "active"],
-        additionalProperties: false
-      }
-    })
+    200: {
+      ...dataEnvelope({
+        type: "array",
+        items: {
+          type: "object",
+          properties: employeeProperties,
+          required: ["id", "name", "email", "position", "department", "hireDate", "active"],
+          additionalProperties: false
+        }
+      }),
+      description: "Lista zaposlenih"
+    }
   }
 };
 
 export const employeeCreateSchema: FastifySchema = {
+  tags: ["hr-employees"],
+  summary: "Create a new employee",
+  description: "Kreira novog zaposlenog u HR sistemu. Email mora biti validan i jedinstven.",
   body: employeeCreateBody,
   response: {
-    201: dataEnvelope({
+    201: {
+      ...dataEnvelope({
+        type: "object",
+        properties: employeeProperties,
+        required: ["id", "name", "email", "position", "department", "hireDate", "active"],
+        additionalProperties: false
+      }),
+      description: "Kreiran zaposleni"
+    },
+    400: {
       type: "object",
-      properties: employeeProperties,
-      required: ["id", "name", "email", "position", "department", "hireDate", "active"],
-      additionalProperties: false
-    })
+      properties: {
+        error: { type: "string" }
+      },
+      description: "Nevalidni podaci"
+    }
   }
 };
 
 export const roleListSchema: FastifySchema = {
+  tags: ["hr-roles"],
+  summary: "List HR roles",
+  description: "Vraća listu svih HR uloga sa definisanim dozvolama.",
   response: {
-    200: dataEnvelope({
-      type: "array",
-      items: {
-        type: "object",
-        properties: roleProperties,
-        required: ["id", "name", "permissions"],
-        additionalProperties: false
-      }
-    })
+    200: {
+      ...dataEnvelope({
+        type: "array",
+        items: {
+          type: "object",
+          properties: roleProperties,
+          required: ["id", "name", "permissions"],
+          additionalProperties: false
+        }
+      }),
+      description: "Lista HR uloga"
+    }
   }
 };
 
 export const attendanceListSchema: FastifySchema = {
+  tags: ["hr-attendance"],
+  summary: "List attendance records",
+  description: "Vraća listu evidencije prisutnosti zaposlenih sa statusom za svaki dan.",
   response: {
-    200: dataEnvelope({
-      type: "array",
-      items: {
-        type: "object",
-        properties: attendanceProperties,
-        required: ["id", "employeeId", "date", "status"],
-        additionalProperties: false
-      }
-    })
+    200: {
+      ...dataEnvelope({
+        type: "array",
+        items: {
+          type: "object",
+          properties: attendanceProperties,
+          required: ["id", "employeeId", "date", "status"],
+          additionalProperties: false
+        }
+      }),
+      description: "Lista evidencije prisutnosti"
+    }
   }
 };
 export type Employee = {

@@ -27,23 +27,133 @@ import type {
   OpportunityUpdateInput
 } from "@crm/types";
 
+/**
+ * Interfejs za CRM servis koji upravlja leads, opportunities i aktivnostima.
+ * 
+ * CRM servis omogućava:
+ * - Upravljanje leadovima (potencijalnim klijentima)
+ * - Upravljanje prodajnim prilikama (opportunities)
+ * - Upravljanje aktivnostima povezanim sa klijentima
+ */
 export interface CRMService {
+  /**
+   * Vraća listu svih leadova sortiranih po datumu kreiranja (najnoviji prvi).
+   * 
+   * @returns Promise koji se razrešava u niz leadova
+   */
   listLeads(): Promise<Lead[]>;
+  
+  /**
+   * Vraća lead po ID-u.
+   * 
+   * @param id - UUID leada
+   * @returns Promise koji se razrešava u lead ili undefined ako nije pronađen
+   */
   getLead(id: string): Promise<Lead | undefined>;
+  
+  /**
+   * Kreira novi lead.
+   * 
+   * @param input - Podaci za kreiranje leada
+   * @returns Promise koji se razrešava u kreirani lead
+   */
   createLead(input: LeadCreateInput): Promise<Lead>;
+  
+  /**
+   * Ažurira postojeći lead.
+   * 
+   * @param id - UUID leada
+   * @param input - Podaci za ažuriranje (parcijalni)
+   * @returns Promise koji se razrešava u ažurirani lead ili undefined ako nije pronađen
+   */
   updateLead(id: string, input: LeadUpdateInput): Promise<Lead | undefined>;
+  
+  /**
+   * Briše lead iz sistema.
+   * 
+   * @param id - UUID leada
+   * @returns Promise koji se razrešava u true ako je uspešno obrisan, false inače
+   */
   deleteLead(id: string): Promise<boolean>;
 
+  /**
+   * Vraća listu svih prodajnih prilika sortiranih po datumu kreiranja (najnovije prve).
+   * 
+   * @returns Promise koji se razrešava u niz prodajnih prilika
+   */
   listOpportunities(): Promise<Opportunity[]>;
+  
+  /**
+   * Vraća prodajnu priliku po ID-u.
+   * 
+   * @param id - UUID prodajne prilike
+   * @returns Promise koji se razrešava u prodajnu priliku ili undefined ako nije pronađena
+   */
   getOpportunity(id: string): Promise<Opportunity | undefined>;
+  
+  /**
+   * Kreira novu prodajnu priliku.
+   * 
+   * @param input - Podaci za kreiranje prodajne prilike
+   * @returns Promise koji se razrešava u kreiranu prodajnu priliku
+   */
   createOpportunity(input: OpportunityCreateInput): Promise<Opportunity>;
+  
+  /**
+   * Ažurira postojeću prodajnu priliku.
+   * 
+   * @param id - UUID prodajne prilike
+   * @param input - Podaci za ažuriranje (parcijalni)
+   * @returns Promise koji se razrešava u ažuriranu prodajnu priliku ili undefined ako nije pronađena
+   */
   updateOpportunity(id: string, input: OpportunityUpdateInput): Promise<Opportunity | undefined>;
+  
+  /**
+   * Briše prodajnu priliku iz sistema.
+   * 
+   * @param id - UUID prodajne prilike
+   * @returns Promise koji se razrešava u true ako je uspešno obrisana, false inače
+   */
   deleteOpportunity(id: string): Promise<boolean>;
 
+  /**
+   * Vraća listu svih aktivnosti sortiranih po due date i datumu kreiranja.
+   * 
+   * @returns Promise koji se razrešava u niz aktivnosti
+   */
   listActivities(): Promise<Activity[]>;
+  
+  /**
+   * Vraća aktivnost po ID-u sa informacijama o klijentu i dodeljenom korisniku.
+   * 
+   * @param id - UUID aktivnosti
+   * @returns Promise koji se razrešava u aktivnost ili undefined ako nije pronađena
+   */
   getActivity(id: string): Promise<Activity | undefined>;
+  
+  /**
+   * Kreira novu aktivnost povezanu sa klijentom.
+   * 
+   * @param input - Podaci za kreiranje aktivnosti
+   * @returns Promise koji se razrešava u kreiranu aktivnost
+   */
   createActivity(input: ActivityCreateInput): Promise<Activity>;
+  
+  /**
+   * Ažurira postojeću aktivnost.
+   * 
+   * @param id - UUID aktivnosti
+   * @param input - Podaci za ažuriranje (parcijalni)
+   * @returns Promise koji se razrešava u ažuriranu aktivnost ili undefined ako nije pronađena
+   */
   updateActivity(id: string, input: ActivityUpdateInput): Promise<Activity | undefined>;
+  
+  /**
+   * Briše aktivnost iz sistema.
+   * 
+   * @param id - UUID aktivnosti
+   * @returns Promise koji se razrešava u true ako je uspešno obrisana, false inače
+   */
   deleteActivity(id: string): Promise<boolean>;
 }
 
@@ -106,7 +216,18 @@ const mapClientActivityRow = (row: ClientActivityRow): Activity => ({
   updatedAt: toIsoString(row.activity.updatedAt) ?? new Date().toISOString()
 });
 
+/**
+ * Drizzle implementacija CRM servisa.
+ * 
+ * Koristi Drizzle ORM za pristup bazi podataka i automatski mapira
+ * rezultate u tipizovane objekte sa validacijom enum vrednosti.
+ */
 class DrizzleCRMService implements CRMService {
+  /**
+   * Kreira novu instancu DrizzleCRMService-a.
+   * 
+   * @param database - Drizzle database instanca (podrazumevano: globalna db)
+   */
   constructor(private readonly database: CRMDatabase = db) {}
 
   async listLeads(): Promise<Lead[]> {
@@ -378,6 +499,12 @@ class DrizzleCRMService implements CRMService {
   }
 }
 
+/**
+ * Factory funkcija za kreiranje CRMService instance.
+ * 
+ * @param database - Opciona database instanca (podrazumevano: globalna db)
+ * @returns Nova CRMService instanca
+ */
 export const createCRMService = (database: CRMDatabase = db): CRMService => {
   return new DrizzleCRMService(database);
 };

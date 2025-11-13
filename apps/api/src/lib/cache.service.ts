@@ -181,6 +181,31 @@ export class CacheService {
   isEnabled(): boolean {
     return this.enabled;
   }
+
+  /**
+   * Check Redis health status
+   * Returns status and response time in milliseconds
+   */
+  async checkHealth(): Promise<{ status: "ok" | "down"; responseTime?: number; error?: string }> {
+    if (!this.enabled || !this.redis) {
+      return { status: "down", error: "Redis not enabled or not initialized" };
+    }
+
+    try {
+      const startTime = Date.now();
+      await Promise.race([
+        this.redis.ping(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("Redis ping timeout")), 5000)
+        )
+      ]);
+      const responseTime = Date.now() - startTime;
+      return { status: "ok", responseTime };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      return { status: "down", error: errorMessage };
+    }
+  }
 }
 
 // Singleton instance

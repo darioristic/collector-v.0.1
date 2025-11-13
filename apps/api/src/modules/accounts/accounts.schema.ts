@@ -85,10 +85,12 @@ const errorResponseSchema = {
 export const listAccountsSchema: FastifySchema = {
   tags: ["accounts"],
   summary: "List all accounts",
+  description: "Vraća listu svih klijentskih naloga sa osnovnim informacijama. Rezultati se mogu filtrirati i sortirati.",
   response: {
     200: {
       type: "array",
-      items: accountResponseSchema
+      items: accountResponseSchema,
+      description: "Lista svih naloga"
     }
   }
 };
@@ -96,10 +98,12 @@ export const listAccountsSchema: FastifySchema = {
 export const listContactsSchema: FastifySchema = {
   tags: ["accounts"],
   summary: "List account contacts",
+  description: "Vraća listu svih kontakata povezanih sa nalozima. Uključuje informacije o nalogu i kontakt osobi.",
   response: {
     200: {
       type: "array",
-      items: contactResponseSchema
+      items: contactResponseSchema,
+      description: "Lista svih kontakata"
     }
   }
 };
@@ -107,43 +111,77 @@ export const listContactsSchema: FastifySchema = {
 export const getAccountSchema: FastifySchema = {
   tags: ["accounts"],
   summary: "Get account by id",
+  description: "Vraća detaljne informacije o konkretnom nalogu na osnovu ID-a.",
   params: accountParamsSchema,
   response: {
-    200: accountResponseSchema,
-    404: errorResponseSchema
+    200: {
+      ...accountResponseSchema,
+      description: "Detalji naloga"
+    },
+    404: {
+      ...errorResponseSchema,
+      description: "Nalog nije pronađen"
+    }
   }
 };
 
 export const createAccountSchema: FastifySchema = {
   tags: ["accounts"],
   summary: "Create new account",
+  description: "Kreira novi klijentski nalog. Svi obavezni podaci moraju biti validni (email format, tip naloga, itd.).",
   body: accountBodySchema,
   response: {
-    201: accountResponseSchema,
-    400: errorResponseSchema,
-    409: errorResponseSchema
+    201: {
+      ...accountResponseSchema,
+      description: "Kreiran nalog"
+    },
+    400: {
+      ...errorResponseSchema,
+      description: "Nevalidni podaci za kreiranje naloga"
+    },
+    409: {
+      ...errorResponseSchema,
+      description: "Nalog sa istim email-om već postoji"
+    }
   }
 };
 
 export const updateAccountSchema: FastifySchema = {
   tags: ["accounts"],
   summary: "Update account",
+  description: "Ažurira postojeći nalog. Mogu se ažurirati svi podaci osim ID-a.",
   params: accountParamsSchema,
   body: accountBodySchema,
   response: {
-    200: accountResponseSchema,
-    400: errorResponseSchema,
-    404: errorResponseSchema
+    200: {
+      ...accountResponseSchema,
+      description: "Ažuriran nalog"
+    },
+    400: {
+      ...errorResponseSchema,
+      description: "Nevalidni podaci za ažuriranje"
+    },
+    404: {
+      ...errorResponseSchema,
+      description: "Nalog nije pronađen"
+    }
   }
 };
 
 export const deleteAccountSchema: FastifySchema = {
   tags: ["accounts"],
   summary: "Delete account",
+  description: "Briše nalog iz sistema. Operacija je trajna i ne može se poništiti.",
   params: accountParamsSchema,
   response: {
-    204: { type: "null" },
-    404: errorResponseSchema
+    204: {
+      type: "null",
+      description: "Nalog je uspešno obrisan"
+    },
+    404: {
+      ...errorResponseSchema,
+      description: "Nalog nije pronađen"
+    }
   }
 };
 

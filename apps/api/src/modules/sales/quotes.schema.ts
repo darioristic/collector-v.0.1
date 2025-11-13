@@ -54,8 +54,9 @@ const quoteSchema = {
 };
 
 export const listQuotesSchema: FastifySchema = {
-  tags: ["sales", "quotes"],
+  tags: ["sales-quotes"],
   summary: "List quotes",
+  description: "Vraća listu ponuda sa opcionim filtriranjem po kompaniji, kontaktu, statusu i pretrazi. Podržava paginaciju.",
   querystring: {
     type: "object",
     properties: {
@@ -93,8 +94,9 @@ export const listQuotesSchema: FastifySchema = {
 };
 
 export const getQuoteSchema: FastifySchema = {
-  tags: ["sales", "quotes"],
+  tags: ["sales-quotes"],
   summary: "Get quote by ID",
+  description: "Vraća detaljne informacije o konkretnoj ponudi uključujući sve stavke.",
   params: {
     type: "object",
     properties: {
@@ -136,8 +138,9 @@ const quoteItemCreateSchema = {
 };
 
 export const createQuoteSchema: FastifySchema = {
-  tags: ["sales", "quotes"],
+  tags: ["sales-quotes"],
   summary: "Create a new quote",
+  description: "Kreira novu ponudu sa stavkama. Automatski se računaju subtotal, tax i total na osnovu stavki.",
   body: {
     type: "object",
     properties: {
@@ -171,8 +174,9 @@ export const createQuoteSchema: FastifySchema = {
 };
 
 export const updateQuoteSchema: FastifySchema = {
-  tags: ["sales", "quotes"],
+  tags: ["sales-quotes"],
   summary: "Update a quote",
+  description: "Ažurira postojeću ponudu. Mogu se ažurirati svi podaci uključujući stavke.",
   params: {
     type: "object",
     properties: {
@@ -219,8 +223,9 @@ export const updateQuoteSchema: FastifySchema = {
 };
 
 export const deleteQuoteSchema: FastifySchema = {
-  tags: ["sales", "quotes"],
+  tags: ["sales-quotes"],
   summary: "Delete a quote",
+  description: "Briše ponudu iz sistema. Operacija je trajna.",
   params: {
     type: "object",
     properties: {
