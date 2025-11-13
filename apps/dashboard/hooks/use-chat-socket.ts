@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import { useAuth } from "@/components/providers/auth-provider";
+import type { ChatMessage } from "@/app/(protected)/apps/chat/api";
 
 const CHAT_SERVICE_URL =
 	process.env.NEXT_PUBLIC_CHAT_SERVICE_URL || "http://localhost:4001";
@@ -15,7 +16,7 @@ export function useChatSocket() {
 	>({});
 	const socketRef = useRef<Socket | null>(null);
 	const messageCallbacksRef = useRef<
-		Set<(data: { conversationId: string; message: unknown }) => void>
+		Set<(data: { conversationId: string; message: ChatMessage }) => void>
 	>(new Set());
 	const conversationUpdateCallbacksRef = useRef<
 		Set<(data: { conversationId: string }) => void>
@@ -96,7 +97,7 @@ export function useChatSocket() {
 		// Message events - notify all registered callbacks
 		newSocket.on(
 			"chat:message:new",
-			(data: { conversationId: string; message: unknown }) => {
+			(data: { conversationId: string; message: ChatMessage }) => {
 				console.log("[chat-socket] New message received:", data);
 				messageCallbacksRef.current.forEach((callback) => {
 					try {
@@ -162,7 +163,7 @@ export function useChatSocket() {
 	// Subscribe to new message events
 	const onNewMessage = useCallback(
 		(
-			callback: (data: { conversationId: string; message: unknown }) => void,
+			callback: (data: { conversationId: string; message: ChatMessage }) => void,
 		) => {
 			messageCallbacksRef.current.add(callback);
 			// Return unsubscribe function

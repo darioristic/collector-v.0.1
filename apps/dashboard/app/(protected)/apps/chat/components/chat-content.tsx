@@ -17,6 +17,7 @@ export function ChatContent() {
 	const { selectedChat, setSelectedChat, setMessages, addMessage } = useChatStore();
 	const { user } = useAuth();
 	const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+	const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 	const { isConnected, joinConversation, leaveConversation, onNewMessage, onConversationUpdate } = useChatSocket();
 	const queryClient = useQueryClient();
 	const currentUserId = user?.id;
@@ -73,25 +74,38 @@ export function ChatContent() {
 		retry: 1,
 	});
 
+	// Helper function to scroll to bottom
+	const scrollToBottom = React.useCallback((smooth = true) => {
+		if (scrollContainerRef.current) {
+			const scrollOptions: ScrollToOptions = {
+				top: scrollContainerRef.current.scrollHeight,
+				behavior: smooth ? "smooth" : "auto",
+			};
+			scrollContainerRef.current.scrollTo(scrollOptions);
+		}
+	}, []);
+
 	useEffect(() => {
 		if (messagesQuery.data && selectedChat?.conversationId) {
 			setMessages(selectedChat.conversationId, messagesQuery.data);
 		}
 	}, [messagesQuery.data, selectedChat?.conversationId, setMessages]);
 
+	// Auto-scroll when messages load or change
 	useEffect(() => {
-		if (messagesContainerRef.current && messagesQuery.data && messagesQuery.data.length > 0) {
-			// Use setTimeout to ensure DOM is updated
-			setTimeout(() => {
-				if (messagesContainerRef.current) {
-					messagesContainerRef.current.scrollIntoView({
-						behavior: "smooth",
-						block: "end",
-					});
-				}
-			}, 100);
+		if (messagesQuery.data && messagesQuery.data.length > 0) {
+			// Scroll instantly on initial load, smooth on updates
+			const isInitialLoad = !selectedChat?.messages || selectedChat.messages.length === 0;
+			setTimeout(() => scrollToBottom(!isInitialLoad), 100);
 		}
-	}, [messagesQuery.data]);
+	}, [messagesQuery.data, scrollToBottom, selectedChat?.messages]);
+
+	// Auto-scroll when new messages are added to store
+	useEffect(() => {
+		if (selectedChat?.messages && selectedChat.messages.length > 0) {
+			setTimeout(() => scrollToBottom(true), 50);
+		}
+	}, [selectedChat?.messages?.length, scrollToBottom]);
 
 	// Join conversation room when chat is selected
 	useEffect(() => {
@@ -123,16 +137,14 @@ export function ChatContent() {
 
 			// If message is for currently selected conversation, add it to store
 			if (selectedChat?.conversationId === payload.conversationId) {
-				console.log("[chat-content] Adding message to current conversation");
-				addMessage(payload.message);
-
-				// Scroll to bottom
-				setTimeout(() => {
-					const container = messagesContainerRef.current?.parentElement;
-					if (container) {
-						container.scrollTop = container.scrollHeight;
-					}
-				}, 100);
+				// Only add message if it's NOT from the current user (to avoid duplicates with optimistic updates)
+				if (payload.message.senderId !== currentUserId) {
+					console.log("[chat-content] Adding message from other user");
+					addMessage(payload.message);
+					// Note: scroll will happen automatically via the messages length effect
+				} else {
+					console.log("[chat-content] Ignoring own message from socket (already added optimistically)");
+				}
 			}
 		});
 
@@ -244,7 +256,7 @@ export function ChatContent() {
 		<div className="bg-background fixed inset-0 z-50 flex h-full flex-col p-4 lg:relative lg:z-10 lg:bg-transparent lg:p-0">
 			<ChatHeader user={otherUser} />
 
-			<div className="flex-1 overflow-y-auto lg:px-4">
+			<div ref={scrollContainerRef} className="flex-1 overflow-y-auto lg:px-4">
 				<div ref={messagesContainerRef}>
 					<div className="flex flex-col items-start space-y-10 py-8">
 						{messagesQuery.isLoading && (

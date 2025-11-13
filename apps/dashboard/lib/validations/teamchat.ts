@@ -51,3 +51,42 @@ export const messageWithAuthorSchema = z.object({
 	channelId: z.string().uuid(),
 	createdAt: z.date(),
 });
+
+// Additional response schemas
+export const channelListResponseSchema = z.object({
+	channels: z.array(channelSummarySchema),
+});
+
+export const directChannelResponseSchema = z.object({
+	channel: channelSummarySchema,
+});
+
+export const directMessageTargetsResponseSchema = z.object({
+	targets: z.array(channelMemberSummarySchema),
+});
+
+export const messageResponseSchema = z.object({
+	message: messageWithAuthorSchema,
+});
+
+export const messagesResponseSchema = z.object({
+	messages: z.array(messageWithAuthorSchema),
+});
+
+export const uploadAttachmentResponseSchema = z.object({
+	url: z.string(),
+	name: z.string(),
+	size: z.number(),
+	mimeType: z.string(),
+});
+
+// Request schemas
+export const createDirectMessageSchema = z.object({
+	targetUserId: z.string().uuid(),
+});
+
+export const createMessageSchema = z.object({
+	content: z.string().min(1),
+	channelId: z.string().uuid(),
+	fileUrl: z.string().optional(),
+});

@@ -762,6 +762,586 @@ body {
 	}
 }
 
+[data-theme-preset="vercel"] {
+	--base-50: oklch(1 0 0);
+	--base-100: oklch(0.96 0 0);
+	--base-200: oklch(0.93 0 0);
+	--base-300: oklch(0.87 0 0);
+	--base-400: oklch(0.70 0 0);
+	--base-500: oklch(0.50 0 0);
+	--base-600: oklch(0.44 0 0);
+	--base-700: oklch(0.37 0 0);
+	--base-800: oklch(0.30 0 0);
+	--base-900: oklch(0.15 0 0);
+	--base-950: oklch(0.08 0 0);
+	--base-1000: oklch(0 0 0);
+
+	--primary-50: oklch(0.98 0.05 250);
+	--primary-100: oklch(0.95 0.08 250);
+	--primary-200: oklch(0.90 0.12 250);
+	--primary-300: oklch(0.80 0.16 250);
+	--primary-400: oklch(0.70 0.18 250);
+	--primary-500: oklch(0.62 0.19 250);
+	--primary-600: oklch(0.55 0.20 250);
+	--primary-700: oklch(0.48 0.19 250);
+	--primary-800: oklch(0.40 0.17 250);
+	--primary-900: oklch(0.33 0.15 250);
+	--primary-950: oklch(0.24 0.12 250);
+	--primary-1000: oklch(0.16 0.10 250);
+
+	--secondary-50: oklch(0.98 0 0);
+	--secondary-100: oklch(0.95 0 0);
+	--secondary-200: oklch(0.93 0 0);
+	--secondary-300: oklch(0.80 0 0);
+	--secondary-400: oklch(0.65 0 0);
+	--secondary-500: oklch(0.50 0 0);
+	--secondary-600: oklch(0.40 0 0);
+	--secondary-700: oklch(0.30 0 0);
+	--secondary-800: oklch(0.20 0 0);
+	--secondary-900: oklch(0.15 0 0);
+	--secondary-950: oklch(0.10 0 0);
+	--secondary-1000: oklch(0.06 0 0);
+
+	/* Geist Light Theme - Using Light Colors */
+	--background: var(--geist-background-1);
+	--foreground: var(--geist-text-10);
+	--card: var(--geist-background-1);
+	--card-foreground: var(--geist-text-10);
+	--popover: var(--geist-background-1);
+	--popover-foreground: var(--geist-text-10);
+	--primary: var(--geist-blue-6);
+	--primary-foreground: #FFFFFF;
+	--secondary: var(--geist-background-2);
+	--secondary-foreground: var(--geist-text-10);
+	--muted: var(--geist-gray-2);
+	--muted-foreground: var(--geist-text-9);
+	--accent: var(--geist-blue-1);
+	--accent-foreground: var(--geist-blue-6);
+	--destructive: var(--geist-red-5);
+	--destructive-foreground: #FFFFFF;
+	--border: var(--geist-border-1);
+	--input: var(--geist-border-1);
+	--ring: var(--geist-blue-6);
+	--chart-1: var(--geist-blue-6);
+	--chart-2: var(--geist-blue-4);
+	--chart-3: var(--geist-blue-7);
+	--chart-4: var(--geist-blue-5);
+	--chart-5: var(--geist-blue-3);
+	--radius: 0.5rem;
+	--sidebar: var(--geist-background-1);
+	--sidebar-foreground: var(--geist-text-10);
+	--sidebar-primary: var(--geist-blue-6);
+	--sidebar-primary-foreground: #FFFFFF;
+	--sidebar-accent: var(--geist-background-2);
+	--sidebar-accent-foreground: var(--geist-text-10);
+	--sidebar-border: var(--geist-border-1);
+	--sidebar-ring: var(--geist-blue-6);
+
+	--text-family: var(--font-inter), system-ui, sans-serif;
+	--display-weight: 600;
+	--font-mono: var(--font-overpass-mono), ui-monospace, monospace;
+
+	/* Geist Color Tokens - Light Theme */
+	/* Background */
+	--geist-background-1: #FFFFFF;
+	--geist-background-2: #F9F9F9;
+
+	/* Gray */
+	--geist-gray-1: #FAFAFA;
+	--geist-gray-2: #F0F0F0;
+	--geist-gray-3: #E5E5E5;
+	--geist-gray-4: #D4D4D4;
+	--geist-gray-5: #A3A3A3;
+	--geist-gray-6: #737373;
+	--geist-gray-7: #525252;
+	--geist-gray-8: #404040;
+	--geist-gray-9: #262626;
+	--geist-gray-10: #171717;
+
+	/* Blue */
+	--geist-blue-1: #F5F9FF;
+	--geist-blue-2: #DDEBFF;
+	--geist-blue-3: #A8CCFF;
+	--geist-blue-4: #74ADFF;
+	--geist-blue-5: #3D8AFF;
+	--geist-blue-6: #0070F3;
+	--geist-blue-7: #0059C9;
+	--geist-blue-8: #0041A1;
+	--geist-blue-9: #002E7A;
+	--geist-blue-10: #001C55;
+
+	/* Red */
+	--geist-red-1: #FFF5F5;
+	--geist-red-2: #FFE5E5;
+	--geist-red-3: #FFCCCC;
+	--geist-red-4: #FF9999;
+	--geist-red-5: #FF3B3B;
+	--geist-red-6: #FF5555;
+	--geist-red-7: #FF6F6F;
+	--geist-red-8: #FF8989;
+	--geist-red-9: #FFA3A3;
+	--geist-red-10: #FFBDBD;
+
+	/* Amber */
+	--geist-amber-1: #FFF8E1;
+	--geist-amber-2: #FFEFCC;
+	--geist-amber-3: #FFE099;
+	--geist-amber-4: #FFD166;
+	--geist-amber-5: #FFB300;
+	--geist-amber-6: #FFC233;
+	--geist-amber-7: #FFD166;
+	--geist-amber-8: #FFE099;
+	--geist-amber-9: #FFEFCC;
+	--geist-amber-10: #FFF8E1;
+
+	/* Green */
+	--geist-green-1: #F5FFF9;
+	--geist-green-2: #CCF5E0;
+	--geist-green-3: #99EBC1;
+	--geist-green-4: #66E1A2;
+	--geist-green-5: #00B37E;
+	--geist-green-6: #00C991;
+	--geist-green-7: #00DFA4;
+	--geist-green-8: #33E8B7;
+	--geist-green-9: #66F1CA;
+	--geist-green-10: #99FADD;
+
+	/* Teal */
+	--geist-teal-1: #F0F9F9;
+	--geist-teal-2: #CCF5F0;
+	--geist-teal-3: #99EBE1;
+	--geist-teal-4: #66E1D2;
+	--geist-teal-5: #00B3B3;
+	--geist-teal-6: #00C9C9;
+	--geist-teal-7: #00DFDF;
+	--geist-teal-8: #33E8E8;
+	--geist-teal-9: #66F1F1;
+	--geist-teal-10: #99FAFA;
+
+	/* Purple */
+	--geist-purple-1: #F9F5FF;
+	--geist-purple-2: #F3E8FF;
+	--geist-purple-3: #E9D5FF;
+	--geist-purple-4: #DDD6FE;
+	--geist-purple-5: #7C3AED;
+	--geist-purple-6: #8B5CF6;
+	--geist-purple-7: #A78BFA;
+	--geist-purple-8: #C4B5FD;
+	--geist-purple-9: #DDD6FE;
+	--geist-purple-10: #EDE9FE;
+
+	/* Pink */
+	--geist-pink-1: #FFF0F6;
+	--geist-pink-2: #FFE1F0;
+	--geist-pink-3: #FFC2E0;
+	--geist-pink-4: #FFA3D0;
+	--geist-pink-5: #EC4899;
+	--geist-pink-6: #F472B6;
+	--geist-pink-7: #F79CD4;
+	--geist-pink-8: #FAB6E2;
+	--geist-pink-9: #FDD0F0;
+	--geist-pink-10: #FFE8F7;
+
+	/* Gray Alpha */
+	--geist-gray-alpha-1: rgba(0, 0, 0, 0.05);
+	--geist-gray-alpha-2: rgba(0, 0, 0, 0.10);
+	--geist-gray-alpha-3: rgba(0, 0, 0, 0.15);
+	--geist-gray-alpha-4: rgba(0, 0, 0, 0.20);
+	--geist-gray-alpha-5: rgba(0, 0, 0, 0.30);
+	--geist-gray-alpha-6: rgba(0, 0, 0, 0.40);
+	--geist-gray-alpha-7: rgba(0, 0, 0, 0.50);
+	--geist-gray-alpha-8: rgba(0, 0, 0, 0.60);
+	--geist-gray-alpha-9: rgba(0, 0, 0, 0.70);
+	--geist-gray-alpha-10: rgba(0, 0, 0, 0.80);
+
+	/* Border */
+	--geist-border-1: #EAEAEA;
+	--geist-border-2: #D4D4D4;
+	--geist-border-3: #A3A3A3;
+	--geist-border-4: #737373;
+	--geist-border-5: #525252;
+	--geist-border-6: #404040;
+
+	/* Text */
+	--geist-text-9: #666666;
+	--geist-text-10: #111111;
+
+	/* Semantic Colors (Light Theme) */
+	--geist-text-primary: var(--geist-text-10);
+	--geist-text-secondary: var(--geist-text-9);
+	--geist-bg-primary: var(--geist-background-1);
+	--geist-bg-secondary: var(--geist-background-2);
+	--geist-border-default: var(--geist-border-1);
+	--geist-border-hover: var(--geist-border-2);
+	--geist-border-active: var(--geist-border-3);
+
+	/* Geist Typography Scale - Headings */
+	--text-heading-72: 72px;
+	--text-heading-72-line-height: 1.1;
+	--text-heading-72-letter-spacing: -0.02em;
+	--text-heading-72-font-weight: 700;
+
+	--text-heading-64: 64px;
+	--text-heading-64-line-height: 1.15;
+	--text-heading-64-letter-spacing: -0.02em;
+	--text-heading-64-font-weight: 700;
+
+	--text-heading-56: 56px;
+	--text-heading-56-line-height: 1.2;
+	--text-heading-56-letter-spacing: -0.02em;
+	--text-heading-56-font-weight: 600;
+
+	--text-heading-48: 48px;
+	--text-heading-48-line-height: 1.2;
+	--text-heading-48-letter-spacing: -0.01em;
+	--text-heading-48-font-weight: 600;
+
+	--text-heading-40: 40px;
+	--text-heading-40-line-height: 1.25;
+	--text-heading-40-letter-spacing: -0.01em;
+	--text-heading-40-font-weight: 600;
+
+	--text-heading-32: 32px;
+	--text-heading-32-line-height: 1.3;
+	--text-heading-32-letter-spacing: -0.01em;
+	--text-heading-32-font-weight: 500;
+
+	--text-heading-24: 24px;
+	--text-heading-24-line-height: 1.35;
+	--text-heading-24-letter-spacing: 0;
+	--text-heading-24-font-weight: 500;
+
+	--text-heading-20: 20px;
+	--text-heading-20-line-height: 1.4;
+	--text-heading-20-letter-spacing: 0;
+	--text-heading-20-font-weight: 500;
+
+	--text-heading-16: 16px;
+	--text-heading-16-line-height: 1.5;
+	--text-heading-16-letter-spacing: 0;
+	--text-heading-16-font-weight: 500;
+
+	--text-heading-14: 14px;
+	--text-heading-14-line-height: 1.5;
+	--text-heading-14-letter-spacing: 0;
+	--text-heading-14-font-weight: 500;
+
+	/* Geist Typography Scale - Labels */
+	--text-label-20: 20px;
+	--text-label-20-line-height: 1.5;
+	--text-label-20-letter-spacing: 0;
+	--text-label-20-font-weight: 500;
+
+	--text-label-18: 18px;
+	--text-label-18-line-height: 1.5;
+	--text-label-18-letter-spacing: 0;
+	--text-label-18-font-weight: 500;
+
+	--text-label-16: 16px;
+	--text-label-16-line-height: 1.5;
+	--text-label-16-letter-spacing: 0;
+	--text-label-16-font-weight: 600;
+
+	--text-label-14: 14px;
+	--text-label-14-line-height: 1.5;
+	--text-label-14-letter-spacing: 0;
+	--text-label-14-font-weight: 600;
+
+	--text-label-13: 13px;
+	--text-label-13-line-height: 1.4;
+	--text-label-13-letter-spacing: 0;
+	--text-label-13-font-weight: 600;
+
+	--text-label-12: 12px;
+	--text-label-12-line-height: 1.3;
+	--text-label-12-letter-spacing: 0;
+	--text-label-12-font-weight: 600;
+	--text-label-12-text-transform: uppercase;
+
+	/* Geist Typography Scale - Copy */
+	--text-copy-24: 24px;
+	--text-copy-24-line-height: 1.6;
+	--text-copy-24-letter-spacing: -0.01em;
+	--text-copy-24-font-weight: 700;
+
+	--text-copy-20: 20px;
+	--text-copy-20-line-height: 1.6;
+	--text-copy-20-letter-spacing: -0.01em;
+	--text-copy-20-font-weight: 700;
+
+	--text-copy-18: 18px;
+	--text-copy-18-line-height: 1.6;
+	--text-copy-18-letter-spacing: -0.01em;
+	--text-copy-18-font-weight: 700;
+
+	--text-copy-16: 16px;
+	--text-copy-16-line-height: 1.6;
+	--text-copy-16-letter-spacing: -0.01em;
+	--text-copy-16-font-weight: 400;
+
+	--text-copy-14: 14px;
+	--text-copy-14-line-height: 1.5;
+	--text-copy-14-letter-spacing: -0.01em;
+	--text-copy-14-font-weight: 400;
+
+	--text-copy-13: 13px;
+	--text-copy-13-line-height: 1.4;
+	--text-copy-13-letter-spacing: -0.01em;
+	--text-copy-13-font-weight: 400;
+
+	/* Geist Typography Scale - Copy Mono */
+	--text-copy-13-mono: 13px;
+	--text-copy-13-mono-line-height: 1.4;
+	--text-copy-13-mono-letter-spacing: -0.01em;
+	--text-copy-13-mono-font-weight: 400;
+	--text-copy-13-mono-font-family: monospace;
+
+	/* Geist Typography Scale - Buttons */
+	--text-button-16: 16px;
+	--text-button-16-line-height: 1.5;
+	--text-button-16-letter-spacing: 0;
+	--text-button-16-font-weight: 600;
+	--text-button-16-text-transform: none;
+
+	--text-button-14: 14px;
+	--text-button-14-line-height: 1.5;
+	--text-button-14-letter-spacing: 0;
+	--text-button-14-font-weight: 600;
+	--text-button-14-text-transform: none;
+
+	--text-button-12: 12px;
+	--text-button-12-line-height: 1.5;
+	--text-button-12-letter-spacing: 0;
+	--text-button-12-font-weight: 600;
+	--text-button-12-text-transform: none;
+
+	@variant dark {
+		/* ============================================================================
+		 * GEIST DARK THEME - Complete Color System
+		 * ============================================================================
+		 * Based on official Vercel Geist Design System dark theme specifications
+		 */
+
+		/* ----------------------------------------------------------------------------
+		 * Backgrounds
+		 * ---------------------------------------------------------------------------- */
+		--geist-dark-background-1: #000000;
+		--geist-dark-background-2: #111111;
+		--geist-dark-component-default: #111111;
+		--geist-dark-component-hover: #1A1A1A;
+		--geist-dark-component-active: #262626;
+		--geist-dark-high-contrast-default: #525252;
+		--geist-dark-high-contrast-hover: #737373;
+
+		/* ----------------------------------------------------------------------------
+		 * Borders
+		 * ---------------------------------------------------------------------------- */
+		--geist-dark-border-default: #2A2A2A;
+		--geist-dark-border-hover: #404040;
+		--geist-dark-border-active: #525252;
+
+		/* ----------------------------------------------------------------------------
+		 * Text & Icons
+		 * ---------------------------------------------------------------------------- */
+		--geist-dark-text-primary: #FFFFFF;
+		--geist-dark-text-secondary: #888888;
+		--geist-dark-icon-primary: #FFFFFF;
+		--geist-dark-icon-secondary: #888888;
+
+		/* ----------------------------------------------------------------------------
+		 * Gray Scale (Dark Theme - Inverted for dark backgrounds)
+		 * ---------------------------------------------------------------------------- */
+		--geist-dark-gray-1: #FAFAFA;
+		--geist-dark-gray-2: #F0F0F0;
+		--geist-dark-gray-3: #E5E5E5;
+		--geist-dark-gray-4: #D4D4D4;
+		--geist-dark-gray-5: #A3A3A3;
+		--geist-dark-gray-6: #737373;
+		--geist-dark-gray-7: #525252;
+		--geist-dark-gray-8: #404040;
+		--geist-dark-gray-9: #262626;
+		--geist-dark-gray-10: #171717;
+
+		/* ----------------------------------------------------------------------------
+		 * Gray Alpha Scale (for transparency on dark backgrounds)
+		 * ---------------------------------------------------------------------------- */
+		--geist-dark-gray-alpha-1: rgba(255, 255, 255, 0.05);
+		--geist-dark-gray-alpha-2: rgba(255, 255, 255, 0.10);
+		--geist-dark-gray-alpha-3: rgba(255, 255, 255, 0.15);
+		--geist-dark-gray-alpha-4: rgba(255, 255, 255, 0.20);
+		--geist-dark-gray-alpha-5: rgba(255, 255, 255, 0.30);
+		--geist-dark-gray-alpha-6: rgba(255, 255, 255, 0.40);
+		--geist-dark-gray-alpha-7: rgba(255, 255, 255, 0.50);
+		--geist-dark-gray-alpha-8: rgba(255, 255, 255, 0.60);
+		--geist-dark-gray-alpha-9: rgba(255, 255, 255, 0.70);
+		--geist-dark-gray-alpha-10: rgba(255, 255, 255, 0.80);
+
+		/* ----------------------------------------------------------------------------
+		 * Blue Scale (Dark Theme)
+		 * ---------------------------------------------------------------------------- */
+		--geist-dark-blue-1: #0A1929;
+		--geist-dark-blue-2: #132F4C;
+		--geist-dark-blue-3: #1E4A6F;
+		--geist-dark-blue-4: #2563EB;
+		--geist-dark-blue-5: #3B82F6;
+		--geist-dark-blue-6: #0070F3;
+		--geist-dark-blue-7: #0059C9;
+		--geist-dark-blue-8: #0041A1;
+		--geist-dark-blue-9: #002E7A;
+		--geist-dark-blue-10: #001C55;
+
+		/* ----------------------------------------------------------------------------
+		 * Red Scale (Dark Theme)
+		 * ---------------------------------------------------------------------------- */
+		--geist-dark-red-1: #2A0E0E;
+		--geist-dark-red-2: #4A1515;
+		--geist-dark-red-3: #6B1F1F;
+		--geist-dark-red-4: #8B2828;
+		--geist-dark-red-5: #FF3B3B;
+		--geist-dark-red-6: #FF5555;
+		--geist-dark-red-7: #FF6F6F;
+		--geist-dark-red-8: #FF8989;
+		--geist-dark-red-9: #FFA3A3;
+		--geist-dark-red-10: #FFBDBD;
+
+		/* ----------------------------------------------------------------------------
+		 * Amber Scale (Dark Theme)
+		 * ---------------------------------------------------------------------------- */
+		--geist-dark-amber-1: #2A1F0E;
+		--geist-dark-amber-2: #4A3F15;
+		--geist-dark-amber-3: #6B5F1F;
+		--geist-dark-amber-4: #8B7F28;
+		--geist-dark-amber-5: #FFB300;
+		--geist-dark-amber-6: #FFC233;
+		--geist-dark-amber-7: #FFD166;
+		--geist-dark-amber-8: #FFE099;
+		--geist-dark-amber-9: #FFEFCC;
+		--geist-dark-amber-10: #FFF8E1;
+
+		/* ----------------------------------------------------------------------------
+		 * Green Scale (Dark Theme)
+		 * ---------------------------------------------------------------------------- */
+		--geist-dark-green-1: #0A1F15;
+		--geist-dark-green-2: #133F2A;
+		--geist-dark-green-3: #1E5F3F;
+		--geist-dark-green-4: #287F54;
+		--geist-dark-green-5: #00B37E;
+		--geist-dark-green-6: #00C991;
+		--geist-dark-green-7: #00DFA4;
+		--geist-dark-green-8: #33E8B7;
+		--geist-dark-green-9: #66F1CA;
+		--geist-dark-green-10: #99FADD;
+
+		/* ----------------------------------------------------------------------------
+		 * Teal Scale (Dark Theme)
+		 * ---------------------------------------------------------------------------- */
+		--geist-dark-teal-1: #0A1F1F;
+		--geist-dark-teal-2: #133F3F;
+		--geist-dark-teal-3: #1E5F5F;
+		--geist-dark-teal-4: #287F7F;
+		--geist-dark-teal-5: #00B3B3;
+		--geist-dark-teal-6: #00C9C9;
+		--geist-dark-teal-7: #00DFDF;
+		--geist-dark-teal-8: #33E8E8;
+		--geist-dark-teal-9: #66F1F1;
+		--geist-dark-teal-10: #99FAFA;
+
+		/* ----------------------------------------------------------------------------
+		 * Purple Scale (Dark Theme)
+		 * ---------------------------------------------------------------------------- */
+		--geist-dark-purple-1: #1F0A2A;
+		--geist-dark-purple-2: #3F133F;
+		--geist-dark-purple-3: #5F1E5F;
+		--geist-dark-purple-4: #7F287F;
+		--geist-dark-purple-5: #9333EA;
+		--geist-dark-purple-6: #A855F7;
+		--geist-dark-purple-7: #BD84F9;
+		--geist-dark-purple-8: #D2B3FB;
+		--geist-dark-purple-9: #E7D2FD;
+		--geist-dark-purple-10: #F3E8FF;
+
+		/* ----------------------------------------------------------------------------
+		 * Pink Scale (Dark Theme)
+		 * ---------------------------------------------------------------------------- */
+		--geist-dark-pink-1: #2A0A1F;
+		--geist-dark-pink-2: #4A133F;
+		--geist-dark-pink-3: #6B1E5F;
+		--geist-dark-pink-4: #8B287F;
+		--geist-dark-pink-5: #EC4899;
+		--geist-dark-pink-6: #F472B6;
+		--geist-dark-pink-7: #F79CD4;
+		--geist-dark-pink-8: #FAB6E2;
+		--geist-dark-pink-9: #FDD0F0;
+		--geist-dark-pink-10: #FFE8F7;
+
+		/* ----------------------------------------------------------------------------
+		 * Semantic Colors (Dark Theme)
+		 * ---------------------------------------------------------------------------- */
+		--geist-dark-primary: #0070F3;
+		--geist-dark-primary-hover: #0059C9;
+		--geist-dark-primary-active: #0041A1;
+		--geist-dark-primary-foreground: #FFFFFF;
+		--geist-dark-secondary: #262626;
+		--geist-dark-secondary-hover: #404040;
+		--geist-dark-secondary-active: #525252;
+		--geist-dark-secondary-foreground: #FFFFFF;
+		--geist-dark-destructive: #FF3B3B;
+		--geist-dark-destructive-hover: #FF5555;
+		--geist-dark-destructive-active: #FF6F6F;
+		--geist-dark-destructive-foreground: #FFFFFF;
+		--geist-dark-accent: #0070F3;
+		--geist-dark-accent-hover: #0059C9;
+		--geist-dark-accent-active: #0041A1;
+		--geist-dark-accent-foreground: #FFFFFF;
+		--geist-dark-muted: #262626;
+		--geist-dark-muted-foreground: #888888;
+		--geist-dark-success: #00B37E;
+		--geist-dark-success-foreground: #FFFFFF;
+		--geist-dark-warning: #FFB300;
+		--geist-dark-warning-foreground: #000000;
+		--geist-dark-error: #FF3B3B;
+		--geist-dark-error-foreground: #FFFFFF;
+		--geist-dark-info: #0070F3;
+		--geist-dark-info-foreground: #FFFFFF;
+
+		/* ----------------------------------------------------------------------------
+		 * Theme Integration - Map to existing theme variables
+		 * ---------------------------------------------------------------------------- */
+		--background: var(--geist-dark-background-1);
+		--foreground: var(--geist-dark-text-primary);
+		--card: var(--geist-dark-component-default);
+		--card-foreground: var(--geist-dark-text-primary);
+		--popover: var(--geist-dark-component-default);
+		--popover-foreground: var(--geist-dark-text-primary);
+		--primary: var(--geist-dark-primary);
+		--primary-foreground: var(--geist-dark-primary-foreground);
+		--secondary: var(--geist-dark-secondary);
+		--secondary-foreground: var(--geist-dark-secondary-foreground);
+		--muted: var(--geist-dark-muted);
+		--muted-foreground: var(--geist-dark-muted-foreground);
+		--accent: var(--geist-dark-accent);
+		--accent-foreground: var(--geist-dark-accent-foreground);
+		--destructive: var(--geist-dark-destructive);
+		--destructive-foreground: var(--geist-dark-destructive-foreground);
+		--border: var(--geist-dark-border-default);
+		--input: var(--geist-dark-border-default);
+		--ring: var(--geist-dark-primary);
+		--chart-1: var(--geist-dark-blue-6);
+		--chart-2: var(--geist-dark-blue-4);
+		--chart-3: var(--geist-dark-blue-7);
+		--chart-4: var(--geist-dark-blue-5);
+		--chart-5: var(--geist-dark-blue-3);
+		--sidebar: var(--geist-dark-background-1);
+		--sidebar-foreground: var(--geist-dark-text-primary);
+		--sidebar-primary: var(--geist-dark-primary);
+		--sidebar-primary-foreground: var(--geist-dark-primary-foreground);
+		--sidebar-accent: var(--geist-dark-component-hover);
+		--sidebar-accent-foreground: var(--geist-dark-text-primary);
+		--sidebar-border: var(--geist-dark-border-default);
+		--sidebar-ring: var(--geist-dark-primary);
+	}
+}
+
 /* Theme presets */
 
 /* Chart presets */

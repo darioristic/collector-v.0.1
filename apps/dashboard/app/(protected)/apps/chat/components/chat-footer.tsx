@@ -69,6 +69,11 @@ export function ChatFooter() {
 		const optimisticId = `temp-${Date.now()}-${Math.random()}`;
 
 		// Create optimistic message
+		// Split name into firstName and lastName for sender object
+		const nameParts = user.name.split(" ");
+		const firstName = nameParts[0] || "";
+		const lastName = nameParts.slice(1).join(" ") || "";
+
 		const optimisticMessage: ChatMessage = {
 			id: optimisticId,
 			conversationId: selectedChat.conversationId,
@@ -83,11 +88,11 @@ export function ChatFooter() {
 			updatedAt: new Date().toISOString(),
 			sender: {
 				id: user.id,
-				firstName: user.firstName || "",
-				lastName: user.lastName || "",
-				displayName: user.displayName || null,
+				firstName,
+				lastName,
+				displayName: null,
 				email: user.email,
-				avatarUrl: user.avatarUrl || null,
+				avatarUrl: null,
 			},
 		};
 

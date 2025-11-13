@@ -1,0 +1,254 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Vercel Geist Design System - Dark Theme",
+  "description": "Complete dark theme color palette organized by category. All colors are ready for use in CSS variables or JS objects. Based on official Vercel Geist Design System specifications.",
+  "version": "1.0.0",
+  "theme": {
+    "name": "Geist Dark",
+    "variant": "dark",
+    "backgrounds": {
+      "background1": {
+        "value": "#000000",
+        "description": "Default element background",
+        "usage": "Main background color"
+      },
+      "background2": {
+        "value": "#111111",
+        "description": "Secondary background",
+        "usage": "Secondary surface, subtle background"
+      },
+      "componentDefault": {
+        "value": "#111111",
+        "description": "Component background (Color 1 - default)",
+        "usage": "Default component background state"
+      },
+      "componentHover": {
+        "value": "#1A1A1A",
+        "description": "Component background (Color 2 - hover)",
+        "usage": "Component hover state background"
+      },
+      "componentActive": {
+        "value": "#262626",
+        "description": "Component background (Color 3 - active)",
+        "usage": "Component active state background"
+      },
+      "highContrastDefault": {
+        "value": "#525252",
+        "description": "High-contrast background (Color 7 - default)",
+        "usage": "High-contrast element background"
+      },
+      "highContrastHover": {
+        "value": "#737373",
+        "description": "High-contrast background (Color 8 - hover)",
+        "usage": "High-contrast element hover state"
+      }
+    },
+    "borders": {
+      "borderDefault": {
+        "value": "#2A2A2A",
+        "description": "Default border (Color 4)",
+        "usage": "Default border color"
+      },
+      "borderHover": {
+        "value": "#404040",
+        "description": "Hover border (Color 5)",
+        "usage": "Border hover state"
+      },
+      "borderActive": {
+        "value": "#525252",
+        "description": "Active border (Color 6)",
+        "usage": "Border active state"
+      }
+    },
+    "text": {
+      "textPrimary": {
+        "value": "#FFFFFF",
+        "description": "Primary text and icons (Color 10)",
+        "usage": "Main text color, primary icons"
+      },
+      "textSecondary": {
+        "value": "#888888",
+        "description": "Secondary text and icons (Color 9)",
+        "usage": "Secondary text, muted icons"
+      }
+    },
+    "icons": {
+      "iconPrimary": {
+        "value": "#FFFFFF",
+        "description": "Primary icons (Color 10)",
+        "usage": "Primary icon color"
+      },
+      "iconSecondary": {
+        "value": "#888888",
+        "description": "Secondary icons (Color 9)",
+        "usage": "Secondary icon color"
+      }
+    },
+    "colorScales": {
+      "gray": {
+        "1": { "value": "#FAFAFA", "usage": "Lightest gray, primary text" },
+        "2": { "value": "#F0F0F0", "usage": "Light gray" },
+        "3": { "value": "#E5E5E5", "usage": "Light gray" },
+        "4": { "value": "#D4D4D4", "usage": "Medium light gray" },
+        "5": { "value": "#A3A3A3", "usage": "Medium gray" },
+        "6": { "value": "#737373", "usage": "Medium dark gray" },
+        "7": { "value": "#525252", "usage": "Dark gray, high contrast" },
+        "8": { "value": "#404040", "usage": "Dark gray, hover border" },
+        "9": { "value": "#262626", "usage": "Very dark gray, component active" },
+        "10": { "value": "#171717", "usage": "Darkest gray, secondary background" }
+      },
+      "grayAlpha": {
+        "1": { "value": "rgba(255, 255, 255, 0.05)", "usage": "5% white opacity" },
+        "2": { "value": "rgba(255, 255, 255, 0.10)", "usage": "10% white opacity" },
+        "3": { "value": "rgba(255, 255, 255, 0.15)", "usage": "15% white opacity" },
+        "4": { "value": "rgba(255, 255, 255, 0.20)", "usage": "20% white opacity" },
+        "5": { "value": "rgba(255, 255, 255, 0.30)", "usage": "30% white opacity" },
+        "6": { "value": "rgba(255, 255, 255, 0.40)", "usage": "40% white opacity" },
+        "7": { "value": "rgba(255, 255, 255, 0.50)", "usage": "50% white opacity" },
+        "8": { "value": "rgba(255, 255, 255, 0.60)", "usage": "60% white opacity" },
+        "9": { "value": "rgba(255, 255, 255, 0.70)", "usage": "70% white opacity" },
+        "10": { "value": "rgba(255, 255, 255, 0.80)", "usage": "80% white opacity" }
+      },
+      "blue": {
+        "1": { "value": "#0A1929", "usage": "Darkest blue" },
+        "2": { "value": "#132F4C", "usage": "Very dark blue" },
+        "3": { "value": "#1E4A6F", "usage": "Dark blue" },
+        "4": { "value": "#2563EB", "usage": "Medium blue" },
+        "5": { "value": "#3B82F6", "usage": "Medium light blue" },
+        "6": { "value": "#0070F3", "usage": "Primary blue (Vercel brand)" },
+        "7": { "value": "#0059C9", "usage": "Dark primary blue, hover" },
+        "8": { "value": "#0041A1", "usage": "Very dark primary blue, active" },
+        "9": { "value": "#002E7A", "usage": "Darkest primary blue" },
+        "10": { "value": "#001C55", "usage": "Darkest blue" }
+      },
+      "red": {
+        "1": { "value": "#2A0E0E", "usage": "Darkest red" },
+        "2": { "value": "#4A1515", "usage": "Very dark red" },
+        "3": { "value": "#6B1F1F", "usage": "Dark red" },
+        "4": { "value": "#8B2828", "usage": "Medium dark red" },
+        "5": { "value": "#FF3B3B", "usage": "Primary red (destructive)" },
+        "6": { "value": "#FF5555", "usage": "Light red, hover" },
+        "7": { "value": "#FF6F6F", "usage": "Lighter red, active" },
+        "8": { "value": "#FF8989", "usage": "Light red" },
+        "9": { "value": "#FFA3A3", "usage": "Very light red" },
+        "10": { "value": "#FFBDBD", "usage": "Lightest red" }
+      },
+      "amber": {
+        "1": { "value": "#2A1F0E", "usage": "Darkest amber" },
+        "2": { "value": "#4A3F15", "usage": "Very dark amber" },
+        "3": { "value": "#6B5F1F", "usage": "Dark amber" },
+        "4": { "value": "#8B7F28", "usage": "Medium dark amber" },
+        "5": { "value": "#FFB300", "usage": "Primary amber (warning)" },
+        "6": { "value": "#FFC233", "usage": "Light amber, hover" },
+        "7": { "value": "#FFD166", "usage": "Lighter amber, active" },
+        "8": { "value": "#FFE099", "usage": "Light amber" },
+        "9": { "value": "#FFEFCC", "usage": "Very light amber" },
+        "10": { "value": "#FFF8E1", "usage": "Lightest amber" }
+      },
+      "green": {
+        "1": { "value": "#0A1F15", "usage": "Darkest green" },
+        "2": { "value": "#133F2A", "usage": "Very dark green" },
+        "3": { "value": "#1E5F3F", "usage": "Dark green" },
+        "4": { "value": "#287F54", "usage": "Medium dark green" },
+        "5": { "value": "#00B37E", "usage": "Primary green (success)" },
+        "6": { "value": "#00C991", "usage": "Light green, hover" },
+        "7": { "value": "#00DFA4", "usage": "Lighter green, active" },
+        "8": { "value": "#33E8B7", "usage": "Light green" },
+        "9": { "value": "#66F1CA", "usage": "Very light green" },
+        "10": { "value": "#99FADD", "usage": "Lightest green" }
+      },
+      "teal": {
+        "1": { "value": "#0A1F1F", "usage": "Darkest teal" },
+        "2": { "value": "#133F3F", "usage": "Very dark teal" },
+        "3": { "value": "#1E5F5F", "usage": "Dark teal" },
+        "4": { "value": "#287F7F", "usage": "Medium dark teal" },
+        "5": { "value": "#00B3B3", "usage": "Primary teal" },
+        "6": { "value": "#00C9C9", "usage": "Light teal, hover" },
+        "7": { "value": "#00DFDF", "usage": "Lighter teal, active" },
+        "8": { "value": "#33E8E8", "usage": "Light teal" },
+        "9": { "value": "#66F1F1", "usage": "Very light teal" },
+        "10": { "value": "#99FAFA", "usage": "Lightest teal" }
+      },
+      "purple": {
+        "1": { "value": "#1F0A2A", "usage": "Darkest purple" },
+        "2": { "value": "#3F133F", "usage": "Very dark purple" },
+        "3": { "value": "#5F1E5F", "usage": "Dark purple" },
+        "4": { "value": "#7F287F", "usage": "Medium dark purple" },
+        "5": { "value": "#9333EA", "usage": "Primary purple" },
+        "6": { "value": "#A855F7", "usage": "Light purple, hover" },
+        "7": { "value": "#BD84F9", "usage": "Lighter purple, active" },
+        "8": { "value": "#D2B3FB", "usage": "Light purple" },
+        "9": { "value": "#E7D2FD", "usage": "Very light purple" },
+        "10": { "value": "#F3E8FF", "usage": "Lightest purple" }
+      },
+      "pink": {
+        "1": { "value": "#2A0A1F", "usage": "Darkest pink" },
+        "2": { "value": "#4A133F", "usage": "Very dark pink" },
+        "3": { "value": "#6B1E5F", "usage": "Dark pink" },
+        "4": { "value": "#8B287F", "usage": "Medium dark pink" },
+        "5": { "value": "#EC4899", "usage": "Primary pink" },
+        "6": { "value": "#F472B6", "usage": "Light pink, hover" },
+        "7": { "value": "#F79CD4", "usage": "Lighter pink, active" },
+        "8": { "value": "#FAB6E2", "usage": "Light pink" },
+        "9": { "value": "#FDD0F0", "usage": "Very light pink" },
+        "10": { "value": "#FFE8F7", "usage": "Lightest pink" }
+      }
+    },
+    "semantic": {
+      "primary": {
+        "value": "#0070F3",
+        "description": "Primary action color",
+        "hover": "#0059C9",
+        "active": "#0041A1",
+        "foreground": "#FFFFFF"
+      },
+      "secondary": {
+        "value": "#262626",
+        "description": "Secondary action color",
+        "hover": "#404040",
+        "active": "#525252",
+        "foreground": "#FFFFFF"
+      },
+      "destructive": {
+        "value": "#FF3B3B",
+        "description": "Destructive action color",
+        "hover": "#FF5555",
+        "active": "#FF6F6F",
+        "foreground": "#FFFFFF"
+      },
+      "accent": {
+        "value": "#0070F3",
+        "description": "Accent color",
+        "hover": "#0059C9",
+        "active": "#0041A1",
+        "foreground": "#FFFFFF"
+      },
+      "muted": {
+        "value": "#262626",
+        "description": "Muted background",
+        "foreground": "#888888"
+      },
+      "success": {
+        "value": "#00B37E",
+        "description": "Success state color",
+        "foreground": "#FFFFFF"
+      },
+      "warning": {
+        "value": "#FFB300",
+        "description": "Warning state color",
+        "foreground": "#000000"
+      },
+      "error": {
+        "value": "#FF3B3B",
+        "description": "Error state color",
+        "foreground": "#FFFFFF"
+      },
+      "info": {
+        "value": "#0070F3",
+        "description": "Info state color",
+        "foreground": "#FFFFFF"
+      }
+    }
+  }
+}
+

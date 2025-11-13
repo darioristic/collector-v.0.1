@@ -48,4 +48,9 @@ export const THEMES = [
 		value: "lavender-dream",
 		colors: ["oklch(0.71 0.16 293.54)"],
 	},
+	{
+		name: "Vercel Theme",
+		value: "vercel",
+		colors: ["oklch(0.55 0.20 250)"],
+	},
 ];
