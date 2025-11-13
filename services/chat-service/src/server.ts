@@ -69,7 +69,20 @@ async function buildServer() {
 			credentials: true,
 		},
 		adapter: createAdapter(pubClient, subClient),
+		// Enable verbose logging in development
+		transports: ["websocket", "polling"],
 	});
+
+	// Add connection logging
+	io.engine.on("connection_error", (err) => {
+		console.error("[chat-service] Socket.IO engine connection error:", {
+			message: err.message,
+			code: err.code,
+			context: err.context,
+		});
+	});
+
+	console.log("[chat-service] Socket.IO server initialized on path /socket/teamchat");
 
 	// Attach Socket.IO to Fastify instance
 	(fastify as FastifyWithSocket).io = io;

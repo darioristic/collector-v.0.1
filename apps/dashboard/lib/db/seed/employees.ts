@@ -398,39 +398,46 @@ export async function seedEmployees(
 
 	await db.transaction(async (tx) => {
 		await Promise.all(
-			employeesToInsert.map((emp) =>
-				tx
+			employeesToInsert.map((emp) => {
+				// Normalize optional values to null instead of undefined
+				const phoneValue = emp.phone ? emp.phone : null;
+				const endDateValue = emp.endDate ? emp.endDate : null;
+				const salaryValue = emp.salary ? emp.salary.toString() : null;
+
+				const values = {
+					firstName: emp.firstName,
+					lastName: emp.lastName,
+					email: emp.email,
+					phone: phoneValue,
+					department: emp.department,
+					role: emp.role,
+					employmentType: emp.employmentType,
+					status: emp.status,
+					startDate: emp.startDate,
+					endDate: endDateValue,
+					salary: salaryValue,
+				};
+
+				return tx
 					.insert(employees)
-					.values({
-						firstName: emp.firstName,
-						lastName: emp.lastName,
-						email: emp.email,
-						phone: emp.phone ?? null,
-						department: emp.department,
-						role: emp.role,
-						employmentType: emp.employmentType,
-						status: emp.status,
-						startDate: emp.startDate,
-						endDate: emp.endDate ?? null,
-						salary: emp.salary ? emp.salary.toString() : null,
-					})
+					.values(values)
 					.onConflictDoUpdate({
 						target: employees.email,
 						set: {
 							firstName: emp.firstName,
 							lastName: emp.lastName,
-							phone: emp.phone ?? null,
+							phone: phoneValue,
 							department: emp.department,
 							role: emp.role,
 							employmentType: emp.employmentType,
 							status: emp.status,
 							startDate: emp.startDate,
-							endDate: emp.endDate ?? null,
-							salary: emp.salary ? emp.salary.toString() : null,
+							endDate: endDateValue,
+							salary: salaryValue,
 							updatedAt: new Date(),
 						},
-					}),
-			),
+					});
+			}),
 		);
 	});
 

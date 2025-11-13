@@ -23,11 +23,14 @@ export function useChatSocket() {
 	>(new Set());
 
 	useEffect(() => {
+		console.log("[chat-socket] 🚀 useEffect triggered", { hasUser: !!user?.id });
+
 		if (!user?.id) {
+			console.log("[chat-socket] ⚠️ No user ID, skipping socket initialization");
 			return;
 		}
 
-		// Get session token from cookie
+		// Get session token from cookie (if available - for non-httpOnly cookies)
 		const getSessionToken = () => {
 			if (typeof document === "undefined") return null;
 			const cookieValue = document.cookie
@@ -38,43 +41,75 @@ export function useChatSocket() {
 		};
 
 		const token = getSessionToken();
+		console.log("[chat-socket] 🔑 Token retrieval:", {
+			hasToken: !!token,
+			tokenLength: token?.length,
+			tokenPreview: token ? `${token.substring(0, 10)}...` : "none",
+			allCookies: document.cookie.split("; ").map(c => c.split("=")[0]),
+		});
+
+		// Note: If token is not found in JavaScript (httpOnly cookie),
+		// Socket.IO will still send it automatically in the HTTP request headers
+		// The server will read it from the cookie header
 		if (!token) {
-			console.warn("[chat-socket] No session token found");
-			return;
+			console.log(
+				"[chat-socket] ℹ️ Token not accessible from JavaScript (likely httpOnly cookie). " +
+				"Socket.IO will automatically send it in HTTP headers."
+			);
 		}
 
+		console.log("[chat-socket] 🔌 Initializing Socket.IO connection to:", CHAT_SERVICE_URL);
+
 		// Create socket connection
-		// Note: extraHeaders doesn't work in browser WebSocket
-		// We need to pass token via auth object or query parameter
-		const newSocket = io(CHAT_SERVICE_URL, {
+		// Note: Socket.IO will automatically send all cookies (including httpOnly)
+		// in the HTTP request, so the server can read them from headers
+		const socketOptions: any = {
 			path: "/socket/teamchat",
-			auth: {
-				token: token,
-			},
-			query: {
-				token: token,
-			},
 			transports: ["websocket", "polling"],
 			reconnection: true,
 			reconnectionDelay: 1000,
 			reconnectionAttempts: 5,
-		});
+			withCredentials: true, // Important: send cookies with cross-origin requests
+		};
+
+		// If token is available in JavaScript, also send it via auth/query
+		// (for additional compatibility)
+		if (token) {
+			socketOptions.auth = { token };
+			socketOptions.query = { token };
+		}
+
+		const newSocket = io(CHAT_SERVICE_URL, socketOptions);
+
+		console.log("[chat-socket] ✅ Socket.IO client created, waiting for connection...");
 
 		socketRef.current = newSocket;
 
 		// Connection events
 		newSocket.on("connect", () => {
-			console.log("[chat-socket] Connected");
+			console.log("[chat-socket] ✅ Connected successfully!", {
+				socketId: newSocket.id,
+				transport: newSocket.io.engine.transport.name,
+			});
 			setIsConnected(true);
 		});
 
-		newSocket.on("disconnect", () => {
-			console.log("[chat-socket] Disconnected");
+		newSocket.on("disconnect", (reason) => {
+			console.log("[chat-socket] ⚠️ Disconnected:", {
+				reason,
+				socketId: newSocket.id,
+			});
 			setIsConnected(false);
 		});
 
 		newSocket.on("connect_error", (error) => {
-			console.error("[chat-socket] Connection error:", error);
+			console.error("[chat-socket] ❌ Connection error:", {
+				message: error.message,
+				type: (error as any).type,
+				description: (error as any).description,
+				context: (error as any).context,
+				error: error,
+			});
 			setIsConnected(false);
 		});
 
@@ -98,9 +133,16 @@ export function useChatSocket() {
 		newSocket.on(
 			"chat:message:new",
 			(data: { conversationId: string; message: ChatMessage }) => {
-				console.log("[chat-socket] New message received:", data);
+				console.log("[chat-socket] ⚡ NEW MESSAGE EVENT RECEIVED:", {
+					conversationId: data.conversationId,
+					messageId: data.message?.id,
+					senderId: data.message?.senderId,
+					content: data.message?.content,
+					callbackCount: messageCallbacksRef.current.size,
+				});
 				messageCallbacksRef.current.forEach((callback) => {
 					try {
+						console.log("[chat-socket] Calling message callback");
 						callback(data);
 					} catch (error) {
 						console.error("[chat-socket] Error in message callback:", error);
@@ -142,7 +184,14 @@ export function useChatSocket() {
 	// Join conversation room
 	const joinConversation = (conversationId: string) => {
 		if (socket && isConnected) {
+			console.log("[chat-socket] Joining conversation:", conversationId);
 			socket.emit("join", { conversationId });
+			console.log("[chat-socket] Join event emitted");
+		} else {
+			console.warn("[chat-socket] Cannot join - socket not ready", {
+				hasSocket: !!socket,
+				isConnected,
+			});
 		}
 	};
 

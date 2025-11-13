@@ -1,4 +1,5 @@
 import { pgClient, db } from "../index";
+import { logger } from "../../lib/logger";
 import { seedAuth } from "./auth";
 import { seedAccounts } from "./accounts";
 import { seedCrm } from "./crm";
@@ -99,7 +100,7 @@ function parseArgs(): {
  * Print help message
  */
 function printHelp() {
-  console.log(`
+  const helpText = `
 Database Seed Script
 
 Usage: bun run seed [options]
@@ -134,7 +135,9 @@ Examples:
 
   # Continue on error with verbose logging
   bun run seed --continue-on-error --verbose
-`);
+`;
+  // Use process.stdout.write for help text to ensure proper formatting
+  process.stdout.write(helpText);
 }
 
 /**
@@ -155,7 +158,10 @@ run()
     process.exit(0);
   })
   .catch(async (error) => {
-    console.error("\n❌ Seed failed:", error instanceof Error ? error.message : error);
+    logger.error(
+      { err: error },
+      `Seed failed: ${error instanceof Error ? error.message : String(error)}`
+    );
     await pgClient.end();
     process.exit(1);
   });

@@ -9,6 +9,7 @@ import {
 import type { Pool } from "pg";
 import { newDb } from "pg-mem";
 import postgres from "postgres";
+import { logger } from "../lib/logger";
 
 const loadEnv = async () => {
 	try {
@@ -18,9 +19,9 @@ const loadEnv = async () => {
 		const shouldLogWarning = process.env.NODE_ENV !== "production";
 
 		if (shouldLogWarning) {
-			console.warn(
+			logger.warn(
+				{ err: error },
 				"dotenv nije pronađen; preskačem učitavanje .env fajla.",
-				error,
 			);
 		}
 	}

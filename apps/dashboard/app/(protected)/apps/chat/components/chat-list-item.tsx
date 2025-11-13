@@ -42,6 +42,9 @@ export function ChatListItem({
 	const { user } = useAuth();
 	const currentUserId = user?.id;
 
+	// Check if there are unread messages
+	const hasUnread = chat.conversation.unreadCount > 0;
+
 	const handleClick = () => {
 		if (!currentUserId) {
 			return;
@@ -64,6 +67,7 @@ export function ChatListItem({
 			className={cn(
 				"group/item hover:bg-muted relative flex min-w-0 cursor-pointer items-center gap-4 px-6 py-4",
 				{ "dark:bg-muted! bg-gray-200!": active },
+				{ "bg-primary/5 dark:bg-primary/10": hasUnread && !active },
 			)}
 			onClick={handleClick}
 		>
@@ -75,17 +79,30 @@ export function ChatListItem({
 				</AvatarFallback>
 			</Avatar>
 			<div className="min-w-0 grow">
-				<div className="flex items-center justify-between">
-					<span className="truncate text-sm font-medium">
+				<div className="flex items-center justify-between gap-2">
+					<span className={cn(
+						"truncate text-sm",
+						hasUnread ? "font-bold" : "font-medium"
+					)}>
 						{chat.user?.name}
 					</span>
-					<span className="text-muted-foreground flex-none text-xs">
-						{chat.date}
-					</span>
+					<div className="flex items-center gap-2 flex-none">
+						{hasUnread && (
+							<span className="bg-primary text-primary-foreground flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-bold">
+								{chat.conversation.unreadCount > 99 ? "99+" : chat.conversation.unreadCount}
+							</span>
+						)}
+						<span className="text-muted-foreground text-xs">
+							{chat.date}
+						</span>
+					</div>
 				</div>
 				<div className="flex items-center gap-2">
 					<MessageStatusIcon status={chat.status} />
-					<span className="text-muted-foreground truncate text-start text-sm">
+					<span className={cn(
+						"truncate text-start text-sm",
+						hasUnread ? "text-foreground font-semibold" : "text-muted-foreground"
+					)}>
 						{chat.last_message}
 					</span>
 				</div>

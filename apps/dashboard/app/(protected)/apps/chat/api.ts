@@ -711,3 +711,52 @@ export const sendMessage = async ({
 		throw error;
 	}
 };
+
+export const markConversationAsRead = async (
+	conversationId: string,
+): Promise<void> => {
+	try {
+		const response = await fetch(
+			getChatApiUrl(`/conversations/${conversationId}/messages/read`),
+			{
+				method: "PUT",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				cache: "no-store",
+				credentials: "include", // Important: send cookies with request
+			},
+		);
+
+		if (!response.ok) {
+			const errorData = await response
+				.json()
+				.catch(() => ({ error: "Označavanje poruka kao pročitanih nije uspelo." }));
+			console.warn("[markConversationAsRead] Server returned error:", {
+				status: response.status,
+				statusText: response.statusText,
+				error: errorData,
+				conversationId,
+			});
+			// Don't throw - just log and return
+			return;
+		}
+
+		console.log("[markConversationAsRead] Successfully marked conversation as read:", conversationId);
+	} catch (error) {
+		// Network errors should be handled gracefully - just log and continue
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		if (
+			errorMessage.includes("Failed to fetch") ||
+			errorMessage.includes("NetworkError") ||
+			errorMessage.includes("ERR_CONNECTION_REFUSED") ||
+			errorMessage.includes("connection refused")
+		) {
+			console.warn("[markConversationAsRead] Chat service unavailable");
+			return; // Don't throw, just return silently
+		}
+		// For other errors, just log - don't break the app
+		console.error("[markConversationAsRead] Error:", error);
+		// Don't re-throw - marking as read is not critical
+	}
+};

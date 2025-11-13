@@ -143,8 +143,10 @@ const DialogContent = React.forwardRef<
 		return containsDescription(children);
 	}, [children]);
 
+	const hasAriaLabelledBy = Boolean(props["aria-labelledby"]);
 	const hasAriaDescribedBy = Boolean(props["aria-describedby"]);
 	const needsDescription = !hasDescription && !hasAriaDescribedBy;
+	const needsTitle = !hasTitle && !hasAriaLabelledBy;
 
 	return (
 		<DialogPortal>
@@ -159,7 +161,7 @@ const DialogContent = React.forwardRef<
 				)}
 				{...props}
 			>
-				{!hasTitle ? (
+				{needsTitle ? (
 					<VisuallyHidden>
 						<DialogPrimitive.Title>Dialog</DialogPrimitive.Title>
 					</VisuallyHidden>

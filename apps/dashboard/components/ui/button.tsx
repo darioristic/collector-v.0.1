@@ -10,7 +10,7 @@ const buttonVariants = cva(
 		variants: {
 			variant: {
 				default:
-					"bg-primary !text-white hover:bg-primary/90 dark:!text-white [data-theme-preset='vercel']:!bg-[var(--geist-blue-6)] [data-theme-preset='vercel']:!text-white [data-theme-preset='vercel']:hover:!bg-[var(--geist-blue-7)]",
+					"bg-primary !text-white hover:bg-primary/90 dark:!text-white [data-theme-preset='vercel']:!bg-[var(--geist-blue-6)] [data-theme-preset='vercel']:!text-white [data-theme-preset='vercel']:hover:!bg-[var(--geist-blue-7)] [data-theme-preset='vercel']:is(.dark,[data-theme-mode='dark']):!bg-[var(--geist-dark-primary)] [data-theme-preset='vercel']:is(.dark,[data-theme-mode='dark']):!text-[var(--geist-dark-primary-foreground)] [data-theme-preset='vercel']:is(.dark,[data-theme-mode='dark']):hover:!bg-[var(--geist-dark-primary-hover)]",
 				destructive:
 					"bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60 [data-theme-preset='vercel']:!bg-[var(--geist-red-5)] [data-theme-preset='vercel']:hover:!bg-[var(--geist-red-5)]/90",
 				outline:
@@ -19,7 +19,7 @@ const buttonVariants = cva(
 					"bg-secondary text-secondary-foreground hover:bg-secondary/80 [data-theme-preset='vercel']:!bg-[var(--geist-background-2)] [data-theme-preset='vercel']:!text-[var(--geist-text-10)]",
 				ghost:
 					"hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50 [data-theme-preset='vercel']:hover:!bg-[var(--geist-background-2)] [data-theme-preset='vercel']:!text-[var(--geist-text-10)]",
-				link: "text-primary underline-offset-4 hover:underline [data-theme-preset='vercel']:!text-[var(--geist-blue-6)]",
+				link: "text-primary underline-offset-4 hover:underline [data-theme-preset='vercel']:!text-[var(--geist-blue-6)] [data-theme-preset='vercel']:is(.dark,[data-theme-mode='dark']):!text-[var(--geist-dark-primary)]",
 			},
 			size: {
 				default: "h-9 px-4 py-2 has-[>svg]:px-3 text-button-14",

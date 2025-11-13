@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import React, { useEffect, useRef } from "react";
 import type { ChatMessage } from "@/app/(protected)/apps/chat/api";
-import { fetchConversationMessages } from "@/app/(protected)/apps/chat/api";
+import { fetchConversationMessages, markConversationAsRead } from "@/app/(protected)/apps/chat/api";
 import { ChatBubble } from "@/app/(protected)/apps/chat/components/chat-bubbles";
 import { ChatFooter } from "@/app/(protected)/apps/chat/components/chat-footer";
 import { ChatHeader } from "@/app/(protected)/apps/chat/components/chat-header";
@@ -107,7 +107,7 @@ export function ChatContent() {
 		}
 	}, [selectedChat?.messages?.length, scrollToBottom]);
 
-	// Join conversation room when chat is selected
+	// Join conversation room when chat is selected and mark as read
 	useEffect(() => {
 		if (!selectedChat?.conversationId || !isConnected) {
 			console.log("[chat-content] Not joining conversation:", {
@@ -120,17 +120,41 @@ export function ChatContent() {
 		console.log("[chat-content] Joining conversation:", selectedChat.conversationId);
 		joinConversation(selectedChat.conversationId);
 
+		// Mark conversation as read when opening it
+		markConversationAsRead(selectedChat.conversationId)
+			.then(() => {
+				console.log("[chat-content] Marked conversation as read");
+				// Invalidate conversations query to update unread counts
+				queryClient.invalidateQueries({ queryKey: ["chat", "conversations"] });
+				queryClient.invalidateQueries({ queryKey: ["chat", "conversations", "unread"] });
+			})
+			.catch((error) => {
+				console.error("[chat-content] Failed to mark as read:", error);
+			});
+
 		return () => {
 			console.log("[chat-content] Leaving conversation:", selectedChat.conversationId);
 			leaveConversation(selectedChat.conversationId);
 		};
-	}, [selectedChat?.conversationId, isConnected, joinConversation, leaveConversation]);
+	}, [selectedChat?.conversationId, isConnected, joinConversation, leaveConversation, queryClient]);
 
 	// Global Socket.IO event listeners
 	useEffect(() => {
+		console.log("[chat-content] 🔔 Registering Socket.IO callbacks", {
+			hasSelectedChat: !!selectedChat,
+			conversationId: selectedChat?.conversationId,
+		});
+
 		// Handle new messages for current conversation
 		const unsubscribeMessage = onNewMessage((payload) => {
-			console.log("[chat-content] New message from socket:", payload);
+			console.log("[chat-content] 📨 New message from socket:", {
+				conversationId: payload.conversationId,
+				messageId: payload.message.id,
+				senderId: payload.message.senderId,
+				currentUserId,
+				isCurrentChat: selectedChat?.conversationId === payload.conversationId,
+				isOwnMessage: payload.message.senderId === currentUserId,
+			});
 
 			// Always invalidate conversations query to update sidebar
 			queryClient.invalidateQueries({ queryKey: ["chat", "conversations"] });
@@ -139,12 +163,14 @@ export function ChatContent() {
 			if (selectedChat?.conversationId === payload.conversationId) {
 				// Only add message if it's NOT from the current user (to avoid duplicates with optimistic updates)
 				if (payload.message.senderId !== currentUserId) {
-					console.log("[chat-content] Adding message from other user");
+					console.log("[chat-content] ✅ Adding message from other user");
 					addMessage(payload.message);
 					// Note: scroll will happen automatically via the messages length effect
 				} else {
-					console.log("[chat-content] Ignoring own message from socket (already added optimistically)");
+					console.log("[chat-content] ⏭️ Ignoring own message from socket (already added optimistically)");
 				}
+			} else {
+				console.log("[chat-content] ⚠️ Message for different conversation - ignoring");
 			}
 		});
 

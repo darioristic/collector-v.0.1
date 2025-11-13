@@ -1277,10 +1277,10 @@ body {
 		/* ----------------------------------------------------------------------------
 		 * Semantic Colors (Dark Theme)
 		 * ---------------------------------------------------------------------------- */
-		--geist-dark-primary: #0070F3;
-		--geist-dark-primary-hover: #0059C9;
-		--geist-dark-primary-active: #0041A1;
-		--geist-dark-primary-foreground: #FFFFFF;
+		--geist-dark-primary: #FFFFFF;
+		--geist-dark-primary-hover: #E5E5E5;
+		--geist-dark-primary-active: #CCCCCC;
+		--geist-dark-primary-foreground: #000000;
 		--geist-dark-secondary: #262626;
 		--geist-dark-secondary-hover: #404040;
 		--geist-dark-secondary-active: #525252;

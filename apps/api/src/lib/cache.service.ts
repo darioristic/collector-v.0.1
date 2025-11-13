@@ -1,5 +1,6 @@
 import Redis from 'ioredis';
 import type { FastifyInstance } from 'fastify';
+import type { MetricsService } from './metrics.service';
 
 export interface CacheOptions {
   ttl?: number; // Time to live in seconds (default: 300 = 5 minutes)
@@ -8,8 +9,10 @@ export interface CacheOptions {
 export class CacheService {
   private redis: Redis | null = null;
   private enabled: boolean = false;
+  private metrics?: MetricsService;
 
-  constructor(private logger?: FastifyInstance['log']) {
+  constructor(private logger?: FastifyInstance['log'], metrics?: MetricsService) {
+    this.metrics = metrics;
     this.initialize();
   }
 
@@ -56,12 +59,23 @@ export class CacheService {
     try {
       const value = await this.redis.get(key);
       if (!value) {
+        // Record cache miss if metrics available
+        if (this.metrics) {
+          this.metrics.recordCacheMiss(key);
+        }
         return null;
       }
 
+      // Record cache hit if metrics available
+      if (this.metrics) {
+        this.metrics.recordCacheHit(key);
+      }
       return JSON.parse(value) as T;
     } catch (error) {
       this.logger?.warn({ error, key }, 'Cache get error');
+      if (this.metrics) {
+        this.metrics.recordCacheMiss(key);
+      }
       return null;
     }
   }
@@ -172,9 +186,12 @@ export class CacheService {
 // Singleton instance
 let cacheInstance: CacheService | null = null;
 
-export const getCacheService = (logger?: FastifyInstance['log']): CacheService => {
+export const getCacheService = (logger?: FastifyInstance['log'], metrics?: MetricsService): CacheService => {
   if (!cacheInstance) {
-    cacheInstance = new CacheService(logger);
+    cacheInstance = new CacheService(logger, metrics);
+  } else if (metrics && !cacheInstance['metrics']) {
+    // Update metrics if not already set
+    cacheInstance['metrics'] = metrics;
   }
   return cacheInstance;
 };
@@ -183,7 +200,9 @@ export const getCacheService = (logger?: FastifyInstance['log']): CacheService =
 import fp from 'fastify-plugin';
 
 export const cachePlugin = fp(async (fastify: FastifyInstance) => {
-  const cache = getCacheService(fastify.log);
+  // Get metrics if available (metrics plugin should be registered before cache plugin)
+  const metrics = fastify.hasDecorator('metrics') ? (fastify as any).metrics : undefined;
+  const cache = getCacheService(fastify.log, metrics);
 
   fastify.decorate('cache', cache);
   fastify.decorateRequest('cache', {
@@ -197,7 +216,8 @@ export const cachePlugin = fp(async (fastify: FastifyInstance) => {
   });
 }, {
   name: 'cache-plugin',
-  fastify: '4.x'
+  fastify: '4.x',
+  dependencies: [] // Note: metrics plugin should be registered first
 });
 
 // TypeScript declarations

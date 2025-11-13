@@ -32,6 +32,15 @@ import {
   deleteQuoteHandler
 } from "./quotes.controller";
 import {
+  exportOrdersHandler,
+  exportQuotesHandler,
+  exportInvoicesHandler
+} from "./export.controller";
+import {
+  exportInvoicePDFHandler,
+  exportQuotePDFHandler
+} from "./pdf-export.controller";
+import {
   createDealSchema,
   listDealsSchema
 } from "./sales.schema";
@@ -94,6 +103,15 @@ const salesRoutes: FastifyPluginAsync = async (app) => {
   // Deal routes
   app.get("/deals", { schema: listDealsSchema }, listDealsHandler);
   app.post("/deals", { schema: createDealSchema }, createDealHandler);
+
+  // Export routes
+  app.get("/orders/export", exportOrdersHandler);
+  app.get("/quotes/export", exportQuotesHandler);
+  app.get("/invoices/export", exportInvoicesHandler);
+  
+  // PDF Export routes
+  app.get("/quotes/:id/pdf", exportQuotePDFHandler);
+  app.get("/invoices/:id/pdf", exportInvoicePDFHandler);
 };
 
 export default salesRoutes;

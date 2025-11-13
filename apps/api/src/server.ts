@@ -8,10 +8,12 @@ import Fastify, {
 
 import { type AppDatabase, db } from "./db/index.js";
 import { cachePlugin } from "./lib/cache.service";
+import metricsPlugin from "./plugins/metrics.plugin";
 import corsPlugin from "./plugins/cors";
 import errorHandlerPlugin from "./plugins/error-handler";
 import openApiPlugin from "./plugins/openapi";
 import healthRoutes from "./routes/health";
+import metricsRoutes from "./routes/metrics";
 
 type PrettyLoggerOptions = FastifyLoggerOptions & {
 	transport: {
@@ -48,6 +50,9 @@ const createLogger = (): FastifyLoggerOptions => {
 
 const registerHealthcheck = (app: FastifyInstance) =>
 	app.register(healthRoutes, { prefix: "/api" });
+
+const registerMetrics = (app: FastifyInstance) =>
+	app.register(metricsRoutes, { prefix: "/api" });
 
 const modulesBaseUrl = new URL("./modules/", import.meta.url);
 const modulesPath = fileURLToPath(modulesBaseUrl);
@@ -146,10 +151,12 @@ export const buildServer = async () => {
 	}
 
 	await app.register(corsPlugin);
+	await app.register(metricsPlugin);
 	await app.register(cachePlugin);
 	await app.register(errorHandlerPlugin);
 	await app.register(openApiPlugin);
 	await registerHealthcheck(app);
+	await registerMetrics(app);
 	await registerModules(app);
 
 	return app;

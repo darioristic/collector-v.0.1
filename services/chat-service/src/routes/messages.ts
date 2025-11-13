@@ -209,6 +209,62 @@ const messagesRoutes: FastifyPluginAsync = async (fastify) => {
 			return reply.code(500).send({ error: "Slanje poruke nije uspelo." });
 		}
 	});
+
+	// Mark messages as read
+	fastify.put<{ Params: { id: string } }>(
+		"/:id/messages/read",
+		async (request, reply) => {
+			if (!request.user) {
+				return reply.code(401).send({ error: "Unauthorized" });
+			}
+
+			const { id: conversationId } = request.params;
+
+			try {
+				// Verify user is part of conversation
+				const conversation = await getConversationById({
+					conversationId,
+					userId: request.user.userId,
+				});
+
+				if (!conversation) {
+					return reply.code(404).send({
+						error: "Konverzacija nije pronađena.",
+					});
+				}
+
+				// Import db and sql
+				const { db } = await import("../db/index.js");
+				const { sql } = await import("drizzle-orm");
+
+				// Mark all messages in conversation as read for current user
+				await db.execute(sql`
+					UPDATE chat_messages
+					SET status = 'read',
+						read_at = NOW(),
+						updated_at = NOW()
+					WHERE conversation_id = ${conversationId}
+						AND sender_id != ${request.user.userId}
+						AND status != 'read'
+				`);
+
+				// Emit socket event for conversation update
+				const io = (fastify as FastifyWithSocket).io;
+				if (io) {
+					io.to(`chat:${conversationId}`).emit("chat:conversation:updated", {
+						conversationId,
+					});
+				}
+
+				return reply.send({ success: true });
+			} catch (error) {
+				request.log.error(error, "Failed to mark messages as read");
+				return reply
+					.code(500)
+					.send({ error: "Označavanje poruka kao pročitanih nije uspelo." });
+			}
+		},
+	);
 };
 
 export default messagesRoutes;

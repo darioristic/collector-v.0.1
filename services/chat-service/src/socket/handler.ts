@@ -17,11 +17,41 @@ function extractTokenFromHeader(authHeader: string | undefined): string | null {
 	return parts[1];
 }
 
+// Extract session token from cookie header
+function extractTokenFromCookie(cookieHeader: string | undefined): string | null {
+	if (!cookieHeader) {
+		return null;
+	}
+
+	// Parse cookies from header like: "cookie1=value1; cookie2=value2"
+	const cookies = cookieHeader.split(";").map((c) => c.trim());
+	const sessionCookie = cookies.find((c) => c.startsWith("auth_session="));
+
+	if (!sessionCookie) {
+		return null;
+	}
+
+	// Extract value after "auth_session="
+	const token = sessionCookie.split("=")[1];
+	return token ? decodeURIComponent(token) : null;
+}
+
 export function setupSocketHandlers(
 	io: SocketIOServer,
 	redis: RedisClientType,
 ): void {
+	console.log("[chat-service] 🔧 Setting up Socket.IO middleware and handlers");
+
 	io.use(async (socket, next) => {
+		console.log("[chat-service] 🔐 Socket authentication middleware triggered", {
+			socketId: socket.id,
+			hasAuthHeader: !!socket.handshake.headers.authorization,
+			hasAuthObject: !!socket.handshake.auth,
+			hasQuery: !!socket.handshake.query,
+			hasCookie: !!socket.handshake.headers.cookie,
+			transport: socket.conn.transport.name,
+		});
+
 		// Try to get token from Authorization header first (for HTTP transport)
 		let token = extractTokenFromHeader(socket.handshake.headers.authorization);
 
@@ -35,15 +65,41 @@ export function setupSocketHandlers(
 			token = (socket.handshake.query as { token?: string })?.token || null;
 		}
 
+		// If still not found, try to get from cookie header (for httpOnly cookies)
+		if (!token && socket.handshake.headers.cookie) {
+			token = extractTokenFromCookie(socket.handshake.headers.cookie);
+			if (token) {
+				console.log("[chat-service] 🍪 Token extracted from cookie header");
+			}
+		}
+
 		if (!token) {
 			console.error(
-				"[chat-service] Socket authentication failed: No token found in headers, auth, or query",
+				"[chat-service] ❌ Socket authentication failed: No token found",
+				{
+					hasAuthHeader: !!socket.handshake.headers.authorization,
+					authHeaderValue: socket.handshake.headers.authorization
+						? `${socket.handshake.headers.authorization.substring(0, 20)}...`
+						: "none",
+					hasAuthObject: !!socket.handshake.auth,
+					authObjectKeys: socket.handshake.auth
+						? Object.keys(socket.handshake.auth)
+						: [],
+					hasQuery: !!socket.handshake.query,
+					queryKeys: socket.handshake.query
+						? Object.keys(socket.handshake.query)
+						: [],
+					hasCookie: !!socket.handshake.headers.cookie,
+					cookiePreview: socket.handshake.headers.cookie
+						? socket.handshake.headers.cookie.substring(0, 100) + "..."
+						: "none",
+				},
 			);
 			return next(new Error("Authentication error"));
 		}
 
 		console.log(
-			"[chat-service] Socket authentication token found:",
+			"[chat-service] ✅ Socket authentication token found:",
 			`${token.substring(0, 10)}...`,
 		);
 

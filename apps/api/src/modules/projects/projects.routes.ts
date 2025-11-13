@@ -54,9 +54,12 @@ import {
   updateBudgetCategoryHandler,
   updateProjectBudgetHandler
 } from "./budget.controller";
+import { exportProjectsHandler } from "./export.controller";
+import { exportProjectReportPDFHandler } from "./pdf-export.controller";
 
 const projectsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get("/", { schema: listProjectsSchema }, listProjectsHandler);
+  fastify.get("/export", exportProjectsHandler);
   fastify.post("/", { schema: createProjectSchema }, createProjectHandler);
 
   fastify.get("/:id", { schema: getProjectSchema }, getProjectHandler);
@@ -90,6 +93,9 @@ const projectsRoutes: FastifyPluginAsync = async (fastify) => {
     { schema: deleteBudgetCategorySchema },
     deleteBudgetCategoryHandler
   );
+
+  // PDF Export route
+  fastify.get("/:id/report/pdf", exportProjectReportPDFHandler);
 };
 
 export default projectsRoutes;

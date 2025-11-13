@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { drizzle as drizzleNodePostgres } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
+import { logger } from "../lib/logger";
 
 const migrationsFolder = join(
 	dirname(fileURLToPath(import.meta.url)),
@@ -18,9 +19,9 @@ const loadEnv = async () => {
 		const shouldLogWarning = process.env.NODE_ENV !== "production";
 
 		if (shouldLogWarning) {
-			console.warn(
+			logger.warn(
+				{ err: error },
 				"dotenv nije pronađen; preskačem učitavanje .env fajla.",
-				error,
 			);
 		}
 	}
@@ -53,6 +54,6 @@ const run = async () => {
 };
 
 void run().catch((error) => {
-	console.error("Database migration failed", error);
+	logger.error({ err: error }, "Database migration failed");
 	process.exit(1);
 });
