@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import Decimal from "decimal.js";
-import type { AppDatabase } from "../../db";
+import type { AppDatabase } from "../../db/index.js";
 import { accounts, accountContacts } from "../../db/schema/accounts.schema.js";
 import { quotes, quoteItems } from "../../db/schema/sales.schema.js";
 import type {

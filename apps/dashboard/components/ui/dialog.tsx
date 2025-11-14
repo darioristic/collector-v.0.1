@@ -8,13 +8,10 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 // Wrap Dialog to suppress hydration warnings for Radix UI generated IDs
-const Dialog = React.forwardRef<
-	React.ElementRef<typeof DialogPrimitive.Root>,
-	React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>
->((props, ref) => {
+const Dialog = (props: React.ComponentProps<typeof DialogPrimitive.Root>) => {
 	return <DialogPrimitive.Root {...props} />;
-});
-Dialog.displayName = "Dialog";
+};
+Dialog.displayName = DialogPrimitive.Root.displayName ?? "Dialog";
 
 const DialogTrigger = React.forwardRef<
 	React.ElementRef<typeof DialogPrimitive.Trigger>,

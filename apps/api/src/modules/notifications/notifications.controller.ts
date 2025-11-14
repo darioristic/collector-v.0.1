@@ -2,7 +2,7 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { and, count, desc, eq, inArray } from "drizzle-orm";
 
 import type { AuthenticatedRequest } from "../../types/auth";
-import { notifications } from "../../db/schema/notifications.schema";
+import { notifications } from "../../db/schema/notifications.schema.js";
 
 type ListNotificationsQuery = {
   limit?: number;

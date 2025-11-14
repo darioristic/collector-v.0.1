@@ -5,7 +5,7 @@ import {
   type ApiDataReply,
   type ApiListReplyWithMeta
 } from "../../lib/errors";
-import { productStatus } from "../../db/schema/products.schema";
+import { productStatus } from "../../db/schema/products.schema.js";
 import { isProductsServiceError } from "./products.service";
 import type {
   CreateProductPayload,

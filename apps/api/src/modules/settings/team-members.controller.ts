@@ -1,7 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { and, desc, eq, ilike, inArray, or } from "drizzle-orm";
 
-import { teamMembers, users } from "../../db/schema/settings.schema";
+import { teamMembers, users } from "../../db/schema/settings.schema.js";
 import { createHttpError } from "../../lib/errors";
 import type { AuthenticatedRequest } from "../../types/auth";
 import {

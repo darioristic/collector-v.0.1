@@ -63,32 +63,162 @@ CREATE TABLE IF NOT EXISTS "project_time_entries" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-DROP INDEX "team_members_email_key";--> statement-breakpoint
-ALTER TABLE "team_members" ADD COLUMN "company_id" uuid;--> statement-breakpoint
-ALTER TABLE "project_members" ADD COLUMN "team_id" uuid;--> statement-breakpoint
-ALTER TABLE "performance_reviews" ADD CONSTRAINT "performance_reviews_employee_id_employees_id_fk" FOREIGN KEY ("employee_id") REFERENCES "public"."employees"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "performance_reviews" ADD CONSTRAINT "performance_reviews_reviewer_id_users_id_fk" FOREIGN KEY ("reviewer_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "recruitment_interviews" ADD CONSTRAINT "recruitment_interviews_candidate_id_recruitment_candidates_id_fk" FOREIGN KEY ("candidate_id") REFERENCES "public"."recruitment_candidates"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "recruitment_interviews" ADD CONSTRAINT "recruitment_interviews_interviewer_id_users_id_fk" FOREIGN KEY ("interviewer_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_teams" ADD CONSTRAINT "project_teams_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_time_entries" ADD CONSTRAINT "project_time_entries_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_time_entries" ADD CONSTRAINT "project_time_entries_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_time_entries" ADD CONSTRAINT "project_time_entries_task_id_project_tasks_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."project_tasks"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "performance_reviews_employee_idx" ON "performance_reviews" USING btree ("employee_id");--> statement-breakpoint
-CREATE INDEX "performance_reviews_reviewer_idx" ON "performance_reviews" USING btree ("reviewer_id");--> statement-breakpoint
-CREATE INDEX "performance_reviews_review_date_idx" ON "performance_reviews" USING btree ("review_date");--> statement-breakpoint
-CREATE INDEX "recruitment_candidates_email_idx" ON "recruitment_candidates" USING btree ("email");--> statement-breakpoint
-CREATE INDEX "recruitment_candidates_status_idx" ON "recruitment_candidates" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "recruitment_interviews_candidate_idx" ON "recruitment_interviews" USING btree ("candidate_id");--> statement-breakpoint
-CREATE INDEX "recruitment_interviews_interviewer_idx" ON "recruitment_interviews" USING btree ("interviewer_id");--> statement-breakpoint
-CREATE INDEX "recruitment_interviews_scheduled_at_idx" ON "recruitment_interviews" USING btree ("scheduled_at");--> statement-breakpoint
-CREATE INDEX "project_teams_project_idx" ON "project_teams" USING btree ("project_id");--> statement-breakpoint
-CREATE INDEX "project_time_entries_project_idx" ON "project_time_entries" USING btree ("project_id");--> statement-breakpoint
-CREATE INDEX "project_time_entries_user_idx" ON "project_time_entries" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "project_time_entries_task_idx" ON "project_time_entries" USING btree ("task_id");--> statement-breakpoint
-CREATE INDEX "project_time_entries_date_idx" ON "project_time_entries" USING btree ("date");--> statement-breakpoint
-ALTER TABLE "team_members" ADD CONSTRAINT "team_members_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "project_members" ADD CONSTRAINT "project_members_team_id_project_teams_id_fk" FOREIGN KEY ("team_id") REFERENCES "public"."project_teams"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-CREATE UNIQUE INDEX "team_members_company_email_key" ON "team_members" USING btree ("company_id","email");--> statement-breakpoint
-CREATE INDEX "team_members_company_idx" ON "team_members" USING btree ("company_id");--> statement-breakpoint
-CREATE INDEX "project_members_team_idx" ON "project_members" USING btree ("team_id");
+DROP INDEX IF EXISTS "team_members_email_key";--> statement-breakpoint
+ALTER TABLE "team_members" ADD COLUMN IF NOT EXISTS "company_id" uuid;--> statement-breakpoint
+ALTER TABLE "project_members" ADD COLUMN IF NOT EXISTS "team_id" uuid;--> statement-breakpoint
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'performance_reviews'
+  ) AND EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'employees'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'performance_reviews_employee_id_employees_id_fk'
+  ) THEN
+    ALTER TABLE "performance_reviews" ADD CONSTRAINT "performance_reviews_employee_id_employees_id_fk" FOREIGN KEY ("employee_id") REFERENCES "public"."employees"("id") ON DELETE cascade ON UPDATE no action;
+  END IF;
+END $$;--> statement-breakpoint
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'performance_reviews'
+  ) AND EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'users'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'performance_reviews_reviewer_id_users_id_fk'
+  ) THEN
+    ALTER TABLE "performance_reviews" ADD CONSTRAINT "performance_reviews_reviewer_id_users_id_fk" FOREIGN KEY ("reviewer_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+  END IF;
+END $$;--> statement-breakpoint
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'recruitment_interviews'
+  ) AND EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'recruitment_candidates'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'recruitment_interviews_candidate_id_recruitment_candidates_id_fk'
+  ) THEN
+    ALTER TABLE "recruitment_interviews" ADD CONSTRAINT "recruitment_interviews_candidate_id_recruitment_candidates_id_fk" FOREIGN KEY ("candidate_id") REFERENCES "public"."recruitment_candidates"("id") ON DELETE cascade ON UPDATE no action;
+  END IF;
+END $$;--> statement-breakpoint
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'recruitment_interviews'
+  ) AND EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'users'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'recruitment_interviews_interviewer_id_users_id_fk'
+  ) THEN
+    ALTER TABLE "recruitment_interviews" ADD CONSTRAINT "recruitment_interviews_interviewer_id_users_id_fk" FOREIGN KEY ("interviewer_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+  END IF;
+END $$;--> statement-breakpoint
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'project_teams'
+  ) AND EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'projects'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'project_teams_project_id_projects_id_fk'
+  ) THEN
+    ALTER TABLE "project_teams" ADD CONSTRAINT "project_teams_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;
+  END IF;
+END $$;--> statement-breakpoint
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'project_time_entries'
+  ) AND EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'projects'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'project_time_entries_project_id_projects_id_fk'
+  ) THEN
+    ALTER TABLE "project_time_entries" ADD CONSTRAINT "project_time_entries_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;
+  END IF;
+END $$;--> statement-breakpoint
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'project_time_entries'
+  ) AND EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'users'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'project_time_entries_user_id_users_id_fk'
+  ) THEN
+    ALTER TABLE "project_time_entries" ADD CONSTRAINT "project_time_entries_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+  END IF;
+END $$;--> statement-breakpoint
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'project_time_entries'
+  ) AND EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'project_tasks'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'project_time_entries_task_id_project_tasks_id_fk'
+  ) THEN
+    ALTER TABLE "project_time_entries" ADD CONSTRAINT "project_time_entries_task_id_project_tasks_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."project_tasks"("id") ON DELETE set null ON UPDATE no action;
+  END IF;
+END $$;--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "performance_reviews_employee_idx" ON "performance_reviews" USING btree ("employee_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "performance_reviews_reviewer_idx" ON "performance_reviews" USING btree ("reviewer_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "performance_reviews_review_date_idx" ON "performance_reviews" USING btree ("review_date");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "recruitment_candidates_email_idx" ON "recruitment_candidates" USING btree ("email");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "recruitment_candidates_status_idx" ON "recruitment_candidates" USING btree ("status");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "recruitment_interviews_candidate_idx" ON "recruitment_interviews" USING btree ("candidate_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "recruitment_interviews_interviewer_idx" ON "recruitment_interviews" USING btree ("interviewer_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "recruitment_interviews_scheduled_at_idx" ON "recruitment_interviews" USING btree ("scheduled_at");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_teams_project_idx" ON "project_teams" USING btree ("project_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_time_entries_project_idx" ON "project_time_entries" USING btree ("project_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_time_entries_user_idx" ON "project_time_entries" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_time_entries_task_idx" ON "project_time_entries" USING btree ("task_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_time_entries_date_idx" ON "project_time_entries" USING btree ("date");--> statement-breakpoint
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'team_members'
+  ) AND EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'companies'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'team_members_company_id_companies_id_fk'
+  ) THEN
+    ALTER TABLE "team_members" ADD CONSTRAINT "team_members_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE cascade ON UPDATE no action;
+  END IF;
+END $$;--> statement-breakpoint
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'project_members'
+  ) AND EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'project_teams'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'project_members_team_id_project_teams_id_fk'
+  ) THEN
+    ALTER TABLE "project_members" ADD CONSTRAINT "project_members_team_id_project_teams_id_fk" FOREIGN KEY ("team_id") REFERENCES "public"."project_teams"("id") ON DELETE set null ON UPDATE no action;
+  END IF;
+END $$;--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "team_members_company_email_key" ON "team_members" USING btree ("company_id","email");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "team_members_company_idx" ON "team_members" USING btree ("company_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "project_members_team_idx" ON "project_members" USING btree ("team_id");

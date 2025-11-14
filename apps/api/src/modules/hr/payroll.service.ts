@@ -1,7 +1,7 @@
 import { and, desc, eq, ilike, or } from "drizzle-orm";
 
-import { db } from "../../db";
-import { employees, payrollEntries } from "../../db/schema";
+import { db } from "../../db/index.js";
+import { employees, payrollEntries } from "../../db/schema/index.js";
 
 export interface PayrollEntry {
   id: string;

@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { GitHubLogoIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -88,7 +88,7 @@ const SocialButtons = () => (
 	</div>
 );
 
-export default function RegisterPage() {
+function RegisterPageContent() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const redirectTo = useMemo(
@@ -309,5 +309,19 @@ export default function RegisterPage() {
 				</CardContent>
 			</Card>
 		</div>
+	);
+}
+
+export default function RegisterPage() {
+	return (
+		<Suspense
+			fallback={
+				<div className="flex items-center justify-center py-12">
+					Loading...
+				</div>
+			}
+		>
+			<RegisterPageContent />
+		</Suspense>
 	);
 }

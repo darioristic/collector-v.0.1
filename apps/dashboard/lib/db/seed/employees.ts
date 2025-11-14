@@ -411,7 +411,10 @@ export async function seedEmployees(
 			// Normalize optional values to null instead of undefined
 			const phoneValue = emp.phone ? emp.phone : null;
 			const endDateValue = emp.endDate ? emp.endDate : null;
-			const salaryValue = emp.salary !== undefined ? emp.salary : null;
+			const salaryValue =
+				emp.salary !== undefined && emp.salary !== null
+					? String(emp.salary)
+					: null;
 
 			// Set default password for employees (email as password for seed data)
 			// In production, employees should set their own passwords

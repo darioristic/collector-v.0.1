@@ -1,5 +1,5 @@
-import type { AppDatabase } from "../../db";
-import { db as defaultDb } from "../../db";
+import type { AppDatabase } from "../../db/index.js";
+import { db as defaultDb } from "../../db/index.js";
 import { InvoicesService } from "./invoices.service";
 import { OrdersService } from "./orders.service";
 import { PaymentsService } from "./payments.service";

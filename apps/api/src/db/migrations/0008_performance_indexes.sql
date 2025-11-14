@@ -22,6 +22,12 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================
+-- ENABLE pg_trgm EXTENSION FOR TEXT SEARCH
+-- ============================================
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- ============================================
 -- ORDERS TABLE INDEXES
 -- ============================================
 
@@ -189,12 +195,6 @@ SELECT crm_try_create_index($$CREATE INDEX IF NOT EXISTS idx_products_created_at
 
 SELECT crm_try_create_index($$CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);$$);
 SELECT crm_try_create_index($$CREATE INDEX IF NOT EXISTS idx_users_status ON users(status) WHERE status IS NOT NULL;$$);
-
--- ============================================
--- ENABLE pg_trgm EXTENSION FOR TEXT SEARCH
--- ============================================
-
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- ============================================
 -- ANALYZE TABLES

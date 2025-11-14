@@ -47,6 +47,13 @@ function PaginationLink({
 	size = "icon",
 	...props
 }: PaginationLinkProps) {
+	const normalizedSize =
+		size === "small"
+			? "sm"
+			: size === "large"
+				? "lg"
+				: size ?? "default";
+
 	return (
 		<a
 			aria-current={isActive ? "page" : undefined}
@@ -55,7 +62,7 @@ function PaginationLink({
 			className={cn(
 				buttonVariants({
 					variant: isActive ? "outline" : "ghost",
-					size,
+					size: normalizedSize,
 				}),
 				className,
 			)}

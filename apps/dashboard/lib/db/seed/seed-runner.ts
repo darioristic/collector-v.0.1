@@ -11,7 +11,10 @@ export type SeedModule = {
 	name: string;
 	description: string;
 	dependencies: string[];
-	seedFn: (database: DashboardDatabase) => Promise<void | SeedModuleResult>;
+	seedFn: (
+		database: DashboardDatabase,
+		options?: { force?: boolean },
+	) => Promise<void | SeedModuleResult>;
 };
 
 export type SeedOptions = {

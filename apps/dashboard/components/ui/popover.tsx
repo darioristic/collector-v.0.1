@@ -11,7 +11,6 @@ function Popover({
 	return (
 		<PopoverPrimitive.Root
 			data-slot="popover"
-			suppressHydrationWarning
 			{...props}
 		/>
 	);

@@ -42,15 +42,37 @@ CREATE TABLE IF NOT EXISTS "companies" (
 CREATE UNIQUE INDEX IF NOT EXISTS "companies_slug_key" ON "companies" ("slug");
 CREATE INDEX IF NOT EXISTS "companies_name_idx" ON "companies" ("name");
 
-ALTER TABLE "users"
-  ADD COLUMN IF NOT EXISTS "hashed_password" text NOT NULL DEFAULT '',
-  ADD COLUMN IF NOT EXISTS "default_company_id" uuid;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'users' AND column_name = 'hashed_password'
+  ) THEN
+    ALTER TABLE "users" ADD COLUMN "hashed_password" text NOT NULL DEFAULT '';
+  END IF;
 
-ALTER TABLE "users"
-  ADD CONSTRAINT IF NOT EXISTS "users_default_company_id_companies_id_fk"
-  FOREIGN KEY ("default_company_id")
-  REFERENCES "companies"("id")
-  ON DELETE SET NULL;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'users' AND column_name = 'default_company_id'
+  ) THEN
+    ALTER TABLE "users" ADD COLUMN "default_company_id" uuid;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'users_default_company_id_companies_id_fk'
+  ) THEN
+    ALTER TABLE "users"
+      ADD CONSTRAINT "users_default_company_id_companies_id_fk"
+      FOREIGN KEY ("default_company_id")
+      REFERENCES "companies"("id")
+      ON DELETE SET NULL;
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS "users_default_company_idx" ON "users" ("default_company_id");
 

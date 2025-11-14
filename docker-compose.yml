@@ -52,7 +52,7 @@ services:
     environment:
       HOST: 0.0.0.0
       PORT: 4000
-      DATABASE_URL: postgresql://collector:collector@postgres:5432/collector
+      DATABASE_URL: postgres://collector:collector@postgres:5432/collector
       REDIS_URL: redis://redis:6379
       NODE_ENV: production
       LOG_LEVEL: info
@@ -81,7 +81,7 @@ services:
     environment:
       PORT: 4001
       HOST: 0.0.0.0
-      DATABASE_URL: postgresql://collector:collector@postgres:5432/collector
+      DATABASE_URL: postgres://collector:collector@postgres:5432/collector
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
       NODE_ENV: production
@@ -112,7 +112,7 @@ services:
     environment:
       PORT: 4002
       HOST: 0.0.0.0
-      DATABASE_URL: postgresql://collector:collector@postgres:5432/collector
+      DATABASE_URL: postgres://collector:collector@postgres:5432/collector
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
       NODE_ENV: production

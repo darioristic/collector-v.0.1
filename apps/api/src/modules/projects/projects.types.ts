@@ -1,4 +1,4 @@
-import type { projectStatus, taskStatus } from "../../db/schema/projects.schema";
+import type { projectStatus, taskStatus } from "../../db/schema/projects.schema.js";
 
 export type ProjectStatus = (typeof projectStatus.enumValues)[number];
 export type TaskStatus = (typeof taskStatus.enumValues)[number];

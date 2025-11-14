@@ -1,15 +1,15 @@
 import { randomBytes } from "node:crypto";
-import { compare, hash } from "bcryptjs";
+import bcrypt from "bcryptjs";
 import { and, eq, isNull, sql } from "drizzle-orm";
 
-import { type AppDatabase, db as defaultDb } from "../../db";
+import { type AppDatabase, db as defaultDb } from "../../db/index.js";
 import {
 	authSessions,
 	companies,
 	companyUsers,
 	passwordResetTokens,
-} from "../../db/schema/auth.schema";
-import { roles, userRoles, users } from "../../db/schema/settings.schema";
+} from "../../db/schema/auth.schema.js";
+import { roles, userRoles, users } from "../../db/schema/settings.schema.js";
 import type { CacheService } from "../../lib/cache.service";
 import type {
 	AuthPayload,
@@ -24,6 +24,7 @@ import type {
 } from "./auth.types";
 import { normalizeEmail, slugify } from "./auth.utils";
 
+const { compare, hash } = bcrypt;
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 dana
 const RESET_TOKEN_TTL_MS = 1000 * 60 * 60; // 60 minuta
 const SALT_ROUNDS = 12;

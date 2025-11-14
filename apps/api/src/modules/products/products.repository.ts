@@ -10,13 +10,13 @@ import {
   sql
 } from "drizzle-orm";
 
-import { db as defaultDb, type AppDatabase } from "../../db";
+import { db as defaultDb, type AppDatabase } from "../../db/index.js";
 import {
   inventoryItems,
   inventoryLocations,
   productCategories,
   products
-} from "../../db/schema/products.schema";
+} from "../../db/schema/products.schema.js";
 import type {
   CreateProductInput,
   InventoryAdjustmentInput,

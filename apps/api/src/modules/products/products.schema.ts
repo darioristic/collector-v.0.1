@@ -1,6 +1,6 @@
 import type { FastifySchema } from "fastify";
 
-import { productStatus } from "../../db/schema/products.schema";
+import { productStatus } from "../../db/schema/products.schema.js";
 
 const productStatusEnum = productStatus.enumValues;
 

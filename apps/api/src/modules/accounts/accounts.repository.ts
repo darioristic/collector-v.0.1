@@ -2,11 +2,11 @@ import { randomUUID } from "node:crypto";
 
 import { and, asc, eq, ilike, or } from "drizzle-orm";
 
-import { db as defaultDb } from "../../db";
+import { db as defaultDb } from "../../db/index.js";
 import {
-  accountContacts as accountContactsTable,
-  accounts as accountsTable
-} from "../../db/schema/accounts.schema";
+	accountContacts as accountContactsTable,
+	accounts as accountsTable
+} from "../../db/schema/accounts.schema.js";
 import type { Account, AccountContact, AccountCreateInput, AccountUpdateInput } from "./accounts.types";
 
 /**

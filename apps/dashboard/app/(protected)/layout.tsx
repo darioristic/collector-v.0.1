@@ -7,6 +7,9 @@ import { AuthProvider } from "@/components/providers/auth-provider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getCurrentAuth } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function AuthLayout({
 	children,
 }: Readonly<{

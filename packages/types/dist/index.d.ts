@@ -63,7 +63,22 @@ export type LeadCreateInput = {
 export type LeadUpdateInput = Partial<Omit<LeadCreateInput, "createdAt">> & {
     updatedAt?: string | null;
 };
-export declare const OPPORTUNITY_STAGES: readonly ["qualification", "proposal", "negotiation", "closedWon", "closedLost"];
+export type LeadListFilters = {
+    status?: LeadStatus;
+    source?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+};
+export type LeadListResult = {
+    data: Lead[];
+    pagination: {
+        total: number;
+        limit: number;
+        offset: number;
+    };
+};
+export declare const OPPORTUNITY_STAGES: readonly ["prospecting", "qualification", "proposal", "negotiation", "closedWon", "closedLost"];
 export type OpportunityStage = (typeof OPPORTUNITY_STAGES)[number];
 export type Opportunity = {
     id: string;

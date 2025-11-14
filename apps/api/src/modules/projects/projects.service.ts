@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, sql } from "drizzle-orm";
-import { db as defaultDb, type AppDatabase } from "../../db";
+import { db as defaultDb, type AppDatabase } from "../../db/index.js";
 import {
   projectBudgetCategories,
   projectMembers,
@@ -10,8 +10,8 @@ import {
   projectTeams,
   projectTimeEntries,
   taskStatus
-} from "../../db/schema/projects.schema";
-import { users } from "../../db/schema/settings.schema";
+} from "../../db/schema/projects.schema.js";
+import { users } from "../../db/schema/settings.schema.js";
 import type {
   AddTeamMemberInput,
   CreateBudgetCategoryInput,

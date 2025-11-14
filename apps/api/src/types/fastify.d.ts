@@ -1,4 +1,4 @@
-import type { AppDatabase } from "../db";
+import type { AppDatabase } from "../db/index.js";
 import type { createLeaveManagementService } from "../modules/hr/leave-management.service";
 import type { createPayrollService } from "../modules/hr/payroll.service";
 import type { createPerformanceReviewsService } from "../modules/hr/performance-reviews.service";

@@ -56,7 +56,7 @@ export function useCreatePayment() {
 				queryClient.invalidateQueries({
 					queryKey: invoiceKeys.detail(payment.invoiceId),
 				}),
-				queryClient.invalidateQueries({ queryKey: invoiceKeys.list() }),
+				queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() }),
 			]);
 			toast({
 				title: "Payment recorded",
@@ -85,7 +85,7 @@ export function useDeletePayment() {
 		onSuccess: async () => {
 			await Promise.all([
 				queryClient.invalidateQueries({ queryKey: paymentKeys.lists() }),
-				queryClient.invalidateQueries({ queryKey: invoiceKeys.list() }),
+				queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() }),
 			]);
 			toast({
 				title: "Payment deleted",

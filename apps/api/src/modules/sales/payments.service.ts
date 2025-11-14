@@ -1,6 +1,6 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 
-import type { AppDatabase } from "../../db";
+import type { AppDatabase } from "../../db/index.js";
 import { payments, invoices } from "../../db/schema/sales.schema.js";
 import type { Payment, PaymentCreateInput, PaymentStatus } from "@crm/types";
 

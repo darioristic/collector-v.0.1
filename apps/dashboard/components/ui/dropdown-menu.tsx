@@ -12,7 +12,6 @@ function DropdownMenu({
 	return (
 		<DropdownMenuPrimitive.Root
 			data-slot="dropdown-menu"
-			suppressHydrationWarning
 			{...props}
 		/>
 	);

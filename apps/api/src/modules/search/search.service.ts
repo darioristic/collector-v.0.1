@@ -1,11 +1,11 @@
 import { ilike, or } from "drizzle-orm";
-import type { AppDatabase } from "../../db";
-import { accounts as companies, accountContacts as contacts } from "../../db/schema/accounts.schema";
-import { orders } from "../../db/schema/sales.schema";
-import { quotes } from "../../db/schema/sales.schema";
-import { invoices } from "../../db/schema/sales.schema";
-import { projects } from "../../db/schema/projects.schema";
-import { leads } from "../../db/schema/crm.schema";
+import type { AppDatabase } from "../../db/index.js";
+import { accounts as companies, accountContacts as contacts } from "../../db/schema/accounts.schema.js";
+import { orders } from "../../db/schema/sales.schema.js";
+import { quotes } from "../../db/schema/sales.schema.js";
+import { invoices } from "../../db/schema/sales.schema.js";
+import { projects } from "../../db/schema/projects.schema.js";
+import { leads } from "../../db/schema/crm.schema.js";
 
 export interface SearchResult {
 	type: "company" | "contact" | "order" | "quote" | "invoice" | "project" | "lead";

@@ -1,4 +1,4 @@
-import type { userStatus } from "../../db/schema/settings.schema";
+import type { userStatus } from "../../db/schema/settings.schema.js";
 
 export type UserStatus = (typeof userStatus.enumValues)[number];
 

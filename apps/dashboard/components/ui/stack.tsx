@@ -46,7 +46,7 @@ type ResponsiveDirection = {
 	"2xl"?: "row" | "column";
 };
 
-interface StackProps
+interface StackComponentProps
 	extends Omit<React.HTMLAttributes<HTMLDivElement>, "dir">,
 		VariantProps<typeof stackVariants> {
 	direction?: "row" | "column" | ResponsiveDirection;
@@ -60,7 +60,7 @@ function Stack({
 	gap = 0,
 	children,
 	...props
-}: StackProps) {
+}: StackComponentProps) {
 	// Handle responsive direction
 	let directionClasses = "";
 	if (typeof direction === "object" && direction !== null) {

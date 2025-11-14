@@ -1,4 +1,4 @@
-import type { productStatus } from "../../db/schema/products.schema";
+import type { productStatus } from "../../db/schema/products.schema.js";
 
 export type ProductStatus = (typeof productStatus.enumValues)[number];
 

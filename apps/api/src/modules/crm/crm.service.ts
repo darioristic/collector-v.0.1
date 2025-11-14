@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 
-import { db } from "../../db";
+import { db } from "../../db/index.js";
 import {
   accounts,
   clientActivities,
@@ -14,7 +14,7 @@ import {
   opportunityStageEnum,
   opportunities,
   users
-} from "../../db/schema";
+} from "../../db/schema/index.js";
 import type {
   Activity,
   ActivityCreateInput,

@@ -131,11 +131,12 @@ export function useToasts(): UseToastsReturn {
 				error: ToastMessage | ((error: unknown) => ToastMessage);
 			},
 		) => {
-			return sonnerToast.promise(promise, {
+			sonnerToast.promise(promise, {
 				loading,
 				success,
 				error,
 			});
+			return promise;
 		},
 		dismiss: (toastId?: string | number) => {
 			if (toastId !== undefined) {
