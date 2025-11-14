@@ -60,7 +60,8 @@ export function ProjectTasksToolbar({
 	table,
 	onExportCSV,
 }: ProjectTasksToolbarProps) {
-	const isFiltered = table?.getState().columnFilters.length > 0 || searchValue.trim().length > 0;
+	const columnFilters = table?.getState()?.columnFilters ?? [];
+	const isFiltered = columnFilters.length > 0 || searchValue.trim().length > 0;
 
 	const handleClearFilters = () => {
 		table?.resetColumnFilters();

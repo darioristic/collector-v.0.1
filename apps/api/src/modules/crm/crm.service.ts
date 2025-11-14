@@ -273,7 +273,7 @@ class DrizzleCRMService implements CRMService {
 
     // Apply WHERE clause if we have conditions
     if (whereConditions.length > 0) {
-      query = query.where(and(...whereConditions));
+      query = query.where(and(...whereConditions)) as typeof query;
     }
 
     // Apply ORDER BY, LIMIT, and OFFSET

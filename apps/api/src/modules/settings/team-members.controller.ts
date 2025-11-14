@@ -55,13 +55,14 @@ export const listTeamMembers = async (
 
   if (search) {
     const pattern = `%${search.trim()}%`;
-    filters.push(
-      or(
-        ilike(teamMembers.firstName, pattern),
-        ilike(teamMembers.lastName, pattern),
-        ilike(teamMembers.email, pattern)
-      )
+    const searchFilter = or(
+      ilike(teamMembers.firstName, pattern),
+      ilike(teamMembers.lastName, pattern),
+      ilike(teamMembers.email, pattern)
     );
+    if (searchFilter) {
+      filters.push(searchFilter);
+    }
   }
 
   try {

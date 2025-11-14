@@ -13,10 +13,16 @@ const envSchema = z.object({
 
 	// Server Configuration
 	PORT: z
-		.string()
-		.transform((val) => Number.parseInt(val, 10))
-		.pipe(z.number().min(1).max(65535))
-		.default("4000"),
+		.preprocess(
+			(val) => {
+				if (typeof val === "string") {
+					return Number.parseInt(val, 10);
+				}
+				return val;
+			},
+			z.number().min(1).max(65535)
+		)
+		.default(4000),
 	HOST: z.string().default("0.0.0.0"),
 
 	// Database
@@ -48,10 +54,16 @@ const envSchema = z.object({
 
 	// Optional Settings
 	SESSION_EXPIRY_DAYS: z
-		.string()
-		.transform((val) => Number.parseInt(val, 10))
-		.pipe(z.number().positive())
-		.default("30"),
+		.preprocess(
+			(val) => {
+				if (typeof val === "string") {
+					return Number.parseInt(val, 10);
+				}
+				return val;
+			},
+			z.number().positive()
+		)
+		.default(30),
 });
 
 export type Env = z.infer<typeof envSchema>;

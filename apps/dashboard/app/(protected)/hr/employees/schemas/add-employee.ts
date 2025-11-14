@@ -119,7 +119,7 @@ export const transformAddEmployeeToAPI = (
 				? "Full-time"
 				: (values.employmentType as "Full-time" | "Contractor" | "Intern"),
 		status: values.status,
-		startDate: values.startDate,
+		startDate: values.startDate instanceof Date ? values.startDate : new Date(values.startDate),
 		endDate: null,
 	};
 };

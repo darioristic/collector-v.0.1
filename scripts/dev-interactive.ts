@@ -11,7 +11,6 @@
  */
 
 import { spawn } from "node:child_process";
-import { createServer } from "node:net";
 import { dirname, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
@@ -34,9 +33,6 @@ const DEFAULT_PORTS = {
 	postgres: 5432,
 	redis: 6379,
 };
-
-const MAX_WAIT_TIME = 120000;
-const HEALTH_CHECK_INTERVAL = 2000;
 
 // ============================================================================
 // LOGGER
@@ -333,19 +329,7 @@ async function runCommand(
 	});
 }
 
-async function isPortFree(port: number): Promise<boolean> {
-	return new Promise((resolve) => {
-		const server = createServer();
-
-		server.once("error", () => {
-			resolve(false);
-		});
-
-		server.listen(port, "0.0.0.0", () => {
-			server.close(() => resolve(true));
-		});
-	});
-}
+// Removed unused isPortFree function - using checkPortInUse instead
 
 function loadEnvFiles() {
 	const candidateFiles = [
@@ -716,6 +700,29 @@ async function analyzeBuildErrors(): Promise<void> {
 	}
 }
 
+async function isPortUsedByDocker(port: number): Promise<boolean> {
+	try {
+		// Check if port is used by a Docker container
+		const { stdout } = await runCommand(
+			"docker",
+			["ps", "--format", "{{.Names}}:{{.Ports}}"],
+			rootDir,
+			{ print: false },
+		);
+
+		const lines = stdout.split("\n").filter(Boolean);
+		for (const line of lines) {
+			// Check if line contains the port (format: "container-name:0.0.0.0:5432->5432/tcp")
+			if (line.includes(`:${port}->`) || line.includes(`:${port}/`)) {
+				return true;
+			}
+		}
+		return false;
+	} catch {
+		return false;
+	}
+}
+
 async function freeUpPortsForDocker(): Promise<void> {
 	logger.step("Oslobađanje portova za Docker servise...");
 
@@ -733,6 +740,14 @@ async function freeUpPortsForDocker(): Promise<void> {
 
 	for (const { port, name, stopFn } of portsToCheck) {
 		if (await checkPortInUse(port)) {
+			// Check if port is used by Docker container
+			const usedByDocker = await isPortUsedByDocker(port);
+			if (usedByDocker) {
+				logger.info(
+					`Port ${port} (${name}) je zauzet od strane Docker kontejnera - OK`,
+				);
+				continue; // Skip this port - it's already used by Docker
+			}
 			portsInUse.push({ port, name, stopFn });
 			logger.info(`Port ${port} (${name}) je zauzet`);
 		}
@@ -801,6 +816,72 @@ async function waitForDockerService(
 
 	while (Date.now() - start < timeoutMs) {
 		try {
+			// First check if container exists at all
+			try {
+				const { stdout: containerCheck } = await runCommand(
+					"docker",
+					[
+						"ps",
+						"-a",
+						"--filter",
+						`name=collector-${service}`,
+						"--format",
+						"{{.Names}}",
+					],
+					rootDir,
+					{ print: false },
+				);
+
+				if (!containerCheck.trim()) {
+					// Container doesn't exist yet, wait a bit
+					await delay(2000);
+					continue;
+				}
+			} catch {
+				// Continue checking
+			}
+
+			// Check health status first (most reliable)
+			try {
+				const { stdout: healthOutput } = await runCommand(
+					"docker",
+					[
+						"inspect",
+						`collector-${service}`,
+						"--format",
+						"{{.State.Health.Status}}",
+					],
+					rootDir,
+					{ print: false },
+				);
+
+				const healthStatus = healthOutput.trim().toLowerCase();
+				if (healthStatus === "healthy") {
+					logger.success(`${service} is ready (healthy)`);
+					return;
+				}
+				if (healthStatus === "unhealthy") {
+					// Read logs to see what's wrong
+					logger.warn(`${service} is unhealthy, checking logs...`);
+					try {
+						const { stdout: logs } = await runCommand(
+							"docker",
+							["logs", "--tail=50", `collector-${service}`],
+							rootDir,
+							{ print: false },
+						);
+						logger.info(`\n📋 ${service} logs (last 50 lines):`);
+						console.log(logs);
+					} catch {
+						// Ignore log reading errors
+					}
+					// Continue waiting - might recover
+				}
+				// If health status is "starting" or empty, continue checking
+			} catch {
+				// Health check might not be available yet, continue with status check
+			}
+
 			// Check if service is running using docker compose ps
 			const { stdout } = await runCommand(
 				"docker",
@@ -819,7 +900,13 @@ async function waitForDockerService(
 
 			if (statusOutput.trim()) {
 				const status = statusOutput.trim().toLowerCase();
-				if (status.includes("up") || status.includes("running")) {
+				if (status.includes("up") && status.includes("healthy")) {
+					logger.success(`${service} is ready`);
+					return;
+				}
+				if (status.includes("up") && !status.includes("unhealthy")) {
+					// Container is up but health check might not be configured
+					// For services without health checks, this is acceptable
 					logger.success(`${service} is ready`);
 					return;
 				}
@@ -828,6 +915,20 @@ async function waitForDockerService(
 					status.includes("dead") ||
 					status.includes("error")
 				) {
+					// Read logs before throwing error
+					logger.warn(`${service} failed to start, checking logs...`);
+					try {
+						const { stdout: logs } = await runCommand(
+							"docker",
+							["logs", "--tail=50", `collector-${service}`],
+							rootDir,
+							{ print: false },
+						);
+						logger.info(`\n📋 ${service} logs (last 50 lines):`);
+						console.log(logs);
+					} catch {
+						// Ignore log reading errors
+					}
 					throw new Error(`${service} failed to start (status: ${status})`);
 				}
 			}
@@ -853,6 +954,20 @@ async function waitForDockerService(
 						return;
 					}
 					if (isFailed) {
+						// Read logs before throwing error
+						logger.warn(`${service} failed to start, checking logs...`);
+						try {
+							const { stdout: logs } = await runCommand(
+								"docker",
+								["logs", `--tail=50`, `collector-${service}`],
+								rootDir,
+								{ print: false },
+							);
+							logger.info(`\n📋 ${service} logs (last 50 lines):`);
+							console.log(logs);
+						} catch {
+							// Ignore log reading errors
+						}
 						throw new Error(
 							`${service} failed to start (status: ${status.State || status.Status})`,
 						);
@@ -861,11 +976,36 @@ async function waitForDockerService(
 					// Continue checking
 				}
 			}
-		} catch {
-			// Continue checking - service might not be up yet
+		} catch (error) {
+			// If it's an error we threw, re-throw it
+			if (error instanceof Error && error.message.includes("failed to start")) {
+				throw error;
+			}
+			// Otherwise continue checking - service might not be up yet
 		}
 
 		await delay(2000);
+	}
+
+	// Timeout reached - read logs and provide helpful message
+	logger.warn(
+		`${service} did not become ready within ${timeoutMs / 1000}s, checking logs...`,
+	);
+	try {
+		const { stdout: logs } = await runCommand(
+			"docker",
+			["logs", "--tail=100", `collector-${service}`],
+			rootDir,
+			{ print: false },
+		);
+		logger.info(`\n📋 ${service} logs (last 100 lines):`);
+		console.log(logs);
+		logger.info(
+			`\n💡 ${service} možda još uvek build-uje ili ima problema. Proveri logove iznad.`,
+		);
+		logger.info(`💡 Pokušaj ručno: docker compose logs -f ${service}`);
+	} catch {
+		// Ignore log reading errors
 	}
 
 	throw new Error(
@@ -998,7 +1138,7 @@ async function setupInfrastructure(): Promise<{
 						"Docker daemon did not start. Please start Docker Desktop manually and try again.",
 					);
 				}
-			} catch (error) {
+			} catch {
 				logger.error("⚠ Ne mogu automatski pokrenuti Docker Desktop");
 				logger.info("💡 Pokreni Docker Desktop ručno:");
 				logger.info("   - Otvori Docker Desktop aplikaciju");
@@ -1035,57 +1175,158 @@ async function setupInfrastructure(): Promise<{
 			"chat-service",
 			"notification-service",
 		];
+
+		// Get all running services using docker compose ps
 		const { stdout: psOutput } = await runCommand(
 			"docker",
-			["compose", "ps", "--format", "{{.Service}}", ...allDockerServices],
+			["compose", "ps", "--format", "{{.Service}}"],
 			rootDir,
 			{ print: false },
 		).catch(() => ({ stdout: "" }));
 
-		const runningServices = psOutput.trim().split("\n").filter(Boolean);
+		// Also check using direct docker ps for containers with collector- prefix
+		const { stdout: dockerPsOutput } = await runCommand(
+			"docker",
+			["ps", "--format", "{{.Names}}"],
+			rootDir,
+			{ print: false },
+		).catch(() => ({ stdout: "" }));
+
+		// Filter out warning messages and empty lines from compose output
+		const composeServices = psOutput
+			.split("\n")
+			.map((line) => line.trim())
+			.filter(
+				(line) =>
+					line && !line.includes("level=warning") && !line.includes("msg="),
+			);
+
+		// Extract service names from container names (collector-api -> api)
+		const dockerServices = dockerPsOutput
+			.split("\n")
+			.map((line) => line.trim())
+			.filter((line) => line.startsWith("collector-"))
+			.map((name) => name.replace("collector-", ""));
+
+		// Combine both sources and remove duplicates
+		const runningServices = [
+			...new Set([...composeServices, ...dockerServices]),
+		];
+
+		logger.info(
+			`Pronađeni pokrenuti servisi: ${runningServices.length > 0 ? runningServices.join(", ") : "nijedan"}`,
+		);
+
 		const allRunning = allDockerServices.every((service) =>
 			runningServices.includes(service),
 		);
 
 		if (allRunning) {
-			logger.info("Svi Docker servisi su već pokrenuti");
+			logger.info("✓ Svi Docker servisi su već pokrenuti");
 		} else {
+			const missingServices = allDockerServices.filter(
+				(service) => !runningServices.includes(service),
+			);
+			if (missingServices.length > 0) {
+				logger.info(
+					`⚠ Neki servisi nisu pokrenuti: ${missingServices.join(", ")}`,
+				);
+			}
 			logger.step("Pokretanje svih Docker servisa...");
 			logger.info(
 				"💡 Pokrećem: PostgreSQL, Redis, API, Dashboard, Chat Service, Notification Service",
 			);
 
-			try {
-				// Double-check Docker is ready before starting services
-				logger.info("Proveravam da li je Docker potpuno spreman...");
-				const dockerReady = await checkDockerDaemon();
+			// Double-check Docker is ready before starting services
+			logger.info("Proveravam da li je Docker potpuno spreman...");
+			let dockerReady = await checkDockerDaemon();
+			if (!dockerReady) {
+				logger.warn(
+					"⚠ Docker daemon možda još nije spreman, čekam dodatne 5 sekundi...",
+				);
+				await delay(5000);
+
+				// Retry check
+				dockerReady = await checkDockerDaemon();
 				if (!dockerReady) {
 					logger.warn(
-						"⚠ Docker daemon možda još nije spreman, čekam dodatne 5 sekundi...",
+						"⚠ Docker daemon još nije spreman, čekam dodatne 10 sekundi...",
 					);
-					await delay(5000);
+					await delay(10000);
 
 					// Final check
-					const finalCheck = await checkDockerDaemon();
-					if (!finalCheck) {
+					dockerReady = await checkDockerDaemon();
+					if (!dockerReady) {
+						logger.error("⚠ Docker daemon nije spreman nakon čekanja");
+						logger.info("💡 Proveri Docker Desktop status:");
+						logger.info("   - Otvori Docker Desktop aplikaciju");
+						logger.info("   - Proveri da li Docker radi: docker ps");
+						logger.info("   - Sačekaj da se Docker potpuno pokrene");
 						throw new Error(
 							"Docker daemon is not ready. Please wait a bit longer and try again.",
 						);
 					}
 				}
+			}
 
+			if (dockerReady) {
+				logger.success("✓ Docker daemon je spreman");
+			}
+
+			try {
 				// Start all services
-				await runCommand(
-					"docker",
-					["compose", "up", "-d", ...allDockerServices],
-					rootDir,
-				);
+				logger.info("💡 Build može potrajati nekoliko minuta...");
+				logger.info("💡 Prati napredak: docker compose logs -f");
+
+				try {
+					await runCommand(
+						"docker",
+						["compose", "up", "-d", "--build", ...allDockerServices],
+						rootDir,
+					);
+					logger.success("Docker compose up uspešno izvršen");
+				} catch (buildError) {
+					// Build might have failed, but some services might still be starting
+					logger.warn("Build proces možda ima probleme, proveravam status...");
+
+					// Check if any services are actually running
+					const { stdout: psOutput } = await runCommand(
+						"docker",
+						["compose", "ps", "--format", "{{.Service}}: {{.Status}}"],
+						rootDir,
+						{ print: false },
+					).catch(() => ({ stdout: "" }));
+
+					if (psOutput.trim()) {
+						logger.info("\n📋 Status servisa nakon build-a:");
+						console.log(psOutput);
+					}
+
+					// Re-throw to be caught by outer catch
+					throw buildError;
+				}
 
 				logger.info("Čekam da se servisi pokrenu...");
-				await delay(5000);
+				await delay(10000); // Increased wait time for build to complete
 			} catch (error) {
 				const errorMsg = error instanceof Error ? error.message : String(error);
 				logger.warn(`Docker compose up error: ${errorMsg}`);
+
+				// Always try to show what services are actually running
+				try {
+					const { stdout: psOutput } = await runCommand(
+						"docker",
+						["compose", "ps", "--format", "{{.Service}}: {{.Status}}"],
+						rootDir,
+						{ print: false },
+					);
+					if (psOutput.trim()) {
+						logger.info("\n📋 Trenutno pokrenuti servisi:");
+						console.log(psOutput);
+					}
+				} catch {
+					// Ignore
+				}
 
 				// Check if Docker daemon is not running
 				if (
@@ -1154,19 +1395,38 @@ async function setupInfrastructure(): Promise<{
 
 		// Wait for application services (with longer timeout and don't fail)
 		const appServices = [
-			"api",
-			"dashboard",
-			"chat-service",
-			"notification-service",
+			{ name: "api", timeout: 180000 }, // 3 minutes for API (build can take time)
+			{ name: "dashboard", timeout: 180000 }, // 3 minutes for dashboard (build can take time)
+			{ name: "chat-service", timeout: 120000 }, // 2 minutes
+			{ name: "notification-service", timeout: 120000 }, // 2 minutes
 		];
-		for (const service of appServices) {
+		for (const { name: service, timeout } of appServices) {
 			try {
-				await waitForDockerService(service, 120000); // 2 minutes timeout
+				await waitForDockerService(service, timeout);
 			} catch (error) {
 				logger.warn(
 					`${service} service check failed: ${error instanceof Error ? error.message : String(error)}`,
 				);
 				logger.info(`💡 ${service} možda još uvek build-uje ili ima problema`);
+
+				// Try to read and display logs even if waitForDockerService failed
+				try {
+					const { stdout: logs } = await runCommand(
+						"docker",
+						["logs", "--tail=50", `collector-${service}`],
+						rootDir,
+						{ print: false },
+					);
+					if (logs.trim()) {
+						logger.info(`\n📋 ${service} logs (last 50 lines):`);
+						console.log(logs);
+					}
+				} catch {
+					// Ignore log reading errors - container might not exist yet
+					logger.info(
+						`💡 Kontejner ${service} možda još nije kreiran. Proveri: docker compose ps`,
+					);
+				}
 			}
 		}
 
@@ -1189,7 +1449,7 @@ async function setupInfrastructure(): Promise<{
 				{ print: false },
 			);
 			logger.success("Local PostgreSQL is available");
-		} catch (error) {
+		} catch {
 			logger.warn("PostgreSQL connection check failed");
 			logger.info("💡 Start PostgreSQL with: brew services start postgresql");
 			logger.info("   Or use Docker: docker-compose up -d postgres");

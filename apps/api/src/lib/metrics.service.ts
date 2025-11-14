@@ -1,5 +1,4 @@
-import type { FastifyInstance } from "fastify";
-import type { FastifyPluginAsync } from "fastify-plugin";
+import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 
 /**
  * Metrics collection service for tracking API performance

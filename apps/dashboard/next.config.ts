@@ -1,7 +1,6 @@
-import { config } from "dotenv";
 import type { NextConfig } from "next";
 
-config();
+// Next.js automatically loads .env files, no need to manually load dotenv
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -98,14 +97,32 @@ const nextConfig: NextConfig = {
 				aggregateTimeout: 300,
 			};
 		}
+		// For Docker builds, resolve modules from workspace root
+		if (process.env.DOCKER_BUILD === "true") {
+			config.resolve = config.resolve || {};
+			config.resolve.modules = [
+				...(config.resolve.modules || []),
+				"/workspace/node_modules",
+				"node_modules",
+			];
+			config.resolve.symlinks = false;
+		}
 		return config;
 	},
 	// Turbopack configuration (used with --turbo flag)
 	// Turbopack has better hot reload performance than webpack
 	turbopack: {
-		// Turbopack automatically watches files for changes
-		// No additional configuration needed for hot reload
+		// Set root directory to workspace root for monorepo support
+		// This tells Turbopack where to find node_modules and packages
+		root: process.env.DOCKER_BUILD === "true" ? "/workspace" : undefined,
 	},
+	// Enable standalone output for Docker builds
+	// This creates a self-contained build with all dependencies
+	output: process.env.DOCKER_BUILD === "true" ? "standalone" : undefined,
+	// Transpile packages from workspace for monorepo support
+	transpilePackages: process.env.DOCKER_BUILD === "true" 
+		? ["@crm/ui", "@crm/types"]
+		: [],
 };
 
 export default nextConfig;

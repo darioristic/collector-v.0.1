@@ -87,11 +87,16 @@ export function TeamChatClient({ initialData, currentUserId }: TeamChatClientPro
       if (!selectedChannelId) {
         return;
       }
+      
+      // Ensure content is a non-empty string (required by schema)
+      if (!content && !fileUrl) {
+        return;
+      }
 
       sendMessageMutation.mutate({
         channelId: selectedChannelId,
-        content: content || null,
-        fileUrl: fileUrl || null
+        content: content || "",
+        fileUrl: fileUrl || undefined
       });
     },
     [selectedChannelId, sendMessageMutation]

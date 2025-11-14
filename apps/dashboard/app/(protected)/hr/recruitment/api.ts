@@ -52,7 +52,7 @@ export async function fetchCandidates(params: {
   query: CandidatesQueryState;
 }): Promise<CandidatesListResponse> {
   const { query } = params;
-  const queryString = buildQueryString(query);
+  const queryString = buildQueryString(query as Record<string, string | number | undefined>);
   const response = await fetch(`/api/hr/recruitment/candidates?${queryString}`, {
     method: "GET",
     headers: DEFAULT_HEADERS,
@@ -109,7 +109,7 @@ export async function fetchInterviews(params: {
   query: InterviewsQueryState;
 }): Promise<InterviewsListResponse> {
   const { query } = params;
-  const queryString = buildQueryString(query);
+  const queryString = buildQueryString(query as Record<string, string | number | undefined>);
   const response = await fetch(`/api/hr/recruitment/interviews?${queryString}`, {
     method: "GET",
     headers: DEFAULT_HEADERS,

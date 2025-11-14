@@ -85,6 +85,7 @@ export class PDFService {
 	async generateInvoicePDF(data: InvoicePDFData, options: PDFOptions = {}): Promise<Readable> {
 		try {
 			// Dynamic import to avoid requiring pdfkit at build time
+			// @ts-ignore - pdfkit may not be installed, handled at runtime
 			const PDFDocument = (await import("pdfkit")).default;
 			const doc = new PDFDocument({
 				margin: options.margin ?? 50,
@@ -182,6 +183,7 @@ export class PDFService {
 	 */
 	async generateQuotePDF(data: QuotePDFData, options: PDFOptions = {}): Promise<Readable> {
 		try {
+			// @ts-ignore - pdfkit may not be installed, handled at runtime
 			const PDFDocument = (await import("pdfkit")).default;
 			const doc = new PDFDocument({
 				margin: options.margin ?? 50,
@@ -276,6 +278,7 @@ export class PDFService {
 		options: PDFOptions = {}
 	): Promise<Readable> {
 		try {
+			// @ts-ignore - pdfkit may not be installed, handled at runtime
 			const PDFDocument = (await import("pdfkit")).default;
 			const doc = new PDFDocument({
 				margin: options.margin ?? 50,

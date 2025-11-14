@@ -113,14 +113,14 @@ export async function getUnreadCount(userId: string, companyId: string, cache?: 
       ),
     );
 
-  const count = result?.count ?? 0;
+  const notificationCount = result?.count ?? 0;
 
   // Cache result (TTL: 30 seconds - unread count changes frequently)
   if (cacheService) {
-    await cacheService.set(cacheKey, count, { ttl: 30 });
+    await cacheService.set(cacheKey, notificationCount, { ttl: 30 });
   }
 
-  return count;
+  return notificationCount;
 }
 
 export async function markAsRead(

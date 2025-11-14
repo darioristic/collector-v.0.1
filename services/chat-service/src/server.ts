@@ -11,7 +11,7 @@ import conversationsRoutes from "./routes/conversations.js";
 import messagesRoutes from "./routes/messages.js";
 import usersRoutes from "./routes/users.js";
 import { setupSocketHandlers } from "./socket/handler.js";
-import { getCacheService, setCacheService } from "./lib/cache.service.js";
+import { getCacheService } from "./lib/cache.service.js";
 import { setCacheService as setRepositoryCache } from "./lib/repository.js";
 import { setCacheService as setTeamchatRepositoryCache } from "./lib/teamchat-repository.js";
 
@@ -109,7 +109,6 @@ async function buildServer() {
 
 	// Setup cache service
 	const cacheService = getCacheService(fastify.log);
-	setCacheService(cacheService);
 	setRepositoryCache(cacheService);
 	setTeamchatRepositoryCache(cacheService);
 	(fastify as FastifyWithSocket).cache = cacheService;

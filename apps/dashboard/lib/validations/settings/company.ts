@@ -1,12 +1,16 @@
 import { z } from "zod";
 
-const emptyToNull = (value: unknown) => {
+const emptyToNull = (value: unknown): string | null | undefined => {
 	if (typeof value === "string") {
 		const trimmed = value.trim();
 		return trimmed.length === 0 ? null : trimmed;
 	}
 
-	return value === undefined ? null : value;
+	if (value === undefined || value === null) {
+		return null;
+	}
+
+	return String(value);
 };
 
 const optionalText = (max: number, message: string) =>
@@ -133,7 +137,26 @@ export const companyResponseSchema = z
 export const companyFormSchema = companyUpsertSchema;
 
 export type CompanyUpsertPayload = z.infer<typeof companyUpsertSchema>;
-export type CompanyFormInput = z.input<typeof companyFormSchema>;
 export type CompanyFormValues = z.infer<typeof companyFormSchema>;
 export type CompanyResponse = z.infer<typeof companyResponseSchema>;
+
+export type CompanyFormInput = {
+	name: string;
+	legalName?: string;
+	registrationNo?: string;
+	taxId?: string;
+	industry?: string;
+	employees?: number | string | undefined;
+	streetAddress?: string;
+	city?: string;
+	zipCode?: string;
+	country?: string;
+	email: string;
+	phone?: string;
+	website?: string;
+	logoUrl?: string;
+	faviconUrl?: string;
+	brandColor?: string;
+	description?: string;
+};
 

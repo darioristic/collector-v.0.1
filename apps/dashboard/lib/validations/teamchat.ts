@@ -86,7 +86,10 @@ export const createDirectMessageSchema = z.object({
 });
 
 export const createMessageSchema = z.object({
-	content: z.string().min(1),
+	content: z.string(),
 	channelId: z.string().uuid(),
 	fileUrl: z.string().optional(),
+}).refine((data) => data.content.trim().length > 0 || data.fileUrl, {
+	message: "Message must have content or fileUrl",
+	path: ["content"],
 });

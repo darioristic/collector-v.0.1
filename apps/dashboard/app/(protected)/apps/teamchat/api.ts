@@ -102,7 +102,12 @@ export const createDirectMessageChannel = async (
 	}
 
 	const data = (await response.json()) as unknown;
-	return directChannelResponseSchema.parse(data);
+	const parsed = directChannelResponseSchema.parse(data);
+	// Return the parsed response with channelId extracted from channel.id
+	return {
+		channelId: parsed.channel.id,
+		channel: parsed.channel,
+	};
 };
 
 export const fetchMessages = async (
@@ -168,7 +173,7 @@ export const fetchDirectMessageTargets = async (): Promise<
 	}
 
 	const data = (await response.json()) as unknown;
-	return directMessageTargetsResponseSchema.parse(data).members;
+	return directMessageTargetsResponseSchema.parse(data).targets;
 };
 
 export const uploadAttachment = async (

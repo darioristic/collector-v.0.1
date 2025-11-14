@@ -60,7 +60,7 @@ function PromptScrollButton({
 	return (
 		<Button
 			variant={variant}
-			size={size}
+			size={size ?? undefined}
 			className={cn(
 				"h-8 w-8 rounded-full transition-all duration-150 ease-out",
 				isVisible

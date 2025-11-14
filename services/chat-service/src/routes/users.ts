@@ -3,6 +3,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { db } from "../db/index.js";
 import { teamchatUsers } from "../db/schema/teamchat.js";
 import { authMiddleware } from "../lib/auth.js";
+import type { CacheService } from "../lib/cache.service.js";
 const CACHE_PREFIX = "chat:";
 const getUserStatusCacheKey2 = (companyId: string, userId: string) =>
 	`${CACHE_PREFIX}user:status:${companyId}:${userId}`;
@@ -18,21 +19,22 @@ const usersRoutes: FastifyPluginAsync = async (fastify) => {
 				return reply.code(401).send({ error: "Unauthorized" });
 			}
 
+			const user = request.user;
 			const { id: userId } = request.params;
 
 			try {
-				const cache = (fastify as any).cache;
-				const cacheKey = getUserStatusCacheKey2(request.user.companyId, userId);
+				const cache = (fastify as any).cache as CacheService | undefined;
+				const cacheKey = getUserStatusCacheKey2(user.companyId, userId);
 
 				// Try cache first
 				if (cache) {
-					const cached = await cache.get<{ userId: string; status: string }>(cacheKey);
+					const cached = await cache.get(cacheKey) as { userId: string; status: string } | null;
 					if (cached) {
 						return reply.send(cached);
 					}
 				}
 
-				const [user] = await db
+				const [userRecord] = await db
 					.select({
 						id: teamchatUsers.id,
 						status: teamchatUsers.status,
@@ -42,18 +44,18 @@ const usersRoutes: FastifyPluginAsync = async (fastify) => {
 					.where(
 						and(
 							eq(teamchatUsers.id, userId),
-							eq(teamchatUsers.companyId, request.user.companyId),
+							eq(teamchatUsers.companyId, user.companyId),
 						),
 					)
 					.limit(1);
 
-				if (!user) {
+				if (!userRecord) {
 					return reply.code(404).send({ error: "User not found" });
 				}
 
 				const result = {
-					userId: user.id,
-					status: user.status,
+					userId: userRecord.id,
+					status: userRecord.status,
 				};
 
 				// Cache result (TTL: 1 minute - status changes frequently)
@@ -77,6 +79,7 @@ const usersRoutes: FastifyPluginAsync = async (fastify) => {
 				return reply.code(401).send({ error: "Unauthorized" });
 			}
 
+			const user = request.user;
 			const body = request.body as { userIds?: string[] };
 
 			if (!body || !Array.isArray(body.userIds) || body.userIds.length === 0) {
@@ -84,8 +87,8 @@ const usersRoutes: FastifyPluginAsync = async (fastify) => {
 			}
 
 			try {
-				const cache = (fastify as any).cache;
-				const cacheKeys = body.userIds.map((id) => getUserStatusCacheKey2(request.user.companyId, id));
+				const cache = (fastify as any).cache as CacheService | undefined;
+				const cacheKeys = body.userIds.map((id) => getUserStatusCacheKey2(user.companyId, id));
 
 				// Try to get from cache first
 				const cachedStatuses: Record<string, string> = {};
@@ -93,7 +96,7 @@ const usersRoutes: FastifyPluginAsync = async (fastify) => {
 
 				if (cache) {
 					for (let i = 0; i < body.userIds.length; i++) {
-						const cached = await cache.get<{ userId: string; status: string }>(cacheKeys[i]);
+						const cached = await cache.get(cacheKeys[i]) as { userId: string; status: string } | null;
 						if (cached) {
 							cachedStatuses[body.userIds[i]] = cached.status;
 						} else {
@@ -114,19 +117,19 @@ const usersRoutes: FastifyPluginAsync = async (fastify) => {
 					.from(teamchatUsers)
 					.where(
 						and(
-							eq(teamchatUsers.companyId, request.user.companyId),
+							eq(teamchatUsers.companyId, user.companyId),
 							inArray(teamchatUsers.id, uncachedIds),
 						),
 					) : [];
 
 				// Combine cached and fetched statuses
 				const statusMap: Record<string, string> = { ...cachedStatuses };
-				for (const user of users) {
-					statusMap[user.id] = user.status;
+				for (const u of users) {
+					statusMap[u.id] = u.status;
 					// Cache fetched status
 					if (cache) {
-						const key = getUserStatusCacheKey2(request.user.companyId, user.id);
-						await cache.set(key, { userId: user.id, status: user.status }, { ttl: 60 });
+						const key = getUserStatusCacheKey2(user.companyId, u.id);
+						await cache.set(key, { userId: u.id, status: u.status }, { ttl: 60 });
 					}
 				}
 

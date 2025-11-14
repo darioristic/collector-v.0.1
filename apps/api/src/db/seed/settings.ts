@@ -248,9 +248,10 @@ export const seedSettings = async (database = defaultDb) => {
       .select({ id: roles.id, key: roles.key })
       .from(roles);
 
-    const roleMap = new Map(existingRoles.map((r) => [r.key, r.id]));
+    type RoleKey = "admin" | "manager" | "user" | "sales_manager" | "sales_rep" | "support" | "viewer";
+    const roleMap = new Map<RoleKey, string>(existingRoles.map((r) => [r.key as RoleKey, r.id]));
 
-    const permissionsData = [
+    const permissionsData: Array<{ roleKey: RoleKey; resource: string; action: string }> = [
       // Admin permissions - full access
       { roleKey: "admin", resource: "accounts", action: "create" },
       { roleKey: "admin", resource: "accounts", action: "read" },

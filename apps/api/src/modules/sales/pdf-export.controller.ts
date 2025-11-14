@@ -25,16 +25,16 @@ export const exportInvoicePDFHandler = async (
 	// Transform invoice data to PDF format
 	const pdfData: InvoicePDFData = {
 		invoiceNumber: invoice.invoiceNumber,
-		invoiceDate: invoice.invoiceDate,
-		dueDate: invoice.dueDate ?? invoice.invoiceDate,
-		items: invoice.items.map((item) => ({
+		invoiceDate: invoice.issuedAt,
+		dueDate: invoice.dueDate ?? invoice.issuedAt,
+		items: (invoice.items || []).map((item) => ({
 			description: item.description ?? "",
 			quantity: item.quantity,
 			unitPrice: Number(item.unitPrice),
-			total: Number(item.total)
+			total: Number(item.totalInclVat)
 		})),
 		subtotal: Number(invoice.subtotal),
-		tax: Number(invoice.tax),
+		tax: Number(invoice.totalVat),
 		total: Number(invoice.total),
 		currency: invoice.currency,
 		notes: invoice.notes ?? undefined
@@ -83,9 +83,9 @@ export const exportQuotePDFHandler = async (
 	// Transform quote data to PDF format
 	const pdfData: QuotePDFData = {
 		quoteNumber: quote.quoteNumber,
-		quoteDate: quote.quoteDate,
-		validUntil: quote.validUntil ?? quote.quoteDate,
-		items: quote.items.map((item) => ({
+		quoteDate: quote.issueDate,
+		validUntil: quote.expiryDate ?? quote.issueDate,
+		items: (quote.items ?? []).map((item) => ({
 			description: item.description ?? "",
 			quantity: item.quantity,
 			unitPrice: Number(item.unitPrice),

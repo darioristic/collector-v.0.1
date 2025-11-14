@@ -39,7 +39,7 @@ export async function fetchPayrollEntries(params: {
   query: PayrollEntriesQueryState;
 }): Promise<PayrollEntriesListResponse> {
   const { query } = params;
-  const queryString = buildQueryString(query);
+  const queryString = buildQueryString(query as Record<string, string | number | undefined>);
   const response = await fetch(`/api/hr/payroll?${queryString}`, {
     method: "GET",
     headers: DEFAULT_HEADERS,

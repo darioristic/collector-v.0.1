@@ -266,7 +266,7 @@ export const listChannels = async (
 		});
 	}
 
-	return summaries.sort((a, b) => {
+	const sortedSummaries = summaries.sort((a, b) => {
 		if (a.lastMessageAt && b.lastMessageAt) {
 			return b.lastMessageAt.getTime() - a.lastMessageAt.getTime();
 		}
@@ -277,10 +277,10 @@ export const listChannels = async (
 
 	// Cache result (TTL: 2 minutes - channels change frequently)
 	if (cacheService) {
-		await cacheService.set(cacheKey, summaries, { ttl: 120 });
+		await (cacheService as CacheService).set(cacheKey, sortedSummaries, { ttl: 120 });
 	}
 
-	return summaries;
+	return sortedSummaries;
 };
 
 export const listDirectMessageTargets = async (
@@ -509,8 +509,6 @@ export const createMessage = async (
 
 	return messageWithAuthor;
 };
-<｜tool▁call▁begin｜>
-read_file
 
 export const upsertDirectMessageChannel = async (
 	companyId: string,

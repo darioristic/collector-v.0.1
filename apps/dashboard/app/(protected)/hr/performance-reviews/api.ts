@@ -44,6 +44,13 @@ const buildQueryString = (
   return searchParams.toString();
 };
 
+// Helper function to convert Date to ISO string
+const dateToISOString = (value: Date | string | undefined): string | undefined => {
+  if (!value) return undefined;
+  if (typeof value === "string") return value;
+  return value.toISOString();
+};
+
 export async function fetchPerformanceReviews(params: {
   query: PerformanceReviewsQueryState;
 }): Promise<PerformanceReviewsListResponse> {
@@ -78,12 +85,24 @@ export async function getPerformanceReviewById(id: string): Promise<PerformanceR
 }
 
 export async function createPerformanceReview(
-  values: Partial<PerformanceReview>,
+  values: Partial<PerformanceReview> & {
+    reviewDate?: Date | string;
+    periodStart?: Date | string;
+    periodEnd?: Date | string;
+  },
 ): Promise<PerformanceReview> {
+  // Convert Date objects to ISO strings for API
+  const apiValues: Partial<PerformanceReview> = {
+    ...values,
+    reviewDate: dateToISOString(values.reviewDate),
+    periodStart: dateToISOString(values.periodStart),
+    periodEnd: dateToISOString(values.periodEnd),
+  };
+  
   const response = await fetch("/api/hr/performance-reviews", {
     method: "POST",
     headers: DEFAULT_HEADERS,
-    body: JSON.stringify(values),
+    body: JSON.stringify(apiValues),
   });
 
   const result = await handleResponse<{ data: PerformanceReview }>(response);
@@ -92,12 +111,24 @@ export async function createPerformanceReview(
 
 export async function updatePerformanceReview(
   id: string,
-  values: Partial<PerformanceReview>,
+  values: Partial<PerformanceReview> & {
+    reviewDate?: Date | string;
+    periodStart?: Date | string;
+    periodEnd?: Date | string;
+  },
 ): Promise<PerformanceReview> {
+  // Convert Date objects to ISO strings for API
+  const apiValues: Partial<PerformanceReview> = {
+    ...values,
+    reviewDate: dateToISOString(values.reviewDate),
+    periodStart: dateToISOString(values.periodStart),
+    periodEnd: dateToISOString(values.periodEnd),
+  };
+  
   const response = await fetch(`/api/hr/performance-reviews/${id}`, {
     method: "PUT",
     headers: DEFAULT_HEADERS,
-    body: JSON.stringify(values),
+    body: JSON.stringify(apiValues),
   });
 
   const result = await handleResponse<{ data: PerformanceReview }>(response);

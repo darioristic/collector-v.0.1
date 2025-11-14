@@ -28,9 +28,15 @@ export async function POST(_request: NextRequest) {
 	});
 
 	if (!response.ok) {
+		const normalizedPayload = (payload ?? null) as
+			| {
+					error?: string;
+					message?: string;
+			  }
+			| null;
 		return backendErrorResponse(
 			response,
-			payload,
+			normalizedPayload,
 			"AUTH_LOGOUT_FAILED",
 			"Odjava nije uspela.",
 		);

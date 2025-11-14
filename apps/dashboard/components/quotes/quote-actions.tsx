@@ -176,10 +176,10 @@ export function QuoteActions({
 						items:
 							items?.map((item) => ({
 								productId: item.productId || undefined,
-								description: item.description,
+								description: item.description ?? undefined,
 								quantity: item.quantity,
 								unitPrice: item.unitPrice,
-							})) || [],
+							})) ?? [],
 					});
 
 					toast({

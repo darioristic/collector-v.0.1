@@ -11,14 +11,12 @@ export const exportProjectsHandler = async (request: FastifyRequest, reply: Fast
 		Name: project.name,
 		Description: project.description ?? "",
 		Status: project.status,
-		"Owner ID": project.ownerId ?? "",
-		"Owner Name": project.ownerName ?? "",
-		"Start Date": exportService.formatDate(project.startDate),
-		"End Date": exportService.formatDate(project.endDate),
+		"Owner ID": project.owner?.id ?? "",
+		"Owner Name": project.owner?.name ?? "",
+		"Start Date": project.startDate ? exportService.formatDate(project.startDate) : "",
+		"End Date": project.dueDate ? exportService.formatDate(project.dueDate) : "",
 		"Total Tasks": project.totalTasks?.toString() ?? "0",
-		"Completed Tasks": project.completedTasks?.toString() ?? "0",
-		"Created At": exportService.formatDate(project.createdAt),
-		"Updated At": exportService.formatDate(project.updatedAt)
+		"Completed Tasks": project.completedTasks?.toString() ?? "0"
 	}));
 
 	const csv = exportService.toCSV(csvData);

@@ -37,38 +37,43 @@ const buttonVariants = cva(
 	},
 );
 
+type ButtonBaseSize = NonNullable<VariantProps<typeof buttonVariants>["size"]>;
+type ButtonSizeProp = ButtonBaseSize | "small" | "large";
+
+type ButtonPropsInternal = Omit<React.ComponentProps<"button">, "size"> &
+	Omit<VariantProps<typeof buttonVariants>, "size"> & {
+		asChild?: boolean;
+		size?: ButtonSizeProp;
+	};
+
 function Button({
 	className,
 	variant,
 	size,
 	asChild = false,
 	...props
-}: React.ComponentProps<"button"> &
-	VariantProps<typeof buttonVariants> & {
-		asChild?: boolean;
-		size?: "small" | "default" | "large" | "sm" | "lg" | "icon" | "icon-sm" | "icon-lg";
-	}) {
+}: ButtonPropsInternal) {
 	const Comp = asChild ? Slot : "button";
 
 	// Handle "small" and "large" sizes (Geist compatibility)
 	// Map to existing size variants
-	const sizeVariant =
+	const sizeVariant: ButtonBaseSize =
 		size === "small"
 			? "sm"
 			: size === "large"
 				? "lg"
-				: size;
+				: (size ?? "default");
 
 	return (
 		<Comp
 			data-slot="button"
-			className={cn(buttonVariants({ variant, size: sizeVariant as any, className }))}
+			className={cn(buttonVariants({ variant, size: sizeVariant, className }))}
 			suppressHydrationWarning
 			{...props}
 		/>
 	);
 }
 
-export type ButtonProps = React.ComponentProps<typeof Button>;
+export type ButtonProps = ButtonPropsInternal;
 
 export { Button, buttonVariants };

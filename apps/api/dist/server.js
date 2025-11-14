@@ -2,11 +2,15 @@ import { readdir } from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import Fastify from "fastify";
 import { db } from "./db/index.js";
+import "./lib/env"; // Validate environment variables FIRST (will exit if invalid)
 import { cachePlugin } from "./lib/cache.service";
+import metricsPlugin from "./plugins/metrics.plugin";
 import corsPlugin from "./plugins/cors";
 import errorHandlerPlugin from "./plugins/error-handler";
 import openApiPlugin from "./plugins/openapi";
+import rateLimitPlugin from "./plugins/rate-limit";
 import healthRoutes from "./routes/health";
+import metricsRoutes from "./routes/metrics";
 const createLogger = () => {
     const baseLevel = process.env.LOG_LEVEL ??
         (process.env.NODE_ENV === "production" ? "info" : "debug");
@@ -29,6 +33,7 @@ const createLogger = () => {
     return devLogger;
 };
 const registerHealthcheck = (app) => app.register(healthRoutes, { prefix: "/api" });
+const registerMetrics = (app) => app.register(metricsRoutes, { prefix: "/api" });
 const modulesBaseUrl = new URL("./modules/", import.meta.url);
 const modulesPath = fileURLToPath(modulesBaseUrl);
 const loadModule = async (app, moduleName) => {
@@ -97,10 +102,13 @@ export const buildServer = async () => {
         app.decorateRequest("db", { getter: () => database });
     }
     await app.register(corsPlugin);
+    await app.register(metricsPlugin);
     await app.register(cachePlugin);
+    await app.register(rateLimitPlugin); // Rate limiting - MUST be after cache (for Redis)
     await app.register(errorHandlerPlugin);
     await app.register(openApiPlugin);
     await registerHealthcheck(app);
+    await registerMetrics(app);
     await registerModules(app);
     return app;
 };

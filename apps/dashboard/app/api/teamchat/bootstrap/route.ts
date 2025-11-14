@@ -32,7 +32,10 @@ export async function GET(request: NextRequest) {
 		await ensureTeamChatSchemaReady();
 
 		try {
-			const data = await bootstrapTeamChat(auth);
+			const data = await bootstrapTeamChat({
+				user: auth.user,
+				company: auth.user.company,
+			});
 			const validated = bootstrapResponseSchema.parse(data);
 
 			return withNoStore(NextResponse.json(validated));

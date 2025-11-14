@@ -261,22 +261,9 @@ export const seedProjects = async (database = defaultDb) => {
         throw new Error("Failed to insert project seed row.");
       }
 
-      // Project members (owner + additional teammates)
-      const shuffledUsers = faker.helpers.shuffle(userRows);
-      const memberCandidates = new Map<string, { id: string; name: string; email: string }>();
-      memberCandidates.set(owner.id, owner);
-
-      for (const candidate of shuffledUsers) {
-        if (memberCandidates.size >= TEAM_MEMBERS_PER_PROJECT) {
-          break;
-        }
-
-        memberCandidates.set(candidate.id, candidate);
-      }
-
       // Create project teams (1-2 teams per project)
       const teamCount = index % 3 === 0 ? 2 : 1;
-      const teamRows = [];
+      const teamRows: Array<{ id: string; name: string; goal: string | null; projectId: string; createdAt: Date | null }> = [];
       
       for (let teamIndex = 0; teamIndex < teamCount; teamIndex++) {
         const [teamRow] = await tx

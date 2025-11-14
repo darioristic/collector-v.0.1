@@ -39,6 +39,15 @@ const hasFilters = (query: PerformanceReviewsQueryState, searchValue: string) =>
   Boolean(query.reviewerId) ||
   Boolean(searchValue);
 
+const mapFormValuesToApiPayload = (
+  values: Partial<PerformanceReviewFormValues>,
+): Partial<PerformanceReview> => ({
+  ...values,
+  reviewDate: values.reviewDate ? values.reviewDate.toISOString() : undefined,
+  periodStart: values.periodStart ? values.periodStart.toISOString() : undefined,
+  periodEnd: values.periodEnd ? values.periodEnd.toISOString() : undefined,
+});
+
 export default function PerformanceReviewsPageClient({
   initialQuery,
 }: PerformanceReviewsPageClientProps) {
@@ -80,7 +89,8 @@ export default function PerformanceReviewsPageClient({
   const reviews = data?.data ?? [];
 
   const createMutation = useMutation({
-    mutationFn: createPerformanceReview,
+    mutationFn: (values: PerformanceReviewFormValues) =>
+      createPerformanceReview(mapFormValuesToApiPayload(values)),
     onSuccess: (review) => {
       toast({
         title: "Performance review created",
@@ -100,7 +110,7 @@ export default function PerformanceReviewsPageClient({
 
   const updateMutation = useMutation({
     mutationFn: ({ id, values }: { id: string; values: Partial<PerformanceReviewFormValues> }) =>
-      updatePerformanceReview(id, values),
+      updatePerformanceReview(id, mapFormValuesToApiPayload(values)),
     onSuccess: (review) => {
       toast({
         title: "Performance review updated",

@@ -1,17 +1,51 @@
-FROM docker.io/oven/bun:1.1.38-debian AS builder
+FROM docker.io/oven/bun:1.1.38-debian AS deps
 WORKDIR /workspace
 ENV BUN_NO_TELEMETRY=1
 ENV NEXT_TELEMETRY_DISABLED=1
-COPY . .
-RUN bun install --frozen-lockfile
-RUN bun run --filter ./apps/dashboard build
-RUN cd apps/dashboard && bun install --frozen-lockfile --production
+COPY package.json bun.lock* ./
+COPY tsconfig.base.json ./
+COPY apps/dashboard/package.json ./apps/dashboard/
+COPY apps/dashboard/tsconfig.json ./apps/dashboard/
+COPY packages ./packages
+RUN bun pm untrusted || true
+RUN bun install --frozen-lockfile --ignore-scripts || bun install --frozen-lockfile --no-verify
+
+FROM docker.io/library/node:20-bookworm AS builder
+WORKDIR /workspace
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV DOCKER_BUILD=true
+ENV NODE_ENV=production
+# Copy all dependencies and workspace files
+COPY --from=deps /workspace/node_modules ./node_modules
+COPY --from=deps /workspace/packages ./packages
+COPY --from=deps /workspace/package.json ./package.json
+COPY --from=deps /workspace/tsconfig.base.json ./tsconfig.base.json
+# Copy dashboard app files (must include updated package.json with @tanstack/react-query)
+COPY apps/dashboard ./apps/dashboard
+# Verify required packages exist in root node_modules
+RUN test -d node_modules/@tanstack/react-query && echo "✓ @tanstack/react-query found" || echo "✗ @tanstack/react-query NOT found"
+RUN test -d node_modules/typescript && echo "✓ typescript found" || echo "✗ typescript NOT found"
+# Create symlink to workspace node_modules for Next.js to find all dependencies
+WORKDIR /workspace/apps/dashboard
+RUN rm -rf node_modules && ln -s ../../node_modules ./node_modules
+# Verify symlink works
+RUN test -L node_modules && test -d node_modules/@tanstack/react-query && echo "✓ Symlink verified: @tanstack/react-query accessible" || (echo "✗ Symlink verification failed" && ls -la node_modules 2>/dev/null | head -5)
+# Build the Next.js app
+RUN npm run build:webpack
 
 FROM docker.io/library/node:20-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-COPY --from=builder /workspace/apps/dashboard /app
-EXPOSE 3000
-CMD ["npm", "run", "start"]
 
+# Copy standalone build output if available, otherwise use regular build
+COPY --from=builder /workspace/apps/dashboard/.next/standalone ./
+COPY --from=builder /workspace/apps/dashboard/.next/static ./.next/static
+COPY --from=builder /workspace/apps/dashboard/public ./public
+
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Use the standalone server.js if available, otherwise use custom server.ts
+CMD ["node", "server.js"]

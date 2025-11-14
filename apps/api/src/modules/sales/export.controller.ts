@@ -81,8 +81,8 @@ export const exportQuotesHandler = async (request: ExportQuotesQuery, reply: Fas
 
 	const csvData = result.data.map((quote) => ({
 		"Quote Number": quote.quoteNumber,
-		"Quote Date": exportService.formatDate(quote.quoteDate),
-		"Valid Until": exportService.formatDate(quote.validUntil),
+		"Quote Date": exportService.formatDate(quote.issueDate),
+		"Valid Until": exportService.formatDate(quote.expiryDate),
 		"Company ID": quote.companyId ?? "",
 		"Contact ID": quote.contactId ?? "",
 		Currency: quote.currency,
@@ -116,13 +116,13 @@ export const exportInvoicesHandler = async (request: ExportInvoicesQuery, reply:
 
 	const csvData = result.data.map((invoice) => ({
 		"Invoice Number": invoice.invoiceNumber,
-		"Invoice Date": exportService.formatDate(invoice.invoiceDate),
+		"Invoice Date": exportService.formatDate(invoice.issuedAt),
 		"Due Date": exportService.formatDate(invoice.dueDate),
-		"Company ID": invoice.companyId ?? "",
+		"Customer ID": invoice.customerId ?? "",
 		"Order ID": invoice.orderId?.toString() ?? "",
 		Currency: invoice.currency,
 		Subtotal: exportService.formatNumber(invoice.subtotal),
-		Tax: exportService.formatNumber(invoice.tax),
+		Tax: exportService.formatNumber(invoice.totalVat),
 		Total: exportService.formatNumber(invoice.total),
 		Status: invoice.status,
 		Notes: invoice.notes ?? "",

@@ -6,9 +6,11 @@ export async function GET(
 	request: NextRequest,
 	{ params }: { params: Promise<{ id: string }> },
 ) {
+	let accountId: string | undefined;
 	try {
-		const { id } = await params;
-		const url = `${API_BASE_URL}/api/accounts/${id}`;
+		const resolvedParams = await params;
+		accountId = resolvedParams.id;
+		const url = `${API_BASE_URL}/api/accounts/${accountId}`;
 
 		// Prosleđujemo cookies i headers iz originalnog zahteva
 		const headers: HeadersInit = {
@@ -35,7 +37,7 @@ export async function GET(
 
 		if (!response.ok) {
 			const errorText = await response.text().catch(() => "Unknown error");
-			console.error(`[accounts/${id}] API error:`, {
+			console.error(`[accounts/${accountId}] API error:`, {
 				status: response.status,
 				statusText: response.statusText,
 				error: errorText,
@@ -53,7 +55,7 @@ export async function GET(
 			},
 		});
 	} catch (error) {
-		console.error(`[accounts/${id}] Error fetching account:`, error);
+		console.error(`[accounts/${accountId ?? "unknown"}] Error fetching account:`, error);
 		return NextResponse.json(
 			{
 				error:

@@ -158,10 +158,10 @@ export function ChatSidebar() {
 				avatarUrl: null,
 				userId, // Matched from users table by email
 				companyId: null,
-				createdAt: emp.createdAt,
-				updatedAt: emp.updatedAt,
-			};
-		}) as TeamMember[];
+				createdAt: new Date(emp.createdAt),
+				updatedAt: new Date(emp.updatedAt),
+			} as TeamMember;
+		});
 	}, [employeesQuery.data, usersQuery.data]);
 
 	const conversations = conversationsQuery.data || [];

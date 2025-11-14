@@ -27,7 +27,8 @@ export const getProjectBudgetHandler: RouteHandler<{
   }
 
   const budget = await request.projectsService.getBudget(request.params.id);
-  return reply.status(200).send({ data: budget ?? { currency: "EUR", total: 0, spent: 0, remaining: 0, categories: [] } });
+  const defaultBudget: ProjectBudgetSummary = { currency: "EUR", total: 0, spent: 0, remaining: 0, totalHours: 0, categories: [] };
+  return reply.status(200).send({ data: budget ?? defaultBudget });
 };
 
 export const updateProjectBudgetHandler: RouteHandler<{

@@ -11,7 +11,7 @@ export const exportProjectReportPDFHandler = async (
 	reply: FastifyReply
 ) => {
 	const service = new ProjectsService(request.db, request.cache);
-	const project = await service.getById(request.params.id);
+	const project = await service.getProjectDetails(request.params.id);
 
 	if (!project) {
 		return reply.status(404).send({ error: "Project not found" });
@@ -22,23 +22,23 @@ export const exportProjectReportPDFHandler = async (
 		projectName: project.name,
 		description: project.description ?? undefined,
 		status: project.status,
-		ownerName: project.ownerName ?? undefined,
+		ownerName: project.owner?.name ?? undefined,
 		startDate: project.startDate ?? undefined,
-		endDate: project.endDate ?? undefined,
+		endDate: project.dueDate ?? undefined,
 		totalTasks: project.totalTasks ?? 0,
 		completedTasks: project.completedTasks ?? 0,
 		budget: project.budget
 			? {
-					total: Number(project.budget.totalBudget ?? 0),
-					spent: Number(project.budget.totalSpent ?? 0),
-					remaining: Number(project.budget.totalRemaining ?? 0),
+					total: Number(project.budget.total ?? 0),
+					spent: Number(project.budget.spent ?? 0),
+					remaining: Number(project.budget.remaining ?? 0),
 					currency: project.budget.currency ?? "EUR"
 				}
 			: undefined,
 		tasks: project.tasks?.map((task) => ({
 			title: task.title,
 			status: task.status,
-			assignee: task.assigneeName ?? undefined,
+			assignee: task.assignee?.name ?? undefined,
 			dueDate: task.dueDate ?? undefined
 		}))
 	};

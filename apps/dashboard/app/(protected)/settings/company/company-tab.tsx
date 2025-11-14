@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -21,14 +21,15 @@ import { Textarea } from "@/components/ui/textarea";
 import {
 	companyFormSchema,
 	type CompanyFormValues,
+	type CompanyFormInput,
 } from "@/lib/validations/settings/company";
 import { useCompanySettings } from "./use-company-settings";
 
 export default function CompanyTab() {
 	const { company, isLoading, updateCompany, isUpdating } = useCompanySettings();
 
-	const form = useForm<CompanyFormValues>({
-		resolver: zodResolver(companyFormSchema),
+	const form = useForm<CompanyFormInput>({
+		resolver: zodResolver(companyFormSchema) as Resolver<CompanyFormInput>,
 		defaultValues: {
 			name: "",
 			legalName: "",
@@ -74,9 +75,10 @@ export default function CompanyTab() {
 		}
 	}, [company, form]);
 
-	const onSubmit = async (values: CompanyFormValues) => {
+	const onSubmit = async (values: CompanyFormInput) => {
 		try {
-			const updatedCompany = await updateCompany(values);
+			const payload = companyFormSchema.parse(values);
+			const updatedCompany = await updateCompany(payload);
 			// Reset form with updated data
 			if (updatedCompany) {
 				form.reset({
@@ -174,7 +176,6 @@ export default function CompanyTab() {
 													placeholder="Enter legal name"
 													disabled={isUpdating}
 													{...field}
-													value={field.value ?? ""}
 												/>
 											</FormControl>
 											<FormMessage />
@@ -193,7 +194,6 @@ export default function CompanyTab() {
 													placeholder="Enter registration number"
 													disabled={isUpdating}
 													{...field}
-													value={field.value ?? ""}
 												/>
 											</FormControl>
 											<FormMessage />
@@ -212,7 +212,6 @@ export default function CompanyTab() {
 													placeholder="Enter tax ID"
 													disabled={isUpdating}
 													{...field}
-													value={field.value ?? ""}
 												/>
 											</FormControl>
 											<FormMessage />
@@ -231,7 +230,6 @@ export default function CompanyTab() {
 													placeholder="Enter industry"
 													disabled={isUpdating}
 													{...field}
-													value={field.value ?? ""}
 												/>
 											</FormControl>
 											<FormMessage />
@@ -251,7 +249,7 @@ export default function CompanyTab() {
 													placeholder="Enter number of employees"
 													disabled={isUpdating}
 													{...field}
-													value={field.value ?? ""}
+													value={field.value === undefined ? "" : String(field.value)}
 													onChange={(e) => {
 														const value = e.target.value;
 														field.onChange(value === "" ? undefined : Number(value));
@@ -303,7 +301,6 @@ export default function CompanyTab() {
 													placeholder="Enter phone number"
 													disabled={isUpdating}
 													{...field}
-													value={field.value ?? ""}
 												/>
 											</FormControl>
 											<FormMessage />
@@ -322,7 +319,6 @@ export default function CompanyTab() {
 													placeholder="https://example.com"
 													disabled={isUpdating}
 													{...field}
-													value={field.value ?? ""}
 												/>
 											</FormControl>
 											<FormMessage />
@@ -349,7 +345,6 @@ export default function CompanyTab() {
 													placeholder="Enter street address"
 													disabled={isUpdating}
 													{...field}
-													value={field.value ?? ""}
 												/>
 											</FormControl>
 											<FormMessage />
@@ -368,7 +363,6 @@ export default function CompanyTab() {
 													placeholder="Enter city"
 													disabled={isUpdating}
 													{...field}
-													value={field.value ?? ""}
 												/>
 											</FormControl>
 											<FormMessage />
@@ -387,7 +381,6 @@ export default function CompanyTab() {
 													placeholder="Enter zip code"
 													disabled={isUpdating}
 													{...field}
-													value={field.value ?? ""}
 												/>
 											</FormControl>
 											<FormMessage />
@@ -406,7 +399,6 @@ export default function CompanyTab() {
 													placeholder="Enter country"
 													disabled={isUpdating}
 													{...field}
-													value={field.value ?? ""}
 												/>
 											</FormControl>
 											<FormMessage />
@@ -435,7 +427,6 @@ export default function CompanyTab() {
 													placeholder="https://example.com/logo.png"
 													disabled={isUpdating}
 													{...field}
-													value={field.value ?? ""}
 												/>
 											</FormControl>
 											<FormDescription>
@@ -457,7 +448,6 @@ export default function CompanyTab() {
 													placeholder="https://example.com/favicon.ico"
 													disabled={isUpdating}
 													{...field}
-													value={field.value ?? ""}
 												/>
 											</FormControl>
 											<FormDescription>
@@ -480,7 +470,6 @@ export default function CompanyTab() {
 														placeholder="#FF5733"
 														disabled={isUpdating}
 														{...field}
-														value={field.value ?? ""}
 													/>
 													{field.value && (
 														<div
@@ -508,7 +497,6 @@ export default function CompanyTab() {
 													disabled={isUpdating}
 													rows={4}
 													{...field}
-													value={field.value ?? ""}
 												/>
 											</FormControl>
 											<FormDescription>

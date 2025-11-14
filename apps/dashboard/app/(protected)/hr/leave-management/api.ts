@@ -39,7 +39,7 @@ export async function fetchLeaveRequests(params: {
   query: LeaveRequestsQueryState;
 }): Promise<LeaveRequestsListResponse> {
   const { query } = params;
-  const queryString = buildQueryString(query);
+  const queryString = buildQueryString(query as Record<string, string | number | undefined>);
   const response = await fetch(`/api/hr/leave-requests?${queryString}`, {
     method: "GET",
     headers: DEFAULT_HEADERS,

@@ -6,6 +6,9 @@ import type {
 	EmployeesQueryState,
 } from "./types";
 
+// Re-export Employee type for use in other modules
+export type { Employee };
+
 const DEFAULT_HEADERS = {
 	"Content-Type": "application/json",
 	Accept: "application/json",

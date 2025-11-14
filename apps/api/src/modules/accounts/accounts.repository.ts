@@ -149,7 +149,7 @@ class DrizzleAccountsRepository implements AccountsRepository {
     let query = this.database.select().from(accountsTable);
 
     if (whereConditions.length > 0) {
-      query = query.where(and(...whereConditions));
+      query = query.where(and(...whereConditions)) as typeof query;
     }
 
     const rows = await query.orderBy(asc(accountsTable.createdAt));
