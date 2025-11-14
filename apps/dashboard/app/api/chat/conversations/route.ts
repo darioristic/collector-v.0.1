@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { type NextRequest, NextResponse } from "next/server";
 
 const CHAT_SERVICE_URL =
-	process.env.NEXT_PUBLIC_CHAT_SERVICE_URL || "http://localhost:4001";
+    process.env.CHAT_SERVICE_URL || process.env.NEXT_PUBLIC_CHAT_SERVICE_URL || "http://localhost:4001";
 const SESSION_COOKIE_NAME = "auth_session";
 
 export async function GET(_request: NextRequest) {

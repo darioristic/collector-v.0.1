@@ -165,9 +165,9 @@ describe("ProjectsService (integration)", () => {
 	});
 
 	it("returns project summaries with aggregated task stats and caches the result", async () => {
-	const summaries = await service.list();
+		const summaries = await service.list();
 
-	const summary = summaries.find((item) => item.id === projectId);
+		const summary = summaries.find((item) => item.id === projectId);
 	expect(summary).toBeDefined();
 	expect(summary?.totalTasks).toBe(2);
 	expect(summary?.completedTasks).toBe(1);

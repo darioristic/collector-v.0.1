@@ -5,6 +5,7 @@ import { useState } from "react";
 import { OrderDetail } from "@/components/orders/order-detail";
 import { OrderList } from "@/components/orders/order-list";
 import { Button } from "@/components/ui/button";
+import { TablePageHeader } from "@/components/ui/page-header";
 import { useDeleteOrder } from "@/src/hooks/useOrders";
 
 export default function OrdersPage() {
@@ -29,19 +30,17 @@ export default function OrdersPage() {
 	};
 
 	return (
-		<div className="space-y-8 py-6">
-			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-				<div className="space-y-1">
-					<h1 className="text-3xl font-bold tracking-tight">Orders</h1>
-					<p className="text-muted-foreground text-sm">
-						Manage and track your orders.
-					</p>
-				</div>
-				<Button type="button" onClick={handleCreateOrder} className="gap-2">
-					<Plus className="h-4 w-4" aria-hidden="true" />
-					New Order
-				</Button>
-			</div>
+		<div className="space-y-8">
+			<TablePageHeader
+				title="Orders"
+				description="Manage and track your orders."
+				actions={
+					<Button type="button" onClick={handleCreateOrder} className="gap-2">
+						<Plus className="h-4 w-4" aria-hidden="true" />
+						New Order
+					</Button>
+				}
+			/>
 
 			<div
 				className={`grid gap-6 ${selectedOrderId ? "lg:grid-cols-2" : "grid-cols-1"}`}

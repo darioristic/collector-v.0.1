@@ -1048,7 +1048,7 @@ async function runMigrations(): Promise<void> {
 	}
 }
 
-async function runSeed(modules: string[]): Promise<void> {
+async function runSeed(modules: string[], useDocker: boolean, dashboardForce = false): Promise<void> {
 	if (modules.length === 0) {
 		logger.info("No modules selected for seeding");
 		return;
@@ -1056,41 +1056,112 @@ async function runSeed(modules: string[]): Promise<void> {
 
 	logger.step(`Seeding database with modules: ${modules.join(", ")}...`);
 
-	const seedArgs = ["run", "db:seed", `--only=${modules.join(",")}`];
-
-	try {
-		await runCommand("bun", seedArgs, apiDir);
-		logger.success("Database seeded successfully");
-	} catch (error) {
-		logger.error(
-			`Seed failed: ${error instanceof Error ? error.message : String(error)}`,
-		);
-		throw error;
+	if (useDocker) {
+		try {
+			await runCommand(
+				"docker",
+				[
+					"compose",
+					"run",
+					"--rm",
+					"-e",
+					`API_SEED_ONLY=${modules.join(",")}`,
+					...(dashboardForce ? ["-e", "DASHBOARD_SEED_FORCE=1"] : []),
+					"seed",
+				],
+				rootDir,
+			);
+			logger.success("Database seeded successfully (Docker)");
+		} catch (error) {
+			logger.error(
+				`Seed failed (Docker): ${error instanceof Error ? error.message : String(error)}`,
+			);
+			throw error;
+		}
+	} else {
+		const seedArgs = ["run", "db:seed", `--only=${modules.join(",")}`];
+		try {
+			await runCommand("bun", seedArgs, apiDir);
+			logger.success("Database seeded successfully");
+		} catch (error) {
+			logger.error(
+				`Seed failed: ${error instanceof Error ? error.message : String(error)}`,
+			);
+			throw error;
+		}
 	}
 }
 
-async function runResetAndSeed(modules: string[]): Promise<void> {
+async function runResetAndSeed(modules: string[], useDocker: boolean, dashboardForce = false): Promise<void> {
   if (modules.length === 0) {
     logger.info("No modules selected for seeding");
     return;
   }
   logger.step("Reset database (drop + migrate) and seed selected modules...");
+  if (useDocker) {
+    try {
+      await runCommand(
+        "docker",
+        [
+          "compose",
+          "run",
+          "--rm",
+          "-e",
+          "SEED_DROP=1",
+          "-e",
+          `API_SEED_ONLY=${modules.join(",")}`,
+          ...(dashboardForce ? ["-e", "DASHBOARD_SEED_FORCE=1"] : []),
+          "seed",
+        ],
+        rootDir,
+      );
+      logger.success("Database reset and seeding completed (Docker)");
+      return;
+    } catch (error) {
+      logger.error(
+        `Reset+Seed (Docker) failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      throw error;
+    }
+  }
   const args = [
     "run",
     "scripts/migrate-and-seed.ts",
     "--drop",
-    "--seed-only",
     "--only",
     modules.join(","),
   ];
+  const currentUrl = process.env.DATABASE_URL || "postgresql://collector:collector@localhost:5432/collector";
+  const adminUrl = (() => {
+    try {
+      const u = new URL(currentUrl);
+      u.username = "collector";
+      u.password = "collector";
+      return u.toString();
+    } catch {
+      return "postgresql://collector:collector@localhost:5432/collector";
+    }
+  })();
   try {
-    await runCommand("bun", args, apiDir);
+    await runCommand("bun", args, rootDir, { env: { DATABASE_URL: adminUrl } });
     logger.success("Database reset and seeding completed");
   } catch (error) {
-    logger.error(
+    logger.warn(
       `Reset+Seed failed: ${error instanceof Error ? error.message : String(error)}`,
     );
-    throw error;
+    logger.step("Attempting Docker schema reset fallback...");
+    try {
+      await resetSchemaDocker();
+      logger.info("Retrying migrate-and-seed without drop...");
+      const retryArgs = ["run", "scripts/migrate-and-seed.ts", "--only", modules.join(",")];
+      await runCommand("bun", retryArgs, rootDir, { env: { DATABASE_URL: adminUrl } });
+      logger.success("Database schema reset and seeding completed");
+    } catch (retryError) {
+      logger.error(
+        `Fallback reset+seed failed: ${retryError instanceof Error ? retryError.message : String(retryError)}`,
+      );
+      throw retryError;
+    }
   }
 }
 
@@ -1160,6 +1231,75 @@ async function restartDockerService(service: string): Promise<void> {
     try {
       await runCommand("docker", ["restart", `collector-${service}`], rootDir);
     } catch {}
+  }
+}
+
+async function ensureDockerRoleAndDb(): Promise<void> {
+  logger.step("Ensuring PostgreSQL role and database in Docker...");
+  const psqlExec = async (args: string[], print = false) =>
+    runCommand(
+      "docker",
+      ["exec", "collector-postgres", "psql", "-U", "collector", ...args],
+      rootDir,
+      { print },
+    );
+  try {
+    const { stdout: dbCheck } = await psqlExec(
+      ["-d", "postgres", "-tAc", "SELECT 1 FROM pg_database WHERE datname='collector'"],
+      false,
+    );
+    const dbExists = dbCheck.trim() === "1";
+    if (!dbExists) {
+      await psqlExec(["-d", "postgres", "-c", "CREATE DATABASE collector OWNER collector ENCODING 'UTF8'"], true);
+      logger.success("Database 'collector' created");
+    }
+    await psqlExec(["-d", "collector", "-c", "CREATE EXTENSION IF NOT EXISTS pgcrypto;"], true);
+    logger.success("Verified pgcrypto extension");
+  } catch (error) {
+    logger.warn(
+      `Docker DB verification failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
+async function resetSchemaDocker(): Promise<void> {
+  logger.step("Resetting public schema in Docker database...");
+  try {
+    await runCommand(
+      "docker",
+      [
+        "exec",
+        "collector-postgres",
+        "psql",
+        "-U",
+        "collector",
+        "-d",
+        "collector",
+        "-c",
+        "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public AUTHORIZATION collector;",
+      ],
+      rootDir,
+    );
+    logger.success("Public schema reset completed");
+  } catch (error) {
+    logger.error(
+      `Public schema reset failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    throw error;
+  }
+}
+
+async function dockerRoleExists(role: string): Promise<boolean> {
+  try {
+    const { stdout } = await runCommand(
+      "docker",
+      ["exec", "collector-postgres", "psql", "-U", "collector", "-d", "postgres", "-tAc", `SELECT 1 FROM pg_roles WHERE rolname='${role}'`],
+      rootDir,
+      { print: false },
+    );
+    return stdout.trim() === "1";
+  } catch {
+    return false;
   }
 }
 
@@ -1578,26 +1718,46 @@ async function setupInfrastructure(): Promise<{
 async function main() {
 	try {
 		// Step 1: Setup infrastructure
-		const { connectionString } = await setupInfrastructure();
+		const infra = await setupInfrastructure();
+		const { connectionString } = infra;
+		process.env.DATABASE_URL = connectionString;
 
 		// Step 2: Database setup
 		logger.step("Setting up database...");
-		await ensureDatabaseExists(connectionString);
+		if (!infra.useDocker) {
+			await ensureDatabaseExists(connectionString);
+		}
+		if (infra.useDocker) {
+			await ensureDockerRoleAndDb();
+    const hasCollector = await dockerRoleExists("collector");
+    if (!hasCollector) {
+      logger.info("Using admin credentials for DATABASE_URL");
+      process.env.DATABASE_URL = "postgresql://collector:collector@localhost:5432/collector";
+    }
+		}
 		await runMigrations();
 
-		const { selectedModules, skipSeed } = await showSeedMenu();
+    const { selectedModules, skipSeed } = await showSeedMenu();
 		if (!skipSeed && selectedModules.length > 0) {
-			const rl = createReadlineInterface();
-			const choice = await question(
-				rl,
-				"\nOčistiti postojeće podatke pre seedovanja? (da/ne): ",
-			).then((a) => a.trim().toLowerCase());
-			rl.close();
-			if (choice === "da" || choice === "d") {
-				await runResetAndSeed(selectedModules);
-			} else {
-				await runSeed(selectedModules);
-			}
+      const rl = createReadlineInterface();
+      const choice = await question(
+        rl,
+        "\nOčistiti postojeće podatke pre seedovanja (API drop)? (da/ne): ",
+      ).then((a) => a.trim().toLowerCase());
+      const dashForceAns = await question(
+        rl,
+        "\nOčistiti Dashboard podatke pre seedovanja (force)? (da/ne): ",
+      ).then((a) => a.trim().toLowerCase());
+      rl.close();
+      const dashboardForce = dashForceAns === "da" || dashForceAns === "d" || dashForceAns === "y";
+      if (choice === "da" || choice === "d" || choice === "y") {
+        if (infra.useDocker) {
+          await ensureDockerRoleAndDb();
+        }
+        await runResetAndSeed(selectedModules, infra.useDocker, dashboardForce);
+      } else {
+        await runSeed(selectedModules, infra.useDocker, dashboardForce);
+      }
 			await verifySeedIntegrity();
 		} else {
 			logger.info("Seedovanje preskočeno.");

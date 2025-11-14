@@ -5,6 +5,7 @@ import * as React from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { TablePageHeader } from "@/components/ui/page-header";
 
 import ContactsDataTable, {
 	type Contact,
@@ -24,24 +25,21 @@ export default function ContactsPageClient({
 
 	return (
 		<div className="space-y-8">
-			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-				<div className="space-y-1">
-					<h1 className="text-3xl font-bold tracking-tight">Contacts</h1>
-					<p className="text-muted-foreground text-sm">
-						Browse account contacts and quickly find the people you collaborate
-						with.
-					</p>
-				</div>
-				<Button
-					type="button"
-					onClick={() => tableRef.current?.openAddDialog()}
-					className="gap-2"
-					disabled={Boolean(error)}
-				>
-					<Plus className="size-4" aria-hidden="true" />
-					Add Contact
-				</Button>
-			</div>
+			<TablePageHeader
+				title="Contacts"
+				description="Browse account contacts and quickly find the people you collaborate with."
+				actions={
+					<Button
+						type="button"
+						onClick={() => tableRef.current?.openAddDialog()}
+						className="gap-2"
+						disabled={Boolean(error)}
+					>
+						<Plus className="size-4" aria-hidden="true" />
+						Add Contact
+					</Button>
+				}
+			/>
 
 			{error ? (
 				<Alert variant="destructive">

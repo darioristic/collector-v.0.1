@@ -9,8 +9,9 @@
     "outDir": "dist",
     "rootDir": ".",
     "strict": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": []
   },
-  "include": ["./**/*.ts"],
+  "include": ["./**/*.ts", "./**/*.d.ts"],
   "exclude": ["dist", "node_modules"]
 }

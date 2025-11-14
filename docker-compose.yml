@@ -43,6 +43,57 @@ services:
       retries: 5
       start_period: 10s
 
+  seed:
+    image: docker.io/oven/bun:1.1.38-debian
+    container_name: collector-seed
+    restart: "no"
+    working_dir: /workspace
+    environment:
+      DATABASE_URL: postgres://collector:collector@postgres:5432/collector
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: production
+      SEED_DROP: ${SEED_DROP:-0}
+      API_SEED_ONLY: ${API_SEED_ONLY:-}
+      API_SEED_SKIP: ${API_SEED_SKIP:-}
+      API_SEED_FORCE: ${API_SEED_FORCE:-0}
+      API_SEED_CONTINUE: ${API_SEED_CONTINUE:-1}
+      API_SEED_VERBOSE: ${API_SEED_VERBOSE:-1}
+      DASHBOARD_SEED_ONLY: ${DASHBOARD_SEED_ONLY:-}
+      DASHBOARD_SEED_SKIP: ${DASHBOARD_SEED_SKIP:-}
+      DASHBOARD_SEED_FORCE: ${DASHBOARD_SEED_FORCE:-0}
+    volumes:
+      - ./:/workspace
+    networks:
+      - collector-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: ["bash", "-lc", "\
+      set -e; \
+      bun install --no-verify; \
+      API_ARGS_STR=''; DASHBOARD_ARGS_STR=''; \
+      if [ -n \"$API_SEED_ONLY\" ]; then API_ARGS_STR=\"$API_ARGS_STR --only $API_SEED_ONLY\"; fi; \
+      if [ -n \"$API_SEED_SKIP\" ]; then API_ARGS_STR=\"$API_ARGS_STR --skip $API_SEED_SKIP\"; fi; \
+      if [ \"$API_SEED_FORCE\" = \"1\" ]; then API_ARGS_STR=\"$API_ARGS_STR --force\"; fi; \
+      if [ \"$API_SEED_CONTINUE\" = \"1\" ]; then API_ARGS_STR=\"$API_ARGS_STR --continue-on-error\"; fi; \
+      if [ \"$API_SEED_VERBOSE\" = \"1\" ]; then API_ARGS_STR=\"$API_ARGS_STR --verbose\"; fi; \
+      if [ -n \"$DASHBOARD_SEED_ONLY\" ]; then DASHBOARD_ARGS_STR=\"$DASHBOARD_ARGS_STR --only $DASHBOARD_SEED_ONLY\"; fi; \
+      if [ -n \"$DASHBOARD_SEED_SKIP\" ]; then DASHBOARD_ARGS_STR=\"$DASHBOARD_ARGS_STR --skip $DASHBOARD_SEED_SKIP\"; fi; \
+      if [ \"$DASHBOARD_SEED_FORCE\" = \"1\" ]; then DASHBOARD_ARGS_STR=\"$DASHBOARD_ARGS_STR --force\"; fi; \
+      cd apps/api; \
+      bun run db:migrate; \
+      if [ \"$SEED_DROP\" = \"1\" ]; then \
+        bun run scripts/migrate-and-seed.ts --drop --continue-on-error --verbose $API_ARGS_STR; \
+      else \
+        bun run db:seed --continue-on-error --verbose $API_ARGS_STR; \
+      fi; \
+      cd /workspace/apps/dashboard; \
+      bun run db:migrate; \
+      bun run db:seed --continue-on-error --verbose $DASHBOARD_ARGS_STR \
+    "]
+
   api:
     build:
       context: .
@@ -65,6 +116,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      seed:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:4000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})\""]
       interval: 30s
@@ -142,10 +195,12 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
+      DATABASE_URL: postgres://collector:collector@postgres:5432/collector
       COLLECTOR_API_URL: http://api:4000
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
-      NEXT_PUBLIC_CHAT_SERVICE_URL: ${NEXT_PUBLIC_CHAT_SERVICE_URL:-http://localhost:4001}
-      NEXT_PUBLIC_NOTIFICATION_SERVICE_URL: ${NEXT_PUBLIC_NOTIFICATION_SERVICE_URL:-http://localhost:4002}
+      CHAT_SERVICE_URL: http://chat-service:4001
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://api:4000}
+      NEXT_PUBLIC_CHAT_SERVICE_URL: ${NEXT_PUBLIC_CHAT_SERVICE_URL:-http://chat-service:4001}
+      NEXT_PUBLIC_NOTIFICATION_SERVICE_URL: ${NEXT_PUBLIC_NOTIFICATION_SERVICE_URL:-http://notification-service:4002}
       NEXT_TELEMETRY_DISABLED: 1
     ports:
       - "3000:3000"
@@ -158,6 +213,8 @@ services:
         condition: service_healthy
       notification-service:
         condition: service_healthy
+      seed:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})\""]
       interval: 30s

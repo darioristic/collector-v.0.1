@@ -1,13 +1,15 @@
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import type { ChannelSummary } from "@/lib/teamchat/types";
 
 interface ChatHeaderProps {
   channel: ChannelSummary | null;
+  chatServiceOnline?: boolean;
 }
 
-export function ChatHeader({ channel }: ChatHeaderProps) {
+export function ChatHeader({ channel, chatServiceOnline }: ChatHeaderProps) {
   if (!channel) {
     return (
       <div className="flex h-16 items-center border-b px-4">
@@ -39,7 +41,12 @@ export function ChatHeader({ channel }: ChatHeaderProps) {
           </span>
         )}
       </div>
-      {channel.isPrivate && <span className="text-muted-foreground ml-auto text-xs">Private</span>}
+      <div className="ml-auto flex items-center gap-2">
+        {channel.isPrivate && <span className="text-muted-foreground text-xs">Private</span>}
+        <Badge variant={chatServiceOnline ? "default" : "destructive"}>
+          {chatServiceOnline ? "Chat online" : "Chat offline"}
+        </Badge>
+      </div>
     </div>
   );
 }

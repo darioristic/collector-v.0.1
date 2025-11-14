@@ -1,22 +1,25 @@
 "use client";
 
-import { useMemo } from "react";
-import {
-	useFieldArray,
-	useWatch,
-	useFormContext,
-	type Control,
-	type FieldValues,
-} from "react-hook-form";
+import type { QuoteItemCreateInput } from "@crm/types";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
 	flexRender,
 	getCoreRowModel,
 	useReactTable,
 } from "@tanstack/react-table";
-import { motion, AnimatePresence } from "motion/react";
 import { Plus, Trash2 } from "lucide-react";
-import type { QuoteItemCreateInput } from "@crm/types";
+import { AnimatePresence, motion } from "motion/react";
+import { useMemo } from "react";
+import {
+	type Control,
+	type FieldPath,
+	type FieldValues,
+	type Path,
+	type PathValue,
+	useFieldArray,
+	useFormContext,
+	useWatch,
+} from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -32,8 +35,8 @@ type QuoteItem = QuoteItemCreateInput & {
 	id: string;
 };
 
-type QuoteItemsFormValues = FieldValues & {
-	items: QuoteItemCreateInput[];
+type QuoteItemsFormValues = {
+    items: QuoteItemCreateInput[];
 };
 
 type QuoteItemsTableProps<TFormValues extends QuoteItemsFormValues = QuoteItemsFormValues> = {
@@ -41,18 +44,19 @@ type QuoteItemsTableProps<TFormValues extends QuoteItemsFormValues = QuoteItemsF
 };
 
 export function QuoteItemsTable<TFormValues extends QuoteItemsFormValues = QuoteItemsFormValues>({
-	control,
+    control,
 }: QuoteItemsTableProps<TFormValues>) {
-	const { fields, append, remove } = useFieldArray<TFormValues, "items", "id">({
-		control,
-		name: "items",
-	});
+    const { fields, append, remove } = useFieldArray<TFormValues, "items">({
+        control,
+        name: "items",
+        keyName: "id",
+    });
 
 	const { setValue } = useFormContext<TFormValues>();
 	const items =
 		(useWatch({
 			control,
-			name: "items",
+			name: "items" as Path<TFormValues>,
 		}) as QuoteItemCreateInput[] | undefined) ?? [];
 
 	const tableItems: QuoteItem[] = fields.map((field, index) => ({
@@ -74,7 +78,10 @@ export function QuoteItemsTable<TFormValues extends QuoteItemsFormValues = Quote
 							placeholder="Item description"
 							value={row.original.description || ""}
 							onChange={(e) => {
-								setValue(`items.${index}.description`, e.target.value);
+								setValue(
+									`items.${index}.description` as Path<TFormValues>,
+									e.target.value as PathValue<TFormValues, Path<TFormValues>>,
+								);
 							}}
 							onKeyDown={(e) => {
 								if (e.key === "Enter") {
@@ -106,7 +113,10 @@ export function QuoteItemsTable<TFormValues extends QuoteItemsFormValues = Quote
 							value={row.original.quantity || 1}
 							onChange={(e) => {
 								const value = Number.parseFloat(e.target.value) || 1;
-								setValue(`items.${index}.quantity`, value);
+								setValue(
+									`items.${index}.quantity` as Path<TFormValues>,
+									value as PathValue<TFormValues, Path<TFormValues>>,
+								);
 							}}
 							onKeyDown={(e) => {
 								if (e.key === "Enter" || e.key === "Tab") {
@@ -138,7 +148,10 @@ export function QuoteItemsTable<TFormValues extends QuoteItemsFormValues = Quote
 							value={row.original.unitPrice || 0}
 							onChange={(e) => {
 								const value = Number.parseFloat(e.target.value) || 0;
-								setValue(`items.${index}.unitPrice`, value);
+								setValue(
+									`items.${index}.unitPrice` as Path<TFormValues>,
+									value as PathValue<TFormValues, Path<TFormValues>>,
+								);
 							}}
 							onKeyDown={(e) => {
 								if (e.key === "Enter") {
@@ -148,7 +161,7 @@ export function QuoteItemsTable<TFormValues extends QuoteItemsFormValues = Quote
 										quantity: 1,
 										unitPrice: 0,
 									};
-									append(emptyItem);
+									append(emptyItem as TFormValues["items"][number]);
 									// Focus first input of new row after a short delay
 									setTimeout(() => {
 										const tbody =
@@ -209,7 +222,7 @@ export function QuoteItemsTable<TFormValues extends QuoteItemsFormValues = Quote
 	});
 
 	const handleAddItem = () => {
-		append({ description: "", quantity: 1, unitPrice: 0 });
+		append({ description: "", quantity: 1, unitPrice: 0 } as TFormValues["items"][number]);
 		// Focus first input of new row after a short delay
 		setTimeout(() => {
 			const newRow = document.querySelector("tbody tr:last-child input") as HTMLInputElement;

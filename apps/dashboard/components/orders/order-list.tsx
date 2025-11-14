@@ -1,6 +1,6 @@
 "use client";
 
-import { ORDER_STATUSES } from "@crm/types";
+import { ORDER_STATUSES, type OrderStatus } from "@crm/types";
 import { Plus } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 import { TableToolbar } from "@/components/table-toolbar";
@@ -53,9 +53,9 @@ export function OrderList({
 	showCreateAction = true,
 }: OrderListProps) {
 	const [search, setSearch] = useState("");
-	const [statusFilter, setStatusFilter] = useState<string | undefined>(
-		undefined,
-	);
+    const [statusFilter, setStatusFilter] = useState<OrderStatus | undefined>(
+        undefined,
+    );
 	const [page, setPage] = useState(0);
 	const limit = 10;
 
@@ -109,8 +109,8 @@ export function OrderList({
 					<Select
 						value={statusFilter ?? "all"}
 						onValueChange={(value) => {
-							const normalized = value === "all" ? undefined : value;
-							setStatusFilter(normalized);
+                            const normalized = value === "all" ? undefined : (value as OrderStatus);
+                            setStatusFilter(normalized);
 							setPage(0);
 						}}
 					>

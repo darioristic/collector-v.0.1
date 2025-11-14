@@ -16,12 +16,12 @@ export type ScrollButtonProps = {
 } & React.ButtonHTMLAttributes<HTMLButtonElement>;
 
 function PromptScrollButton({
-	scrollRef,
-	containerRef,
-	className,
-	threshold = 100,
-	variant = "outline",
-	size = "sm",
+    scrollRef,
+    containerRef,
+    className,
+    threshold = 100,
+    variant = "outline",
+    size = "sm",
 	...props
 }: ScrollButtonProps) {
 	const [isVisible, setIsVisible] = useState(false);

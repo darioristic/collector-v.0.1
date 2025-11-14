@@ -22,7 +22,7 @@ const unauthorized = () =>
 		),
 	);
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
 	try {
 		const auth = await getCurrentAuth();
 		if (!auth || !auth.user || !auth.user.company) {

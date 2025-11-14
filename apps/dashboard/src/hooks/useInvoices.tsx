@@ -2,9 +2,14 @@
 
 import type {
 	InvoiceCreateInput,
+	InvoiceStatus,
 	InvoiceUpdateInput,
 } from "@crm/types";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
 
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -17,12 +22,12 @@ import {
 } from "@/src/queries/invoices";
 
 type UseInvoicesOptions = {
-	customerId?: string;
-	orderId?: number;
-	status?: string;
-	search?: string;
-	limit?: number;
-	offset?: number;
+    customerId?: string;
+    orderId?: number;
+    status?: InvoiceStatus;
+    search?: string;
+    limit?: number;
+    offset?: number;
 };
 
 export function useInvoices(options: UseInvoicesOptions = {}) {

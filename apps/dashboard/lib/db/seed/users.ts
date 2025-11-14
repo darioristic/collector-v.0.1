@@ -1,4 +1,4 @@
-import { inArray } from "drizzle-orm";
+import { inArray, eq } from "drizzle-orm";
 import { employees } from "../schema/employees";
 import { companies, users } from "../schema/core";
 import type { DashboardDatabase } from "./seed-runner";
@@ -9,11 +9,18 @@ type UsersSeedResult = {
 };
 
 export async function seedUsers(
-	db: DashboardDatabase,
-	options: { force?: boolean } = {},
+    db: DashboardDatabase,
+    options: { force?: boolean } = {},
 ): Promise<UsersSeedResult> {
-	// Get default company
-	const [company] = await db.select().from(companies).limit(1);
+    let [company] = await db
+        .select()
+        .from(companies)
+        .where(eq(companies.slug, 'collector-labs'))
+        .limit(1);
+
+    if (!company) {
+        [company] = await db.select().from(companies).limit(1);
+    }
 
 	if (!company) {
 		throw new Error(
@@ -22,7 +29,7 @@ export async function seedUsers(
 	}
 
 	// Get all employees
-	const allEmployees = await db.select().from(employees);
+    const allEmployees = await db.select().from(employees);
 
 	if (allEmployees.length === 0) {
 		return {

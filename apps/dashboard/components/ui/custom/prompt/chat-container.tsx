@@ -62,7 +62,7 @@ const useAutoScroll = (
 				container.addEventListener("scrollend", handleScrollEnd, {
 					once: true,
 				});
-			} catch (e) {
+			} catch (_e) {
 				// scrollend event not supported in this browser, fallback to requestAnimationFrame
 			}
 		},
@@ -190,7 +190,7 @@ function ChatContainer({
 
 		prevChildrenCountRef.current = currentChildrenCount;
 		prevChildrenRef.current = children;
-	}, [children, setNewMessageAdded]);
+	}, [children, setNewMessageAdded, prevChildrenCountRef]);
 
 	useEffect(() => {
 		if (!autoScroll) return;
@@ -233,7 +233,7 @@ function ChatContainer({
 			{children}
 			<div
 				ref={bottomRef}
-				className="h-[1px] w-full flex-shrink-0 scroll-mt-4"
+				className="h-px w-full shrink-0 scroll-mt-4"
 				aria-hidden="true"
 			/>
 		</div>

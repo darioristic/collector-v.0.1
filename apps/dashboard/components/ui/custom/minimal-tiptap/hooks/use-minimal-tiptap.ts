@@ -83,7 +83,7 @@ const createExtensions = (placeholder: string) => [
 				}),
 			);
 		},
-		onImageRemoved({ id, src }) {
+		onImageRemoved({ id: _id, src: _src }) {
 			// console.log('Image removed', { id, src })
 		},
 		onValidationError(errors) {

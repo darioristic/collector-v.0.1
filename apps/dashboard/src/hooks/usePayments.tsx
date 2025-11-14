@@ -1,6 +1,6 @@
 "use client";
 
-import type { PaymentCreateInput } from "@crm/types";
+import type { PaymentCreateInput, PaymentStatus } from "@crm/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useToast } from "@/hooks/use-toast";
@@ -14,10 +14,10 @@ import {
 } from "@/src/queries/payments";
 
 type UsePaymentsOptions = {
-	invoiceId?: string;
-	status?: string;
-	limit?: number;
-	offset?: number;
+    invoiceId?: string;
+    status?: PaymentStatus;
+    limit?: number;
+    offset?: number;
 };
 
 export function usePayments(options: UsePaymentsOptions = {}) {

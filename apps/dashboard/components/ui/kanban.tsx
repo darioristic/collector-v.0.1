@@ -306,19 +306,21 @@ function KanbanRoot<T>(props: KanbanRootProps<T>) {
 		[activeId, value, getItemValue],
 	);
 
+	const { onDragStart: onDragStartProp, onDragOver: onDragOverProp, onDragEnd: onDragEndProp, onDragCancel: onDragCancelProp } = kanbanProps;
+
 	const onDragStart = React.useCallback(
 		(event: DragStartEvent) => {
-			kanbanProps.onDragStart?.(event);
+			onDragStartProp?.(event);
 
 			if (event.activatorEvent.defaultPrevented) return;
 			setActiveId(event.active.id);
 		},
-		[kanbanProps.onDragStart],
+		[onDragStartProp],
 	);
 
 	const onDragOver = React.useCallback(
 		(event: DragOverEvent) => {
-			kanbanProps.onDragOver?.(event);
+			onDragOverProp?.(event);
 
 			if (event.activatorEvent.defaultPrevented) return;
 
@@ -373,12 +375,12 @@ function KanbanRoot<T>(props: KanbanRootProps<T>) {
 				hasMovedRef.current = true;
 			}
 		},
-		[value, getColumn, getItemValue, onValueChange, kanbanProps.onDragOver],
+		[value, getColumn, getItemValue, onValueChange, onDragOverProp],
 	);
 
 	const onDragEnd = React.useCallback(
 		(event: DragEndEvent) => {
-			kanbanProps.onDragEnd?.(event);
+			onDragEndProp?.(event);
 
 			if (event.activatorEvent.defaultPrevented) return;
 
@@ -459,20 +461,20 @@ function KanbanRoot<T>(props: KanbanRootProps<T>) {
 			getItemValue,
 			onValueChange,
 			onMove,
-			kanbanProps.onDragEnd,
+			onDragEndProp,
 		],
 	);
 
 	const onDragCancel = React.useCallback(
 		(event: DragCancelEvent) => {
-			kanbanProps.onDragCancel?.(event);
+			onDragCancelProp?.(event);
 
 			if (event.activatorEvent.defaultPrevented) return;
 
 			setActiveId(null);
 			hasMovedRef.current = false;
 		},
-		[kanbanProps.onDragCancel],
+		[onDragCancelProp],
 	);
 
 	const announcements: Announcements = React.useMemo(
@@ -778,7 +780,7 @@ const KanbanColumn = React.forwardRef<HTMLDivElement, KanbanColumnProps>(
 		const items = React.useMemo(() => {
 			const items = context.items[value] ?? [];
 			return items.map((item) => context.getItemValue(item));
-		}, [context.items, value, context.getItemValue]);
+		}, [context, value]);
 
 		const columnContext = React.useMemo<KanbanColumnContextValue>(
 			() => ({

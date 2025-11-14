@@ -1,9 +1,15 @@
 "use client";
 
-import { motion } from "motion/react";
 import { Plus } from "lucide-react";
+import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
-import { Fragment, useEffect, useRef, useState } from "react";
+import {
+	Fragment,
+	useEffect,
+	useId,
+	useRef,
+	useState,
+} from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
 	AlertDialog,
@@ -35,11 +41,12 @@ import {
 	useUpdateProjectTask,
 } from "@/src/hooks/useProjects";
 import type {
+	ProjectDetails,
 	ProjectStatus,
 	ProjectUpdatePayload,
 } from "@/src/types/projects";
-import { ProjectTasks, type ProjectTasksRef } from "./project-tasks";
 import type { ViewMode } from "./project-header";
+import { ProjectTasks, type ProjectTasksRef } from "./project-tasks";
 
 type ProjectEditFormValues = {
 	name: string;
@@ -69,8 +76,13 @@ export function ProjectDetailsView({ projectId }: ProjectDetailsViewProps) {
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 	const [viewMode, setViewMode] = useState<ViewMode>("list");
 	const projectTasksRef = useRef<ProjectTasksRef>(null);
+	const nameId = useId();
+	const customerId = useId();
+	const descriptionId = useId();
+	const startDateId = useId();
+	const dueDateId = useId();
 
-	const projectQuery = useProjectDetails(projectId, { suspense: true });
+    const projectQuery = useProjectDetails(projectId);
 	const updateProjectMutation = useUpdateProject(projectId);
 	const deleteProjectMutation = useDeleteProject(projectId, {
 		onDeleted: () => router.push("/projects/list"),
@@ -97,20 +109,23 @@ export function ProjectDetailsView({ projectId }: ProjectDetailsViewProps) {
 			return;
 		}
 
-		editForm.reset({
-			name: project.name,
-			description: project.description ?? "",
-			status: project.status,
-			customer: project.customer ?? "",
-			ownerId: project.owner?.id ?? "",
-			startDate: project.startDate ? project.startDate.slice(0, 10) : "",
-			dueDate: project.dueDate ? project.dueDate.slice(0, 10) : "",
-		});
+    const p = project as unknown as ProjectDetails;
+    editForm.reset({
+        name: p.name,
+        description: p.description ?? "",
+        status: p.status,
+        customer: p.customer ?? "",
+        ownerId: p.owner?.id ?? "",
+        startDate: p.startDate ? p.startDate.slice(0, 10) : "",
+        dueDate: p.dueDate ? p.dueDate.slice(0, 10) : "",
+    });
 	}, [project, editForm]);
 
-	if (!project) {
-		return null;
-	}
+    if (!project) {
+        return null;
+    }
+
+    const p = project as unknown as ProjectDetails;
 
 	const submitProjectUpdate = async (values: ProjectEditFormValues) => {
 		const payload: ProjectUpdatePayload = {
@@ -171,7 +186,7 @@ export function ProjectDetailsView({ projectId }: ProjectDetailsViewProps) {
 			>
 				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 					<div className="space-y-1">
-						<h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
+                        <h1 className="text-3xl font-bold tracking-tight">{p.name}</h1>
 						<p className="text-muted-foreground text-sm">
 							Monitor each task's status, assignee, and due date to keep your
 							project moving.
@@ -188,14 +203,14 @@ export function ProjectDetailsView({ projectId }: ProjectDetailsViewProps) {
 					</Button>
 				</div>
 
-				<ProjectTasks
-					ref={projectTasksRef}
-					project={project}
-					viewMode={viewMode}
-					onViewModeChange={setViewMode}
-					onUpdateTask={(taskId, payload) =>
-						updateTaskMutation.mutateAsync({ taskId, input: payload })
-					}
+                <ProjectTasks
+                    ref={projectTasksRef}
+                    project={p}
+                    viewMode={viewMode}
+                    onViewModeChange={setViewMode}
+                    onUpdateTask={(taskId, payload) =>
+                        updateTaskMutation.mutateAsync({ taskId, input: payload })
+                    }
 					onDeleteTask={(taskId) => deleteTaskMutation.mutateAsync(taskId)}
 					onCreateTask={(payload) => createTaskMutation.mutateAsync(payload)}
 				/>
@@ -212,20 +227,20 @@ export function ProjectDetailsView({ projectId }: ProjectDetailsViewProps) {
 					>
 						<div className="grid gap-4 md:grid-cols-2">
 							<div className="space-y-2">
-								<Label htmlFor="name">Naziv</Label>
+								<Label htmlFor={nameId}>Naziv</Label>
 								<Input
-									id="name"
+									id={nameId}
 									{...editForm.register("name", { required: true })}
 								/>
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="customer">Klijent</Label>
-								<Input id="customer" {...editForm.register("customer")} />
+								<Label htmlFor={customerId}>Klijent</Label>
+								<Input id={customerId} {...editForm.register("customer")} />
 							</div>
 						</div>
 						<div className="space-y-2">
-							<Label htmlFor="description">Opis</Label>
-							<Input id="description" {...editForm.register("description")} />
+							<Label htmlFor={descriptionId}>Opis</Label>
+							<Input id={descriptionId} {...editForm.register("description")} />
 						</div>
 						<div className="grid gap-4 md:grid-cols-3">
 							<div className="space-y-2">
@@ -249,17 +264,17 @@ export function ProjectDetailsView({ projectId }: ProjectDetailsViewProps) {
 								/>
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="startDate">Početak</Label>
+								<Label htmlFor={startDateId}>Početak</Label>
 								<Input
-									id="startDate"
+									id={startDateId}
 									type="date"
 									{...editForm.register("startDate")}
 								/>
 							</div>
 							<div className="space-y-2">
-								<Label htmlFor="dueDate">Rok</Label>
+								<Label htmlFor={dueDateId}>Rok</Label>
 								<Input
-									id="dueDate"
+									id={dueDateId}
 									type="date"
 									{...editForm.register("dueDate")}
 								/>

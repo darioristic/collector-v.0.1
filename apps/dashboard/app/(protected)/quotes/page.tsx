@@ -6,6 +6,7 @@ import { CreateQuoteDialog } from "@/components/quotes/create-quote-dialog";
 import { QuoteDetail } from "@/components/quotes/quote-detail";
 import { QuoteList } from "@/components/quotes/quote-list";
 import { Button } from "@/components/ui/button";
+import { TablePageHeader } from "@/components/ui/page-header";
 import { useDeleteQuote } from "@/src/hooks/useQuotes";
 
 export default function QuotesPage() {
@@ -38,19 +39,17 @@ export default function QuotesPage() {
 	};
 
 	return (
-		<div className="space-y-8 py-6">
-			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-				<div className="space-y-1">
-					<h1 className="text-2xl font-semibold tracking-tight">Quotes</h1>
-					<p className="text-base font-medium text-muted-foreground">
-						Manage and track your sales quotes across accounts and stakeholders.
-					</p>
-				</div>
-				<Button type="button" onClick={handleCreateQuote} className="gap-2">
-					<Plus className="size-4" aria-hidden="true" />
-					New Quote
-				</Button>
-			</div>
+		<div className="space-y-8">
+			<TablePageHeader
+				title="Quotes"
+				description="Manage and track your sales quotes across accounts and stakeholders."
+				actions={
+					<Button type="button" onClick={handleCreateQuote} className="gap-2">
+						<Plus className="size-4" aria-hidden="true" />
+						New Quote
+					</Button>
+				}
+			/>
 
 			<QuoteList onQuoteClick={handleQuoteClick} showCreateAction={false} />
 

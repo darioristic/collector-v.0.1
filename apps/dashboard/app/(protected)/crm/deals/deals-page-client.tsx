@@ -13,6 +13,7 @@ import { TableToolbar } from "@/components/table-toolbar";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { TablePageHeader } from "@/components/ui/page-header";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -346,24 +347,22 @@ export default function DealsPageClient({
 	}, [resetFilters]);
 
 	return (
-		<div className="space-y-6">
+		<div className="space-y-8">
 			<div className="space-y-4">
-				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-					<div className="space-y-1">
-						<h1 className="text-3xl font-bold tracking-tight">Deals</h1>
-						<p className="text-muted-foreground text-sm">
-							Manage your sales pipeline and track deal progress.
-						</p>
-					</div>
-					<Button
-						type="button"
-						onClick={() => handleOpenModal("create")}
-						className="gap-2 sm:w-auto"
-					>
-						<Plus className="h-4 w-4" aria-hidden="true" />
-						Add Deal
-					</Button>
-				</div>
+				<TablePageHeader
+					title="Deals"
+					description="Manage your sales pipeline and track deal progress."
+					actions={
+						<Button
+							type="button"
+							onClick={() => handleOpenModal("create")}
+							className="gap-2 sm:w-auto"
+						>
+							<Plus className="h-4 w-4" aria-hidden="true" />
+							Add Deal
+						</Button>
+					}
+				/>
 
 				<TableToolbar
 					search={{

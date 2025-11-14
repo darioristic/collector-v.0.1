@@ -67,8 +67,6 @@ import { Separator } from "@/components/ui/separator";
 import {
 	Sheet,
 	SheetContent,
-	SheetDescription,
-	SheetTitle,
 } from "@/components/ui/sheet";
 import {
 	Table,
@@ -968,15 +966,9 @@ export const LeadsDataTable = React.forwardRef<
 					{activeLead ? (
 						<div className="flex h-full flex-col">
 							<div className="border-b px-6 py-5">
-								<div className="space-y-1">
-									<SheetTitle className="text-2xl leading-tight font-semibold">
-										Lead details
-									</SheetTitle>
-									<SheetDescription>
-										Review the status, next steps, and key information for{" "}
-										{activeLead.name}.
-									</SheetDescription>
-								</div>
+								<h1 className="text-xl font-bold tracking-tight lg:text-2xl">
+									{activeLead.name} — Lead Details
+								</h1>
 							</div>
 
 							<ScrollArea className="h-[calc(100vh-200px)] flex-1">
@@ -988,20 +980,7 @@ export const LeadsDataTable = React.forwardRef<
 													{generateAvatarFallback(activeLead.name)}
 												</AvatarFallback>
 											</Avatar>
-											<div className="flex flex-col gap-2">
-												<div className="flex flex-wrap items-center gap-3">
-													<h2 className="text-xl font-semibold">
-														{activeLead.name}
-													</h2>
-													<Badge
-														className={cn(
-															"rounded-full px-2.5 py-0.5 text-xs",
-															statusClasses[activeLead.status],
-														)}
-													>
-														{statusLabels[activeLead.status]}
-													</Badge>
-												</div>
+											<div className="flex flex-col gap-2 flex-1">
 												<p className="text-muted-foreground text-sm leading-relaxed">
 													This lead originates from{" "}
 													<span className="text-foreground font-medium">
@@ -1012,7 +991,56 @@ export const LeadsDataTable = React.forwardRef<
 												</p>
 											</div>
 										</div>
-										<Separator />
+									</section>
+
+									<Separator />
+
+									<section className="space-y-4">
+										<h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+											Status
+										</h2>
+										<div className="space-y-3">
+											<Badge
+												className={cn(
+													"rounded-full px-3 py-1 text-sm",
+													statusClasses[activeLead.status],
+												)}
+											>
+												<Sparkles className="mr-1.5 h-3.5 w-3.5" />
+												{statusLabels[activeLead.status]}
+											</Badge>
+											<div className="space-y-2 text-sm text-muted-foreground">
+												<div className="flex items-center gap-2">
+													<CalendarClock
+														className="h-4 w-4 text-muted-foreground"
+														aria-hidden="true"
+													/>
+													<span>
+														Lead created on {formatLeadDate(activeLead.createdAt)}
+													</span>
+												</div>
+												{activeLead.updatedAt && activeLead.updatedAt !== activeLead.createdAt && (
+													<div className="flex items-center gap-2">
+														<NotebookPen
+															className="h-4 w-4 text-muted-foreground"
+															aria-hidden="true"
+														/>
+														<span>
+															Last updated on{" "}
+															{formatLeadDate(activeLead.updatedAt)}
+														</span>
+													</div>
+												)}
+											</div>
+										</div>
+									</section>
+
+									<Separator />
+
+									<section className="space-y-4">
+										<h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+											Key Information
+										</h2>
 										<dl className="grid gap-4 sm:grid-cols-2">
 											<DetailRow
 												icon={<Mail className="h-4 w-4" aria-hidden="true" />}
@@ -1046,10 +1074,12 @@ export const LeadsDataTable = React.forwardRef<
 										</dl>
 									</section>
 
-									<section className="space-y-3">
-										<h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-											Suggested next steps
-										</h3>
+									<Separator />
+
+									<section className="space-y-4">
+										<h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+											Next Steps
+										</h2>
 										<ul className="space-y-2 text-sm text-muted-foreground">
 											<li className="flex items-center gap-2">
 												<PhoneCall

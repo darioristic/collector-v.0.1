@@ -4,6 +4,7 @@ ENV BUN_NO_TELEMETRY=1
 COPY . .
 RUN bun pm untrusted || true
 RUN bun install --frozen-lockfile --ignore-scripts || bun install --frozen-lockfile --no-verify
+RUN bun run --filter @crm/types build
 RUN bun run --filter api build
 RUN cd apps/api && bun install --frozen-lockfile --production --ignore-scripts || bun install --frozen-lockfile --production --no-verify
 

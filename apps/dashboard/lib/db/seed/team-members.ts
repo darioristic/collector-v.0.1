@@ -13,27 +13,27 @@ type TeamMemberSeedData = {
 };
 
 const TEAM_MEMBERS_DATA: TeamMemberSeedData[] = [
-	{
-		firstName: "Dario",
-		lastName: "Ristić",
-		email: "dario@techfirm.rs",
-		role: "CEO",
-		status: "online",
-	},
-	{
-		firstName: "Miha",
-		lastName: "Petrović",
-		email: "miha@techfirm.rs",
-		role: "CTO",
-		status: "online",
-	},
-	{
-		firstName: "Tara",
-		lastName: "Jovanović",
-		email: "tara@techfirm.rs",
-		role: "Lead Developer",
-		status: "online",
-	},
+  {
+    firstName: "Dario",
+    lastName: "Ristić",
+    email: "dario@collectorlabs.test",
+    role: "CEO",
+    status: "online",
+  },
+  {
+    firstName: "Miha",
+    lastName: "Petrović",
+    email: "miha@collectorlabs.test",
+    role: "CTO",
+    status: "online",
+  },
+  {
+    firstName: "Tara",
+    lastName: "Jovanović",
+    email: "tara@collectorlabs.test",
+    role: "Lead Developer",
+    status: "online",
+  },
 	{
 		firstName: "Marko",
 		lastName: "Petrović",
@@ -196,23 +196,26 @@ type TeamMembersSeedResult = {
 };
 
 export async function seedTeamMembers(
-	db: DashboardDatabase,
-	options: { force?: boolean } = {},
+  db: DashboardDatabase,
+  options: { force?: boolean } = {},
 ): Promise<TeamMembersSeedResult> {
-	// Get or create default company
-	let [company] = await db.select().from(companies).limit(1);
+  let [company] = await db
+    .select()
+    .from(companies)
+    .where(eq(companies.slug, 'collector-labs'))
+    .limit(1);
 
-	if (!company) {
-		const [newCompany] = await db
-			.insert(companies)
-			.values({
-				name: "Default Company",
-				slug: "default-company",
-				domain: null,
-			})
-			.returning();
-		company = newCompany;
-	}
+  if (!company) {
+    const [newCompany] = await db
+      .insert(companies)
+      .values({
+        name: "Default Company",
+        slug: "default-company",
+        domain: null,
+      })
+      .returning();
+    company = newCompany;
+  }
 
 	if (options.force) {
 		await db.delete(teamMembers).where(eq(teamMembers.companyId, company.id));

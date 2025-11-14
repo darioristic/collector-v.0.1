@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import * as React from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { TablePageHeader } from "@/components/ui/page-header";
 import { LeadsDataTable, type LeadsDataTableHandle } from "./data-table";
 
 type LeadsPageClientProps = {
@@ -17,24 +18,21 @@ export default function LeadsPageClient({ data, error }: LeadsPageClientProps) {
 
 	return (
 		<div className="space-y-8">
-			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-				<div className="space-y-1">
-					<h1 className="text-3xl font-bold tracking-tight">CRM Leads</h1>
-					<p className="text-muted-foreground text-sm">
-						Monitor each lead’s status, source, and next steps to keep your
-						pipeline moving.
-					</p>
-				</div>
-				<Button
-					type="button"
-					onClick={() => tableRef.current?.openAddDialog()}
-					className="gap-2"
-					disabled={Boolean(error)}
-				>
-					<Plus className="size-4" aria-hidden="true" />
-					New Lead
-				</Button>
-			</div>
+			<TablePageHeader
+				title="CRM Leads"
+				description="Monitor each lead's status, source, and next steps to keep your pipeline moving."
+				actions={
+					<Button
+						type="button"
+						onClick={() => tableRef.current?.openAddDialog()}
+						className="gap-2"
+						disabled={Boolean(error)}
+					>
+						<Plus className="size-4" aria-hidden="true" />
+						New Lead
+					</Button>
+				}
+			/>
 
 			{error ? (
 				<Alert variant="destructive">

@@ -1,32 +1,4 @@
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'role_key') THEN
-    CREATE TYPE "role_key" AS ENUM ('admin', 'manager', 'user', 'sales_manager', 'sales_rep', 'support', 'viewer');
-  ELSE
-    -- Add missing values if enum already exists
-    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'admin' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'role_key')) THEN
-      ALTER TYPE "role_key" ADD VALUE 'admin';
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'manager' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'role_key')) THEN
-      ALTER TYPE "role_key" ADD VALUE 'manager';
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'user' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'role_key')) THEN
-      ALTER TYPE "role_key" ADD VALUE 'user';
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'sales_manager' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'role_key')) THEN
-      ALTER TYPE "role_key" ADD VALUE 'sales_manager';
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'sales_rep' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'role_key')) THEN
-      ALTER TYPE "role_key" ADD VALUE 'sales_rep';
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'support' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'role_key')) THEN
-      ALTER TYPE "role_key" ADD VALUE 'support';
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_enum WHERE enumlabel = 'viewer' AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'role_key')) THEN
-      ALTER TYPE "role_key" ADD VALUE 'viewer';
-    END IF;
-  END IF;
-END $$;
+CREATE TYPE "role_key" AS ENUM ('admin', 'manager', 'user', 'sales_manager', 'sales_rep', 'support', 'viewer');
 
 CREATE TABLE IF NOT EXISTS "companies" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -42,37 +14,14 @@ CREATE TABLE IF NOT EXISTS "companies" (
 CREATE UNIQUE INDEX IF NOT EXISTS "companies_slug_key" ON "companies" ("slug");
 CREATE INDEX IF NOT EXISTS "companies_name_idx" ON "companies" ("name");
 
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'users' AND column_name = 'hashed_password'
-  ) THEN
-    ALTER TABLE "users" ADD COLUMN "hashed_password" text NOT NULL DEFAULT '';
-  END IF;
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "hashed_password" text NOT NULL DEFAULT '';
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "default_company_id" uuid;
 
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'users' AND column_name = 'default_company_id'
-  ) THEN
-    ALTER TABLE "users" ADD COLUMN "default_company_id" uuid;
-  END IF;
-END $$;
-
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1
-    FROM pg_constraint
-    WHERE conname = 'users_default_company_id_companies_id_fk'
-  ) THEN
-    ALTER TABLE "users"
-      ADD CONSTRAINT "users_default_company_id_companies_id_fk"
-      FOREIGN KEY ("default_company_id")
-      REFERENCES "companies"("id")
-      ON DELETE SET NULL;
-  END IF;
-END $$;
+ALTER TABLE "users"
+  ADD CONSTRAINT "users_default_company_id_companies_id_fk"
+  FOREIGN KEY ("default_company_id")
+  REFERENCES "companies"("id")
+  ON DELETE SET NULL;
 
 CREATE INDEX IF NOT EXISTS "users_default_company_idx" ON "users" ("default_company_id");
 

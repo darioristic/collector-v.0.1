@@ -10,6 +10,7 @@ import {
 } from "@/app/(protected)/sales/components";
 import CalendarDateRangePicker from "@/components/custom-date-range-picker";
 import { Button } from "@/components/ui/button";
+import { DashboardPageHeader } from "@/components/ui/page-header";
 import { generateMeta } from "@/lib/utils";
 
 export async function generateMetadata() {
@@ -24,20 +25,21 @@ export async function generateMetadata() {
 export default function Page() {
 	return (
 		<div className="space-y-4">
-			<div className="flex flex-row items-center justify-between">
-				<h1 className="text-xl font-bold tracking-tight lg:text-2xl">
-					Sales Dashboard
-				</h1>
-				<div className="flex items-center space-x-2">
-					<div className="grow">
-						<CalendarDateRangePicker />
-					</div>
-					<Button>
-						<Download />
-						<span className="hidden lg:inline">Download</span>
-					</Button>
-				</div>
-			</div>
+			<DashboardPageHeader
+				title="Sales Dashboard"
+				description="Track sales performance, revenue trends, and order status across your business."
+				actions={
+					<>
+						<div className="grow">
+							<CalendarDateRangePicker />
+						</div>
+						<Button>
+							<Download />
+							<span className="hidden lg:inline">Download</span>
+						</Button>
+					</>
+				}
+			/>
 			<div className="gap-4 space-y-4 md:grid md:grid-cols-2 lg:space-y-0 xl:grid-cols-8">
 				<div className="md:col-span-4">
 					<RevenueChart />

@@ -361,9 +361,9 @@ export async function runSeeds(
 
 	printSummary(summary, logger);
 
-	if (summary.failed > 0) {
-		throw new Error(`Seed je pao: ${summary.failed} modul(a) nije prošlo`);
-	}
+  if (summary.failed > 0 && !options.continueOnError) {
+    throw new Error(`Seed je pao: ${summary.failed} modul(a) nije prošlo`);
+  }
 
 	logger.success("Seed je uspešno završen.");
 	return summary;

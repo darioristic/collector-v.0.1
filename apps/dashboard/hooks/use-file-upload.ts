@@ -260,6 +260,7 @@ export const useFileUpload = (
 			}
 		},
 		[
+			state.files,
 			state.files.length,
 			maxFiles,
 			multiple,
@@ -271,7 +272,7 @@ export const useFileUpload = (
 			onFilesChange,
 			onFilesAdded,
 		],
-	);
+		);
 
 	const removeFile = useCallback(
 		(id: string) => {

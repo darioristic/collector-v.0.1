@@ -1,7 +1,15 @@
 "use client";
 
-import type { OrderCreateInput, OrderUpdateInput } from "@crm/types";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type {
+	OrderCreateInput,
+	OrderStatus,
+	OrderUpdateInput,
+} from "@crm/types";
+import {
+	useMutation,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
 
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -14,13 +22,13 @@ import {
 } from "@/src/queries/orders";
 
 type UseOrdersOptions = {
-	companyId?: string;
-	contactId?: string;
-	quoteId?: number;
-	status?: string;
-	search?: string;
-	limit?: number;
-	offset?: number;
+    companyId?: string;
+    contactId?: string;
+    quoteId?: number;
+    status?: OrderStatus;
+    search?: string;
+    limit?: number;
+    offset?: number;
 };
 
 export function useOrders(options: UseOrdersOptions = {}) {

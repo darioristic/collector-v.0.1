@@ -14,7 +14,7 @@ type ChatSeedResult = {
 
 export async function seedChat(
 	db: DashboardDatabase,
-	options: { force?: boolean } = {},
+	_options: { force?: boolean } = {},
 ): Promise<ChatSeedResult> {
 	// Get or create default company
 	let [company] = await db.select().from(companies).limit(1);

@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
 				{ status: 201 },
 			),
 		);
-	} catch (error) {
+  } catch (_error) {
 		return withNoStore(
 			NextResponse.json(
 				{

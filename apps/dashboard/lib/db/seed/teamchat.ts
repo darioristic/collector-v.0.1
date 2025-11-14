@@ -17,22 +17,25 @@ type TeamchatSeedResult = {
 
 export async function seedTeamchat(
 	db: DashboardDatabase,
-	options: { force?: boolean } = {},
+	_options: { force?: boolean } = {},
 ): Promise<TeamchatSeedResult> {
-	// Get or create default company
-	let [company] = await db.select().from(companies).limit(1);
+  let [company] = await db
+    .select()
+    .from(companies)
+    .where(eq(companies.slug, 'collector-labs'))
+    .limit(1);
 
-	if (!company) {
-		const [newCompany] = await db
-			.insert(companies)
-			.values({
-				name: "Default Company",
-				slug: "default-company",
-				domain: null,
-			})
-			.returning();
-		company = newCompany;
-	}
+  if (!company) {
+    const [newCompany] = await db
+      .insert(companies)
+      .values({
+        name: "Default Company",
+        slug: "default-company",
+        domain: null,
+      })
+      .returning();
+    company = newCompany;
+  }
 
 	// Get all users
 	const allUsers = await db.select().from(users);

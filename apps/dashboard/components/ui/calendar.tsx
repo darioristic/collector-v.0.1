@@ -80,7 +80,7 @@ function Calendar({
 		}, [yearRange]),
 	);
 
-	const { onNextClick, onPrevClick, startMonth, endMonth } = props;
+const { onNextClick: _onNextClick, onPrevClick, startMonth, endMonth } = props;
 
 	const columnsDisplayed = navView === "years" ? 1 : numberOfMonths;
 
@@ -201,15 +201,16 @@ function Calendar({
 					return <Icon className="h-4 w-4" />;
 				},
 				Nav: ({ className }) => (
-					<Nav
-						className={className}
-						displayYears={displayYears}
-						navView={navView}
-						setDisplayYears={setDisplayYears}
-						startMonth={startMonth}
-						endMonth={endMonth}
-						onPrevClick={onPrevClick}
-					/>
+				<Nav
+					className={className}
+					displayYears={displayYears}
+					navView={navView}
+					setDisplayYears={setDisplayYears}
+					startMonth={startMonth}
+					endMonth={endMonth}
+					onPrevClick={onPrevClick}
+					onNextClick={_onNextClick}
+				/>
 				),
 				CaptionLabel: (props) => (
 					<CaptionLabel
@@ -302,42 +303,34 @@ function Nav({
 	const handlePreviousClick = React.useCallback(() => {
 		if (!previousMonth) return;
 		if (navView === "years") {
-			setDisplayYears((prev) => ({
-				from: prev.from - (prev.to - prev.from + 1),
-				to: prev.to - (prev.to - prev.from + 1),
-			}));
-			onPrevClick?.(
-				new Date(
-					displayYears.from - (displayYears.to - displayYears.from),
-					0,
-					1,
-				),
-			);
+			setDisplayYears((prev) => {
+				const span = prev.to - prev.from + 1;
+				const newFrom = prev.from - span;
+				const newTo = prev.to - span;
+				onPrevClick?.(new Date(newFrom, 0, 1));
+				return { from: newFrom, to: newTo };
+			});
 			return;
 		}
 		goToMonth(previousMonth);
 		onPrevClick?.(previousMonth);
-	}, [previousMonth, goToMonth]);
+	}, [previousMonth, navView, setDisplayYears, onPrevClick, goToMonth]);
 
 	const handleNextClick = React.useCallback(() => {
 		if (!nextMonth) return;
 		if (navView === "years") {
-			setDisplayYears((prev) => ({
-				from: prev.from + (prev.to - prev.from + 1),
-				to: prev.to + (prev.to - prev.from + 1),
-			}));
-			onNextClick?.(
-				new Date(
-					displayYears.from + (displayYears.to - displayYears.from),
-					0,
-					1,
-				),
-			);
+			setDisplayYears((prev) => {
+				const span = prev.to - prev.from + 1;
+				const newFrom = prev.from + span;
+				const newTo = prev.to + span;
+				onNextClick?.(new Date(newFrom, 0, 1));
+				return { from: newFrom, to: newTo };
+			});
 			return;
 		}
 		goToMonth(nextMonth);
 		onNextClick?.(nextMonth);
-	}, [goToMonth, nextMonth]);
+	}, [nextMonth, navView, setDisplayYears, onNextClick, goToMonth]);
 	return (
 		<nav className={cn("flex items-center", className)}>
 			<Button

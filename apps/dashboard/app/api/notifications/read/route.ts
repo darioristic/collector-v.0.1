@@ -67,7 +67,7 @@ export async function PATCH(request: NextRequest) {
 		const validated = notificationUpdateResponseSchema.parse(payload);
 
 		return withNoStore(NextResponse.json(validated));
-	} catch (error) {
+  } catch (_error) {
 		return withNoStore(
 			NextResponse.json(
 				{

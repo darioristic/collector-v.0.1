@@ -72,30 +72,10 @@ const USER_DEFINITIONS: UserSeed[] = [
 ];
 
 export const seedAuth = async (database = defaultDb) => {
-	await database.transaction(async (tx) => {
-		// Ensure unique index exists for company_users table
-		// This is needed for onConflictDoUpdate to work
-		// First, try to drop constraint if it exists (as constraint-based unique)
-		await tx.execute(sql`
-      DO $$
-      BEGIN
-        IF EXISTS (
-          SELECT 1 FROM pg_constraint 
-          WHERE conname = 'company_users_company_user_key'
-        ) THEN
-          ALTER TABLE "company_users" 
-          DROP CONSTRAINT IF EXISTS "company_users_company_user_key";
-        END IF;
-      END $$;
-    `);
+  await database.transaction(async (tx) => {
+    
 
-		// Create unique index if it doesn't exist
-		await tx.execute(sql`
-      CREATE UNIQUE INDEX IF NOT EXISTS "company_users_company_user_key" 
-      ON "company_users" ("company_id", "user_id");
-    `);
-
-		await Promise.all(
+      await Promise.all(
 			ROLE_DEFINITIONS.map((role) =>
 				tx
 					.insert(roles)

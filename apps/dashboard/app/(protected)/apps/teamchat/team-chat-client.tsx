@@ -8,7 +8,8 @@ import {
   bootstrapTeamChat,
   fetchMessages,
   sendMessage,
-  uploadAttachment
+  uploadAttachment,
+  fetchChatHealth
 } from "@/app/(protected)/apps/teamchat/api";
 import { ChatHeader } from "@/app/(protected)/apps/teamchat/components/ChatHeader";
 import { ChatSidebar } from "@/app/(protected)/apps/teamchat/components/ChatSidebar";
@@ -55,6 +56,13 @@ export function TeamChatClient({ initialData, currentUserId }: TeamChatClientPro
   const selectedChannel = React.useMemo(() => {
     return channels.find((c) => c.id === selectedChannelId) || null;
   }, [channels, selectedChannelId]);
+
+  const healthQuery = useQuery({
+    queryKey: ["teamchat", "health"],
+    queryFn: fetchChatHealth,
+    staleTime: 1000 * 15,
+    refetchInterval: 1000 * 15,
+  });
 
   const sendMessageMutation = useMutation({
     mutationFn: sendMessage,
@@ -175,7 +183,7 @@ export function TeamChatClient({ initialData, currentUserId }: TeamChatClientPro
         onChannelSelect={handleChannelSelect}
       />
       <div className="flex flex-1 flex-col gap-4">
-        <ChatHeader channel={selectedChannel} />
+        <ChatHeader channel={selectedChannel} chatServiceOnline={Boolean(healthQuery.data)} />
         <ChatWindow messages={messagesQuery.data || []} currentUserId={currentUserId} />
         <MessageInput
           onSend={handleSend}

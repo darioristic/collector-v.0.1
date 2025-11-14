@@ -388,8 +388,8 @@ export async function runSeeds(
   // Print summary
   printSummary(summary, logger);
 
-  // Throw if any module failed
-  if (summary.failed > 0) {
+  // Throw only if failures occurred and continueOnError is not enabled
+  if (summary.failed > 0 && !options.continueOnError) {
     throw new Error(`Seed failed: ${summary.failed} module(s) failed`);
   }
 

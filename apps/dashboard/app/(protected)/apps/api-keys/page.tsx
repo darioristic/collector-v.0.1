@@ -1,6 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import ApiCallsCard from "@/app/(protected)/apps/api-keys/api-calls-card";
+import { TablePageHeader } from "@/components/ui/page-header";
 import { generateMeta } from "@/lib/utils";
 import ApiKeysDataTable from "./datatable";
 import FailedConversionsCard from "./failed-conversions-card";
@@ -27,12 +28,11 @@ export default async function Page() {
 	const apiKeys = await getApiKeys();
 
 	return (
-		<div className="space-y-4">
-			<div className="flex items-center justify-between space-y-2">
-				<h1 className="text-2xl font-bold tracking-tight">
-					Api Keys Management
-				</h1>
-			</div>
+		<div className="space-y-8">
+			<TablePageHeader
+				title="Api Keys Management"
+				description="Manage and secure your API keys for external integrations."
+			/>
 			<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
 				<UpgradePlanCard />
 				<SuccessfulConversionsCard />

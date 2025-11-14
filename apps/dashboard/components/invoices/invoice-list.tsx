@@ -1,6 +1,6 @@
 "use client";
 
-import { INVOICE_STATUSES } from "@crm/types";
+import { INVOICE_STATUSES, type InvoiceStatus } from "@crm/types";
 import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { TableToolbar } from "@/components/table-toolbar";
@@ -51,9 +51,9 @@ export function InvoiceList({
 	showCreateAction = true,
 }: InvoiceListProps) {
 	const [search, setSearch] = useState("");
-	const [statusFilter, setStatusFilter] = useState<string | undefined>(
-		undefined,
-	);
+    const [statusFilter, setStatusFilter] = useState<InvoiceStatus | undefined>(
+        undefined,
+    );
 	const [page, setPage] = useState(0);
 	const limit = 10;
 
@@ -114,8 +114,8 @@ export function InvoiceList({
 					<Select
 						value={statusFilter ?? "all"}
 						onValueChange={(value) => {
-							const normalized = value === "all" ? undefined : value;
-							setStatusFilter(normalized);
+                        const normalized = value === "all" ? undefined : (value as InvoiceStatus);
+                        setStatusFilter(normalized);
 							setPage(0);
 						}}
 						disabled={isToolbarDisabled}

@@ -59,8 +59,8 @@ export function useProjects(options?: { enabled?: boolean }) {
 }
 
 export function useProjectDetails(
-	projectId: string,
-	options?: { enabled?: boolean; suspense?: boolean },
+    projectId: string,
+    options?: { enabled?: boolean },
 ) {
 	return useQuery<ProjectDetails>({
 		queryKey: projectKeys.detail(projectId),
@@ -78,8 +78,7 @@ export function useProjectDetails(
 				throw error;
 			}
 		},
-		enabled: options?.enabled ?? Boolean(projectId),
-		suspense: options?.suspense,
+        enabled: options?.enabled ?? Boolean(projectId),
 		retry: (failureCount, error) => {
 			// Don't retry on 404 (not found) errors
 			if (error instanceof Error) {

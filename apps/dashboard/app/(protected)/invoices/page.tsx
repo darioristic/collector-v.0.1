@@ -5,6 +5,7 @@ import { useState } from "react";
 import { InvoiceDetail } from "@/components/invoices/invoice-detail";
 import { InvoiceList } from "@/components/invoices/invoice-list";
 import { Button } from "@/components/ui/button";
+import { TablePageHeader } from "@/components/ui/page-header";
 import { useDeleteInvoice } from "@/src/hooks/useInvoices";
 
 export default function InvoicesPage() {
@@ -32,19 +33,17 @@ export default function InvoicesPage() {
 	};
 
 	return (
-		<div className="space-y-8 py-6">
-			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-				<div className="space-y-1">
-					<h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
-					<p className="text-muted-foreground text-sm">
-						Manage and track your invoices.
-					</p>
-				</div>
-				<Button type="button" onClick={handleCreateInvoice} className="gap-2">
-					<Plus className="h-4 w-4" aria-hidden="true" />
-					New Invoice
-				</Button>
-			</div>
+		<div className="space-y-8">
+			<TablePageHeader
+				title="Invoices"
+				description="Manage and track your invoices."
+				actions={
+					<Button type="button" onClick={handleCreateInvoice} className="gap-2">
+						<Plus className="h-4 w-4" aria-hidden="true" />
+						New Invoice
+					</Button>
+				}
+			/>
 
 			<div
 				className={`grid gap-6 ${selectedInvoiceId ? "lg:grid-cols-2" : "grid-cols-1"}`}

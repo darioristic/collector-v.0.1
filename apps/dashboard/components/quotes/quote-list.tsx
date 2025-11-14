@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import type { Account } from "@crm/types";
 import type { QuoteSortField } from "@crm/types";
-import { QUOTE_STATUSES } from "@crm/types";
+import { QUOTE_STATUSES, type QuoteStatus } from "@crm/types";
 import { TableToolbar } from "@/components/table-toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -109,7 +109,7 @@ export function QuoteList({
   showCreateAction = true
 }: QuoteListProps) {
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
+  const [statusFilter, setStatusFilter] = useState<QuoteStatus | undefined>(undefined);
   const [sortField, setSortField] = useState<QuoteSortField>(DEFAULT_SORT_FIELD);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">(DEFAULT_SORT_ORDER);
   const [page, setPage] = useState(0);
@@ -346,7 +346,7 @@ export function QuoteList({
           <Select
             value={statusFilter ?? "__all__"}
             onValueChange={(value) => {
-              setStatusFilter(value === "__all__" ? undefined : value);
+              setStatusFilter(value === "__all__" ? undefined : (value as QuoteStatus));
               setPage(0);
             }}
             disabled={isFetching && !quotes.length}>

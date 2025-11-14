@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { index, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid, numeric } from "drizzle-orm/pg-core";
 
 import { users } from "./settings.schema";
 
@@ -16,6 +16,16 @@ export const accounts = pgTable(
     website: text("website"),
     taxId: text("tax_id").notNull().default(""),
     country: text("country").notNull().default("RS"),
+    legalName: text("legal_name"),
+    registrationNumber: text("registration_number"),
+    dateOfIncorporation: timestamp("date_of_incorporation", { withTimezone: true }),
+    industry: text("industry"),
+    numberOfEmployees: integer("number_of_employees"),
+    annualRevenueRange: text("annual_revenue_range"),
+    legalStatus: text("legal_status"),
+    companyType: text("company_type"),
+    description: text("description"),
+    socialMediaLinks: jsonb("social_media_links"),
     ownerId: uuid("owner_id").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
@@ -63,6 +73,8 @@ export const accountAddresses = pgTable(
     state: text("state"),
     postalCode: text("postal_code"),
     country: text("country"),
+    latitude: numeric("latitude", { precision: 10, scale: 7 }),
+    longitude: numeric("longitude", { precision: 10, scale: 7 }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
   },
   (table) => ({
@@ -70,9 +82,46 @@ export const accountAddresses = pgTable(
   })
 );
 
+export const accountExecutives = pgTable(
+  "account_executives",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    title: text("title"),
+    email: text("email"),
+    phone: text("phone"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
+  },
+  (table) => ({
+    accountIdx: index("account_executives_account_idx").on(table.accountId)
+  })
+);
+
+export const accountMilestones = pgTable(
+  "account_milestones",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    date: timestamp("date", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
+  },
+  (table) => ({
+    accountIdx: index("account_milestones_account_idx").on(table.accountId)
+  })
+);
+
 export const accountsRelations = relations(accounts, ({ many, one }) => ({
   contacts: many(accountContacts),
   addresses: many(accountAddresses),
+  executives: many(accountExecutives),
+  milestones: many(accountMilestones),
   owner: one(users, {
     fields: [accounts.ownerId],
     references: [users.id]
@@ -93,6 +142,20 @@ export const accountContactsRelations = relations(accountContacts, ({ one }) => 
 export const accountAddressesRelations = relations(accountAddresses, ({ one }) => ({
   account: one(accounts, {
     fields: [accountAddresses.accountId],
+    references: [accounts.id]
+  })
+}));
+
+export const accountExecutivesRelations = relations(accountExecutives, ({ one }) => ({
+  account: one(accounts, {
+    fields: [accountExecutives.accountId],
+    references: [accounts.id]
+  })
+}));
+
+export const accountMilestonesRelations = relations(accountMilestones, ({ one }) => ({
+  account: one(accounts, {
+    fields: [accountMilestones.accountId],
     references: [accounts.id]
   })
 }));

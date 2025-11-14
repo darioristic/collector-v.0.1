@@ -14,21 +14,50 @@ import {
 import { roles, users } from "../schema/settings.schema";
 
 type EmployeeSeedData = {
-	email: string;
-	name: string;
-	employeeNumber: string;
-	department: string;
-	managerEmail?: string;
-	hiredAt: Date;
-	status: "active" | "on_leave" | "terminated" | "contractor";
+    email: string;
+    name: string;
+    employeeNumber: string;
+    department: string;
+    managerEmail?: string;
+    hiredAt: Date;
+    status: "active" | "on_leave" | "terminated" | "contractor";
+    roleKey?: "admin" | "manager" | "user";
 };
 
 const EMPLOYEES_DATA: EmployeeSeedData[] = [
-	{
-		email: "marko.petrovic@collectorlabs.test",
-		name: "Marko Petrović",
-		employeeNumber: "EMP001",
-		department: "Development",
+    {
+        email: "dario@collectorlabs.test",
+        name: "Dario Ristic",
+        employeeNumber: "EMP100",
+        department: "Management",
+        hiredAt: new Date("2021-01-15"),
+        status: "active",
+        roleKey: "admin",
+    },
+    {
+        email: "miha@collectorlabs.test",
+        name: "Miha Manager",
+        employeeNumber: "EMP101",
+        department: "Management",
+        hiredAt: new Date("2022-05-10"),
+        status: "active",
+        roleKey: "manager",
+    },
+    {
+        email: "tara@collectorlabs.test",
+        name: "Tara User",
+        employeeNumber: "EMP102",
+        department: "Operations",
+        managerEmail: "miha@collectorlabs.test",
+        hiredAt: new Date("2023-03-20"),
+        status: "active",
+        roleKey: "user",
+    },
+    {
+        email: "marko.petrovic@collectorlabs.test",
+        name: "Marko Petrović",
+        employeeNumber: "EMP001",
+        department: "Development",
 		hiredAt: new Date("2020-03-15"),
 		status: "active",
 	},
@@ -185,21 +214,24 @@ export const seedHr = async (database = defaultDb): Promise<void> => {
 			}
 		}
 
-		// Assign roles to employees (assign user role by default)
-		const userRoleId = roleMap.get("user");
-		if (userRoleId) {
-			const roleAssignments = Array.from(employeeMap.values()).map((employeeId) => ({
-				employeeId,
-				roleId: userRoleId,
-			}));
+        // Assign roles to employees based on desired role per employee (default to user)
+        const roleAssignments: Array<{ employeeId: string; roleId: string }> = [];
 
-			if (roleAssignments.length > 0) {
-				await tx
-					.insert(employeeRoleAssignments)
-					.values(roleAssignments)
-					.onConflictDoNothing();
-			}
-		}
+        for (const [email, employeeId] of employeeMap.entries()) {
+            const desiredRoleKey =
+                EMPLOYEES_DATA.find((e) => e.email.toLowerCase() === email)?.roleKey || "user";
+            const roleId = roleMap.get(desiredRoleKey);
+            if (roleId) {
+                roleAssignments.push({ employeeId, roleId });
+            }
+        }
+
+        if (roleAssignments.length > 0) {
+            await tx
+                .insert(employeeRoleAssignments)
+                .values(roleAssignments)
+                .onConflictDoNothing();
+        }
 
 		// Create attendance records for last 30 days
 		const today = new Date();
@@ -309,12 +341,15 @@ export const seedHr = async (database = defaultDb): Promise<void> => {
 			netPay: number;
 		}> = [];
 
-		const baseSalaries = new Map([
-			["marko.petrovic@collectorlabs.test", 180000],
-			["jovana.jovanovic@collectorlabs.test", 140000],
-			["stefan.nikolic@collectorlabs.test", 130000],
-			["ana.markovic@collectorlabs.test", 170000],
-			["milos.radovic@collectorlabs.test", 160000],
+        const baseSalaries = new Map([
+            ["dario@collectorlabs.test", 250000],
+            ["miha@collectorlabs.test", 200000],
+            ["tara@collectorlabs.test", 140000],
+            ["marko.petrovic@collectorlabs.test", 180000],
+            ["jovana.jovanovic@collectorlabs.test", 140000],
+            ["stefan.nikolic@collectorlabs.test", 130000],
+            ["ana.markovic@collectorlabs.test", 170000],
+            ["milos.radovic@collectorlabs.test", 160000],
 			["ivana.tomic@collectorlabs.test", 150000],
 			["marija.kostic@collectorlabs.test", 190000],
 			["snezana.pavlovic@collectorlabs.test", 145000],

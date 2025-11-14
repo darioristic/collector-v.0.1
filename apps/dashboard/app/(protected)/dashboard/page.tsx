@@ -2,6 +2,7 @@ import { Download } from "lucide-react";
 import CalendarDateRangePicker from "@/components/custom-date-range-picker";
 
 import { Button } from "@/components/ui/button";
+import { DashboardPageHeader } from "@/components/ui/page-header";
 import { generateMeta } from "@/lib/utils";
 import KPICards from "@/app/(protected)/finance/components/kpi-cards";
 import MonthlyExpenses from "@/app/(protected)/finance/components/monthly-expenses";
@@ -23,17 +24,18 @@ export async function generateMetadata() {
 export default function Page() {
 	return (
 		<div className="space-y-4">
-			<div className="flex flex-row items-center justify-between">
-				<h1 className="text-xl font-bold tracking-tight lg:text-2xl">
-					Finance Dashboard
-				</h1>
-				<div className="flex items-center space-x-2">
-					<CalendarDateRangePicker />
-					<Button size="icon">
-						<Download />
-					</Button>
-				</div>
-			</div>
+			<DashboardPageHeader
+				title="Finance Dashboard"
+				description="Overview of your financial performance, transactions, and key metrics."
+				actions={
+					<>
+						<CalendarDateRangePicker />
+						<Button size="icon">
+							<Download />
+						</Button>
+					</>
+				}
+			/>
 
 			<KPICards />
 

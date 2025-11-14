@@ -177,7 +177,7 @@ export const fetchDirectMessageTargets = async (): Promise<
 };
 
 export const uploadAttachment = async (
-	file: File,
+  file: File,
 ): Promise<{ url: string; name: string; size: number }> => {
 	const formData = new FormData();
 	formData.append("file", file);
@@ -206,6 +206,21 @@ export const uploadAttachment = async (
 		throw new Error(error.error || "Failed to upload file.");
 	}
 
-	const data = (await response.json()) as unknown;
-	return uploadAttachmentResponseSchema.parse(data);
+  const data = (await response.json()) as unknown;
+  return uploadAttachmentResponseSchema.parse(data);
+};
+
+export const fetchChatHealth = async (): Promise<boolean> => {
+  const response = await fetch(`${getChatServiceUrl()}/health`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    return false;
+  }
+  const payload = (await response.json().catch(() => ({}))) as {
+    status?: string;
+  };
+  return payload.status === "ok";
 };

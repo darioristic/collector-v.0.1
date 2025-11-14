@@ -13,6 +13,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { TablePageHeader } from "@/components/ui/page-header";
 import { generateMeta } from "@/lib/utils";
 import { type Product as ApiProduct, fetchProducts } from "./api";
 
@@ -54,15 +55,18 @@ export default async function Page() {
 	const products = await getProducts();
 
 	return (
-		<div className="space-y-4">
-			<div className="flex items-center justify-between space-y-2">
-				<h1 className="text-2xl font-bold tracking-tight">Products</h1>
-				<Button asChild>
-					<Link href="/products/create">
-						<PlusIcon /> Add Product
-					</Link>
-				</Button>
-			</div>
+		<div className="space-y-8">
+			<TablePageHeader
+				title="Products"
+				description="Manage your product catalog, inventory, and pricing."
+				actions={
+					<Button asChild className="gap-2">
+						<Link href="/products/create">
+							<PlusIcon /> Add Product
+						</Link>
+					</Button>
+				}
+			/>
 			<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
 				<Card>
 					<CardHeader>

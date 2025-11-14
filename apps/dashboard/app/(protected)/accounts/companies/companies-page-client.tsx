@@ -5,6 +5,7 @@ import * as React from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { TablePageHeader } from "@/components/ui/page-header";
 
 import CompaniesDataTable, {
 	type CompaniesDataTableHandle,
@@ -24,24 +25,21 @@ export default function CompaniesPageClient({
 
 	return (
 		<div className="space-y-8">
-			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-				<div className="space-y-1">
-					<h1 className="text-3xl font-bold tracking-tight">Companies</h1>
-					<p className="text-muted-foreground text-sm">
-						Manage company accounts, validate primary contacts, and keep
-						business records up to date.
-					</p>
-				</div>
-				<Button
-					type="button"
-					onClick={() => tableRef.current?.openCreateDialog()}
-					className="gap-2"
-					disabled={Boolean(error)}
-				>
-					<Plus className="size-4" aria-hidden="true" />
-					Add Company
-				</Button>
-			</div>
+			<TablePageHeader
+				title="Companies"
+				description="Manage company accounts, validate primary contacts, and keep business records up to date."
+				actions={
+					<Button
+						type="button"
+						onClick={() => tableRef.current?.openCreateDialog()}
+						className="gap-2"
+						disabled={Boolean(error)}
+					>
+						<Plus className="size-4" aria-hidden="true" />
+						Add Company
+					</Button>
+				}
+			/>
 
 			{error ? (
 				<Alert variant="destructive">

@@ -88,7 +88,7 @@ export function QuoteActions({
 						if (onDelete) {
 							onDelete(quote.id);
 						}
-					} catch (error) {
+					} catch (_error) {
 						// Error handling je već u useDeleteQuote hook-u
 						// Ne treba dodatni toast jer hook već prikazuje grešku
 					}
@@ -240,7 +240,7 @@ export function QuoteActions({
 					Actions
 				</Button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" side="top" className="z-[100]">
+			<DropdownMenuContent align="end" side="top" className="z-100">
 				{actions.map((action) => (
 					<DropdownMenuItem
 						key={action}

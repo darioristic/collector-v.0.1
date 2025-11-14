@@ -13,6 +13,7 @@ import * as React from "react";
 import type { DateRange } from "react-day-picker";
 import { TableToolbar } from "@/components/table-toolbar";
 import { Button } from "@/components/ui/button";
+import { TablePageHeader } from "@/components/ui/page-header";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Dialog,
@@ -423,24 +424,22 @@ export function ClientActivitiesPageClient({
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">Client Activities</h1>
-          <p className="text-muted-foreground text-sm">
-            Track scheduled tasks, meetings, and follow-ups across every client.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" onClick={() => setFilterSheetOpen(true)} className="gap-2">
-            <Filter className="h-4 w-4" aria-hidden="true" />
-            Filters
-          </Button>
-          <Button onClick={handleCreateClick} className="gap-2">
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Add Activity
-          </Button>
-        </div>
-      </div>
+      <TablePageHeader
+        title="Client Activities"
+        description="Track scheduled tasks, meetings, and follow-ups across every client."
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={() => setFilterSheetOpen(true)} className="gap-2">
+              <Filter className="h-4 w-4" aria-hidden="true" />
+              Filters
+            </Button>
+            <Button onClick={handleCreateClick} className="gap-2">
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Add Activity
+            </Button>
+          </div>
+        }
+      />
 
       <TableToolbar
         search={{

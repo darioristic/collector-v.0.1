@@ -1408,11 +1408,27 @@ async function runDockerWorkflow(): Promise<void> {
 	);
 	state.dockerStarted = true;
 
-	await waitForDockerService("postgres");
-	await waitForDockerService("redis");
+  await waitForDockerService("postgres");
+  await waitForDockerService("redis");
 
-	logger.step("Building API image...");
-	await runCommand("docker", ["compose", "build", "api"], rootDir);
+  // Seed database inside Docker before starting application services
+  logger.step("Running database seed in Docker...");
+  try {
+    await runCommand(
+      "docker",
+      ["compose", "run", "--rm", "seed"],
+      rootDir,
+    );
+    logger.success("Database seeded successfully");
+  } catch (error) {
+    logger.warn(
+      `Database seed encountered issues: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    logger.info("Continuing with service startup; verify seed data after start");
+  }
+
+  logger.step("Building API image...");
+  await runCommand("docker", ["compose", "build", "api"], rootDir);
 
 	logger.step("Starting API container...");
 	await runCommand("docker", ["compose", "up", "-d", "api"], rootDir);

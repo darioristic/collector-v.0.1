@@ -1,9 +1,19 @@
 "use client";
 
-import { useEffect } from "react";
-import { useWatch, type Control, type FieldValues } from "react-hook-form";
-import { motion, useMotionValue, useSpring, useTransform } from "motion/react";
 import type { QuoteItemCreateInput } from "@crm/types";
+import {
+	motion,
+	useMotionValue,
+	useSpring,
+	useTransform,
+} from "motion/react";
+import { useEffect } from "react";
+import {
+	type Control,
+	type FieldValues,
+	type Path,
+	useWatch,
+} from "react-hook-form";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
@@ -46,7 +56,7 @@ export function QuoteTotals<TFormValues extends QuoteTotalsFormValues = QuoteTot
 	const items =
 		(useWatch({
 			control,
-			name: "items",
+			name: "items" as Path<TFormValues>,
 		}) as QuoteItemCreateInput[] | undefined) ?? [];
 
 	const subtotal = items.reduce((acc, item) => {
@@ -83,7 +93,7 @@ export function QuoteTotals<TFormValues extends QuoteTotalsFormValues = QuoteTot
 					<div className="flex items-center justify-between">
 						<span className="text-lg font-semibold">Total:</span>
 						<motion.span
-							className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent"
+							className="text-2xl font-bold bg-linear-to-r from-primary to-primary/80 bg-clip-text text-transparent"
 							key={total}
 							initial={{ scale: 1.1 }}
 							animate={{ scale: 1 }}

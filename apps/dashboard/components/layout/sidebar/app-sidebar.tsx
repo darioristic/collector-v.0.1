@@ -52,13 +52,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 		React.useState(false);
 	const [isClient, setIsClient] = React.useState(false);
 
-	useEffect(() => {
-		if (isMobile) setOpenMobile(false);
-	}, [pathname]);
+useEffect(() => {
+    if (isMobile) setOpenMobile(false);
+}, [pathname, isMobile, setOpenMobile]);
 
-	useEffect(() => {
-		setOpen(!isTablet);
-	}, [isTablet]);
+useEffect(() => {
+    setOpen(!isTablet);
+}, [isTablet, setOpen]);
 
 	useEffect(() => {
 		setIsClient(true);

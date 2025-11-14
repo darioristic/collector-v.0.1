@@ -9,6 +9,22 @@ export type Account = {
   website?: string | null;
   taxId: string;
   country: string;
+  legalName?: string | null;
+  registrationNumber?: string | null;
+  dateOfIncorporation?: string | null;
+  industry?: string | null;
+  numberOfEmployees?: number | null;
+  annualRevenueRange?: string | null;
+  legalStatus?: string | null;
+  companyType?: string | null;
+  description?: string | null;
+  socialMediaLinks?: {
+    linkedin?: string | null;
+    facebook?: string | null;
+    twitter?: string | null;
+    instagram?: string | null;
+    [key: string]: string | null | undefined;
+  } | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -21,6 +37,22 @@ export type AccountCreateInput = {
   website?: string | null;
   taxId: string;
   country: string;
+  legalName?: string | null;
+  registrationNumber?: string | null;
+  dateOfIncorporation?: string | null;
+  industry?: string | null;
+  numberOfEmployees?: number | null;
+  annualRevenueRange?: string | null;
+  legalStatus?: string | null;
+  companyType?: string | null;
+  description?: string | null;
+  socialMediaLinks?: {
+    linkedin?: string | null;
+    facebook?: string | null;
+    twitter?: string | null;
+    instagram?: string | null;
+    [key: string]: string | null | undefined;
+  } | null;
 };
 
 export type AccountUpdateInput = Partial<AccountCreateInput>;
@@ -39,6 +71,39 @@ export type AccountContact = {
   ownerId?: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export type AccountAddress = {
+  id: string;
+  accountId: string;
+  label: string;
+  street?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postalCode?: string | null;
+  country?: string | null;
+  latitude?: string | null;
+  longitude?: string | null;
+  createdAt: string;
+};
+
+export type AccountExecutive = {
+  id: string;
+  accountId: string;
+  name: string;
+  title?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  createdAt: string;
+};
+
+export type AccountMilestone = {
+  id: string;
+  accountId: string;
+  title: string;
+  description?: string | null;
+  date: string;
+  createdAt: string;
 };
 
 export type User = {

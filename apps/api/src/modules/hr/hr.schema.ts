@@ -56,6 +56,16 @@ export const employeeListSchema: FastifySchema = {
   tags: ["hr-employees"],
   summary: "List employees",
   description: "Vraća listu svih zaposlenih sa osnovnim informacijama uključujući poziciju, odeljenje i status aktivnosti.",
+  querystring: {
+    type: "object",
+    properties: {
+      search: { type: "string" },
+      limit: { type: "integer", minimum: 1, maximum: 1000 },
+      offset: { type: "integer", minimum: 0 },
+      department: { type: "string" }
+    },
+    additionalProperties: false
+  },
   response: {
     200: {
       ...dataEnvelope({

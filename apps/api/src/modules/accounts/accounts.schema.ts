@@ -10,7 +10,17 @@ const accountProperties = {
   phone: { type: "string", nullable: true },
   website: { type: "string", nullable: true },
   taxId: { type: "string" },
-  country: { type: "string", minLength: 2, maxLength: 2 }
+  country: { type: "string", minLength: 2, maxLength: 2 },
+  legalName: { type: "string", nullable: true },
+  registrationNumber: { type: "string", nullable: true },
+  dateOfIncorporation: { type: "string", format: "date-time", nullable: true },
+  industry: { type: "string", nullable: true },
+  numberOfEmployees: { type: "integer", nullable: true },
+  annualRevenueRange: { type: "string", nullable: true },
+  legalStatus: { type: "string", nullable: true },
+  companyType: { type: "string", nullable: true },
+  description: { type: "string", nullable: true },
+  socialMediaLinks: { type: "object", nullable: true, additionalProperties: { type: "string", nullable: true } }
 } as const;
 
 const accountResponseSchema = {
@@ -115,15 +125,88 @@ export const listContactsSchema: FastifySchema = {
   }
 };
 
+const addressResponseSchema = {
+  type: "object",
+  properties: {
+    id: { type: "string" },
+    accountId: { type: "string" },
+    label: { type: "string" },
+    street: { type: "string", nullable: true },
+    city: { type: "string", nullable: true },
+    state: { type: "string", nullable: true },
+    postalCode: { type: "string", nullable: true },
+    country: { type: "string", nullable: true },
+    latitude: { type: "string", nullable: true },
+    longitude: { type: "string", nullable: true },
+    createdAt: { type: "string", format: "date-time" }
+  },
+  required: ["id", "accountId", "label", "createdAt"],
+  additionalProperties: false
+} as const;
+
+const executiveResponseSchema = {
+  type: "object",
+  properties: {
+    id: { type: "string" },
+    accountId: { type: "string" },
+    name: { type: "string" },
+    title: { type: "string", nullable: true },
+    email: { type: "string", format: "email", nullable: true },
+    phone: { type: "string", nullable: true },
+    createdAt: { type: "string", format: "date-time" }
+  },
+  required: ["id", "accountId", "name", "createdAt"],
+  additionalProperties: false
+} as const;
+
+const milestoneResponseSchema = {
+  type: "object",
+  properties: {
+    id: { type: "string" },
+    accountId: { type: "string" },
+    title: { type: "string" },
+    description: { type: "string", nullable: true },
+    date: { type: "string", format: "date-time" },
+    createdAt: { type: "string", format: "date-time" }
+  },
+  required: ["id", "accountId", "title", "date", "createdAt"],
+  additionalProperties: false
+} as const;
+
+const accountWithDetailsResponseSchema = {
+  type: "object",
+  properties: {
+    account: accountResponseSchema,
+    addresses: {
+      type: "array",
+      items: addressResponseSchema
+    },
+    contacts: {
+      type: "array",
+      items: contactResponseSchema
+    },
+    executives: {
+      type: "array",
+      items: executiveResponseSchema
+    },
+    milestones: {
+      type: "array",
+      items: milestoneResponseSchema
+    }
+  },
+  required: ["account", "addresses", "contacts", "executives", "milestones"],
+  additionalProperties: false
+} as const;
+
 export const getAccountSchema: FastifySchema = {
   tags: ["accounts"],
   summary: "Get account by id",
-  description: "Vraća detaljne informacije o konkretnom nalogu na osnovu ID-a.",
+  description: "Vraća detaljne informacije o konkretnom nalogu na osnovu ID-a sa svim povezanim podacima (addresses, contacts, executives, milestones).",
   params: accountParamsSchema,
   response: {
     200: {
-      ...accountResponseSchema,
-      description: "Detalji naloga"
+      ...accountWithDetailsResponseSchema,
+      description: "Detalji naloga sa svim povezanim podacima"
     },
     404: {
       ...errorResponseSchema,

@@ -9,7 +9,7 @@ import type {
   AccountUpdateInput
 } from "./accounts.types";
 
-import type { AccountsRepository } from "./accounts.repository";
+import type { AccountsRepository, AccountWithDetails } from "./accounts.repository";
 
 declare module "fastify" {
   interface FastifyInstance {
@@ -29,6 +29,7 @@ export type ListAccountsReply = Account[];
 export type ListContactsReply = AccountContact[];
 export type GetAccountParams = { id: string };
 export type GetAccountReply = ApiReply<Account>;
+export type GetAccountWithDetailsReply = ApiReply<AccountWithDetails>;
 export type CreateAccountBody = AccountCreateInput;
 export type CreateAccountReply = ApiReply<Account>;
 export type UpdateAccountParams = GetAccountParams;
@@ -70,15 +71,15 @@ export const listContactsHandler: RouteHandler<{ Reply: ListContactsReply }> = a
  */
 export const getAccountHandler: RouteHandler<{
   Params: GetAccountParams;
-  Reply: GetAccountReply;
+  Reply: GetAccountWithDetailsReply;
 }> = async (request, reply) => {
-  const account = await request.accountsRepository.findById(request.params.id);
+  const accountWithDetails = await request.accountsRepository.findByIdWithDetails(request.params.id);
 
-  if (!account) {
+  if (!accountWithDetails) {
     return reply.status(404).send(createHttpError(404, `Account ${request.params.id} not found`));
   }
 
-  return account;
+  return accountWithDetails;
 };
 
 /**

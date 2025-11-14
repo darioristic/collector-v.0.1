@@ -20,6 +20,42 @@ type EmployeeSeedData = {
 };
 
 const EMPLOYEES_DATA: EmployeeSeedData[] = [
+  {
+    firstName: "Dario",
+    lastName: "Ristić",
+    email: "dario@collectorlabs.test",
+    phone: "+381 64 111 1111",
+    department: "Management",
+    role: "CEO",
+    employmentType: "Full-time",
+    status: "Active",
+    startDate: new Date("2020-01-10"),
+    salary: 250000,
+  },
+  {
+    firstName: "Miha",
+    lastName: "Petrović",
+    email: "miha@collectorlabs.test",
+    phone: "+381 64 222 2222",
+    department: "Management",
+    role: "CTO",
+    employmentType: "Full-time",
+    status: "Active",
+    startDate: new Date("2021-05-15"),
+    salary: 200000,
+  },
+  {
+    firstName: "Tara",
+    lastName: "Jovanović",
+    email: "tara@collectorlabs.test",
+    phone: "+381 64 333 3333",
+    department: "Operations",
+    role: "Lead Developer",
+    employmentType: "Full-time",
+    status: "Active",
+    startDate: new Date("2022-03-20"),
+    salary: 140000,
+  },
 	// Development - Backend (4)
 	{
 		firstName: "Marko",

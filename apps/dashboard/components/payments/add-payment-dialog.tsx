@@ -6,7 +6,7 @@ import {
 	type PaymentMethod,
 	type PaymentStatus,
 } from "@crm/types";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,11 +53,15 @@ export function AddPaymentDialog({
 	invoiceBalance,
 	currency = "EUR",
 }: AddPaymentDialogProps) {
+	const amountId = useId();
+	const methodId = useId();
+	const paymentDateId = useId();
+	const statusId = useId();
+	const referenceId = useId();
+	const notesId = useId();
 	const {
 		register,
 		handleSubmit,
-		watch,
-		setValue,
 		reset,
 		formState: { errors },
 	} = useForm<PaymentFormData>({
@@ -107,11 +111,11 @@ export function AddPaymentDialog({
 
 					<div className="grid gap-4 py-4">
 						<div className="grid gap-2">
-							<Label htmlFor="amount">
+							<Label htmlFor={amountId}>
 								Amount ({currency}) <span className="text-destructive">*</span>
 							</Label>
 							<Input
-								id="amount"
+								id={amountId}
 								type="number"
 								step="0.01"
 								placeholder="0.00"
@@ -131,7 +135,7 @@ export function AddPaymentDialog({
 						</div>
 
 						<div className="grid gap-2">
-							<Label htmlFor="method">
+							<Label htmlFor={methodId}>
 								Payment Method <span className="text-destructive">*</span>
 							</Label>
 							<Select
@@ -140,7 +144,7 @@ export function AddPaymentDialog({
 									setSelectedMethod(value as PaymentMethod)
 								}
 							>
-								<SelectTrigger id="method">
+								<SelectTrigger id={methodId}>
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
@@ -156,23 +160,23 @@ export function AddPaymentDialog({
 						</div>
 
 						<div className="grid gap-2">
-							<Label htmlFor="paymentDate">Payment Date</Label>
+							<Label htmlFor={paymentDateId}>Payment Date</Label>
 							<Input
-								id="paymentDate"
+								id={paymentDateId}
 								type="date"
 								{...register("paymentDate")}
 							/>
 						</div>
 
 						<div className="grid gap-2">
-							<Label htmlFor="status">Status</Label>
+							<Label htmlFor={statusId}>Status</Label>
 							<Select
 								value={selectedStatus}
 								onValueChange={(value) =>
 									setSelectedStatus(value as PaymentStatus)
 								}
 							>
-								<SelectTrigger id="status">
+								<SelectTrigger id={statusId}>
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
@@ -186,18 +190,18 @@ export function AddPaymentDialog({
 						</div>
 
 						<div className="grid gap-2">
-							<Label htmlFor="reference">Reference Number</Label>
+							<Label htmlFor={referenceId}>Reference Number</Label>
 							<Input
-								id="reference"
+								id={referenceId}
 								placeholder="e.g., TXN-12345"
 								{...register("reference")}
 							/>
 						</div>
 
 						<div className="grid gap-2">
-							<Label htmlFor="notes">Notes</Label>
+							<Label htmlFor={notesId}>Notes</Label>
 							<Textarea
-								id="notes"
+								id={notesId}
 								placeholder="Add any additional notes..."
 								rows={3}
 								{...register("notes")}
