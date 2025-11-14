@@ -12,7 +12,6 @@ import "swiper/css/free-mode";
 import "swiper/css/navigation";
 import "swiper/css/thumbs";
 
-import { Card, CardContent } from "@/components/ui/card";
 
 export default function ProductImageGallery() {
 	const [thumbsSwiper, setThumbsSwiper] = useState<SwiperClass | null>(null);

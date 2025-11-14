@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Filter, MoreHorizontal, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Filter, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
 	addDays,
@@ -8,7 +8,6 @@ import {
 	differenceInDays,
 	endOfWeek,
 	format,
-	isSameDay,
 	startOfWeek,
 	subWeeks,
 } from "date-fns";
@@ -241,7 +240,7 @@ export function TasksGanttView({
 							No tasks with due dates for this week.
 						</div>
 					) : (
-						visibleTasks.map(({ task, duration }, index) => {
+						visibleTasks.map(({ task, duration }, _index) => {
 							const config = statusConfig[task.status];
 							const barStyle = getTaskBarStyle(duration);
 							const assigneeName =
@@ -280,7 +279,7 @@ export function TasksGanttView({
 									{/* Timeline Column */}
 									<div className="relative p-2">
 										<div className="grid grid-cols-7 h-full relative">
-											{weekDays.map((day, dayIndex) => (
+											{weekDays.map((day) => (
 												<div
 													key={day.toISOString()}
 													className={cn(

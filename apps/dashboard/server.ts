@@ -43,7 +43,7 @@ console.log("[server] Handle function type:", typeof handle);
 console.log("[server] Next.js app initialized");
 
 declare global {
-	// eslint-disable-next-line no-var
+	 
 	var __server_initialized: boolean | undefined;
 }
 

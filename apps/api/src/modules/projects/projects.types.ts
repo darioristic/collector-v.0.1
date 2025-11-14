@@ -133,7 +133,7 @@ export interface ProjectCreateInput {
   };
 }
 
-export interface ProjectUpdateInput extends Partial<ProjectCreateInput> {}
+export type ProjectUpdateInput = Partial<ProjectCreateInput>;
 
 export interface CreateTaskInput {
   title: string;
@@ -143,7 +143,7 @@ export interface CreateTaskInput {
   dueDate?: string | null;
 }
 
-export interface UpdateTaskInput extends Partial<CreateTaskInput> {}
+export type UpdateTaskInput = Partial<CreateTaskInput>;
 
 export interface CreateTimelineEventInput {
   title: string;
@@ -152,14 +152,14 @@ export interface CreateTimelineEventInput {
   date?: string | null;
 }
 
-export interface UpdateTimelineEventInput extends Partial<CreateTimelineEventInput> {}
+export type UpdateTimelineEventInput = Partial<CreateTimelineEventInput>;
 
 export interface CreateTeamInput {
   name: string;
   goal?: string | null;
 }
 
-export interface UpdateTeamInput extends Partial<CreateTeamInput> {}
+export type UpdateTeamInput = Partial<CreateTeamInput>;
 
 export interface AddTeamMemberInput {
   userId: string;
@@ -179,7 +179,7 @@ export interface CreateBudgetCategoryInput {
   spent?: number | null;
 }
 
-export interface UpdateBudgetCategoryInput extends Partial<CreateBudgetCategoryInput> {}
+export type UpdateBudgetCategoryInput = Partial<CreateBudgetCategoryInput>;
 
 export interface CreateTimeEntryInput {
   userId: string;
@@ -189,5 +189,5 @@ export interface CreateTimeEntryInput {
   description?: string | null;
 }
 
-export interface UpdateTimeEntryInput extends Partial<CreateTimeEntryInput> {}
+export type UpdateTimeEntryInput = Partial<CreateTimeEntryInput>;
 

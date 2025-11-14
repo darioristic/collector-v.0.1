@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsync, RouteHandlerMethod } from "fastify";
 
 import {
   integrationListSchema,
@@ -25,10 +25,10 @@ const settingsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post("/users", { schema: userCreateSchema }, createUser);
   fastify.get("/permissions", { schema: permissionListSchema }, listPermissions);
   fastify.get("/integrations", { schema: integrationListSchema }, listIntegrations);
-  fastify.get("/team-members", { schema: teamMemberListSchema }, listTeamMembers as any);
-  fastify.post("/team-members", { schema: teamMemberCreateSchema }, createTeamMember as any);
-  fastify.patch("/team-members/:id", { schema: teamMemberUpdateSchema }, updateTeamMember as any);
-  fastify.delete("/team-members/:id", { schema: teamMemberDeleteSchema }, deleteTeamMember as any);
+  fastify.get("/team-members", { schema: teamMemberListSchema }, listTeamMembers as RouteHandlerMethod);
+  fastify.post("/team-members", { schema: teamMemberCreateSchema }, createTeamMember as RouteHandlerMethod);
+  fastify.patch("/team-members/:id", { schema: teamMemberUpdateSchema }, updateTeamMember as RouteHandlerMethod);
+  fastify.delete("/team-members/:id", { schema: teamMemberDeleteSchema }, deleteTeamMember as RouteHandlerMethod);
 };
 
 export default settingsRoutes;

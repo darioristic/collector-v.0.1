@@ -1,6 +1,6 @@
 "use client";
 
-import type { Order, OrderCreateInput, OrderUpdateInput } from "@crm/types";
+import type { OrderCreateInput, OrderUpdateInput } from "@crm/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useToast } from "@/hooks/use-toast";

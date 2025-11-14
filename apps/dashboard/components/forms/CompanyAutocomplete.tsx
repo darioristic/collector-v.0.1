@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Controller, type Control } from "react-hook-form";
+import { Controller, type Control, type FieldPath, type FieldValues } from "react-hook-form";
 import { Check, ChevronsUpDown, Loader2, Plus } from "lucide-react";
 import type { Account } from "@crm/types";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
-import { getCompanyInitials, formatCompanyDisplay } from "@/lib/utils/company";
+import { getCompanyInitials } from "@/lib/utils/company";
 import { useCompanySearch } from "@/src/hooks/useCompanySearch";
 import { useAccounts } from "@/src/hooks/useAccounts";
 import { Button } from "@/components/ui/button";
@@ -26,23 +26,23 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { CompanyCreationModal } from "./CompanyCreationModal";
 
-type CompanyAutocompleteProps = {
+type CompanyAutocompleteProps<TFieldValues extends FieldValues = FieldValues> = {
 	value?: string;
 	onChange: (companyId: string) => void;
-	control?: Control<any>;
-	name?: string;
+	control?: Control<TFieldValues>;
+	name?: FieldPath<TFieldValues>;
 	disabled?: boolean;
 	placeholder?: string;
 };
 
-export function CompanyAutocomplete({
-	value,
-	onChange,
-	control,
-	name = "companyId",
-	disabled = false,
-	placeholder = "Search or add company…",
-}: CompanyAutocompleteProps) {
+export function CompanyAutocomplete<TFieldValues extends FieldValues = FieldValues>({
+    value,
+    onChange,
+    control,
+    name,
+    disabled = false,
+    placeholder = "Search or add company…",
+}: CompanyAutocompleteProps<TFieldValues>) {
 	if (control && name) {
 		return (
 			<Controller

@@ -40,7 +40,7 @@ export const listInvoicesHandler = async (request: ListRequest, reply: FastifyRe
   const filters = {
     customerId: request.query.customerId,
     orderId: request.query.orderId ? Number.parseInt(request.query.orderId, 10) : undefined,
-    status: status as any,
+    status,
     search: request.query.search,
     limit: request.query.limit ? Number.parseInt(request.query.limit, 10) : undefined,
     offset: request.query.offset ? Number.parseInt(request.query.offset, 10) : undefined

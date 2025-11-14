@@ -1,6 +1,5 @@
 "use client";
 
-import type { OrderStatus } from "@crm/types";
 import { ORDER_STATUSES } from "@crm/types";
 import { Plus } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";

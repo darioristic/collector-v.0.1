@@ -1,6 +1,5 @@
 "use client";
 
-import { Info } from "lucide-react";
 import { ExportButton } from "@/components/CardActionMenus";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -11,12 +10,8 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
+
+
 
 type SalesData = {
 	country: string;

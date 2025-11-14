@@ -9,9 +9,9 @@ import rateLimit from "@fastify/rate-limit";
  */
 const rateLimitPlugin: FastifyPluginAsync = async (fastify) => {
 	// Get Redis client from cache service if available
-	const redis = fastify.hasDecorator("cache")
-		? (fastify as any).cache?.redis
-		: undefined;
+  const redis = fastify.hasDecorator("cache")
+    ? fastify.cache?.getRedisClient?.()
+    : undefined;
 
 	await fastify.register(rateLimit, {
 		global: true, // Apply to all routes by default

@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { OrdersService } from "./orders.service.js";
-import type { OrderCreateInput, OrderUpdateInput } from "@crm/types";
+import { ORDER_STATUSES, type OrderCreateInput, type OrderStatus, type OrderUpdateInput } from "@crm/types";
 
 type ListRequest = FastifyRequest<{
   Querystring: {
@@ -33,11 +33,12 @@ type DeleteRequest = FastifyRequest<{
 
 export const listOrdersHandler = async (request: ListRequest, reply: FastifyReply) => {
   const service = new OrdersService(request.db, request.cache);
+  const status = normalizeOrderStatus(request.query.status);
   const filters = {
     companyId: request.query.companyId,
     contactId: request.query.contactId,
     quoteId: request.query.quoteId ? Number.parseInt(request.query.quoteId, 10) : undefined,
-    status: request.query.status as any,
+    status,
     search: request.query.search,
     limit: request.query.limit ? Number.parseInt(request.query.limit, 10) : undefined,
     offset: request.query.offset ? Number.parseInt(request.query.offset, 10) : undefined
@@ -108,4 +109,11 @@ export const deleteOrderHandler = async (request: DeleteRequest, reply: FastifyR
   }
 
   await reply.status(204).send();
+};
+
+const normalizeOrderStatus = (status?: string): OrderStatus | undefined => {
+  if (!status) {
+    return undefined;
+  }
+  return ORDER_STATUSES.includes(status as OrderStatus) ? (status as OrderStatus) : undefined;
 };

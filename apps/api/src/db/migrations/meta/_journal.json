@@ -100,12 +100,20 @@
       "tag": "0014_add_company_to_team_members",
       "breakpoints": false
     },
-    {
-      "idx": 14,
-      "version": "7",
-      "when": 1763044811100,
-      "tag": "0014_past_shadowcat",
-      "breakpoints": true
-    }
-  ]
+  {
+    "idx": 14,
+    "version": "7",
+    "when": 1763044811100,
+    "tag": "0014_past_shadowcat",
+    "breakpoints": true
+  }
+  ,
+  {
+    "idx": 15,
+    "version": "0018",
+    "when": 1763132300000,
+    "tag": "0018_create_sales_tables",
+    "breakpoints": false
+  }
+]
 }

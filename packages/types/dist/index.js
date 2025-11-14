@@ -25,7 +25,16 @@ export const PAYMENT_METHODS = ["bank_transfer", "cash", "card", "crypto"];
 // Quote Types
 export const QUOTE_STATUSES = ["draft", "sent", "accepted", "rejected"];
 // Order Types
-export const ORDER_STATUSES = ["pending", "processing", "shipped", "completed", "cancelled"];
+export const ORDER_STATUSES = [
+    "draft",
+    "confirmed",
+    "fulfilled",
+    "pending",
+    "processing",
+    "shipped",
+    "completed",
+    "cancelled"
+];
 // Invoice Types
 export const INVOICE_STATUSES = ["draft", "sent", "paid", "overdue", "void", "unpaid"];
 export const PROJECT_STATUSES = ["draft", "inProgress", "completed", "onHold", "cancelled"];

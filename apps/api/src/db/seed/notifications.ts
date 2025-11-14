@@ -1,4 +1,4 @@
-import { eq, inArray, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { db as defaultDb } from "../index";
 import { companies } from "../schema/auth.schema";

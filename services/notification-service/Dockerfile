@@ -15,5 +15,6 @@ ENV NODE_ENV=production
 COPY --from=builder /workspace/services/notification-service/dist ./dist
 COPY --from=builder /workspace/services/notification-service/node_modules ./node_modules
 COPY --from=builder /workspace/services/notification-service/package.json ./
+COPY apps/api/esm-loader.mjs ./esm-loader.mjs
 EXPOSE 4002
-CMD ["node", "dist/server.js"]
+CMD ["node", "--loader", "./esm-loader.mjs", "dist/server.js"]

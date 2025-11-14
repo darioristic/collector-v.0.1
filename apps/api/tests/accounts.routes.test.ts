@@ -12,7 +12,7 @@ describe("Accounts API routes", () => {
   let seededAccountIds: string[];
 
   beforeAll(async () => {
-    process.env.DATABASE_URL = "";
+    process.env.DATABASE_URL = "pg-mem";
     process.env.ACCOUNTS_REPOSITORY = "memory";
 
     ({ buildServer } = await import("../src/server"));

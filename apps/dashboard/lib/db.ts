@@ -50,17 +50,19 @@ const createPgMemDatabase = (): {
 	const adapter = memoryDb.adapters.createPg();
 	const pool = new adapter.Pool();
 	const originalQuery = pool.query.bind(pool);
+	type QueryArgs = Parameters<typeof originalQuery>;
 
-	pool.query = (config: any, values?: any, callback?: any) => {
+	pool.query = ((...args: QueryArgs) => {
+		const [config, values, callback] = args;
 		if (config && typeof config === "object" && "rowMode" in config) {
 			// pg-mem does not support rowMode; strip it to fallback to default behaviour
-			delete config.rowMode;
+			delete (config as Record<string, unknown>).rowMode;
 		}
 		if (config && typeof config === "object" && "types" in config) {
-			delete config.types;
+			delete (config as Record<string, unknown>).types;
 		}
 		return originalQuery(config, values, callback);
-	};
+	}) as typeof originalQuery;
 
 	return {
 		client: pool,

@@ -7,7 +7,6 @@ import {
 	type ActivityType,
 } from "@crm/types";
 import {
-	CalendarClock,
 	CheckSquare,
 	type LucideIcon,
 	PhoneCall,

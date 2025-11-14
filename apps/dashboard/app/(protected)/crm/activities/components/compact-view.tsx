@@ -34,7 +34,6 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
 
 import {
 	ACTIVITY_PRIORITY_LABEL,

@@ -11,6 +11,7 @@ import { ActiveThemeProvider } from "@/components/active-theme";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { DEFAULT_THEME } from "@/lib/themes";
+import type { ThemeType } from "@/lib/themes";
 
 export default function RootLayout({
 	children,
@@ -19,11 +20,8 @@ export default function RootLayout({
 }>) {
 	// Use default theme settings - cookies will be read on client side
 	// This prevents blocking server-side rendering
-	const themeSettings = {
-		preset: DEFAULT_THEME.preset as any,
-		scale: DEFAULT_THEME.scale as any,
-		radius: DEFAULT_THEME.radius as any,
-		contentLayout: DEFAULT_THEME.contentLayout as any,
+	const themeSettings: ThemeType = {
+		...DEFAULT_THEME,
 	};
 
 	const bodyAttributes = Object.fromEntries(

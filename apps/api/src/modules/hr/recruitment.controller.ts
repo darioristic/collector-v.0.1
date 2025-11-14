@@ -11,18 +11,8 @@ import type {
   InterviewListFilters,
   InterviewUpdateInput
 } from "./recruitment.service";
-import {
-  candidateCreateSchema,
-  candidateDeleteSchema,
-  candidateGetSchema,
-  candidateListSchema,
-  candidateUpdateSchema,
-  interviewCreateSchema,
-  interviewDeleteSchema,
-  interviewGetSchema,
-  interviewListSchema,
-  interviewUpdateSchema
-} from "./recruitment.schema";
+
+
 
 // Candidate types
 export type ListCandidatesQuery = {

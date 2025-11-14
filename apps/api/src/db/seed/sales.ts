@@ -1,4 +1,3 @@
-import { inArray, sql } from "drizzle-orm";
 
 import { db as defaultDb } from "../index";
 import { accountContacts, accounts } from "../schema/accounts.schema";

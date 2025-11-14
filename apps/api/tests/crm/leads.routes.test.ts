@@ -12,6 +12,7 @@ import crmRoutes from "../../src/modules/crm/crm.routes";
 import { createCRMService } from "../../src/modules/crm/crm.service";
 import healthRoutes from "../../src/routes/health";
 import type { AppDatabase } from "../../src/db";
+import { createTestPool } from "../utils/test-db";
 
 const parseBody = <T>(responseBody: string): T => JSON.parse(responseBody) as T;
 
@@ -36,15 +37,12 @@ const buildTestServer = async (database: AppDatabase): Promise<FastifyInstance> 
 };
 
 describe("Leads API routes", () => {
-	const connectionString =
-		process.env.TEST_DATABASE_URL ?? "postgresql://collector:collector@localhost:5432/collector";
-
 	let pool: Pool;
 	let client: PoolClient;
 	let app: FastifyInstance;
 
 	beforeAll(async () => {
-		pool = new Pool({ connectionString });
+		pool = await createTestPool();
 	});
 
 	afterAll(async () => {

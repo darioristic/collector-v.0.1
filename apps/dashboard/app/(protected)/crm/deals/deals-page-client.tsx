@@ -1,7 +1,6 @@
 "use client";
 
 import {
-	BarChart2,
 	Columns3,
 	Filter,
 	Grid as GridIcon,
@@ -13,7 +12,6 @@ import * as React from "react";
 import { TableToolbar } from "@/components/table-toolbar";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -37,8 +35,6 @@ import DealsFiltersSheet from "./components/deals-filters-sheet";
 import DealsKanbanBoard from "./components/deals-kanban-board";
 import DealsTableView from "./components/deals-table-view";
 import {
-	DEAL_STAGE_BADGE_CLASSNAME,
-	DEAL_STAGE_DESCRIPTIONS,
 	DEAL_STAGES,
 	type DealStage,
 	type DealView,

@@ -13,6 +13,10 @@ import type {
 } from "@crm/types";
 import type { CacheService } from "../../lib/cache.service";
 
+type QuoteInsert = typeof quotes.$inferInsert;
+type QuoteRow = typeof quotes.$inferSelect;
+type QuoteItemRow = typeof quoteItems.$inferSelect;
+
 /**
  * QuotesService handles all quote-related business logic
  * 
@@ -87,15 +91,7 @@ export class QuotesService {
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const sortColumnMap: Record<QuoteSortField, any> = {
-      issueDate: quotes.issueDate,
-      expiryDate: quotes.expiryDate,
-      total: quotes.total,
-      quoteNumber: quotes.quoteNumber,
-      createdAt: quotes.createdAt
-    };
-
-    const orderColumn = sortColumnMap[sortField] ?? quotes.createdAt;
+    const orderColumn = getOrderColumn(sortField);
     const orderClause = sortOrder === "asc" ? asc(orderColumn) : desc(orderColumn);
 
     // OPTIMIZATION: Window function
@@ -247,7 +243,7 @@ export class QuotesService {
       }
 
       await this.database.transaction(async (tx) => {
-        const updateData: any = {};
+        const updateData: Partial<QuoteInsert> = {};
         if (input.companyId !== undefined) updateData.companyId = input.companyId || null;
         if (input.contactId !== undefined) updateData.contactId = input.contactId || null;
         if (input.issueDate !== undefined) updateData.issueDate = input.issueDate;
@@ -325,7 +321,7 @@ export class QuotesService {
   }
 
   private mapQuoteFromDb(
-    dbQuote: typeof quotes.$inferSelect,
+    dbQuote: QuoteRow,
     extras: { companyName?: string | null; contactName?: string | null } = {}
   ): Quote {
     return {
@@ -356,7 +352,7 @@ export class QuotesService {
     };
   }
 
-  private mapQuoteItemFromDb(dbItem: any): QuoteItem {
+  private mapQuoteItemFromDb(dbItem: QuoteItemRow): QuoteItem {
     return {
       id: dbItem.id,
       quoteId: dbItem.quoteId,
@@ -369,3 +365,26 @@ export class QuotesService {
     };
   }
 }
+
+const getOrderColumn = (
+  field: QuoteSortField
+):
+  | typeof quotes.issueDate
+  | typeof quotes.expiryDate
+  | typeof quotes.total
+  | typeof quotes.quoteNumber
+  | typeof quotes.createdAt => {
+  switch (field) {
+    case "issueDate":
+      return quotes.issueDate;
+    case "expiryDate":
+      return quotes.expiryDate;
+    case "total":
+      return quotes.total;
+    case "quoteNumber":
+      return quotes.quoteNumber;
+    case "createdAt":
+    default:
+      return quotes.createdAt;
+  }
+};

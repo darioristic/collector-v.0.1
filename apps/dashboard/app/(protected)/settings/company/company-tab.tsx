@@ -20,7 +20,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
 	companyFormSchema,
-	type CompanyFormValues,
 	type CompanyFormInput,
 } from "@/lib/validations/settings/company";
 import { useCompanySettings } from "./use-company-settings";

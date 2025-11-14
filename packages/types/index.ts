@@ -287,7 +287,16 @@ export type QuoteCreateInput = {
 export type QuoteUpdateInput = Partial<Omit<QuoteCreateInput, "quoteNumber">>;
 
 // Order Types
-export const ORDER_STATUSES = ["pending", "processing", "shipped", "completed", "cancelled"] as const;
+export const ORDER_STATUSES = [
+  "draft",
+  "confirmed",
+  "fulfilled",
+  "pending",
+  "processing",
+  "shipped",
+  "completed",
+  "cancelled"
+] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
 export type OrderItem = {
@@ -313,7 +322,7 @@ export type Order = {
   subtotal: number;
   tax: number;
   total: number;
-  status: string;
+  status: OrderStatus;
   notes?: string | null;
   createdAt: string;
   updatedAt: string;
@@ -335,7 +344,7 @@ export type OrderCreateInput = {
   orderDate?: string;
   expectedDelivery?: string;
   currency?: string;
-  status?: string;
+  status?: OrderStatus;
   notes?: string;
   items: OrderItemCreateInput[];
 };

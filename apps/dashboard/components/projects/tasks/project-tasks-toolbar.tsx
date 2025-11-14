@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, Columns3, Download, GanttChart, LayoutGrid, LayoutList, Search, X } from "lucide-react";
+import { Calendar, Download, GanttChart, LayoutGrid, LayoutList, Search, X } from "lucide-react";
 import {
 	CheckCircle,
 	CircleDashed,
@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { DataTableFacetedFilter } from "./data-table-faceted-filter";
 import { DataTableViewOptions } from "./data-table-view-options";
 import type { ViewMode } from "../project-header";
-import type { TaskStatus } from "@/src/types/projects";
+import type { ProjectTask, TaskStatus } from "@/src/types/projects";
 import type { Table } from "@tanstack/react-table";
 
 const statuses: {
@@ -48,7 +48,7 @@ type ProjectTasksToolbarProps = {
 	onSearchChange: (value: string) => void;
 	viewMode: ViewMode;
 	onViewModeChange: (mode: ViewMode) => void;
-	table?: Table<any>;
+	table?: Table<ProjectTask>;
 	onExportCSV?: () => void;
 };
 

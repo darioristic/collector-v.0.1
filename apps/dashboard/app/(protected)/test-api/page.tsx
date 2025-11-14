@@ -3,8 +3,13 @@
 import { useEffect, useState } from "react";
 import { getApiUrl } from "@/src/lib/fetch-utils";
 
+type QuotesResponse = {
+	total?: number;
+	data?: unknown[];
+};
+
 export default function TestAPIPage() {
-	const [data, setData] = useState<any>(null);
+	const [data, setData] = useState<QuotesResponse | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(true);
 
@@ -21,7 +26,7 @@ export default function TestAPIPage() {
 					throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 				}
 
-				const json = await response.json();
+				const json = (await response.json()) as QuotesResponse;
 				console.log("Response data:", json);
 
 				setData(json);

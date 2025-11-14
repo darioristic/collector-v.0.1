@@ -4,7 +4,6 @@ import {
 	useMutation,
 	useQuery,
 	useQueryClient,
-	useSuspenseQuery,
 } from "@tanstack/react-query";
 
 import { useToast } from "@/hooks/use-toast";
@@ -39,10 +38,8 @@ import type {
 	CreateBudgetCategoryPayload,
 	CreateTaskPayload,
 	CreateTimelinePayload,
-	ProjectBudgetCategory,
 	ProjectBudgetSummary,
 	ProjectDetails,
-	ProjectSummary,
 	ProjectTask,
 	ProjectTeamMember,
 	ProjectTimelineEvent,
@@ -65,45 +62,6 @@ export function useProjectDetails(
 	projectId: string,
 	options?: { enabled?: boolean; suspense?: boolean },
 ) {
-	if (options?.suspense) {
-		if (options.enabled === false) {
-			return useQuery<ProjectDetails>({
-				queryKey: projectKeys.detail(projectId),
-				queryFn: () => fetchProject(projectId),
-				enabled: false,
-			});
-		}
-
-		return useSuspenseQuery<ProjectDetails>({
-			queryKey: projectKeys.detail(projectId),
-			queryFn: async () => {
-				try {
-					const project = await fetchProject(projectId);
-					return project;
-				} catch (error) {
-					console.error("[useProjectDetails] Error fetching project:", {
-						projectId,
-						error: error instanceof Error ? error.message : String(error),
-						stack: error instanceof Error ? error.stack : undefined,
-						errorType: error instanceof Error ? error.constructor.name : typeof error,
-					});
-					throw error;
-				}
-			},
-			retry: (failureCount, error) => {
-				// Don't retry on 404 (not found) errors
-				if (error instanceof Error) {
-					const message = error.message.toLowerCase();
-					if (message.includes("404") || message.includes("not found")) {
-						return false;
-					}
-				}
-				// Retry up to 2 times for other errors
-				return failureCount < 2;
-			},
-		});
-	}
-
 	return useQuery<ProjectDetails>({
 		queryKey: projectKeys.detail(projectId),
 		queryFn: async () => {
@@ -121,6 +79,7 @@ export function useProjectDetails(
 			}
 		},
 		enabled: options?.enabled ?? Boolean(projectId),
+		suspense: options?.suspense,
 		retry: (failureCount, error) => {
 			// Don't retry on 404 (not found) errors
 			if (error instanceof Error) {

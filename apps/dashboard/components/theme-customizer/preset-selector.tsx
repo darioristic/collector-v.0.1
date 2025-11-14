@@ -9,13 +9,13 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { DEFAULT_THEME, THEMES } from "@/lib/themes";
+import { DEFAULT_THEME, THEMES, type ThemeType } from "@/lib/themes";
 
 export function PresetSelector() {
 	const { theme, setTheme } = useThemeConfig();
 
-	const handlePreset = (value: string) => {
-		setTheme({ ...theme, ...DEFAULT_THEME, preset: value as any });
+	const handlePreset = (value: ThemeType["preset"]) => {
+		setTheme({ ...theme, ...DEFAULT_THEME, preset: value });
 	};
 
 	return (
@@ -23,7 +23,7 @@ export function PresetSelector() {
 			<Label>Theme preset:</Label>
 			<Select
 				value={theme.preset}
-				onValueChange={(value) => handlePreset(value)}
+				onValueChange={(value) => handlePreset(value as ThemeType["preset"])}
 			>
 				<SelectTrigger className="w-full">
 					<SelectValue placeholder="Select a theme" />

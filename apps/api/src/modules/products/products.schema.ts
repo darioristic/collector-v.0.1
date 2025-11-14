@@ -30,11 +30,6 @@ const productEntitySchema = {
   additionalProperties: false
 } as const;
 
-const productCollectionSchema = {
-  type: "array",
-  items: productEntitySchema
-} as const;
-
 const productCreateBodySchema = {
   type: "object",
   properties: {

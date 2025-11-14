@@ -1,6 +1,6 @@
 "use client";
 
-import type { Payment, PaymentCreateInput } from "@crm/types";
+import type { PaymentCreateInput } from "@crm/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useToast } from "@/hooks/use-toast";

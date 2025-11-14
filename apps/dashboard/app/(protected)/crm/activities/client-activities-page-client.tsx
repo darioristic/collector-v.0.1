@@ -239,7 +239,7 @@ export function ClientActivitiesPageClient({
   React.useEffect(() => {
     setListPage(1);
     setCompactPage(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [filteredActivities.length]);
 
   const paginatedCompactActivities = React.useMemo(() => {

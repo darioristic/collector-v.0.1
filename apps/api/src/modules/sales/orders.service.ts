@@ -11,6 +11,10 @@ import type {
 } from "@crm/types";
 import type { CacheService } from "../../lib/cache.service";
 
+type OrderInsert = typeof orders.$inferInsert;
+type OrderRow = typeof orders.$inferSelect;
+type OrderItemRow = typeof orderItems.$inferSelect;
+
 /**
  * OrdersService handles all order-related business logic
  * 
@@ -135,7 +139,10 @@ export class OrdersService {
     const total = data.length > 0 ? Number(data[0].totalCount) : 0;
 
     const result = {
-      data: data.map((o) => this.mapOrderFromDb(o)),
+      data: data.map((o) => {
+        const { totalCount: _totalCount, ...orderRow } = o;
+        return this.mapOrderFromDb(orderRow as OrderRow);
+      }),
       total
     };
 
@@ -296,14 +303,14 @@ export class OrdersService {
       // Use transaction
       await this.database.transaction(async (tx) => {
         // Update order
-        const updateData: any = {};
+        const updateData: Partial<OrderInsert> = {};
         if (input.quoteId !== undefined) updateData.quoteId = input.quoteId || null;
         if (input.companyId !== undefined) updateData.companyId = input.companyId || null;
         if (input.contactId !== undefined) updateData.contactId = input.contactId || null;
         if (input.orderDate !== undefined) updateData.orderDate = input.orderDate;
         if (input.expectedDelivery !== undefined) updateData.expectedDelivery = input.expectedDelivery;
         if (input.currency !== undefined) updateData.currency = input.currency;
-        if (input.status !== undefined) updateData.status = input.status as typeof orders.$inferSelect.status;
+        if (input.status !== undefined) updateData.status = input.status;
         if (input.notes !== undefined) updateData.notes = input.notes;
         if (subtotal !== undefined) updateData.subtotal = subtotal.toString();
         if (tax !== undefined) updateData.tax = tax.toString();
@@ -342,7 +349,7 @@ export class OrdersService {
       return this.getById(id);
 
     } catch (error) {
-      throw new Error(`Failed to update order: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`Failed to update order: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   }
 
@@ -361,7 +368,7 @@ export class OrdersService {
       return deleted.length > 0;
 
     } catch (error) {
-      throw new Error(`Failed to delete order: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`Failed to delete order: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   }
 
@@ -382,14 +389,16 @@ export class OrdersService {
     return { subtotal, tax, total };
   }
 
-  private mapOrderFromDb(dbOrder: any): Order {
+  private mapOrderFromDb(dbOrder: OrderRow): Order {
     return {
       id: dbOrder.id,
       orderNumber: dbOrder.orderNumber,
       quoteId: dbOrder.quoteId,
       companyId: dbOrder.companyId,
       contactId: dbOrder.contactId,
-      orderDate: dbOrder.orderDate,
+      orderDate: dbOrder.orderDate
+        ? new Date(dbOrder.orderDate).toISOString().split("T")[0]
+        : "",
       expectedDelivery: dbOrder.expectedDelivery,
       currency: dbOrder.currency,
       subtotal: Number(dbOrder.subtotal),
@@ -402,7 +411,7 @@ export class OrdersService {
     };
   }
 
-  private mapOrderItemFromDb(dbItem: any): OrderItem {
+  private mapOrderItemFromDb(dbItem: OrderItemRow): OrderItem {
     return {
       id: dbItem.id,
       orderId: dbItem.orderId,

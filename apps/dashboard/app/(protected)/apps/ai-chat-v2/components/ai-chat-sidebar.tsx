@@ -39,7 +39,7 @@ const sidebarItems: SidebarItem[] = [
 	{ icon: History, label: "History" },
 ];
 
-export type Conversation = (typeof conversations)[number];
+export type Conversation = (typeof conversations)[number] & { preview?: string };
 
 const groupConversationsByCategory = (conversations: Conversation[]) => {
 	const groups: Record<
@@ -61,16 +61,34 @@ const groupConversationsByCategory = (conversations: Conversation[]) => {
 		.map(([key, group]) => ({ key, ...group }));
 };
 
+const allConversations: Conversation[] = conversations as Conversation[];
+
 const SidebarContent = () => {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [filteredConversations, setFilteredConversations] =
-		useState(conversations);
+    useState(allConversations);
 
 	const params = useParams<{ id: string }>();
 	const activeConversationId = params?.id ?? null;
 
 	const handleSearch = (query: string) => {
 		setSearchQuery(query);
+
+		const normalizedQuery = query.trim().toLowerCase();
+		if (!normalizedQuery) {
+            setFilteredConversations(allConversations);
+			return;
+		}
+
+    setFilteredConversations(
+            allConversations.filter((conversation) => {
+                    const previewText = conversation.preview ?? conversation.lastMessage ?? "";
+                    return (
+                            conversation.title.toLowerCase().includes(normalizedQuery) ||
+                            previewText.toLowerCase().includes(normalizedQuery)
+                    );
+            }),
+    );
 	};
 
 	const conversationGroups = groupConversationsByCategory(

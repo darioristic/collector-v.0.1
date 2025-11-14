@@ -4,6 +4,7 @@ import { BanIcon } from "lucide-react";
 import { useThemeConfig } from "@/components/active-theme";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import type { ThemeType } from "@/lib/themes";
 
 export function ThemeRadiusSelector() {
 	const { theme, setTheme } = useThemeConfig();
@@ -14,7 +15,12 @@ export function ThemeRadiusSelector() {
 			<ToggleGroup
 				value={theme.radius}
 				type="single"
-				onValueChange={(value) => setTheme({ ...theme, radius: value as any })}
+				onValueChange={(value) => {
+					if (!value) {
+						return;
+					}
+					setTheme({ ...theme, radius: value as ThemeType["radius"] });
+				}}
 				className="*:border-input w-full gap-3 *:rounded-md *:border"
 			>
 				<ToggleGroupItem variant="outline" value="none">

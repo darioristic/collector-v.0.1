@@ -1,4 +1,4 @@
-import { eq, inArray, isNull } from "drizzle-orm";
+import { eq, isNull } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 
 import { db as defaultDb } from "../index";

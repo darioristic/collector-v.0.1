@@ -1,12 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 
 export default async function handler(
-	_req: NextApiRequest,
-	res: NextApiResponse,
+    _req: NextApiRequest,
+    res: NextApiResponse,
 ) {
-	const backendUrl =
-		process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
-	const url = `${backendUrl.replace(/\/$/, "")}/health`;
+    const apiBase =
+        process.env.COLLECTOR_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+    const url = `${apiBase.replace(/\/$/, "")}/api/health`;
 
 	try {
 		const response = await fetch(url, {
@@ -25,10 +25,10 @@ export default async function handler(
 
 		const data = await response.json().catch(() => ({}));
 		return res.status(200).json({ ok: true, data });
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error("API health check failed:", error);
-		return res
-			.status(503)
-			.json({ ok: false, error: error?.message ?? "Service unavailable" });
+		const message =
+			error instanceof Error ? error.message : "Service unavailable";
+		return res.status(503).json({ ok: false, error: message });
 	}
 }

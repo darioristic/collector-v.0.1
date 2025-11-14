@@ -18,7 +18,6 @@ import { toast } from "sonner";
 import {
 	EnumTodoPriority,
 	EnumTodoStatus,
-	priorityClasses,
 	statusClasses,
 	todoStatusNamed,
 } from "@/app/(protected)/apps/todo-list-app/enum";
@@ -48,7 +47,6 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 interface TodoDetailSheetProps {

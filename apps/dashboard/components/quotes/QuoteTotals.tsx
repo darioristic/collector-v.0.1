@@ -1,14 +1,18 @@
 "use client";
 
 import { useEffect } from "react";
-import { useWatch, type Control } from "react-hook-form";
+import { useWatch, type Control, type FieldValues } from "react-hook-form";
 import { motion, useMotionValue, useSpring, useTransform } from "motion/react";
 import type { QuoteItemCreateInput } from "@crm/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
-type QuoteTotalsProps = {
-	control: Control<any>;
+type QuoteTotalsFormValues = FieldValues & {
+	items: QuoteItemCreateInput[];
+};
+
+type QuoteTotalsProps<TFormValues extends QuoteTotalsFormValues = QuoteTotalsFormValues> = {
+	control: Control<TFormValues>;
 	currency?: string;
 	className?: string;
 };
@@ -34,8 +38,16 @@ function AnimatedNumber({ value }: { value: number }) {
 	return <motion.span>{display}</motion.span>;
 }
 
-export function QuoteTotals({ control, currency = "EUR", className }: QuoteTotalsProps) {
-	const items = useWatch({ control, name: "items" }) as QuoteItemCreateInput[];
+export function QuoteTotals<TFormValues extends QuoteTotalsFormValues = QuoteTotalsFormValues>({
+	control,
+	currency = "EUR",
+	className,
+}: QuoteTotalsProps<TFormValues>) {
+	const items =
+		(useWatch({
+			control,
+			name: "items",
+		}) as QuoteItemCreateInput[] | undefined) ?? [];
 
 	const subtotal = items.reduce((acc, item) => {
 		return acc + (item.quantity || 0) * (item.unitPrice || 0);

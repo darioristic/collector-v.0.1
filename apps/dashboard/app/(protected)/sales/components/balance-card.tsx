@@ -2,7 +2,6 @@ import { ArrowUpIcon } from "lucide-react";
 import * as React from "react";
 import {
 	Card,
-	CardContent,
 	CardDescription,
 	CardHeader,
 } from "@/components/ui/card";

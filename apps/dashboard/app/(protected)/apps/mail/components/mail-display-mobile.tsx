@@ -58,7 +58,7 @@ export function MailDisplayMobile({ mail }: MailDisplayProps) {
 		if (!open) {
 			setSelectedMail(null);
 		}
-	}, [open]);
+	}, [open, setSelectedMail]);
 
 	return (
 		<Drawer open={open} onOpenChange={setOpen}>

@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, or } from "drizzle-orm";
+import { and, desc, eq, ilike } from "drizzle-orm";
 
 import { db } from "../../db/index.js";
 import { employees, timeOffRequests, users } from "../../db/schema/index.js";

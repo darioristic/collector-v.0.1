@@ -40,7 +40,6 @@ import {
   MessageSquareIcon,
   SettingsIcon,
   ShoppingBagIcon,
-  SlidersHorizontalIcon,
   UserIcon,
   UsersIcon,
   WalletMinimalIcon

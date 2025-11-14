@@ -24,6 +24,10 @@ import type {
 } from "@crm/types";
 import type { CacheService } from "../../lib/cache.service";
 
+type OrderInsert = typeof orders.$inferInsert;
+type OrderRow = typeof orders.$inferSelect;
+type OrderItemRow = typeof orderItems.$inferSelect;
+
 export class OrdersServiceOptimized {
   constructor(
     private database: AppDatabase,
@@ -96,7 +100,10 @@ export class OrdersServiceOptimized {
     const total = data[0]?.totalCount ? Number(data[0].totalCount) : 0;
 
     const result = {
-      data: data.map((o) => this.mapOrderFromDb(o)),
+      data: data.map((o) => {
+        const { totalCount: _totalCount, ...orderRow } = o;
+        return this.mapOrderFromDb(orderRow as OrderRow);
+      }),
       total
     };
 
@@ -249,7 +256,7 @@ export class OrdersServiceOptimized {
       // Use transaction
       await this.database.transaction(async (tx) => {
         // Update order
-        const updateData: any = {};
+        const updateData: Partial<OrderInsert> = {};
         if (input.quoteId !== undefined) updateData.quoteId = input.quoteId || null;
         if (input.companyId !== undefined) updateData.companyId = input.companyId || null;
         if (input.contactId !== undefined) updateData.contactId = input.contactId || null;
@@ -338,7 +345,7 @@ export class OrdersServiceOptimized {
     return { subtotal, tax, total };
   }
 
-  private mapOrderFromDb(dbOrder: any): Order {
+  private mapOrderFromDb(dbOrder: OrderRow): Order {
     return {
       id: dbOrder.id,
       orderNumber: dbOrder.orderNumber,
@@ -358,7 +365,7 @@ export class OrdersServiceOptimized {
     };
   }
 
-  private mapOrderItemFromDb(dbItem: any): OrderItem {
+  private mapOrderItemFromDb(dbItem: OrderItemRow): OrderItem {
     return {
       id: dbItem.id,
       orderId: dbItem.orderId,

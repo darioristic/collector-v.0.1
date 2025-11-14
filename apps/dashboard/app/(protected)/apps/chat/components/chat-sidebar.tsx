@@ -15,7 +15,6 @@ import useChatStore, {
 	type ChatItem,
 } from "@/app/(protected)/apps/chat/useChatStore";
 import {
-	fetchTeamMembers,
 	type TeamMember,
 } from "@/app/(protected)/settings/teams/api";
 import {
@@ -164,7 +163,10 @@ export function ChatSidebar() {
 		});
 	}, [employeesQuery.data, usersQuery.data]);
 
-	const conversations = conversationsQuery.data || [];
+	const conversations = React.useMemo(
+		() => conversationsQuery.data ?? [],
+		[conversationsQuery.data],
+	);
 	const currentUserId = user?.id;
 
 	const filteredConversations = React.useMemo(() => {

@@ -1,7 +1,6 @@
 "use client";
 
 import type {
-	Invoice,
 	InvoiceCreateInput,
 	InvoiceUpdateInput,
 } from "@crm/types";

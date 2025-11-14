@@ -11,6 +11,7 @@ import openApiPlugin from "../../src/plugins/openapi";
 import salesRoutes from "../../src/modules/sales/sales.routes";
 import healthRoutes from "../../src/routes/health";
 import type { AppDatabase } from "../../src/db";
+import { createTestPool } from "../utils/test-db";
 
 const parseBody = <T>(responseBody: string): T => JSON.parse(responseBody) as T;
 
@@ -31,9 +32,6 @@ const buildTestServer = async (database: AppDatabase): Promise<FastifyInstance> 
 };
 
 describe("Invoices API routes", () => {
-	const connectionString =
-		process.env.TEST_DATABASE_URL ?? "postgresql://collector:collector@localhost:5432/collector";
-
 	let pool: Pool;
 	let client: PoolClient;
 	let app: FastifyInstance;
@@ -42,7 +40,7 @@ describe("Invoices API routes", () => {
 	let orderId: number;
 
 	beforeAll(async () => {
-		pool = new Pool({ connectionString });
+		pool = await createTestPool();
 	});
 
 	afterAll(async () => {
@@ -91,7 +89,7 @@ describe("Invoices API routes", () => {
 
 	it("should list invoices", async () => {
 		// Create a test invoice
-		const invoiceResult = await client.query(
+		await client.query(
 			`INSERT INTO invoices (invoice_number, company_id, order_id, invoice_date, due_date, currency, subtotal, tax, total, status, created_at, updated_at)
        VALUES ('INV-001', $1, $2, CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days', 'USD', 100.00, 20.00, 120.00, 'draft', NOW(), NOW())
        RETURNING id`,
@@ -110,7 +108,7 @@ describe("Invoices API routes", () => {
 	});
 
 	it("should get invoice by id", async () => {
-		const invoiceResult = await client.query(
+		await client.query(
 			`INSERT INTO invoices (invoice_number, company_id, order_id, invoice_date, due_date, currency, subtotal, tax, total, status, created_at, updated_at)
        VALUES ('INV-002', $1, $2, CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days', 'USD', 200.00, 40.00, 240.00, 'draft', NOW(), NOW())
        RETURNING id`,
@@ -159,7 +157,7 @@ describe("Invoices API routes", () => {
 	});
 
 	it("should update an invoice", async () => {
-		const invoiceResult = await client.query(
+		await client.query(
 			`INSERT INTO invoices (invoice_number, company_id, order_id, invoice_date, due_date, currency, subtotal, tax, total, status, created_at, updated_at)
        VALUES ('INV-004', $1, $2, CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days', 'USD', 100.00, 20.00, 120.00, 'draft', NOW(), NOW())
        RETURNING id`,
@@ -184,7 +182,7 @@ describe("Invoices API routes", () => {
 	});
 
 	it("should delete an invoice", async () => {
-		const invoiceResult = await client.query(
+		await client.query(
 			`INSERT INTO invoices (invoice_number, company_id, order_id, invoice_date, due_date, currency, subtotal, tax, total, status, created_at, updated_at)
        VALUES ('INV-005', $1, $2, CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days', 'USD', 100.00, 20.00, 120.00, 'draft', NOW(), NOW())
        RETURNING id`,
@@ -217,10 +215,9 @@ describe("Invoices API routes", () => {
 	});
 
 	it("should filter invoices by status", async () => {
-		const invoiceResult = await client.query(
+		await client.query(
 			`INSERT INTO invoices (invoice_number, company_id, order_id, invoice_date, due_date, currency, subtotal, tax, total, status, created_at, updated_at)
-       VALUES ('INV-006', $1, $2, CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days', 'USD', 100.00, 20.00, 120.00, 'draft', NOW(), NOW())
-       RETURNING id`,
+       VALUES ('INV-006', $1, $2, CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days', 'USD', 100.00, 20.00, 120.00, 'draft', NOW(), NOW())`,
 			[companyId, orderId]
 		);
 

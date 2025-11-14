@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { QuotesService } from "./quotes.service.js";
-import type { QuoteCreateInput, QuoteSortField, QuoteUpdateInput } from "@crm/types";
+import { QUOTE_STATUSES, type QuoteCreateInput, type QuoteSortField, type QuoteStatus, type QuoteUpdateInput } from "@crm/types";
 
 type ListRequest = FastifyRequest<{
   Querystring: {
@@ -41,10 +41,11 @@ type DeleteRequest = FastifyRequest<{
  */
 export const listQuotesHandler = async (request: ListRequest, reply: FastifyReply) => {
   const service = new QuotesService(request.db, request.cache);
+  const status = normalizeQuoteStatus(request.query.status);
   const filters = {
     companyId: request.query.companyId,
     contactId: request.query.contactId,
-    status: request.query.status as any,
+    status,
     search: request.query.search,
     limit: request.query.limit ? Number.parseInt(request.query.limit, 10) : undefined,
     offset: request.query.offset ? Number.parseInt(request.query.offset, 10) : undefined,
@@ -146,4 +147,11 @@ export const deleteQuoteHandler = async (request: DeleteRequest, reply: FastifyR
   }
 
   await reply.status(204).send();
+};
+
+const normalizeQuoteStatus = (status?: string): QuoteStatus | undefined => {
+  if (!status) {
+    return undefined;
+  }
+  return QUOTE_STATUSES.includes(status as QuoteStatus) ? (status as QuoteStatus) : undefined;
 };

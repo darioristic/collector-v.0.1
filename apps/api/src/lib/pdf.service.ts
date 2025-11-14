@@ -77,6 +77,19 @@ export interface ProjectReportPDFData {
 	}>;
 }
 
+interface ModuleNotFoundError extends Error {
+  code?: string;
+}
+
+function isModuleNotFoundError(error: unknown): error is ModuleNotFoundError {
+  return Boolean(
+    error &&
+    typeof error === "object" &&
+    "code" in error &&
+    typeof (error as { code?: unknown }).code === "string"
+  );
+}
+
 export class PDFService {
 	/**
 	 * Generate PDF for invoice
@@ -85,7 +98,7 @@ export class PDFService {
 	async generateInvoicePDF(data: InvoicePDFData, options: PDFOptions = {}): Promise<Readable> {
 		try {
 			// Dynamic import to avoid requiring pdfkit at build time
-			// @ts-ignore - pdfkit may not be installed, handled at runtime
+			// @ts-expect-error - pdfkit may not be installed, handled at runtime
 			const PDFDocument = (await import("pdfkit")).default;
 			const doc = new PDFDocument({
 				margin: options.margin ?? 50,
@@ -169,12 +182,12 @@ export class PDFService {
 			return doc as unknown as Readable;
 		} catch (error) {
 			// If pdfkit is not installed, throw helpful error
-			if ((error as any)?.code === "MODULE_NOT_FOUND") {
+			if (isModuleNotFoundError(error) && error.code === "MODULE_NOT_FOUND") {
 				throw new Error(
 					"PDFKit is not installed. Please run: bun add pdfkit @types/pdfkit"
 				);
 			}
-			throw error;
+			throw error instanceof Error ? error : new Error("PDF generation failed");
 		}
 	}
 
@@ -183,7 +196,7 @@ export class PDFService {
 	 */
 	async generateQuotePDF(data: QuotePDFData, options: PDFOptions = {}): Promise<Readable> {
 		try {
-			// @ts-ignore - pdfkit may not be installed, handled at runtime
+			// @ts-expect-error - pdfkit may not be installed, handled at runtime
 			const PDFDocument = (await import("pdfkit")).default;
 			const doc = new PDFDocument({
 				margin: options.margin ?? 50,
@@ -263,10 +276,10 @@ export class PDFService {
 			doc.end();
 			return doc as unknown as Readable;
 		} catch (error) {
-			if ((error as any)?.code === "MODULE_NOT_FOUND") {
+			if (isModuleNotFoundError(error) && error.code === "MODULE_NOT_FOUND") {
 				throw new Error("PDFKit is not installed. Please run: bun add pdfkit @types/pdfkit");
 			}
-			throw error;
+			throw error instanceof Error ? error : new Error("PDF generation failed");
 		}
 	}
 
@@ -278,7 +291,7 @@ export class PDFService {
 		options: PDFOptions = {}
 	): Promise<Readable> {
 		try {
-			// @ts-ignore - pdfkit may not be installed, handled at runtime
+			// @ts-expect-error - pdfkit may not be installed, handled at runtime
 			const PDFDocument = (await import("pdfkit")).default;
 			const doc = new PDFDocument({
 				margin: options.margin ?? 50,
@@ -360,10 +373,10 @@ export class PDFService {
 			doc.end();
 			return doc as unknown as Readable;
 		} catch (error) {
-			if ((error as any)?.code === "MODULE_NOT_FOUND") {
+			if (isModuleNotFoundError(error) && error.code === "MODULE_NOT_FOUND") {
 				throw new Error("PDFKit is not installed. Please run: bun add pdfkit @types/pdfkit");
 			}
-			throw error;
+			throw error instanceof Error ? error : new Error("PDF generation failed");
 		}
 	}
 

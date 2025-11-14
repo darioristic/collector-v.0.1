@@ -16,7 +16,6 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -31,7 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 export function ChatFooter() {
 	const [message, setMessage] = useState("");
 	const [isSending, setIsSending] = useState(false);
-	const { selectedChat, addMessage, removeMessage, updateMessage } = useChatStore();
+	const { selectedChat, addMessage, removeMessage } = useChatStore();
 	const { user } = useAuth();
 	const { toast } = useToast();
 

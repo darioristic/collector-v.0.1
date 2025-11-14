@@ -1,5 +1,20 @@
-import type { Order, OrderCreateInput, OrderUpdateInput } from "@crm/types";
+import type {
+	Order,
+	OrderCreateInput,
+	OrderStatus,
+	OrderUpdateInput,
+} from "@crm/types";
 import { ensureResponse, getApiUrl } from "@/src/lib/fetch-utils";
+
+type OrderListFilters = {
+	companyId?: string;
+	contactId?: string;
+	quoteId?: number;
+	status?: OrderStatus;
+	search?: string;
+	limit?: number;
+	offset?: number;
+};
 
 type OrdersListResponse = {
 	data: Order[];
@@ -11,7 +26,7 @@ type OrdersListResponse = {
 export const orderKeys = {
 	all: ["orders"] as const,
 	lists: () => [...orderKeys.all, "list"] as const,
-	list: (filters?: Record<string, any>) =>
+	list: (filters?: OrderListFilters) =>
 		filters ? ([...orderKeys.lists(), filters] as const) : orderKeys.lists(),
 	details: () => [...orderKeys.all, "detail"] as const,
 	detail: (id: number) => [...orderKeys.details(), id] as const,
@@ -22,15 +37,7 @@ export const orderKeys = {
 	byQuote: (quoteId: number) => [...orderKeys.lists(), { quoteId }] as const,
 };
 
-export async function fetchOrders(filters?: {
-	companyId?: string;
-	contactId?: string;
-	quoteId?: number;
-	status?: string;
-	search?: string;
-	limit?: number;
-	offset?: number;
-}): Promise<OrdersListResponse> {
+export async function fetchOrders(filters?: OrderListFilters): Promise<OrdersListResponse> {
 	const params = new URLSearchParams();
 	if (filters?.companyId) params.append("companyId", filters.companyId);
 	if (filters?.contactId) params.append("contactId", filters.contactId);

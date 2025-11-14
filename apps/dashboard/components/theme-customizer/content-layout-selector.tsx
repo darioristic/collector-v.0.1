@@ -3,6 +3,7 @@
 import { useThemeConfig } from "@/components/active-theme";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import type { ThemeType } from "@/lib/themes";
 
 export function ContentLayoutSelector() {
 	const { theme, setTheme } = useThemeConfig();
@@ -13,9 +14,15 @@ export function ContentLayoutSelector() {
 			<ToggleGroup
 				value={theme.contentLayout}
 				type="single"
-				onValueChange={(value) =>
-					setTheme({ ...theme, contentLayout: value as any })
-				}
+				onValueChange={(value) => {
+					if (!value) {
+						return;
+					}
+					setTheme({
+						...theme,
+						contentLayout: value as ThemeType["contentLayout"],
+					});
+				}}
 				className="*:border-input w-full gap-4 *:rounded-md *:border"
 			>
 				<ToggleGroupItem variant="outline" value="full">

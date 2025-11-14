@@ -51,7 +51,7 @@ const metricsRoutes: FastifyPluginAsync = async (fastify) => {
 				return reply.status(503).send({ error: "Metrics service not available" });
 			}
 
-			const metrics = (fastify as any).metrics;
+			const metrics = fastify.metrics;
 			const snapshot = metrics.getMetrics();
 
 			return reply.status(200).send(snapshot);
@@ -81,7 +81,7 @@ const metricsRoutes: FastifyPluginAsync = async (fastify) => {
 				return reply.status(503).send({ error: "Metrics service not available" });
 			}
 
-			const metrics = (fastify as any).metrics;
+			const metrics = fastify.metrics;
 			metrics.reset();
 
 			return reply.status(200).send({ success: true, message: "Metrics reset successfully" });

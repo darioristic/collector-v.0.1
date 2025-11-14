@@ -25,7 +25,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -213,67 +212,8 @@ export function DataTable<TData, TValue>({
 											// Find the actual table row for this task
 											const tableRow = tableRows.get(task.id);
 
-											// If row not found, create a minimal fallback row object
 											if (!tableRow) {
-												return (
-													<TableRow
-														key={task.id}
-														className="bg-background"
-													>
-														{columns.map((column, colIdx) => {
-															// For select column, render disabled checkbox
-															if (column.id === "select") {
-																return (
-																	<TableCell key={`${task.id}-${colIdx}`}>
-																		<Checkbox
-																			checked={false}
-																			disabled
-																			aria-label="Select row"
-																			className="translate-y-[2px]"
-																		/>
-																	</TableCell>
-																);
-															}
-
-															// Create minimal cell context for other columns
-															const cellContext = {
-																row: {
-																	original: task,
-																	id: task.id,
-																	getValue: (key: string) => {
-																		if (key === "title") return task.title;
-																		if (key === "assignee") return task.assignee;
-																		if (key === "status") return task.status;
-																		if (key === "dueDate") return task.dueDate;
-																		return undefined;
-																	},
-																},
-																column: {
-																	id: column.id || String(colIdx),
-																	columnDef: column,
-																},
-																getValue: (key: string) => {
-																	if (key === "title") return task.title;
-																	if (key === "assignee") return task.assignee;
-																	if (key === "status") return task.status;
-																	if (key === "dueDate") return task.dueDate;
-																	return undefined;
-																},
-															};
-
-															return (
-																<TableCell key={`${task.id}-${colIdx}`}>
-																	{column.cell
-																		? flexRender(
-																				column.cell,
-																				cellContext as any,
-																			)
-																		: null}
-																</TableCell>
-															);
-														})}
-													</TableRow>
-												);
+												return null;
 											}
 
 											// Use the actual table row with all TanStack Table methods

@@ -236,6 +236,13 @@ export class CacheService {
 	}
 
 	/**
+	 * Expose underlying Redis client for plugins that need direct access
+	 */
+	getRedisClient(): Redis | null {
+		return this.redis;
+	}
+
+	/**
 	 * Check Redis health status
 	 * Returns status and response time in milliseconds
 	 */

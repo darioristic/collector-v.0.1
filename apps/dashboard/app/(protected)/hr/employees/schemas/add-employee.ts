@@ -3,7 +3,6 @@ import { z } from "zod";
 import {
 	employmentStatusSchema,
 	employmentStatusValues,
-	employmentTypeSchema,
 } from "@/lib/validations/employees";
 
 export const departmentValues = [

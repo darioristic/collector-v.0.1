@@ -13,13 +13,13 @@ type ProjectHeaderProps = {
 };
 
 export function ProjectHeader({
-	projectId,
-	projectName = "Product Sprints",
-	viewMode,
-	onViewModeChange,
-	onGroupByStatus,
-	groupByStatus = false,
-	onCreateIssue,
+	projectId: _projectId,
+	projectName: _projectName = "Product Sprints",
+	viewMode: _viewMode,
+	onViewModeChange: _onViewModeChange,
+	onGroupByStatus: _onGroupByStatus,
+	groupByStatus: _groupByStatus = false,
+	onCreateIssue: _onCreateIssue,
 }: ProjectHeaderProps) {
 	return null;
 }

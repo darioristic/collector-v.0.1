@@ -1,6 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { PaymentsService } from "./payments.service.js";
 import type { PaymentCreateBody, PaymentIdParams } from "./payments.schema.js";
+import { PAYMENT_STATUSES, type PaymentStatus } from "@crm/types";
 
 type ListRequest = FastifyRequest<{
   Querystring: {
@@ -16,9 +17,10 @@ type DeleteRequest = FastifyRequest<{ Params: PaymentIdParams }>;
 
 export const listPaymentsHandler = async (request: ListRequest, reply: FastifyReply) => {
   const service = new PaymentsService(request.db);
+  const status = normalizePaymentStatus(request.query.status);
   const filters = {
     invoiceId: request.query.invoiceId,
-    status: request.query.status as any,
+    status,
     limit: request.query.limit ? Number(request.query.limit) : undefined,
     offset: request.query.offset ? Number(request.query.offset) : undefined
   };
@@ -68,4 +70,11 @@ export const deletePaymentHandler = async (request: DeleteRequest, reply: Fastif
       message: error instanceof Error ? error.message : "Payment not found"
     });
   }
+};
+
+const normalizePaymentStatus = (status?: string): PaymentStatus | undefined => {
+  if (!status) {
+    return undefined;
+  }
+  return PAYMENT_STATUSES.includes(status as PaymentStatus) ? (status as PaymentStatus) : undefined;
 };

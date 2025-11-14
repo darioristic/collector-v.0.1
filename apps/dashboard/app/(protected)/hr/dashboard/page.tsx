@@ -2,12 +2,9 @@ import { Download } from "lucide-react";
 import {
 	EcommerceBestSellingProductsCard,
 	EcommerceCustomerReviewsCard,
-	EcommerceNewCustomersCard,
 	EcommerceRecentOrdersCard,
 	EcommerceReturnRateCard,
-	EcommerceRevenueCard,
 	EcommerceSalesByLocationCard,
-	EcommerceSalesCard,
 	EcommerceTotalRevenueCard,
 	EcommerceVisitBySourceCard,
 	EcommerceWelcomeCard,

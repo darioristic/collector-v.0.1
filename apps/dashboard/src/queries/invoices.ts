@@ -1,9 +1,19 @@
 import type {
 	Invoice,
 	InvoiceCreateInput,
+	InvoiceStatus,
 	InvoiceUpdateInput,
 } from "@crm/types";
 import { ensureResponse, getApiUrl } from "@/src/lib/fetch-utils";
+
+type InvoiceListFilters = {
+	customerId?: string;
+	orderId?: number;
+	status?: InvoiceStatus;
+	search?: string;
+	limit?: number;
+	offset?: number;
+};
 
 type InvoicesListResponse = {
 	data: Invoice[];
@@ -15,7 +25,7 @@ type InvoicesListResponse = {
 export const invoiceKeys = {
 	all: ["invoices"] as const,
 	lists: () => [...invoiceKeys.all, "list"] as const,
-	list: (filters?: Record<string, any>) =>
+	list: (filters?: InvoiceListFilters) =>
 		filters
 			? ([...invoiceKeys.lists(), filters] as const)
 			: invoiceKeys.lists(),
@@ -26,14 +36,9 @@ export const invoiceKeys = {
 	byOrder: (orderId: number) => [...invoiceKeys.lists(), { orderId }] as const,
 };
 
-export async function fetchInvoices(filters?: {
-	customerId?: string;
-	orderId?: number;
-	status?: string;
-	search?: string;
-	limit?: number;
-	offset?: number;
-}): Promise<InvoicesListResponse> {
+export async function fetchInvoices(
+	filters?: InvoiceListFilters,
+): Promise<InvoicesListResponse> {
 	const params = new URLSearchParams();
 	if (filters?.customerId) params.append("customerId", filters.customerId);
 	if (filters?.orderId) params.append("orderId", filters.orderId.toString());

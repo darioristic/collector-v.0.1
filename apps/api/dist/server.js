@@ -79,15 +79,16 @@ const registerModules = async (app) => {
         }
         const modulePlugin = await loadModule(app, entry.name);
         if (!modulePlugin) {
-            throw new Error(`Module "${entry.name}" failed to load or is missing a default export.`);
+            app.log.warn({ module: entry.name }, "Module failed to load or is missing a default export, skipping");
+            continue;
         }
         try {
             await app.register(modulePlugin, { prefix: "/api" });
             app.log.info({ module: entry.name }, "Module registered");
         }
         catch (error) {
-            app.log.error({ err: error, module: entry.name }, "Failed to register module");
-            throw error;
+            app.log.error({ err: error, module: entry.name }, "Failed to register module, skipping");
+            continue;
         }
     }
 };

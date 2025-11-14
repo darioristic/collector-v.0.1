@@ -1,7 +1,13 @@
 "use client";
 
 import { useMemo } from "react";
-import { useFieldArray, type Control, useWatch, useFormContext } from "react-hook-form";
+import {
+	useFieldArray,
+	useWatch,
+	useFormContext,
+	type Control,
+	type FieldValues,
+} from "react-hook-form";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
 	flexRender,
@@ -26,29 +32,35 @@ type QuoteItem = QuoteItemCreateInput & {
 	id: string;
 };
 
-type QuoteItemsTableProps = {
-	control: Control<any>;
+type QuoteItemsFormValues = FieldValues & {
+	items: QuoteItemCreateInput[];
 };
 
-export function QuoteItemsTable({ control }: QuoteItemsTableProps) {
-	const { fields, append, remove } = useFieldArray({
+type QuoteItemsTableProps<TFormValues extends QuoteItemsFormValues = QuoteItemsFormValues> = {
+	control: Control<TFormValues>;
+};
+
+export function QuoteItemsTable<TFormValues extends QuoteItemsFormValues = QuoteItemsFormValues>({
+	control,
+}: QuoteItemsTableProps<TFormValues>) {
+	const { fields, append, remove } = useFieldArray<TFormValues, "items", "id">({
 		control,
 		name: "items",
 	});
 
-	const { setValue } = useFormContext();
-	const items = useWatch({ control, name: "items" }) as QuoteItemCreateInput[];
+	const { setValue } = useFormContext<TFormValues>();
+	const items =
+		(useWatch({
+			control,
+			name: "items",
+		}) as QuoteItemCreateInput[] | undefined) ?? [];
 
-	const tableItems: QuoteItem[] = useMemo(
-		() =>
-			fields.map((field, index) => ({
-				id: field.id,
-				description: items[index]?.description || "",
-				quantity: items[index]?.quantity || 1,
-				unitPrice: items[index]?.unitPrice || 0,
-			})),
-		[fields, items],
-	);
+	const tableItems: QuoteItem[] = fields.map((field, index) => ({
+		id: field.id,
+		description: items[index]?.description || "",
+		quantity: items[index]?.quantity || 1,
+		unitPrice: items[index]?.unitPrice || 0,
+	}));
 
 	const columns = useMemo<ColumnDef<QuoteItem>[]>(
 		() => [
@@ -131,12 +143,19 @@ export function QuoteItemsTable({ control }: QuoteItemsTableProps) {
 							onKeyDown={(e) => {
 								if (e.key === "Enter") {
 									e.preventDefault();
-									// Add new row
-									append({ description: "", quantity: 1, unitPrice: 0 });
+									const emptyItem: QuoteItemCreateInput = {
+										description: "",
+										quantity: 1,
+										unitPrice: 0,
+									};
+									append(emptyItem);
 									// Focus first input of new row after a short delay
 									setTimeout(() => {
-										const tbody = e.currentTarget.closest("tbody");
-										const newRow = tbody?.querySelector("tr:last-child input") as HTMLInputElement;
+										const tbody =
+											e.currentTarget.closest("tbody");
+										const newRow = tbody?.querySelector(
+											"tr:last-child input",
+										) as HTMLInputElement;
 										newRow?.focus();
 									}, 100);
 								}
@@ -180,7 +199,7 @@ export function QuoteItemsTable({ control }: QuoteItemsTableProps) {
 				},
 			},
 		],
-		[control, fields.length, remove],
+		[append, fields.length, remove, setValue],
 	);
 
 	const table = useReactTable({

@@ -1,6 +1,5 @@
 import { companies, users } from "../schema/core";
 import type { DashboardDatabase } from "./seed-runner";
-import { eq } from "drizzle-orm";
 
 type UsersCompaniesSeedResult = {
 	usersInserted: number;

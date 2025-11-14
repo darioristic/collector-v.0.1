@@ -1,10 +1,17 @@
-import type { Payment, PaymentCreateInput } from "@crm/types";
+import type { Payment, PaymentCreateInput, PaymentStatus } from "@crm/types";
 import { ensureResponse, getApiUrl } from "@/src/lib/fetch-utils";
+
+type PaymentListFilters = {
+	invoiceId?: string;
+	status?: PaymentStatus;
+	limit?: number;
+	offset?: number;
+};
 
 export const paymentKeys = {
 	all: ["payments"] as const,
 	lists: () => [...paymentKeys.all, "list"] as const,
-	list: (filters?: Record<string, any>) =>
+	list: (filters?: PaymentListFilters) =>
 		filters
 			? ([...paymentKeys.lists(), filters] as const)
 			: paymentKeys.lists(),
@@ -21,12 +28,9 @@ export type PaymentsListResponse = {
 	offset: number;
 };
 
-export async function fetchPayments(filters?: {
-	invoiceId?: string;
-	status?: string;
-	limit?: number;
-	offset?: number;
-}): Promise<PaymentsListResponse> {
+export async function fetchPayments(
+	filters?: PaymentListFilters,
+): Promise<PaymentsListResponse> {
 	const params = new URLSearchParams();
 	if (filters?.invoiceId) params.append("invoiceId", filters.invoiceId);
 	if (filters?.status) params.append("status", filters.status);

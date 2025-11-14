@@ -213,7 +213,7 @@ export const metricsPlugin: FastifyPluginAsync = async (fastify: FastifyInstance
 
 	// Add onResponse hook to track response times
 	fastify.addHook("onResponse", async (request, reply) => {
-		const startTime = (request as any).startTime as number | undefined;
+		const startTime = request.startTime;
 		if (startTime) {
 			const duration = Date.now() - startTime;
 			const route = request.routerPath || request.url.split("?")[0];
@@ -223,7 +223,7 @@ export const metricsPlugin: FastifyPluginAsync = async (fastify: FastifyInstance
 
 	// Add onRequest hook to record start time
 	fastify.addHook("onRequest", async (request) => {
-		(request as any).startTime = Date.now();
+		request.startTime = Date.now();
 	});
 };
 
@@ -231,6 +231,10 @@ export const metricsPlugin: FastifyPluginAsync = async (fastify: FastifyInstance
 declare module "fastify" {
 	interface FastifyInstance {
 		metrics: MetricsService;
+	}
+
+	interface FastifyRequest {
+		startTime?: number;
 	}
 }
 

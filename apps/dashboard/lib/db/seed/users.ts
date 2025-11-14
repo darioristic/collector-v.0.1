@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 import { employees } from "../schema/employees";
 import { companies, users } from "../schema/core";
 import type { DashboardDatabase } from "./seed-runner";

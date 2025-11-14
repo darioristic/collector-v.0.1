@@ -169,8 +169,15 @@ const formatDateInput = (value?: Date | null) => {
 	return date.toISOString().split("T")[0] ?? "";
 };
 
+type EmployeeFormExtendedValues = EmployeeFormValues & {
+	projectAssigned?: string | null;
+	workHour?: string | null;
+	description?: string | null;
+	sendChangeToEmail?: boolean;
+};
+
 export const toEmployeeFormInput = (
-	values?: EmployeeFormValues | null,
+	values?: EmployeeFormExtendedValues | null,
 ): EmployeeFormInput => ({
 	firstName: values?.firstName ?? "",
 	lastName: values?.lastName ?? "",
@@ -188,10 +195,10 @@ export const toEmployeeFormInput = (
 		!Number.isNaN(values.salary)
 			? String(values.salary)
 			: "",
-	projectAssigned: (values as any)?.projectAssigned ?? "",
-	workHour: (values as any)?.workHour ?? "",
-	description: (values as any)?.description ?? "",
-	sendChangeToEmail: (values as any)?.sendChangeToEmail ?? false,
+	projectAssigned: values?.projectAssigned ?? "",
+	workHour: values?.workHour ?? "",
+	description: values?.description ?? "",
+	sendChangeToEmail: values?.sendChangeToEmail ?? false,
 });
 
 export const employeeFiltersSchema = z.object({

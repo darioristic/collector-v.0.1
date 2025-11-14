@@ -16,7 +16,6 @@ import {
 	ArrowDownIcon,
 	ArrowUpIcon,
 	ChevronDown,
-	ChevronDownIcon,
 } from "lucide-react";
 import * as React from "react";
 import { ExportButton } from "@/components/CardActionMenus";
@@ -46,7 +45,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
 
 type Order = {
 	id: string;

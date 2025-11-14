@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 
 import { ProjectsService } from "../src/modules/projects/projects.service";
 import type { CacheOptions, CacheService } from "../src/lib/cache.service";
+import { createTestPool } from "./utils/test-db";
 
 class InMemoryCache implements CacheService {
 	private store = new Map<string, unknown>();
@@ -67,9 +68,6 @@ class InMemoryCache implements CacheService {
 }
 
 describe("ProjectsService (integration)", () => {
-	const connectionString =
-		process.env.TEST_DATABASE_URL ?? "postgresql://collector:collector@localhost:5432/collector";
-
 	let pool: Pool;
 	let client: PoolClient;
 	let service: ProjectsService;
@@ -80,8 +78,8 @@ describe("ProjectsService (integration)", () => {
 	let assigneeId: string;
 	let projectSuffix: string;
 
-	beforeAll(() => {
-		pool = new Pool({ connectionString });
+	beforeAll(async () => {
+		pool = await createTestPool();
 	});
 
 	afterAll(async () => {

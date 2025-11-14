@@ -443,6 +443,20 @@ async function checkDockerAvailable(): Promise<boolean> {
 	}
 }
 
+async function checkDockerVersions(): Promise<{ docker: string; compose: string }> {
+  let dockerVersion = "unknown";
+  let composeVersion = "unknown";
+  try {
+    const { stdout } = await runCommand("docker", ["--version"], rootDir, { print: false });
+    dockerVersion = stdout.trim();
+  } catch {}
+  try {
+    const { stdout } = await runCommand("docker", ["compose", "version"], rootDir, { print: false });
+    composeVersion = stdout.trim();
+  } catch {}
+  return { docker: dockerVersion, compose: composeVersion };
+}
+
 async function checkDockerDaemon(): Promise<boolean> {
 	try {
 		// Check if docker info works
@@ -1055,6 +1069,100 @@ async function runSeed(modules: string[]): Promise<void> {
 	}
 }
 
+async function runResetAndSeed(modules: string[]): Promise<void> {
+  if (modules.length === 0) {
+    logger.info("No modules selected for seeding");
+    return;
+  }
+  logger.step("Reset database (drop + migrate) and seed selected modules...");
+  const args = [
+    "run",
+    "scripts/migrate-and-seed.ts",
+    "--drop",
+    "--seed-only",
+    "--only",
+    modules.join(","),
+  ];
+  try {
+    await runCommand("bun", args, apiDir);
+    logger.success("Database reset and seeding completed");
+  } catch (error) {
+    logger.error(
+      `Reset+Seed failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    throw error;
+  }
+}
+
+async function verifySeedIntegrity(): Promise<void> {
+  logger.step("Verifying data integrity after seeding...");
+  const checks: { table: string; query: string; min: number; label: string }[] = [
+    { table: "accounts", query: "SELECT COUNT(*) FROM accounts", min: 50, label: "Accounts" },
+    { table: "account_contacts", query: "SELECT COUNT(*) FROM account_contacts", min: 100, label: "Contacts" },
+    { table: "products", query: "SELECT COUNT(*) FROM products", min: 4, label: "Products" },
+    { table: "quotes", query: "SELECT COUNT(*) FROM quotes", min: 50, label: "Quotes" },
+    { table: "orders", query: "SELECT COUNT(*) FROM orders", min: 50, label: "Orders" },
+    { table: "invoices", query: "SELECT COUNT(*) FROM invoices", min: 50, label: "Invoices" },
+    { table: "payments", query: "SELECT COUNT(*) FROM payments", min: 25, label: "Payments" },
+    { table: "leads", query: "SELECT COUNT(*) FROM leads", min: 60, label: "Leads" },
+    { table: "opportunities", query: "SELECT COUNT(*) FROM opportunities", min: 45, label: "Opportunities" },
+    { table: "activities", query: "SELECT COUNT(*) FROM activities", min: 35, label: "CRM Activities" },
+    { table: "projects", query: "SELECT COUNT(*) FROM projects", min: 10, label: "Projects" },
+    { table: "project_tasks", query: "SELECT COUNT(*) FROM project_tasks", min: 200, label: "Project Tasks" },
+    { table: "users", query: "SELECT COUNT(*) FROM users", min: 3, label: "Users" },
+  ];
+  let failures = 0;
+  for (const c of checks) {
+    try {
+      const { stdout } = await runCommand(
+        "docker",
+        [
+          "exec",
+          "collector-postgres",
+          "psql",
+          "-U",
+          "collector",
+          "-d",
+          "collector",
+          "-t",
+          "-A",
+          "-c",
+          c.query,
+        ],
+        rootDir,
+        { print: false },
+      );
+      const count = parseInt(stdout.trim().split("\n").filter(Boolean).pop() || "0", 10);
+      if (Number.isFinite(count) && count >= c.min) {
+        logger.success(`${c.label}: ${count}`);
+      } else {
+        failures++;
+        logger.warn(`${c.label}: ${count} (expected ≥ ${c.min})`);
+      }
+    } catch (e) {
+      failures++;
+      const msg = e instanceof Error ? e.message : String(e);
+      logger.warn(`${c.label} check failed: ${msg}`);
+    }
+  }
+  if (failures === 0) {
+    logger.success("Data integrity checks passed");
+  } else {
+    logger.warn(`Data integrity checks found ${failures} issue(s)`);
+  }
+}
+
+async function restartDockerService(service: string): Promise<void> {
+  logger.info(`Restarting ${service}...`);
+  try {
+    await runCommand("docker", ["compose", "restart", service], rootDir);
+  } catch {
+    try {
+      await runCommand("docker", ["restart", `collector-${service}`], rootDir);
+    } catch {}
+  }
+}
+
 // ============================================================================
 // INFRASTRUCTURE SETUP
 // ============================================================================
@@ -1165,6 +1273,9 @@ async function setupInfrastructure(): Promise<{
 		}
 
 		logger.step("Checking Docker infrastructure status...");
+		const versions = await checkDockerVersions();
+		logger.info(`Docker: ${versions.docker || "unknown"}`);
+		logger.info(`Docker Compose: ${versions.compose || "unknown"}`);
 
 		// Check if all Docker services are already running
 		const allDockerServices = [
@@ -1391,6 +1502,8 @@ async function setupInfrastructure(): Promise<{
 			logger.warn(
 				`Redis service check failed: ${error instanceof Error ? error.message : String(error)}`,
 			);
+			await restartDockerService("redis");
+			await waitForDockerService("redis");
 		}
 
 		// Wait for application services (with longer timeout and don't fail)
@@ -1408,8 +1521,6 @@ async function setupInfrastructure(): Promise<{
 					`${service} service check failed: ${error instanceof Error ? error.message : String(error)}`,
 				);
 				logger.info(`💡 ${service} možda još uvek build-uje ili ima problema`);
-
-				// Try to read and display logs even if waitForDockerService failed
 				try {
 					const { stdout: logs } = await runCommand(
 						"docker",
@@ -1421,12 +1532,9 @@ async function setupInfrastructure(): Promise<{
 						logger.info(`\n📋 ${service} logs (last 50 lines):`);
 						console.log(logs);
 					}
-				} catch {
-					// Ignore log reading errors - container might not exist yet
-					logger.info(
-						`💡 Kontejner ${service} možda još nije kreiran. Proveri: docker compose ps`,
-					);
-				}
+				} catch {}
+				await restartDockerService(service);
+				await waitForDockerService(service, timeout);
 			}
 		}
 
@@ -1477,12 +1585,20 @@ async function main() {
 		await ensureDatabaseExists(connectionString);
 		await runMigrations();
 
-		// Step 3: Interactive seed menu
 		const { selectedModules, skipSeed } = await showSeedMenu();
-
-		// Step 4: Run seed if selected
 		if (!skipSeed && selectedModules.length > 0) {
-			await runSeed(selectedModules);
+			const rl = createReadlineInterface();
+			const choice = await question(
+				rl,
+				"\nOčistiti postojeće podatke pre seedovanja? (da/ne): ",
+			).then((a) => a.trim().toLowerCase());
+			rl.close();
+			if (choice === "da" || choice === "d") {
+				await runResetAndSeed(selectedModules);
+			} else {
+				await runSeed(selectedModules);
+			}
+			await verifySeedIntegrity();
 		} else {
 			logger.info("Seedovanje preskočeno.");
 		}

@@ -1,4 +1,4 @@
-import { ArrowRight, CircleCheck, PlusCircleIcon } from "lucide-react";
+import { ArrowRight, CircleCheck } from "lucide-react";
 import { AddReminderDialog } from "@/app/(protected)/projects/components/add-reminder-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

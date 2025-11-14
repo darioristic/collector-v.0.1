@@ -11,6 +11,7 @@ import openApiPlugin from "../../src/plugins/openapi";
 import salesRoutes from "../../src/modules/sales/sales.routes";
 import healthRoutes from "../../src/routes/health";
 import type { AppDatabase } from "../../src/db";
+import { createTestPool } from "../utils/test-db";
 
 const parseBody = <T>(responseBody: string): T => JSON.parse(responseBody) as T;
 
@@ -31,9 +32,6 @@ const buildTestServer = async (database: AppDatabase): Promise<FastifyInstance> 
 };
 
 describe("Orders API routes", () => {
-	const connectionString =
-		process.env.TEST_DATABASE_URL ?? "postgresql://collector:collector@localhost:5432/collector";
-
 	let pool: Pool;
 	let client: PoolClient;
 	let app: FastifyInstance;
@@ -41,7 +39,7 @@ describe("Orders API routes", () => {
 	let contactId: string;
 
 	beforeAll(async () => {
-		pool = new Pool({ connectionString });
+		pool = await createTestPool();
 	});
 
 	afterAll(async () => {

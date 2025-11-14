@@ -1,4 +1,12 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
+import {
+	ORDER_STATUSES,
+	type InvoiceStatus,
+	INVOICE_STATUSES,
+	type OrderStatus,
+	type QuoteStatus,
+	QUOTE_STATUSES,
+} from "@crm/types";
 import { OrdersService } from "./orders.service";
 import { QuotesService } from "./quotes.service";
 import { InvoicesService } from "./invoices.service";
@@ -36,7 +44,7 @@ export const exportOrdersHandler = async (request: ExportOrdersQuery, reply: Fas
 	const filters = {
 		companyId: request.query.companyId,
 		contactId: request.query.contactId,
-		status: request.query.status as any,
+		status: normalizeOrderStatus(request.query.status),
 		limit: 10000, // Large limit for export
 		offset: 0
 	};
@@ -72,7 +80,7 @@ export const exportQuotesHandler = async (request: ExportQuotesQuery, reply: Fas
 	const filters = {
 		companyId: request.query.companyId,
 		contactId: request.query.contactId,
-		status: request.query.status as any,
+		status: normalizeQuoteStatus(request.query.status),
 		limit: 10000,
 		offset: 0
 	};
@@ -107,7 +115,7 @@ export const exportInvoicesHandler = async (request: ExportInvoicesQuery, reply:
 	const filters = {
 		customerId: request.query.customerId,
 		orderId: request.query.orderId ? Number.parseInt(request.query.orderId, 10) : undefined,
-		status: request.query.status as any,
+		status: normalizeInvoiceStatus(request.query.status),
 		limit: 10000,
 		offset: 0
 	};
@@ -135,5 +143,32 @@ export const exportInvoicesHandler = async (request: ExportInvoicesQuery, reply:
 	reply.header("Content-Type", "text/csv; charset=utf-8");
 	reply.header("Content-Disposition", `attachment; filename="invoices-${new Date().toISOString().split("T")[0]}.csv"`);
 	return reply.send(csv);
+};
+
+const normalizeOrderStatus = (status?: string): OrderStatus | undefined => {
+	if (!status) {
+		return undefined;
+	}
+	return ORDER_STATUSES.includes(status as OrderStatus)
+		? (status as OrderStatus)
+		: undefined;
+};
+
+const normalizeQuoteStatus = (status?: string): QuoteStatus | undefined => {
+	if (!status) {
+		return undefined;
+	}
+	return QUOTE_STATUSES.includes(status as QuoteStatus)
+		? (status as QuoteStatus)
+		: undefined;
+};
+
+const normalizeInvoiceStatus = (status?: string): InvoiceStatus | undefined => {
+	if (!status) {
+		return undefined;
+	}
+	return INVOICE_STATUSES.includes(status as InvoiceStatus)
+		? (status as InvoiceStatus)
+		: undefined;
 };
 

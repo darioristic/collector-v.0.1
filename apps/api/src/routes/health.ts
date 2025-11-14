@@ -1,6 +1,8 @@
 import type { FastifyPluginAsync } from "fastify";
 import type { User } from "@crm/types";
 import { sql } from "drizzle-orm";
+import type { AppDatabase } from "../db/index.js";
+import type { CacheService } from "../lib/cache.service.js";
 
 const systemUser: User = {
   id: "system",
@@ -32,7 +34,9 @@ interface HealthStatus {
   };
 }
 
-const checkDatabase = async (db: any): Promise<{ status: "ok" | "down"; responseTime?: number; error?: string }> => {
+const checkDatabase = async (
+  db: AppDatabase
+): Promise<{ status: "ok" | "down"; responseTime?: number; error?: string }> => {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString || connectionString === "pg-mem") {
     return { status: "ok" }; // In-memory database is always available
@@ -55,7 +59,9 @@ const checkDatabase = async (db: any): Promise<{ status: "ok" | "down"; response
   }
 };
 
-const checkRedis = async (cache: any): Promise<{ status: "ok" | "down"; responseTime?: number; error?: string }> => {
+const checkRedis = async (
+  cache: CacheService | undefined
+): Promise<{ status: "ok" | "down"; responseTime?: number; error?: string }> => {
   if (!cache || typeof cache.checkHealth !== "function") {
     return { status: "down", error: "Cache service not available" };
   }

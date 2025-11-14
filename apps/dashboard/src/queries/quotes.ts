@@ -2,14 +2,26 @@ import type {
 	Quote,
 	QuoteCreateInput,
 	QuoteSortField,
+	QuoteStatus,
 	QuoteUpdateInput,
 } from "@crm/types";
 import { ensureResponse, getApiUrl } from "@/src/lib/fetch-utils";
 
+type QuoteListFilters = {
+	companyId?: string;
+	contactId?: string;
+	status?: QuoteStatus;
+	search?: string;
+	limit?: number;
+	offset?: number;
+	sortField?: QuoteSortField;
+	sortOrder?: "asc" | "desc";
+};
+
 export const quoteKeys = {
 	all: ["quotes"] as const,
 	lists: () => [...quoteKeys.all, "list"] as const,
-	list: (filters?: Record<string, any>) =>
+	list: (filters?: QuoteListFilters) =>
 		filters ? ([...quoteKeys.lists(), filters] as const) : quoteKeys.lists(),
 	details: () => [...quoteKeys.all, "detail"] as const,
 	detail: (id: number) => [...quoteKeys.details(), id] as const,
@@ -26,16 +38,9 @@ export type QuotesListResponse = {
 	offset: number;
 };
 
-export async function fetchQuotes(filters?: {
-	companyId?: string;
-	contactId?: string;
-	status?: string;
-	search?: string;
-	limit?: number;
-	offset?: number;
-	sortField?: QuoteSortField;
-	sortOrder?: "asc" | "desc";
-}): Promise<QuotesListResponse> {
+export async function fetchQuotes(
+	filters?: QuoteListFilters,
+): Promise<QuotesListResponse> {
 	const params = new URLSearchParams();
 	if (filters?.companyId) params.append("companyId", filters.companyId);
 	if (filters?.contactId) params.append("contactId", filters.contactId);

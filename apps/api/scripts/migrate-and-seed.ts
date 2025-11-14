@@ -304,7 +304,7 @@ async function main() {
     console.log("\n" + "=".repeat(60));
     success("All operations completed successfully!");
     console.log("=".repeat(60) + "\n");
-  } catch (err) {
+  } catch {
     console.log("\n" + "=".repeat(60));
     error("Operation failed");
     console.log("=".repeat(60) + "\n");

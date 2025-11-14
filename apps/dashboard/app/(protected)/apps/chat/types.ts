@@ -26,7 +26,7 @@ export type ChatMessageDataProps = {
 	path?: string;
 	duration?: string;
 	size?: string;
-	images?: [];
+	images?: string[];
 };
 
 export type UserPropsTypes = {

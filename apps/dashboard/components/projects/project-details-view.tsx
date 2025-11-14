@@ -3,7 +3,7 @@
 import { motion } from "motion/react";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Fragment, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
 	AlertDialog,
@@ -35,7 +35,6 @@ import {
 	useUpdateProjectTask,
 } from "@/src/hooks/useProjects";
 import type {
-	ProjectDetails,
 	ProjectStatus,
 	ProjectUpdatePayload,
 } from "@/src/types/projects";
@@ -72,13 +71,6 @@ export function ProjectDetailsView({ projectId }: ProjectDetailsViewProps) {
 	const projectTasksRef = useRef<ProjectTasksRef>(null);
 
 	const projectQuery = useProjectDetails(projectId, { suspense: true });
-
-	if (!projectQuery.data) {
-		return null;
-	}
-
-	const project = projectQuery.data as unknown as ProjectDetails;
-
 	const updateProjectMutation = useUpdateProject(projectId);
 	const deleteProjectMutation = useDeleteProject(projectId, {
 		onDeleted: () => router.push("/projects/list"),
@@ -86,9 +78,26 @@ export function ProjectDetailsView({ projectId }: ProjectDetailsViewProps) {
 	const updateTaskMutation = useUpdateProjectTask(projectId);
 	const deleteTaskMutation = useDeleteProjectTask(projectId);
 	const createTaskMutation = useCreateProjectTask(projectId);
+	const project = projectQuery.data;
 
 	const editForm = useForm<ProjectEditFormValues>({
 		defaultValues: {
+			name: "",
+			description: "",
+			status: "planned",
+			customer: "",
+			ownerId: "",
+			startDate: "",
+			dueDate: "",
+		},
+	});
+
+	useEffect(() => {
+		if (!project) {
+			return;
+		}
+
+		editForm.reset({
 			name: project.name,
 			description: project.description ?? "",
 			status: project.status,
@@ -96,8 +105,12 @@ export function ProjectDetailsView({ projectId }: ProjectDetailsViewProps) {
 			ownerId: project.owner?.id ?? "",
 			startDate: project.startDate ? project.startDate.slice(0, 10) : "",
 			dueDate: project.dueDate ? project.dueDate.slice(0, 10) : "",
-		},
-	});
+		});
+	}, [project, editForm]);
+
+	if (!project) {
+		return null;
+	}
 
 	const submitProjectUpdate = async (values: ProjectEditFormValues) => {
 		const payload: ProjectUpdatePayload = {
@@ -178,7 +191,6 @@ export function ProjectDetailsView({ projectId }: ProjectDetailsViewProps) {
 				<ProjectTasks
 					ref={projectTasksRef}
 					project={project}
-					projectId={projectId}
 					viewMode={viewMode}
 					onViewModeChange={setViewMode}
 					onUpdateTask={(taskId, payload) =>

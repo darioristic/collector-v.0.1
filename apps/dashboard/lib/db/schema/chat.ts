@@ -1,10 +1,8 @@
 import { relations } from "drizzle-orm";
 import {
-	boolean,
 	index,
 	pgEnum,
 	pgTable,
-	primaryKey,
 	text,
 	timestamp,
 	uniqueIndex,

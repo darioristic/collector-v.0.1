@@ -1,4 +1,4 @@
-import type { FastifyReply, FastifyRequest, RouteHandler } from "fastify";
+import type { FastifyReply, RouteHandler } from "fastify";
 
 import {
   createHttpError,

@@ -1,18 +1,7 @@
 "use client";
 
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useState } from "react";
-
-import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import type { Table as TanStackTable } from "@tanstack/react-table";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import type {
@@ -34,7 +23,6 @@ import type { ViewMode } from "./project-header";
 
 type ProjectTasksProps = {
 	project: ProjectDetails;
-	projectId: string;
 	viewMode: ViewMode;
 	onViewModeChange: (mode: ViewMode) => void;
 	onUpdateTask: (
@@ -51,7 +39,6 @@ export type ProjectTasksRef = {
 
 export const ProjectTasks = forwardRef<ProjectTasksRef, ProjectTasksProps>(({
 	project,
-	projectId,
 	viewMode,
 	onViewModeChange,
 	onUpdateTask,
@@ -63,7 +50,7 @@ export const ProjectTasks = forwardRef<ProjectTasksRef, ProjectTasksProps>(({
 	const [isDetailSheetOpen, setIsDetailSheetOpen] = useState(false);
 	const [isAddTaskDialogOpen, setIsAddTaskDialogOpen] = useState(false);
 	const [searchValue, setSearchValue] = useState("");
-	const [table, setTable] = useState<any>(null);
+	const [table, setTable] = useState<TanStackTable<ProjectTask> | null>(null);
 
 	// Expose openAddTaskDialog function to parent
 	useImperativeHandle(ref, () => ({
@@ -228,20 +215,20 @@ export const ProjectTasks = forwardRef<ProjectTasksRef, ProjectTasksProps>(({
 	return (
 		<>
 			<div className="space-y-6">
-				<ProjectTasksToolbar
-					searchValue={searchValue}
-					onSearchChange={setSearchValue}
-					viewMode={viewMode}
-					onViewModeChange={onViewModeChange}
-					table={table}
-					onExportCSV={() => {
-						// TODO: Implement CSV export
-						toast({
-							title: "Export CSV",
-							description: "CSV export functionality will be available soon.",
-						});
-					}}
-				/>
+                    <ProjectTasksToolbar
+                        searchValue={searchValue}
+                        onSearchChange={setSearchValue}
+                        viewMode={viewMode}
+                        onViewModeChange={onViewModeChange}
+                        table={table ?? undefined}
+                        onExportCSV={() => {
+                            // TODO: Implement CSV export
+                            toast({
+                                title: "Export CSV",
+                                description: "CSV export functionality will be available soon.",
+                            });
+                        }}
+                    />
 				{renderView()}
 			</div>
 

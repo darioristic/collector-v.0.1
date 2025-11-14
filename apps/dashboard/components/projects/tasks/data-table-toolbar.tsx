@@ -7,7 +7,7 @@ interface DataTableToolbarProps<TData> {
 }
 
 export function DataTableToolbar<TData>({
-	table,
+	table: _table,
 }: DataTableToolbarProps<TData>) {
 	return null;
 }

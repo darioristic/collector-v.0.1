@@ -1,4 +1,5 @@
-import { hash } from "bcryptjs";
+import bcrypt from "bcryptjs";
+const { hash } = bcrypt;
 import { eq, inArray, sql } from "drizzle-orm";
 
 import { db as defaultDb } from "../index";

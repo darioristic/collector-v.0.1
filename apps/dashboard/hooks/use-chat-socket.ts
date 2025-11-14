@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { io, type Socket } from "socket.io-client";
+import { io, type ManagerOptions, type Socket, type SocketOptions } from "socket.io-client";
 import { useAuth } from "@/components/providers/auth-provider";
 import type { ChatMessage } from "@/app/(protected)/apps/chat/api";
 
@@ -63,7 +63,7 @@ export function useChatSocket() {
 		// Create socket connection
 		// Note: Socket.IO will automatically send all cookies (including httpOnly)
 		// in the HTTP request, so the server can read them from headers
-		const socketOptions: any = {
+		const socketOptions: Partial<ManagerOptions & SocketOptions> = {
 			path: "/socket/teamchat",
 			transports: ["websocket", "polling"],
 			reconnection: true,
@@ -102,12 +102,12 @@ export function useChatSocket() {
 			setIsConnected(false);
 		});
 
-		newSocket.on("connect_error", (error) => {
+		newSocket.on("connect_error", (error: SocketConnectionError) => {
 			console.error("[chat-socket] ❌ Connection error:", {
 				message: error.message,
-				type: (error as any).type,
-				description: (error as any).description,
-				context: (error as any).context,
+				type: error.type,
+				description: error.description,
+				context: error.context,
 				error: error,
 			});
 			setIsConnected(false);
@@ -178,7 +178,7 @@ export function useChatSocket() {
 				socketRef.current = null;
 			}
 		};
-		// eslint-disable-next-line react-hooks/exhaustive-deps
+		 
 	}, [user?.id]);
 
 	// Join conversation room
@@ -246,3 +246,9 @@ export function useChatSocket() {
 		onConversationUpdate,
 	};
 }
+
+type SocketConnectionError = Error & {
+	type?: string;
+	description?: string;
+	context?: unknown;
+};

@@ -1,7 +1,6 @@
 "use client";
 
 import type {
-	Quote,
 	QuoteCreateInput,
 	QuoteSortField,
 	QuoteUpdateInput,

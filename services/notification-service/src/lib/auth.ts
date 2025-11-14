@@ -1,5 +1,5 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import jwt, { JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 
 export interface JWTPayload {
 	userId: string;
@@ -17,15 +17,16 @@ export function validateJWT(token: string): JWTPayload {
 	try {
 		const payload = jwt.verify(token, secret) as JWTPayload;
 		return payload;
-	} catch (error) {
-		if (error instanceof JsonWebTokenError) {
-			throw new Error("Invalid token");
-		}
-		if (error instanceof TokenExpiredError) {
-			throw new Error("Token expired");
-		}
-		throw error;
-	}
+  } catch (error) {
+    const err = error as { name?: string };
+    if (err?.name === "JsonWebTokenError") {
+      throw new Error("Invalid token");
+    }
+    if (err?.name === "TokenExpiredError") {
+      throw new Error("Token expired");
+    }
+    throw error;
+  }
 }
 
 export function extractTokenFromHeader(

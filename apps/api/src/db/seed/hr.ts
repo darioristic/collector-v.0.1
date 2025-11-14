@@ -111,14 +111,6 @@ const EMPLOYEES_DATA: EmployeeSeedData[] = [
 	},
 ];
 
-type HrSeedResult = {
-	employeesCreated: number;
-	roleAssignmentsCreated: number;
-	attendanceRecordsCreated: number;
-	timeOffRequestsCreated: number;
-	payrollEntriesCreated: number;
-};
-
 export const seedHr = async (database = defaultDb): Promise<void> => {
 	console.log("[HR Seed] Starting HR seed process...");
 	await database.transaction(async (tx) => {
@@ -771,7 +763,7 @@ export const seedHr = async (database = defaultDb): Promise<void> => {
 		);
 
 		for (let i = 0; i < Math.min(25, activeEmployees.length * 3); i++) {
-			const [employeeEmail, employeeId] = activeEmployees[i % activeEmployees.length];
+			const [employeeEmail] = activeEmployees[i % activeEmployees.length];
 			const managerEmail = managerMap.get(employeeEmail) || "marko.petrovic@collectorlabs.test";
 			const reviewerId = userMap.get(managerEmail.toLowerCase());
 

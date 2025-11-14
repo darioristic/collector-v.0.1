@@ -91,21 +91,23 @@ export function ChatContent() {
 		}
 	}, [messagesQuery.data, selectedChat?.conversationId, setMessages]);
 
+	const storedMessagesCount = selectedChat?.messages?.length ?? 0;
+
 	// Auto-scroll when messages load or change
 	useEffect(() => {
 		if (messagesQuery.data && messagesQuery.data.length > 0) {
 			// Scroll instantly on initial load, smooth on updates
-			const isInitialLoad = !selectedChat?.messages || selectedChat.messages.length === 0;
+			const isInitialLoad = storedMessagesCount === 0;
 			setTimeout(() => scrollToBottom(!isInitialLoad), 100);
 		}
-	}, [messagesQuery.data, scrollToBottom, selectedChat?.messages]);
+	}, [messagesQuery.data, scrollToBottom, storedMessagesCount]);
 
 	// Auto-scroll when new messages are added to store
 	useEffect(() => {
-		if (selectedChat?.messages && selectedChat.messages.length > 0) {
+		if (storedMessagesCount > 0) {
 			setTimeout(() => scrollToBottom(true), 50);
 		}
-	}, [selectedChat?.messages?.length, scrollToBottom]);
+	}, [storedMessagesCount, scrollToBottom]);
 
 	// Join conversation room when chat is selected and mark as read
 	useEffect(() => {
@@ -193,7 +195,15 @@ export function ChatContent() {
 			unsubscribeMessage();
 			unsubscribeUpdate();
 		};
-	}, [onNewMessage, onConversationUpdate, queryClient, selectedChat?.conversationId, addMessage]);
+	}, [
+		onNewMessage,
+		onConversationUpdate,
+		queryClient,
+		selectedChat,
+		selectedChat?.conversationId,
+		addMessage,
+		currentUserId,
+	]);
 
 	// Fix missing otherUser in store if it's not set but we can determine it
 	useEffect(() => {
@@ -308,7 +318,7 @@ export function ChatContent() {
 											own_message: ownMessage,
 											read: message.status === "read",
 											data: message.fileUrl
-												? ({
+												? {
 														file_name: message.fileMetadata || undefined,
 														path: message.fileUrl,
 														images:
@@ -319,7 +329,7 @@ export function ChatContent() {
 															message.type === "video"
 																? message.fileUrl
 																: undefined,
-													} as any)
+													}
 												: undefined,
 										}}
 										type={message.type}

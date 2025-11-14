@@ -9,7 +9,6 @@ import {
 	Loader2,
 	MoreHorizontal,
 	Plus,
-	TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";

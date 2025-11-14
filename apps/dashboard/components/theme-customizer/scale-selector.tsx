@@ -4,6 +4,7 @@ import { BanIcon } from "lucide-react";
 import { useThemeConfig } from "@/components/active-theme";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import type { ThemeType } from "@/lib/themes";
 
 export function ThemeScaleSelector() {
 	const { theme, setTheme } = useThemeConfig();
@@ -15,7 +16,12 @@ export function ThemeScaleSelector() {
 				<ToggleGroup
 					value={theme.scale}
 					type="single"
-					onValueChange={(value) => setTheme({ ...theme, scale: value as any })}
+					onValueChange={(value) => {
+						if (!value) {
+							return;
+						}
+						setTheme({ ...theme, scale: value as ThemeType["scale"] });
+					}}
 					className="*:border-input w-full gap-3 *:rounded-md *:border"
 				>
 					<ToggleGroupItem variant="outline" value="none">

@@ -4,8 +4,12 @@ import type { NextConfig } from "next";
 
 const isProduction = process.env.NODE_ENV === "production";
 
+// Only set assetPrefix when explicitly provided via env; avoid hard-coded domain
 const nextConfig: NextConfig = {
-	assetPrefix: isProduction ? "https://dashboard.shadcnuikit.com" : undefined,
+    assetPrefix:
+        isProduction && process.env.NEXT_PUBLIC_ASSET_PREFIX
+            ? process.env.NEXT_PUBLIC_ASSET_PREFIX
+            : undefined,
 	images: {
 		remotePatterns: [
 			{

@@ -38,14 +38,14 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Copy standalone build output if available, otherwise use regular build
-COPY --from=builder /workspace/apps/dashboard/.next/standalone ./
-COPY --from=builder /workspace/apps/dashboard/.next/static ./.next/static
+COPY --from=builder /workspace/apps/dashboard/.next ./.next
 COPY --from=builder /workspace/apps/dashboard/public ./public
+COPY --from=builder /workspace/apps/dashboard/package.json ./package.json
+COPY --from=deps /workspace/node_modules ./node_modules
 
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Use the standalone server.js if available, otherwise use custom server.ts
-CMD ["node", "server.js"]
+# Start Next.js server
+CMD ["npx", "next", "start"]

@@ -44,7 +44,6 @@ import { DEFAULT_PROJECT_TASKS, generateTasksFromTemplates } from "./project-tem
 type ProjectsTableRow = typeof projects.$inferSelect;
 type TasksTableRow = typeof projectTasks.$inferSelect;
 type TimelineTableRow = typeof projectMilestones.$inferSelect;
-type TeamTableRow = typeof projectMembers.$inferSelect;
 type TeamEntityRow = typeof projectTeams.$inferSelect;
 type BudgetCategoryRow = typeof projectBudgetCategories.$inferSelect;
 type TimeEntryRow = typeof projectTimeEntries.$inferSelect;

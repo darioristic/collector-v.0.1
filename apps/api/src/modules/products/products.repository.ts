@@ -109,14 +109,6 @@ const normalizeStatus = (
 const buildSearchPattern = (value: string): string =>
   `%${value.trim().replace(/\s+/g, "%")}%`;
 
-type ProductSelectionRow = {
-  product: ProductRow;
-  category: CategoryRow | null;
-  onHand: number | null;
-  reserved: number | null;
-  totalCount?: number | null;
-};
-
 const mapInventoryLocation = (
   item: InventoryRow,
   location: InventoryLocationRow | null

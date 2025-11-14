@@ -13,7 +13,7 @@ const loadEnv = async () => {
 		config({ path: join(__dirname, "../.env.local") });
 		config({ path: join(__dirname, "../../.env") });
 		config({ path: join(__dirname, "../../.env.local") });
-	} catch (error) {
+	} catch {
 		// Ignore if dotenv is not available
 	}
 };

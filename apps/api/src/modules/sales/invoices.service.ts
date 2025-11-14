@@ -12,6 +12,10 @@ import type {
 import type { CacheService } from "../../lib/cache.service";
 import { TAX_CONFIG } from "../../config/tax.config.js";
 
+type InvoiceInsert = typeof invoices.$inferInsert;
+type InvoiceRow = typeof invoices.$inferSelect;
+type InvoiceItemRow = typeof invoiceItems.$inferSelect;
+
 export class InvoicesService {
   constructor(
     private database: AppDatabase,
@@ -100,7 +104,10 @@ export class InvoicesService {
     const total = data.length > 0 ? Number(data[0].totalCount) : 0;
 
     const result = {
-      data: data.map((inv) => this.mapInvoiceFromDb(inv)),
+      data: data.map((inv) => {
+        const { totalCount: _totalCount, ...invoiceRow } = inv;
+        return this.mapInvoiceFromDb(invoiceRow as InvoiceRow);
+      }),
       total
     };
 
@@ -264,7 +271,7 @@ export class InvoicesService {
       // Use transaction
       await this.database.transaction(async (tx) => {
         // Update invoice
-        const updateData: any = {};
+        const updateData: Partial<InvoiceInsert> = {};
         if (input.orderId !== undefined) updateData.orderId = input.orderId || null;
         if (input.customerName !== undefined) updateData.customerName = input.customerName;
         if (input.customerEmail !== undefined) updateData.customerEmail = input.customerEmail || null;
@@ -327,7 +334,7 @@ export class InvoicesService {
       return this.getById(id);
 
     } catch (error) {
-      throw new Error(`Failed to update invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`Failed to update invoice: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   }
 
@@ -346,7 +353,7 @@ export class InvoicesService {
       return deleted.length > 0;
 
     } catch (error) {
-      throw new Error(`Failed to delete invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`Failed to delete invoice: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   }
 
@@ -409,7 +416,7 @@ export class InvoicesService {
     };
   }
 
-  private mapInvoiceFromDb(dbInvoice: any): Invoice {
+  private mapInvoiceFromDb(dbInvoice: InvoiceRow): Invoice {
     return {
       id: dbInvoice.id,
       orderId: dbInvoice.orderId,
@@ -435,7 +442,7 @@ export class InvoicesService {
     };
   }
 
-  private mapInvoiceItemFromDb(dbItem: any): InvoiceItem {
+  private mapInvoiceItemFromDb(dbItem: InvoiceItemRow): InvoiceItem {
     return {
       id: dbItem.id,
       invoiceId: dbItem.invoiceId,

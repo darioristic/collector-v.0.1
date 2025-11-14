@@ -15,5 +15,6 @@ ENV NODE_ENV=production
 COPY --from=builder /workspace/services/chat-service/dist ./dist
 COPY --from=builder /workspace/services/chat-service/node_modules ./node_modules
 COPY --from=builder /workspace/services/chat-service/package.json ./
+COPY apps/api/esm-loader.mjs ./esm-loader.mjs
 EXPOSE 4001
-CMD ["node", "dist/server.js"]
+CMD ["node", "--loader", "./esm-loader.mjs", "dist/server.js"]

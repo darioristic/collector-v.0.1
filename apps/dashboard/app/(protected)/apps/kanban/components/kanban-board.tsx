@@ -6,7 +6,6 @@ import {
 	MessageSquare,
 	Paperclip,
 	PlusCircleIcon,
-	Search,
 	SearchIcon,
 	SlidersHorizontalIcon,
 } from "lucide-react";

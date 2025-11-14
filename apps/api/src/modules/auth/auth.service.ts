@@ -552,7 +552,7 @@ export class AuthService {
 		let candidate = baseSlug.length > 0 ? baseSlug : "company";
 		let attempt = 1;
 
-		// eslint-disable-next-line no-constant-condition
+		 
 		while (true) {
 			const existing = await database
 				.select({ id: companies.id })
