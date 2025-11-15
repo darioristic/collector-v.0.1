@@ -8,13 +8,7 @@ import {
 import { getCurrentAuth } from "@/lib/auth";
 import { notificationListResponseSchema } from "@/lib/validations/notifications";
 
-const getNotificationServiceUrl = () => {
-  return (
-    process.env.NOTIFICATION_SERVICE_URL ||
-    process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL ||
-    "http://localhost:4002"
-  );
-};
+import { getApiUrl } from "@/src/lib/fetch-utils";
 
 export async function GET(request: NextRequest) {
 	const auth = await getCurrentAuth();
@@ -23,26 +17,39 @@ export async function GET(request: NextRequest) {
 		return unauthorizedResponse();
 	}
 
-	const token = request.cookies.get("auth_session")?.value;
 	const limit = request.nextUrl.searchParams.get("limit") || "25";
+	const offset = request.nextUrl.searchParams.get("offset") || "0";
+	const unreadOnly = request.nextUrl.searchParams.get("unreadOnly") === "true";
 
 	try {
-		const response = await fetch(
-			`${getNotificationServiceUrl()}/api/notifications?limit=${limit}`,
-			{
-				method: "GET",
-				headers: {
-					"Content-Type": "application/json",
-					...(token && {
-						Authorization: `Bearer ${token}`,
-					}),
-				},
-				cache: "no-store",
+		const searchParams = new URLSearchParams({
+			limit,
+			offset,
+			...(unreadOnly && { unreadOnly: "true" }),
+		});
+
+		const apiUrl = getApiUrl(`notifications?${searchParams.toString()}`);
+		
+		const response = await fetch(apiUrl, {
+			method: "GET",
+			headers: {
+				"Content-Type": "application/json",
+				"x-user-id": auth.user.id,
+				"x-user-email": auth.user.email || "",
+				"x-user-name": auth.user.name || "",
+				"x-user-role": auth.user.role || "",
+				"x-company-id": auth.user.company?.id || "",
 			},
-		);
+			cache: "no-store",
+		});
 
 		if (!response.ok) {
 			const error = await response.json().catch(() => ({ error: "Failed to fetch notifications" }));
+			console.error("[notifications] API error", {
+				status: response.status,
+				url: apiUrl,
+				error,
+			});
 			return withNoStore(
 				NextResponse.json(
 					{
@@ -67,15 +74,15 @@ export async function GET(request: NextRequest) {
 		}
 
 		return withNoStore(NextResponse.json(payload.data));
-    } catch (error) {
-        console.error("[notifications] Failed to list notifications", error);
-        return withNoStore(
-            NextResponse.json(
-                {
-                    error: "Servis notifikacija nije dostupan.",
-                },
-                { status: 503 },
-            ),
-        );
-    }
+	} catch (error) {
+		console.error("[notifications] Failed to list notifications", error);
+		return withNoStore(
+			NextResponse.json(
+				{
+					error: "Servis notifikacija nije dostupan.",
+				},
+				{ status: 503 },
+			),
+		);
+	}
 }

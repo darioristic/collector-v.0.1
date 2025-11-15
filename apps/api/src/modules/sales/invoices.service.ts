@@ -15,6 +15,7 @@ import { TAX_CONFIG } from "../../config/tax.config.js";
 type InvoiceInsert = typeof invoices.$inferInsert;
 type InvoiceRow = typeof invoices.$inferSelect;
 type InvoiceItemRow = typeof invoiceItems.$inferSelect;
+type InvoiceItemInsert = Omit<typeof invoiceItems.$inferInsert, "id" | "createdAt">;
 
 export class InvoicesService {
   constructor(
@@ -133,29 +134,30 @@ export class InvoicesService {
       }
     }
 
-    // FIX N+1: Use JOIN to fetch invoice and items in one query
-    const result = await this.database
-      .select({
-        invoice: invoices,
-        item: invoiceItems
-      })
+    // Simpler and more compatible approach: separate queries
+    const [invoiceRow] = await this.database
+      .select()
       .from(invoices)
-      .leftJoin(invoiceItems, eq(invoiceItems.invoiceId, invoices.id))
-      .where(eq(invoices.id, id));
+      .where(eq(invoices.id, id))
+      .limit(1);
 
-    if (result.length === 0) {
+    if (!invoiceRow) {
       return null;
     }
 
-    // Group items by invoice
-    const invoiceData = result[0].invoice;
-    const items = result
-      .filter(row => row.item !== null)
-      .map(row => this.mapInvoiceItemFromDb(row.item!));
+    let itemRows: InvoiceItemRow[] = [];
+    try {
+      itemRows = await this.database
+        .select()
+        .from(invoiceItems)
+        .where(eq(invoiceItems.invoiceId, id)) as unknown as InvoiceItemRow[];
+    } catch {
+      itemRows = [];
+    }
 
     const invoice: Invoice = {
-      ...this.mapInvoiceFromDb(invoiceData),
-      items
+      ...this.mapInvoiceFromDb(invoiceRow as InvoiceRow),
+      items: itemRows.map((row) => this.mapInvoiceItemFromDb(row as InvoiceItemRow))
     };
 
     // Cache for 15 minutes
@@ -173,6 +175,9 @@ export class InvoicesService {
     try {
       // Calculate totals from items
       const calculated = this.calculateTotals(input.items);
+
+      console.log("[InvoicesService.create] Creating invoice with input:", JSON.stringify(input, null, 2));
+      console.log("[InvoicesService.create] Calculated totals:", JSON.stringify(calculated, null, 2));
 
       // Use transaction to ensure atomicity
       const result = await this.database.transaction(async (tx) => {
@@ -203,23 +208,27 @@ export class InvoicesService {
 
         // Create invoice items
         if (input.items.length > 0) {
-          await tx.insert(invoiceItems).values(
-            input.items.map((item) => {
-              const itemCalc = this.calculateItemTotals(item);
-              return {
-                invoiceId: newInvoice.id,
-                description: item.description || null,
-                quantity: item.quantity.toString(),
-                unit: item.unit || "pcs",
-                unitPrice: item.unitPrice.toString(),
-                discountRate: (item.discountRate || 0).toString(),
-                vatRate: (item.vatRate || TAX_CONFIG.DEFAULT_RATE_PERCENTAGE).toString(),
-                totalExclVat: itemCalc.totalExclVat.toString(),
-                vatAmount: itemCalc.vatAmount.toString(),
-                totalInclVat: itemCalc.totalInclVat.toString()
-              };
-            })
-          );
+          const itemsToInsert: InvoiceItemInsert[] = input.items.map((item) => {
+            const itemCalc = this.calculateItemTotals(item);
+            const insertItem = {
+              invoiceId: newInvoice.id,
+              description: item.description || null,
+              quantity: new Decimal(item.quantity).toFixed(2),
+              unit: item.unit || "pcs",
+              unitPrice: new Decimal(item.unitPrice).toFixed(2),
+              discountRate: new Decimal(item.discountRate || 0).toFixed(2),
+              vatRate: new Decimal(item.vatRate || TAX_CONFIG.DEFAULT_RATE_PERCENTAGE).toFixed(2),
+              totalExclVat: itemCalc.totalExclVat.toFixed(2),
+              vatAmount: itemCalc.vatAmount.toFixed(2),
+              totalInclVat: itemCalc.totalInclVat.toFixed(2)
+              // Note: id and createdAt are omitted - they use database defaults (serial and defaultNow)
+            };
+            console.log("[InvoicesService.create] Inserting item:", JSON.stringify(insertItem, null, 2));
+            return insertItem;
+          });
+          console.log("[InvoicesService.create] Inserting", itemsToInsert.length, "items");
+          await tx.insert(invoiceItems).values(itemsToInsert);
+          console.log("[InvoicesService.create] Items inserted successfully");
         }
 
         return newInvoice;
@@ -239,6 +248,11 @@ export class InvoicesService {
       return invoice;
 
     } catch (error) {
+      console.error("[InvoicesService.create] Error creating invoice:", error);
+      if (error instanceof Error) {
+        console.error("[InvoicesService.create] Error message:", error.message);
+        console.error("[InvoicesService.create] Error stack:", error.stack);
+      }
       throw new Error(`Failed to create invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -304,23 +318,23 @@ export class InvoicesService {
 
           // Insert new items
           if (input.items.length > 0) {
-            await tx.insert(invoiceItems).values(
-              input.items.map((item) => {
-                const itemCalc = this.calculateItemTotals(item);
-                return {
-                  invoiceId: id,
-                  description: item.description || null,
-                  quantity: item.quantity.toString(),
-                  unit: item.unit || "pcs",
-                  unitPrice: item.unitPrice.toString(),
-                  discountRate: (item.discountRate || 0).toString(),
-                  vatRate: (item.vatRate || TAX_CONFIG.DEFAULT_RATE_PERCENTAGE).toString(),
-                  totalExclVat: itemCalc.totalExclVat.toString(),
-                  vatAmount: itemCalc.vatAmount.toString(),
-                  totalInclVat: itemCalc.totalInclVat.toString()
-                };
-              })
-            );
+            const itemsToInsert: InvoiceItemInsert[] = input.items.map((item) => {
+              const itemCalc = this.calculateItemTotals(item);
+              return {
+                invoiceId: id,
+                description: item.description || null,
+                quantity: new Decimal(item.quantity).toFixed(2),
+                unit: item.unit || "pcs",
+                unitPrice: new Decimal(item.unitPrice).toFixed(2),
+                discountRate: new Decimal(item.discountRate || 0).toFixed(2),
+                vatRate: new Decimal(item.vatRate || TAX_CONFIG.DEFAULT_RATE_PERCENTAGE).toFixed(2),
+                totalExclVat: itemCalc.totalExclVat.toFixed(2),
+                vatAmount: itemCalc.vatAmount.toFixed(2),
+                totalInclVat: itemCalc.totalInclVat.toFixed(2)
+                // Note: id and createdAt are omitted - they use database defaults (serial and defaultNow)
+              };
+            });
+            await tx.insert(invoiceItems).values(itemsToInsert);
           }
         }
       });

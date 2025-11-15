@@ -63,10 +63,13 @@ export async function ensureResponse(
 			const contentType = response.headers.get("content-type");
 			if (contentType?.includes("application/json")) {
 				const errorData = await response.json();
+				console.error("[ensureResponse] Error response:", JSON.stringify(errorData, null, 2));
 				if (errorData.error) {
 					errorMessage = errorData.error;
 				} else if (errorData.message) {
 					errorMessage = errorData.message;
+				} else if (errorData.details) {
+					errorMessage = `${errorMessage}: ${JSON.stringify(errorData.details)}`;
 				} else if (typeof errorData === "string") {
 					errorMessage = errorData;
 				}
@@ -75,6 +78,7 @@ export async function ensureResponse(
 				const text = await response.text();
 				if (text) {
 					errorMessage = text;
+					console.error("[ensureResponse] Error response text:", text);
 				}
 			}
 		} catch (parseError) {

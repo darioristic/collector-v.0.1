@@ -65,15 +65,16 @@ export async function PATCH(request: NextRequest) {
 		const validated = notificationUpdateResponseSchema.parse(payload);
 
 		return withNoStore(NextResponse.json(validated));
-  } catch (error) {
-    console.error("[notifications] Failed to mark as read", error);
-    return withNoStore(
-      NextResponse.json(
-        {
-          error: "Servis notifikacija nije dostupan.",
-        },
-        { status: 503 },
-      ),
-    );
-  }
+	} catch (error) {
+		console.error("[notifications] Failed to mark as read", error);
+		return withNoStore(
+			NextResponse.json(
+				{
+					error: "Servis notifikacija nije dostupan.",
+				},
+				{ status: 503 },
+			),
+		);
+	}
 }
+

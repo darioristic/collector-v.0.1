@@ -41,7 +41,7 @@ export default async function AuthLayout({
 				<SidebarInset>
 					<SiteHeader />
 					<div className="flex flex-1 flex-col">
-						<div className="@container/main p-4 xl:group-data-[theme-content-layout=centered]/layout:container xl:group-data-[theme-content-layout=centered]/layout:mx-auto">
+						<div className="@container/main p-4 xl:group-data-[theme-content-layout=centered]/layout:container xl:group-data-[theme-content-layout=centered]/layout:mx-auto" suppressHydrationWarning>
 							{children}
 						</div>
 					</div>

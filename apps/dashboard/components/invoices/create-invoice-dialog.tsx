@@ -439,7 +439,7 @@ function DescriptionAutocomplete({
 				/>
 			</div>
 			{isOpen && (
-				<div className="absolute z-50 mt-1.5 w-[600px] max-w-[95vw] rounded-lg border border-border/80 bg-popover shadow-2xl backdrop-blur-md">
+				<div className="absolute z-50 mt-1.5 left-0 rounded-lg border border-border/80 bg-popover shadow-2xl backdrop-blur-md" style={{ width: "68%", minWidth: "550px", maxWidth: "calc(100vw - 4rem)" }}>
 					{isLoading ? (
 						<div className="flex items-center justify-center px-4 py-8">
 							<Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -448,7 +448,7 @@ function DescriptionAutocomplete({
 					) : hasResults ? (
 						<div className="max-h-64 overflow-y-auto py-1.5">
 							<div className="px-2 pb-1.5 pt-1">
-								<span className="text-xs font-medium text-muted-foreground">
+								<span className="text-xs font-semibold text-foreground/90">
 									Found {sortedProducts.length} {sortedProducts.length === 1 ? "product" : "products"}
 								</span>
 							</div>
@@ -489,36 +489,29 @@ function DescriptionAutocomplete({
 										)}
 										onMouseEnter={() => setSelectedIndex(idx)}
 									>
-										<div className="flex items-start justify-between gap-4">
-											<div className="flex min-w-0 flex-1 items-start gap-3">
-												<div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 mt-0.5">
-													<Package className="h-5 w-5 text-primary" />
-												</div>
-												<div className="min-w-0 flex-1 space-y-1.5">
-													<div className="font-medium text-sm leading-snug text-foreground">
-														{highlightMatch(product.name, trimmedQuery)}
+										<div className="flex flex-col gap-1.5 min-w-0">
+											<div className="font-semibold text-sm leading-snug text-foreground line-clamp-1 truncate">
+												{highlightMatch(product.name, trimmedQuery)}
+											</div>
+											{(product.sku || product.description || price > 0) && (
+												<div className="flex flex-col gap-1">
+													<div className="flex items-center gap-2 flex-wrap">
+														{price > 0 && (
+															<div className="text-xs font-bold text-foreground whitespace-nowrap">
+																{formatCurrency(price, displayCurrency)}
+															</div>
+														)}
+														{product.sku && (
+															<div className="text-xs text-foreground/80 font-mono font-medium">
+																SKU: {product.sku}
+															</div>
+														)}
 													</div>
-													{(product.sku || product.description) && (
-														<div className="flex flex-col gap-1">
-															{product.sku && (
-																<div className="text-xs text-muted-foreground/70 font-mono">
-																	SKU: {product.sku}
-																</div>
-															)}
-															{product.description && (
-																<div className="text-xs text-muted-foreground/60 leading-relaxed line-clamp-2">
-																	{product.description}
-																</div>
-															)}
+													{product.description && (
+														<div className="text-xs text-foreground/70 leading-relaxed line-clamp-2">
+															{product.description}
 														</div>
 													)}
-												</div>
-											</div>
-											{price > 0 && (
-												<div className="shrink-0 text-right pt-0.5">
-													<div className="text-base font-bold text-foreground whitespace-nowrap">
-														{formatCurrency(price, displayCurrency)}
-													</div>
 												</div>
 											)}
 										</div>
@@ -1004,20 +997,20 @@ export function CreateInvoiceDialog({
 				invoiceNumber: data.invoiceNumber,
 				customerId: data.customerId,
 				customerName: data.customerName,
-				customerEmail: data.customerEmail || undefined,
-				billingAddress: data.billingAddress || undefined,
-				issuedAt: data.issuedAt,
-				dueDate: data.dueDate || undefined,
-				currency: data.currency,
-				status: data.status as InvoiceCreateInput["status"],
-				notes: data.notes || undefined,
+				customerEmail: data.customerEmail && data.customerEmail.trim() ? data.customerEmail.trim() : undefined,
+				billingAddress: data.billingAddress && data.billingAddress.trim() ? data.billingAddress.trim() : undefined,
+				issuedAt: data.issuedAt ? new Date(data.issuedAt).toISOString() : new Date().toISOString(),
+				dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
+				currency: data.currency || "EUR",
+				status: (data.status as InvoiceCreateInput["status"]) || "draft",
+				notes: data.notes && data.notes.trim() ? data.notes.trim() : undefined,
 				items: validItems.map((item) => ({
-					description: item.description || undefined,
+					description: item.description && item.description.trim() ? item.description.trim() : undefined,
 					quantity: item.quantity,
-					unit: item.unit || undefined,
-					unitPrice: item.unitPrice,
-					discountRate: item.discountRate || undefined,
-					vatRate: item.vatRate || undefined,
+					unit: item.unit && item.unit.trim() ? item.unit.trim() : undefined,
+					unitPrice: Number(item.unitPrice),
+					discountRate: item.discountRate && item.discountRate > 0 ? Number(item.discountRate) : undefined,
+					vatRate: item.vatRate && item.vatRate > 0 ? Number(item.vatRate) : undefined,
 				})),
 			};
 
@@ -1356,10 +1349,10 @@ export function CreateInvoiceDialog({
 												<Table>
 													<TableHeader>
 														<TableRow>
-															<TableHead className="w-[45%] text-xs font-semibold px-3 py-2">Description</TableHead>
-															<TableHead className="w-[4%] text-xs font-semibold px-3 py-2">Qty</TableHead>
-															<TableHead className="w-[7%] text-xs font-semibold px-3 py-2">Unit</TableHead>
-															<TableHead className="w-[12%] text-xs font-semibold px-3 py-2 text-right">Unit Price</TableHead>
+															<TableHead className="text-xs font-semibold px-3 py-2" style={{ width: "45%" }}>Description</TableHead>
+															<TableHead className="text-xs font-semibold px-3 py-2" style={{ width: "4%" }}>Qty</TableHead>
+															<TableHead className="text-xs font-semibold px-3 py-2" style={{ width: "7%" }}>Unit</TableHead>
+															<TableHead className="text-xs font-semibold px-3 py-2 text-right" style={{ width: "12%" }}>Unit Price</TableHead>
 															<TableHead className="w-[8%] text-xs font-semibold px-3 py-2 text-right">Disc %</TableHead>
 															<TableHead className="w-[8%] text-xs font-semibold px-3 py-2 text-right">VAT %</TableHead>
 															<TableHead className="w-[16%] text-xs font-semibold px-3 py-2 text-right">Amount</TableHead>
@@ -1731,6 +1724,36 @@ export function CreateInvoiceDialog({
 						</FormProvider>
 					</div>
 
+					<div className="fixed bottom-6 right-6 z-50">
+						<Button
+							type="button"
+							size="lg"
+							className="px-6 py-6 shadow-lg"
+							onClick={handleSubmit(
+								(data) => {
+									onSubmit(data as InvoiceFormData);
+								},
+								(errors) => {
+									console.error("Form validation errors:", errors);
+									toast({
+										variant: "destructive",
+										title: "Validation Error",
+										description: "Please check all required fields and fix any errors.",
+									});
+								},
+							)}
+							disabled={createInvoiceMutation.isPending}
+						>
+							{createInvoiceMutation.isPending ? (
+								<>
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+									Creating...
+								</>
+							) : (
+								"CREATE"
+							)}
+						</Button>
+					</div>
 				</div>
 			</SheetContent>
 		</Sheet>

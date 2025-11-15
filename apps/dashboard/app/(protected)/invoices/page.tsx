@@ -40,7 +40,7 @@ export default function InvoicesPage() {
 	};
 
 	return (
-		<div className="space-y-8">
+		<div className="space-y-8" suppressHydrationWarning>
 			<TablePageHeader
 				title="Invoices"
 				description="Manage and track your invoices."

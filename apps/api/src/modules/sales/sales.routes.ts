@@ -82,22 +82,53 @@ const salesRoutes: FastifyPluginAsync = async (app) => {
   app.delete("/quotes/:id", { schema: deleteQuoteSchema }, deleteQuoteHandler);
 
   // Order routes
-  app.get(
+  app.get<{
+    Querystring: {
+      companyId?: string;
+      contactId?: string;
+      quoteId?: string;
+      status?: string;
+      search?: string;
+      limit?: string;
+      offset?: string;
+    };
+  }>(
     "/orders",
     { schema: listOrdersSchema, preValidation: createSearchPreValidation(255, "search") },
     listOrdersHandler
   );
-  app.get("/orders/:id", { schema: getOrderSchema }, getOrderHandler);
-  app.post("/orders", { schema: createOrderSchema }, createOrderHandler);
-  app.patch("/orders/:id", { schema: updateOrderSchema }, updateOrderHandler);
-  app.delete("/orders/:id", { schema: deleteOrderSchema }, deleteOrderHandler);
+  app.get<{ Params: { id: string } }>("/orders/:id", { schema: getOrderSchema }, getOrderHandler);
+  app.post<{ Body: import("@crm/types").OrderCreateInput }>("/orders", { schema: createOrderSchema }, createOrderHandler);
+  app.patch<{ Params: { id: string }; Body: import("@crm/types").OrderUpdateInput }>(
+    "/orders/:id",
+    { schema: updateOrderSchema },
+    updateOrderHandler
+  );
+  app.delete<{ Params: { id: string } }>("/orders/:id", { schema: deleteOrderSchema }, deleteOrderHandler);
 
   // Invoice routes
-  app.get("/invoices", { schema: listInvoicesSchema }, listInvoicesHandler);
-  app.get("/invoices/:id", { schema: getInvoiceSchema }, getInvoiceHandler);
-  app.post("/invoices", { schema: createInvoiceSchema }, createInvoiceHandler);
-  app.patch("/invoices/:id", { schema: updateInvoiceSchema }, updateInvoiceHandler);
-  app.delete("/invoices/:id", { schema: deleteInvoiceSchema }, deleteInvoiceHandler);
+  app.get<{
+    Querystring: {
+      customerId?: string;
+      orderId?: string;
+      status?: string;
+      search?: string;
+      limit?: string;
+      offset?: string;
+    };
+  }>("/invoices", { schema: listInvoicesSchema }, listInvoicesHandler);
+  app.get<{ Params: { id: string } }>("/invoices/:id", { schema: getInvoiceSchema }, getInvoiceHandler);
+  app.post<{ Body: import("@crm/types").InvoiceCreateInput }>(
+    "/invoices",
+    { schema: createInvoiceSchema },
+    createInvoiceHandler
+  );
+  app.patch<{ Params: { id: string }; Body: import("@crm/types").InvoiceUpdateInput }>(
+    "/invoices/:id",
+    { schema: updateInvoiceSchema },
+    updateInvoiceHandler
+  );
+  app.delete<{ Params: { id: string } }>("/invoices/:id", { schema: deleteInvoiceSchema }, deleteInvoiceHandler);
 
   // Payment routes
   app.get("/payments", { schema: listPaymentsSchema }, listPaymentsHandler);

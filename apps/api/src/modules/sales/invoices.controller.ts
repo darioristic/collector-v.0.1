@@ -61,6 +61,11 @@ export const getInvoiceHandler = async (request: GetRequest, reply: FastifyReply
     const service = new InvoicesService(request.db, request.cache);
     const { id } = request.params;
 
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return reply.status(400).send({ error: "Invalid invoice ID format" });
+    }
+
     const invoice = await service.getById(id);
 
     if (!invoice) {
@@ -69,6 +74,7 @@ export const getInvoiceHandler = async (request: GetRequest, reply: FastifyReply
 
     await reply.status(200).send({ data: invoice });
   } catch (error) {
+    request.log?.error(error, "Failed to fetch invoice");
     const message = error instanceof Error ? error.message : "Unknown error";
     await reply.status(500).send({ error: "Failed to fetch invoice", message });
   }

@@ -11,7 +11,7 @@
 import { createServer } from "node:http";
 import { Server as SocketIOServer } from "socket.io";
 
-const port = parseInt(process.env.SOCKET_PORT || "3001", 10);
+const port = parseInt(process.env.SOCKET_PORT || "4002", 10);
 const hostname = process.env.SOCKET_HOST || "0.0.0.0";
 const dev = process.env.NODE_ENV !== "production";
 

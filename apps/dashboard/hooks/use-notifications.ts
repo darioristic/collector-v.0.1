@@ -147,12 +147,14 @@ export function useNotifications(
 			path: SOCKET_PATH,
 			addTrailingSlash: false,
 			withCredentials: true,
-			transports: ["websocket"],
+			transports: ["websocket", "polling"],
 			query: { userId },
 			reconnection: true,
-			reconnectionAttempts: 3,
-			reconnectionDelay: 2000,
-			timeout: 5000,
+			reconnectionAttempts: 8,
+			reconnectionDelay: 1000,
+			reconnectionDelayMax: 10000,
+			randomizationFactor: 0.5,
+			timeout: 7000,
 		});
 
 		socketRef.current = socket;
@@ -169,6 +171,17 @@ export function useNotifications(
 					error.message,
 				);
 			}
+		});
+
+		// Reconnect lifecycle logging
+		socket.on("reconnect_attempt", (attempt) => {
+			console.warn("[notifications] Reconnect attempt", attempt);
+		});
+		socket.on("reconnect_failed", () => {
+			console.error("[notifications] Reconnect failed after max attempts");
+		});
+		socket.on("error", (err) => {
+			console.error("[notifications] Socket error", err);
 		});
 
 		socket.on("connect", () => {
@@ -247,7 +260,7 @@ export function useNotifications(
 			}
 
 		try {
-			const response = await fetch(`/api/notifications/read`, {
+			const response = await fetch(`/api/notifications/mark-read`, {
 				method: "PATCH",
 				headers: {
 					"Content-Type": "application/json",

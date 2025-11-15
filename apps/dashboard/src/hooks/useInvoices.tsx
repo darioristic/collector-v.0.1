@@ -6,9 +6,9 @@ import type {
 	InvoiceUpdateInput,
 } from "@crm/types";
 import {
-	useMutation,
-	useQuery,
-	useQueryClient,
+    useMutation,
+    useQuery,
+    useQueryClient,
 } from "@tanstack/react-query";
 
 import { useToast } from "@/hooks/use-toast";
@@ -31,34 +31,73 @@ type UseInvoicesOptions = {
 };
 
 export function useInvoices(options: UseInvoicesOptions = {}) {
-	return useQuery({
-		queryKey: invoiceKeys.list(options),
-		queryFn: () => fetchInvoices(options),
-	});
+    const { toast } = useToast();
+    return useQuery({
+        queryKey: invoiceKeys.list(options),
+        queryFn: () => fetchInvoices(options),
+        onError: (error) => {
+            toast({
+                variant: "destructive",
+                title: "Greška pri učitavanju računa",
+                description:
+                    error instanceof Error ? error.message : "Neuspješno učitavanje liste računa.",
+            });
+        },
+    });
 }
 
 export function useInvoicesByCustomer(customerId: string) {
-	return useQuery({
-		queryKey: invoiceKeys.byCustomer(customerId),
-		queryFn: () => fetchInvoices({ customerId }),
-		enabled: Boolean(customerId),
-	});
+    const { toast } = useToast();
+    return useQuery({
+        queryKey: invoiceKeys.byCustomer(customerId),
+        queryFn: () => fetchInvoices({ customerId }),
+        enabled: Boolean(customerId),
+        onError: (error) => {
+            toast({
+                variant: "destructive",
+                title: "Greška pri učitavanju računa kupca",
+                description:
+                    error instanceof Error ? error.message : "Neuspješno učitavanje liste računa.",
+            });
+        },
+    });
 }
 
 export function useInvoicesByOrder(orderId: number) {
-	return useQuery({
-		queryKey: invoiceKeys.byOrder(orderId),
-		queryFn: () => fetchInvoices({ orderId }),
-		enabled: Boolean(orderId),
-	});
+    const { toast } = useToast();
+    return useQuery({
+        queryKey: invoiceKeys.byOrder(orderId),
+        queryFn: () => fetchInvoices({ orderId }),
+        enabled: Boolean(orderId),
+        onError: (error) => {
+            toast({
+                variant: "destructive",
+                title: "Greška pri učitavanju računa za narudžbu",
+                description:
+                    error instanceof Error ? error.message : "Neuspješno učitavanje liste računa.",
+            });
+        },
+    });
 }
 
 export function useInvoice(id: string, options: { enabled?: boolean } = {}) {
-	return useQuery({
-		queryKey: invoiceKeys.detail(id),
-		queryFn: () => fetchInvoice(id),
-		enabled: options.enabled ?? Boolean(id),
-	});
+    const { toast } = useToast();
+    return useQuery({
+        queryKey: invoiceKeys.detail(id),
+        queryFn: () => fetchInvoice(id),
+        enabled: options.enabled ?? Boolean(id),
+        retry: 2,
+        retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
+        staleTime: 1000 * 30,
+        onError: (error) => {
+            toast({
+                variant: "destructive",
+                title: "Greška pri učitavanju računa",
+                description:
+                    error instanceof Error ? error.message : "Neuspješno učitavanje detalja računa.",
+            });
+        },
+    });
 }
 
 export function useCreateInvoice() {

@@ -142,9 +142,24 @@ export async function markAsRead(
       )
       .returning();
 
+    // Get updated IDs
+    const updatedIds = result.map((item) => item.id);
+
+    // Get unread count after update
+    const [unreadResult] = await request.server.db
+      .select({ count: count() })
+      .from(notifications)
+      .where(
+        and(
+          eq(notifications.recipientId, userId),
+          eq(notifications.companyId, companyId),
+          eq(notifications.read, false)
+        )
+      );
+
     return reply.status(200).send({
-      success: true,
-      updated: result.length
+      updatedIds,
+      unreadCount: unreadResult?.count ?? 0
     });
   } catch (error) {
     request.log.error(error, "Failed to mark notifications as read");
