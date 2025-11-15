@@ -10,7 +10,8 @@ import {
   listInvoicesHandler,
   getInvoiceHandler,
   updateInvoiceHandler,
-  deleteInvoiceHandler
+  deleteInvoiceHandler,
+  sendInvoiceHandler
 } from "./invoices.controller";
 import {
   createOrderHandler,
@@ -50,7 +51,8 @@ import {
   getInvoiceSchema,
   createInvoiceSchema,
   updateInvoiceSchema,
-  deleteInvoiceSchema
+  deleteInvoiceSchema,
+  sendInvoiceSchema
 } from "./invoices.schema";
 import {
   listOrdersSchema,
@@ -129,6 +131,11 @@ const salesRoutes: FastifyPluginAsync = async (app) => {
     updateInvoiceHandler
   );
   app.delete<{ Params: { id: string } }>("/invoices/:id", { schema: deleteInvoiceSchema }, deleteInvoiceHandler);
+  app.post<{ Params: { id: string }; Body: { email?: string | string[]; expiresInDays?: number } }>(
+    "/invoices/:id/send",
+    { schema: sendInvoiceSchema },
+    sendInvoiceHandler
+  );
 
   // Payment routes
   app.get("/payments", { schema: listPaymentsSchema }, listPaymentsHandler);

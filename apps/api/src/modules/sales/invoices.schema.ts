@@ -3,7 +3,7 @@ import type { FastifySchema } from "fastify";
 const invoiceItemSchema = {
   type: "object",
   properties: {
-    id: { type: "number" },
+    id: { type: "string", format: "uuid" },
     invoiceId: { type: "string", format: "uuid" },
     description: { type: ["string", "null"] },
     quantity: { type: "number" },
@@ -53,7 +53,7 @@ const invoiceSchema = {
     amountPaid: { type: "number" },
     balance: { type: "number" },
     currency: { type: "string" },
-    notes: { type: ["string", "null"] },
+    notes: { type: ["object", "string", "null"] }, // JSON object (Tiptap format) or string for backward compatibility
     createdAt: { type: "string", format: "date-time" },
     updatedAt: { type: "string", format: "date-time" },
     items: {
@@ -182,7 +182,7 @@ export const createInvoiceSchema: FastifySchema = {
       dueDate: { type: "string", format: "date-time" },
       currency: { type: "string" },
       status: { type: "string" },
-      notes: { type: "string" },
+      notes: { type: ["object", "string"] }, // JSON object (Tiptap format) or string for backward compatibility
       items: {
         type: "array",
         items: invoiceItemCreateSchema,
@@ -226,7 +226,7 @@ export const updateInvoiceSchema: FastifySchema = {
       dueDate: { type: "string", format: "date-time" },
       currency: { type: "string" },
       status: { type: "string" },
-      notes: { type: "string" },
+      notes: { type: ["object", "string"] }, // JSON object (Tiptap format) or string for backward compatibility
       items: {
         type: "array",
         items: invoiceItemCreateSchema
@@ -274,6 +274,79 @@ export const deleteInvoiceSchema: FastifySchema = {
       type: "object",
       properties: {
         error: { type: "string" }
+      },
+      required: ["error"],
+      additionalProperties: false
+    }
+  }
+};
+
+export const sendInvoiceSchema: FastifySchema = {
+  tags: ["sales", "invoices"],
+  summary: "Send invoice via email with shareable link",
+  params: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" }
+    },
+    required: ["id"],
+    additionalProperties: false
+  },
+  body: {
+    type: "object",
+    properties: {
+      email: {
+        oneOf: [
+          { type: "string", format: "email" },
+          {
+            type: "array",
+            items: { type: "string", format: "email" }
+          }
+        ]
+      },
+      expiresInDays: { type: "number", minimum: 0, maximum: 365 }
+    },
+    additionalProperties: false
+  },
+  response: {
+    200: {
+      type: "object",
+      properties: {
+        data: {
+          type: "object",
+          properties: {
+            token: { type: "string" },
+            link: { type: "string" },
+            expiresAt: { type: ["string", "null"], format: "date-time" }
+          },
+          required: ["token", "link", "expiresAt"],
+          additionalProperties: false
+        }
+      },
+      required: ["data"],
+      additionalProperties: false
+    },
+    400: {
+      type: "object",
+      properties: {
+        error: { type: "string" }
+      },
+      required: ["error"],
+      additionalProperties: false
+    },
+    404: {
+      type: "object",
+      properties: {
+        error: { type: "string" }
+      },
+      required: ["error"],
+      additionalProperties: false
+    },
+    500: {
+      type: "object",
+      properties: {
+        error: { type: "string" },
+        message: { type: "string" }
       },
       required: ["error"],
       additionalProperties: false

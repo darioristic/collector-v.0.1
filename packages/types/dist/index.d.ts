@@ -346,7 +346,7 @@ export type OrderUpdateInput = Partial<Omit<OrderCreateInput, "orderNumber">>;
 export declare const INVOICE_STATUSES: readonly ["draft", "sent", "paid", "overdue", "void", "unpaid"];
 export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
 export type InvoiceItem = {
-    id: number;
+    id: string;
     invoiceId: string;
     description?: string | null;
     quantity: number;

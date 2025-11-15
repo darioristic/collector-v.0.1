@@ -44,18 +44,37 @@ export const getInitials = (fullName: string) => {
 };
 
 /**
+ * Format a number with proper formatting (no currency symbol)
+ */
+export function formatNumber(
+	amount: number,
+): string {
+	return new Intl.NumberFormat("en-US", {
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+	}).format(amount);
+}
+
+/**
  * Format a number as currency with proper formatting
  */
 export function formatCurrency(
 	amount: number,
 	currency: string = "USD",
 ): string {
-	return new Intl.NumberFormat("en-US", {
+	const formatted = new Intl.NumberFormat("en-US", {
 		style: "currency",
 		currency: currency,
 		minimumFractionDigits: 2,
 		maximumFractionDigits: 2,
 	}).format(amount);
+	// Ensure single space between currency and number
+	// Replace multiple spaces with single space, and ensure space after currency symbol
+	return formatted
+		.replace(/\s+/g, " ") // Replace multiple spaces with single space
+		.replace(/([A-Z]{3})(\d)/, "$1 $2") // Add space between currency code and number (e.g., RSD123 -> RSD 123)
+		.replace(/([€$£¥])(\d)/, "$1 $2") // Add space between currency symbol and number (e.g., €123 -> € 123)
+		.trim();
 }
 
 /**

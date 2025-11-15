@@ -24,6 +24,7 @@ import {
 	PopoverTrigger,
 } from "@/components/ui/popover";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { CompanyCreationModal } from "./CompanyCreationModal";
 
 type CompanyAutocompleteProps<TFieldValues extends FieldValues = FieldValues> = {
 	value?: string;
@@ -103,6 +104,7 @@ function CompanyAutocompleteInner({
 }: Omit<CompanyAutocompleteProps, "control" | "name">) {
 	const router = useRouter();
 	const [open, setOpen] = useState(false);
+	const [createOpen, setCreateOpen] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
 	const { data: companies = [], isLoading } = useCompanySearch(searchQuery);
 	const { data: allAccounts = [] } = useAccounts();
@@ -178,14 +180,9 @@ function CompanyAutocompleteInner({
 
 	const handleCreateNew = useCallback(() => {
 		if (!isValidCompanyName(trimmedQuery)) return;
-		
 		setOpen(false);
-		const params = new URLSearchParams({
-			create: "true",
-			name: trimmedQuery,
-		});
-		router.push(`/accounts/companies?${params.toString()}`);
-	}, [trimmedQuery, router]);
+		setCreateOpen(true);
+	}, [trimmedQuery]);
 
 	const handleOpenChange = useCallback((newOpen: boolean) => {
 		setOpen(newOpen);
@@ -280,10 +277,11 @@ function CompanyAutocompleteInner({
 													<CommandGroup 
 														heading={
 															<div className="flex items-center justify-between w-full">
-																<span>
-																	{visibleCompanies.length} {visibleCompanies.length === 1 ? "company" : "companies"}
-																	{hasMoreResults && ` (showing first ${MAX_VISIBLE_ITEMS})`}
-																</span>
+									<span>
+										{hasMoreResults
+											? `Showing first ${MAX_VISIBLE_ITEMS} of ${companies.length} companies`
+											: `${companies.length} ${companies.length === 1 ? "company" : "companies"}`}
+									</span>
 															</div>
 														}
 													>
@@ -357,6 +355,14 @@ function CompanyAutocompleteInner({
 					</AnimatePresence>
 				</PopoverContent>
 			</Popover>
+			<CompanyCreationModal
+				open={createOpen}
+				onOpenChange={setCreateOpen}
+				onCompanyCreated={(company) => {
+					onChange(company.id);
+				}}
+				initialName={trimmedQuery}
+			/>
 		</div>
 	);
 }

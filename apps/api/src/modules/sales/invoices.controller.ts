@@ -1,6 +1,9 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
+import { randomBytes } from "node:crypto";
 import { InvoicesService } from "./invoices.service.js";
 import { INVOICE_STATUSES, type InvoiceCreateInput, type InvoiceUpdateInput, type InvoiceStatus } from "@crm/types";
+import { invoiceLinks } from "../../db/schema/sales.schema.js";
+import { emailService } from "../../lib/email.service.js";
 
 type ListRequest = FastifyRequest<{
   Querystring: {
@@ -28,6 +31,14 @@ type UpdateRequest = FastifyRequest<{
 
 type DeleteRequest = FastifyRequest<{
   Params: { id: string };
+}>;
+
+type SendInvoiceRequest = FastifyRequest<{
+  Params: { id: string };
+  Body: {
+    email?: string | string[];
+    expiresInDays?: number;
+  };
 }>;
 
 export const listInvoicesHandler = async (request: ListRequest, reply: FastifyReply) => {
@@ -110,4 +121,71 @@ export const deleteInvoiceHandler = async (request: DeleteRequest, reply: Fastif
   }
 
   await reply.status(204).send();
+};
+
+/**
+ * Generate a secure random token for invoice link
+ */
+function generateToken(): string {
+  return randomBytes(32).toString("base64url");
+}
+
+export const sendInvoiceHandler = async (request: SendInvoiceRequest, reply: FastifyReply) => {
+  try {
+    const service = new InvoicesService(request.db, request.cache);
+    const { id } = request.params;
+    const { email, expiresInDays = 30 } = request.body;
+
+    // Get invoice
+    const invoice = await service.getById(id);
+    if (!invoice) {
+      return reply.status(404).send({ error: "Invoice not found" });
+    }
+
+    // Determine recipient email(s)
+    const recipientEmails = email || invoice.customerEmail;
+    if (!recipientEmails) {
+      return reply.status(400).send({ error: "No email address provided" });
+    }
+
+    // Generate unique token
+    const token = generateToken();
+
+    // Calculate expiration date
+    const expiresAt = expiresInDays > 0
+      ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000)
+      : null;
+
+    // Create invoice link record
+    await request.db.insert(invoiceLinks).values({
+      invoiceId: id,
+      token,
+      expiresAt,
+      viewCount: 0,
+    });
+
+    // Generate invoice link URL
+    const baseUrl = process.env.PUBLIC_URL || process.env.API_URL || "http://localhost:3000";
+    const invoiceLink = `${baseUrl}/invoices/${token}`;
+
+    // Send email
+    await emailService.sendInvoiceLink({
+      to: recipientEmails,
+      invoiceNumber: invoice.invoiceNumber,
+      invoiceLink,
+      customerName: invoice.customerName,
+    });
+
+    await reply.status(200).send({
+      data: {
+        token,
+        link: invoiceLink,
+        expiresAt: expiresAt?.toISOString() || null,
+      },
+    });
+  } catch (error) {
+    request.log?.error(error, "Failed to send invoice");
+    const message = error instanceof Error ? error.message : "Unknown error";
+    await reply.status(500).send({ error: "Failed to send invoice", message });
+  }
 };

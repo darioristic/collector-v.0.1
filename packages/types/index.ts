@@ -421,7 +421,7 @@ export const INVOICE_STATUSES = ["draft", "sent", "paid", "overdue", "void", "un
 export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
 
 export type InvoiceItem = {
-  id: number;
+  id: string;
   invoiceId: string;
   description?: string | null;
   quantity: number;

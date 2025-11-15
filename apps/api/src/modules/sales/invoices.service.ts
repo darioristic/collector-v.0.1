@@ -147,17 +147,49 @@ export class InvoicesService {
 
     let itemRows: InvoiceItemRow[] = [];
     try {
+      console.log("[InvoicesService.getById] Fetching invoice items for invoiceId:", id, "type:", typeof id);
       itemRows = await this.database
-        .select()
+        .select({
+          id: invoiceItems.id,
+          invoiceId: invoiceItems.invoiceId,
+          description: invoiceItems.description,
+          quantity: invoiceItems.quantity,
+          unit: invoiceItems.unit,
+          unitPrice: invoiceItems.unitPrice,
+          discountRate: invoiceItems.discountRate,
+          vatRate: invoiceItems.vatRate,
+          total: invoiceItems.total,
+          totalExclVat: invoiceItems.totalExclVat,
+          vatAmount: invoiceItems.vatAmount,
+          totalInclVat: invoiceItems.totalInclVat,
+          createdAt: invoiceItems.createdAt
+        })
         .from(invoiceItems)
         .where(eq(invoiceItems.invoiceId, id)) as unknown as InvoiceItemRow[];
-    } catch {
+      console.log("[InvoicesService.getById] Fetched", itemRows.length, "invoice items");
+      if (itemRows.length > 0) {
+        console.log("[InvoicesService.getById] First item sample:", JSON.stringify(itemRows[0], null, 2));
+      }
+    } catch (error) {
+      console.error("[InvoicesService.getById] Error fetching invoice items:", error);
+      if (error instanceof Error) {
+        console.error("[InvoicesService.getById] Error message:", error.message);
+        console.error("[InvoicesService.getById] Error stack:", error.stack);
+      }
       itemRows = [];
     }
 
     const invoice: Invoice = {
       ...this.mapInvoiceFromDb(invoiceRow as InvoiceRow),
-      items: itemRows.map((row) => this.mapInvoiceItemFromDb(row as InvoiceItemRow))
+      items: itemRows.map((row, index) => {
+        try {
+          return this.mapInvoiceItemFromDb(row as InvoiceItemRow);
+        } catch (error) {
+          console.error(`[InvoicesService.getById] Error mapping invoice item at index ${index}:`, error);
+          console.error(`[InvoicesService.getById] Item row data:`, JSON.stringify(row, null, 2));
+          throw error;
+        }
+      })
     };
 
     // Cache for 15 minutes
@@ -166,6 +198,34 @@ export class InvoicesService {
     }
 
     return invoice;
+  }
+
+  /**
+   * Transform notes to JSON format if it's a string (backward compatibility)
+   */
+  private transformNotes(notes: unknown): unknown {
+    if (!notes) return null;
+    if (typeof notes === "string") {
+      // Convert string to Tiptap JSON format
+      const trimmed = notes.trim();
+      if (!trimmed) return null;
+      return {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [
+              {
+                type: "text",
+                text: trimmed
+              }
+            ]
+          }
+        ]
+      };
+    }
+    // Already JSON format
+    return notes;
   }
 
   /**
@@ -202,7 +262,7 @@ export class InvoicesService {
             amountPaid: "0",
             balance: calculated.total.toString(),
             status: input.status || "draft",
-            notes: input.notes || null
+            notes: this.transformNotes(input.notes)
           })
           .returning();
 
@@ -218,10 +278,10 @@ export class InvoicesService {
               unitPrice: new Decimal(item.unitPrice).toFixed(2),
               discountRate: new Decimal(item.discountRate || 0).toFixed(2),
               vatRate: new Decimal(item.vatRate || TAX_CONFIG.DEFAULT_RATE_PERCENTAGE).toFixed(2),
+              total: itemCalc.totalInclVat.toFixed(2),
               totalExclVat: itemCalc.totalExclVat.toFixed(2),
               vatAmount: itemCalc.vatAmount.toFixed(2),
               totalInclVat: itemCalc.totalInclVat.toFixed(2)
-              // Note: id and createdAt are omitted - they use database defaults (serial and defaultNow)
             };
             console.log("[InvoicesService.create] Inserting item:", JSON.stringify(insertItem, null, 2));
             return insertItem;
@@ -294,7 +354,7 @@ export class InvoicesService {
         if (input.dueDate !== undefined) updateData.dueDate = input.dueDate ? new Date(input.dueDate) : null;
         if (input.currency !== undefined) updateData.currency = input.currency;
         if (input.status !== undefined) updateData.status = input.status;
-        if (input.notes !== undefined) updateData.notes = input.notes;
+        if (input.notes !== undefined) updateData.notes = this.transformNotes(input.notes);
 
         if (calculated) {
           updateData.amountBeforeDiscount = calculated.amountBeforeDiscount.toString();
@@ -328,10 +388,10 @@ export class InvoicesService {
                 unitPrice: new Decimal(item.unitPrice).toFixed(2),
                 discountRate: new Decimal(item.discountRate || 0).toFixed(2),
                 vatRate: new Decimal(item.vatRate || TAX_CONFIG.DEFAULT_RATE_PERCENTAGE).toFixed(2),
+                total: itemCalc.totalInclVat.toFixed(2),
                 totalExclVat: itemCalc.totalExclVat.toFixed(2),
                 vatAmount: itemCalc.vatAmount.toFixed(2),
                 totalInclVat: itemCalc.totalInclVat.toFixed(2)
-                // Note: id and createdAt are omitted - they use database defaults (serial and defaultNow)
               };
             });
             await tx.insert(invoiceItems).values(itemsToInsert);
@@ -469,8 +529,8 @@ export class InvoicesService {
   private mapInvoiceItemFromDb(dbItem: InvoiceItemRow): InvoiceItem {
     const d = dbItem.createdAt instanceof Date ? dbItem.createdAt : new Date(dbItem.createdAt as unknown as string);
     return {
-      id: dbItem.id,
-      invoiceId: dbItem.invoiceId,
+      id: String(dbItem.id),
+      invoiceId: String(dbItem.invoiceId),
       description: dbItem.description,
       quantity: Number(dbItem.quantity),
       unit: dbItem.unit,

@@ -41,6 +41,8 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { MinimalTiptap } from "@/components/ui/custom/minimal-tiptap/minimal-tiptap";
+import type { Content } from "@tiptap/react";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { useToast } from "@/hooks/use-toast";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
@@ -66,7 +68,7 @@ const invoiceFormSchema = z.object({
 	dueDate: z.string().optional(),
 	currency: z.string().min(1, "Currency is required"),
 	status: z.string().min(1, "Status is required"),
-	notes: z.string().optional(),
+	notes: z.any().optional(), // JSON content from Tiptap editor
 	items: z.array(invoiceItemSchema).min(1, "At least one item is required"),
 });
 
@@ -681,7 +683,7 @@ export function CreateInvoiceDialog({
 			})(),
 			currency: getDefaultCurrency(),
 			status: "draft",
-			notes: "",
+			notes: undefined,
 			items: [
 				{
 					description: "",
@@ -837,7 +839,7 @@ export function CreateInvoiceDialog({
 				})(),
 				currency: initialCurrency,
 				status: "draft",
-				notes: "",
+				notes: undefined,
 				items: [
 					{
 						description: "",
@@ -1003,7 +1005,7 @@ export function CreateInvoiceDialog({
 				dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
 				currency: data.currency || "EUR",
 				status: (data.status as InvoiceCreateInput["status"]) || "draft",
-				notes: data.notes && data.notes.trim() ? data.notes.trim() : undefined,
+				notes: data.notes ? (typeof data.notes === "string" ? data.notes.trim() || undefined : data.notes) : undefined,
 				items: validItems.map((item) => ({
 					description: item.description && item.description.trim() ? item.description.trim() : undefined,
 					quantity: item.quantity,
@@ -1709,12 +1711,12 @@ export function CreateInvoiceDialog({
 													<FileText className="h-4 w-4" aria-hidden="true" />
 													Notes
 												</div>
-												<Textarea
-													{...methods.register("notes")}
+												<MinimalTiptap
+													value={watch("notes") as Content | undefined}
+													onChange={(content) => setValue("notes", content)}
+													output="json"
 													placeholder="Add notes…"
-													value={watch("notes") || ""}
-													onChange={(e) => setValue("notes", e.target.value)}
-													className="min-h-[100px] border-0 bg-transparent px-3 py-2 text-sm leading-relaxed shadow-none focus-visible:ring-0"
+													editorClassName="min-h-[100px] border-0 bg-transparent px-3 py-2 text-sm leading-relaxed"
 												/>
 											</div>
 										</div>

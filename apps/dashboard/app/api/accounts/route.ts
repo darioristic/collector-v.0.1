@@ -4,7 +4,9 @@ const API_BASE_URL = process.env.COLLECTOR_API_URL || "http://localhost:4000";
 
 export async function GET(request: NextRequest) {
 	try {
-		const url = `${API_BASE_URL}/api/accounts`;
+		const searchParams = request.nextUrl.searchParams;
+		const queryString = searchParams.toString();
+		const url = `${API_BASE_URL}/api/accounts${queryString ? `?${queryString}` : ""}`;
 
 		// Prosleđujemo cookies i headers iz originalnog zahteva
 		const headers: HeadersInit = {

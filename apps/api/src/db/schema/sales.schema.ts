@@ -3,6 +3,7 @@ import {
   date,
   index,
   integer,
+  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -171,7 +172,7 @@ export const invoices = pgTable(
     amountPaid: numeric("amount_paid", { precision: 14, scale: 2 }).default("0").notNull(),
     balance: numeric("balance", { precision: 14, scale: 2 }).default("0").notNull(),
     currency: text("currency").default("EUR").notNull(),
-    notes: text("notes"),
+    notes: jsonb("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull()
   },
@@ -188,7 +189,7 @@ export const invoices = pgTable(
 export const invoiceItems = pgTable(
   "invoice_items",
   {
-    id: serial("id").primaryKey(),
+    id: uuid("id").defaultRandom().primaryKey(),
     invoiceId: uuid("invoice_id")
       .notNull()
       .references(() => invoices.id, { onDelete: "cascade" }),
@@ -198,6 +199,7 @@ export const invoiceItems = pgTable(
     unitPrice: numeric("unit_price", { precision: 14, scale: 2 }).default("0").notNull(),
     discountRate: numeric("discount_rate", { precision: 6, scale: 2 }).default("0").notNull(),
     vatRate: numeric("vat_rate", { precision: 6, scale: 2 }).default("20").notNull(),
+    total: numeric("total", { precision: 14, scale: 2 }).default("0").notNull(),
     totalExclVat: numeric("total_excl_vat", { precision: 14, scale: 2 }).default("0").notNull(),
     vatAmount: numeric("vat_amount", { precision: 14, scale: 2 }).default("0").notNull(),
     totalInclVat: numeric("total_incl_vat", { precision: 14, scale: 2 }).default("0").notNull(),
@@ -230,6 +232,26 @@ export const payments = pgTable(
     invoiceIdx: index("payments_invoice_idx").on(table.invoiceId),
     companyIdx: index("payments_company_idx").on(table.companyId),
     statusIdx: index("payments_status_idx").on(table.status)
+  })
+);
+
+export const invoiceLinks = pgTable(
+  "invoice_links",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    invoiceId: uuid("invoice_id")
+      .notNull()
+      .references(() => invoices.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    viewedAt: timestamp("viewed_at", { withTimezone: true }),
+    viewCount: integer("view_count").default(0).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
+  },
+  (table) => ({
+    tokenIdx: uniqueIndex("invoice_links_token_idx").on(table.token),
+    invoiceIdx: index("invoice_links_invoice_idx").on(table.invoiceId),
+    expiresAtIdx: index("invoice_links_expires_at_idx").on(table.expiresAt)
   })
 );
 
@@ -307,7 +329,8 @@ export const invoicesRelations = relations(invoices, ({ one, many }) => ({
     references: [accounts.id]
   }),
   items: many(invoiceItems),
-  payments: many(payments)
+  payments: many(payments),
+  links: many(invoiceLinks)
 }));
 
 export const invoiceItemsRelations = relations(invoiceItems, ({ one }) => ({
@@ -329,6 +352,13 @@ export const paymentsRelations = relations(payments, ({ one }) => ({
   contact: one(accountContacts, {
     fields: [payments.contactId],
     references: [accountContacts.id]
+  })
+}));
+
+export const invoiceLinksRelations = relations(invoiceLinks, ({ one }) => ({
+  invoice: one(invoices, {
+    fields: [invoiceLinks.invoiceId],
+    references: [invoices.id]
   })
 }));
 

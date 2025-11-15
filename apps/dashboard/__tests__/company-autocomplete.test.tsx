@@ -177,12 +177,12 @@ describe("CompanyAutocomplete", () => {
 		const input = screen.getByPlaceholderText("Search or add company…");
 		await userEvent.type(input, "Acme", { delay: 50 });
 
-		await waitFor(
-			() => {
-				expect(screen.getByText("Acme Corporation")).toBeInTheDocument();
-			},
-			{ timeout: 3000 }
-		);
+        await waitFor(
+            () => {
+                expect(screen.getByText(/Acme Corporation/i)).toBeInTheDocument();
+            },
+            { timeout: 3000 }
+        );
 	});
 
 	it("should show 'Create' option when no companies match", async () => {
@@ -210,11 +210,11 @@ describe("CompanyAutocomplete", () => {
 		);
 	});
 
-	it("should navigate to companies page when create option is clicked", async () => {
-		mockFetch.mockResolvedValueOnce({
-			ok: true,
-			json: async () => [],
-		});
+    it("should open creation modal when create option is clicked", async () => {
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            json: async () => [],
+        });
 
 		const onChange = vi.fn();
 		render(<CompanyAutocomplete value={undefined} onChange={onChange} />, {
@@ -234,17 +234,18 @@ describe("CompanyAutocomplete", () => {
 			{ timeout: 3000 }
 		);
 
-		const createButton = screen.getByText(/Create "NewCompany"/i).closest("div");
-		if (createButton) {
-			await userEvent.click(createButton);
+        const createButton = screen.getByText(/Create "NewCompany"/i).closest("div");
+        if (createButton) {
+            await userEvent.click(createButton);
 
-			await waitFor(() => {
-				expect(mockPush).toHaveBeenCalledWith(
-					"/accounts/companies?create=true&name=NewCompany"
-				);
-			});
-		}
-	});
+            await waitFor(() => {
+                expect(screen.getByText("Create Customer")).toBeInTheDocument();
+            });
+
+            const nameInput = screen.getByLabelText("Company name");
+            expect(nameInput).toHaveValue("NewCompany");
+        }
+    });
 
 	it("should call onChange when company is selected", async () => {
 		mockFetch.mockResolvedValueOnce({
@@ -263,14 +264,14 @@ describe("CompanyAutocomplete", () => {
 		const input = screen.getByPlaceholderText("Search or add company…");
 		await userEvent.type(input, "Acme", { delay: 50 });
 
-		await waitFor(
-			() => {
-				expect(screen.getByText("Acme Corporation")).toBeInTheDocument();
-			},
-			{ timeout: 3000 }
-		);
+        await waitFor(
+            () => {
+                expect(screen.getByText(/Acme Corporation/i)).toBeInTheDocument();
+            },
+            { timeout: 3000 }
+        );
 
-		const companyItem = screen.getByText("Acme Corporation").closest("div");
+        const companyItem = screen.getByText(/Acme Corporation/i).closest("div");
 		if (companyItem) {
 			await userEvent.click(companyItem);
 
@@ -362,27 +363,27 @@ describe("CompanyAutocomplete", () => {
 		await userEvent.type(input, "Acme", { delay: 50 });
 
 		await waitFor(
-			() => {
-				const companyItem = screen.getByText("Acme Corporation");
-				expect(companyItem).toBeInTheDocument();
-				const mark = within(companyItem.parentElement!).queryByText("Acme");
-				expect(mark?.tagName.toLowerCase()).toBe("mark");
-			},
+            () => {
+                const companyItem = screen.getByText(/Acme Corporation/i);
+                expect(companyItem).toBeInTheDocument();
+                const mark = within(companyItem.parentElement!).queryByText("Acme");
+                expect(mark?.tagName.toLowerCase()).toBe("mark");
+            },
 			{ timeout: 3000 }
 		);
 	});
 
 	it("should limit visible companies to MAX_VISIBLE_ITEMS", async () => {
-		const manyCompanies = Array.from({ length: 100 }, (_, i) => ({
-			...mockCompanies[0],
-			id: String(i + 1),
-			name: `Company ${i + 1}`,
-		}));
-
-		mockFetch.mockResolvedValueOnce({
-			ok: true,
-			json: async () => manyCompanies,
-		});
+    const manyCompanies = Array.from({ length: 100 }, (_, i) => ({
+        ...mockCompanies[0],
+        id: String(i + 1),
+        name: `Company ${i + 1}`,
+    }));
+    
+    mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => manyCompanies,
+    });
 
 		const onChange = vi.fn();
 		render(<CompanyAutocomplete value={undefined} onChange={onChange} />, {

@@ -111,14 +111,14 @@ describe("CompanyAutocomplete E2E Tests", () => {
 
 		await userEvent.type(input, "Acme", { delay: 50 });
 
-		await waitFor(
-			() => {
-				expect(screen.getByText("Acme Corporation")).toBeInTheDocument();
-			},
-			{ timeout: 3000 }
-		);
+        await waitFor(
+            () => {
+                expect(screen.getByText(/Acme Corporation/i)).toBeInTheDocument();
+            },
+            { timeout: 3000 }
+        );
 
-		const companyItem = screen.getByText("Acme Corporation").closest("div");
+        const companyItem = screen.getByText(/Acme Corporation/i).closest("div");
 		if (companyItem) {
 			await userEvent.click(companyItem);
 
@@ -130,11 +130,11 @@ describe("CompanyAutocomplete E2E Tests", () => {
 		}
 	});
 
-	it("should complete full user flow: search non-existent company, create new", async () => {
-		mockFetch.mockResolvedValue({
-			ok: true,
-			json: async () => [],
-		});
+    it("should complete full user flow: search non-existent company, open create modal", async () => {
+        mockFetch.mockResolvedValue({
+            ok: true,
+            json: async () => [],
+        });
 
 		const onChange = vi.fn();
 		render(<CompanyAutocomplete value={undefined} onChange={onChange} />, {
@@ -154,17 +154,18 @@ describe("CompanyAutocomplete E2E Tests", () => {
 			{ timeout: 3000 }
 		);
 
-		const createButton = screen.getByText(/Create "NewTech Inc"/i).closest("div");
-		if (createButton) {
-			await userEvent.click(createButton);
+        const createButton = screen.getByText(/Create "NewTech Inc"/i).closest("div");
+        if (createButton) {
+            await userEvent.click(createButton);
 
-			await waitFor(() => {
-				expect(mockPush).toHaveBeenCalledWith(
-					"/accounts/companies?create=true&name=NewTech Inc"
-				);
-			});
-		}
-	});
+            await waitFor(() => {
+                expect(screen.getByText("Create Customer")).toBeInTheDocument();
+            });
+
+            const nameInput = screen.getByLabelText("Company name");
+            expect(nameInput).toHaveValue("NewTech Inc");
+        }
+    });
 
 	it("should handle user typing quickly and debounce requests", async () => {
 		mockFetch.mockResolvedValue({
@@ -222,12 +223,12 @@ describe("CompanyAutocomplete E2E Tests", () => {
 		const input = screen.getByPlaceholderText("Search or add company…");
 		await userEvent.type(input, "Acme", { delay: 50 });
 
-		await waitFor(
-			() => {
-				expect(screen.getByText("Acme Corporation")).toBeInTheDocument();
-			},
-			{ timeout: 3000 }
-		);
+        await waitFor(
+            () => {
+                expect(screen.getByText(/Acme Corporation/i)).toBeInTheDocument();
+            },
+            { timeout: 3000 }
+        );
 
 		const companyItem = screen.getByText("Acme Corporation").closest("div");
 		if (companyItem) {
