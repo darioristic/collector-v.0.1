@@ -26,6 +26,8 @@ type ProductResponse = {
   sku: string;
   price: number;
   currency: string;
+  description: string | null;
+  specifications: Record<string, unknown> | null;
   category: string | null;
   active: boolean;
   relatedSalesOrders: string[];
@@ -107,6 +109,8 @@ const mapProductToResponse = (product: ProductEntity): ProductResponse => ({
   sku: product.sku,
   price: product.unitPrice,
   currency: product.currency,
+  description: product.description,
+  specifications: product.specifications ?? null,
   category: product.categoryName,
   active: product.status === "active",
   relatedSalesOrders: []
@@ -116,6 +120,8 @@ const mapCreateBodyToPayload = (body: ProductCreateBody): CreateProductPayload =
   name: body.name,
   sku: body.sku,
   unitPrice: body.price,
+  description: body.description ?? null,
+  specifications: body.specifications ?? null,
   status: body.active === false ? "inactive" : "active",
   categoryName: body.category ?? null,
   inventory: [],
@@ -135,6 +141,14 @@ const mapUpdateBodyToPayload = (body: ProductUpdateBody): UpdateProductPayload =
 
   if (body.price !== undefined) {
     payload.unitPrice = body.price;
+  }
+
+  if (body.description !== undefined) {
+    payload.description = body.description ?? null;
+  }
+
+  if (body.specifications !== undefined) {
+    payload.specifications = body.specifications ?? null;
   }
 
   if (body.category !== undefined) {

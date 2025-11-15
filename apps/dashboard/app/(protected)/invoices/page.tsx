@@ -2,6 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { useState } from "react";
+import { CreateInvoiceDialog } from "@/components/invoices/create-invoice-dialog";
 import { InvoiceDetail } from "@/components/invoices/invoice-detail";
 import { InvoiceList } from "@/components/invoices/invoice-list";
 import { Button } from "@/components/ui/button";
@@ -9,19 +10,25 @@ import { TablePageHeader } from "@/components/ui/page-header";
 import { useDeleteInvoice } from "@/src/hooks/useInvoices";
 
 export default function InvoicesPage() {
-	const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(
-		null,
-	);
+    const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+	const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 	const deleteInvoice = useDeleteInvoice();
 
-	const handleInvoiceClick = (invoiceId: string) => {
-		setSelectedInvoiceId(invoiceId);
-	};
+    const handleInvoiceClick = (invoiceId: string) => {
+        setSelectedInvoiceId(invoiceId);
+        setIsDrawerOpen(true);
+    };
 
 	const handleCreateInvoice = () => {
-		// TODO: Implement create invoice dialog
-		alert("Create invoice dialog - Coming soon!");
+		setIsCreateDialogOpen(true);
 	};
+
+    const handleCreateSuccess = () => {
+        setIsCreateDialogOpen(false);
+        setSelectedInvoiceId(null);
+        setIsDrawerOpen(false);
+    };
 
 	const handleDeleteInvoice = async (invoiceId: string) => {
 		if (confirm("Are you sure you want to delete this invoice?")) {
@@ -45,25 +52,34 @@ export default function InvoicesPage() {
 				}
 			/>
 
-			<div
-				className={`grid gap-6 ${selectedInvoiceId ? "lg:grid-cols-2" : "grid-cols-1"}`}
-			>
-				<InvoiceList
-					onInvoiceClick={handleInvoiceClick}
-					onCreateInvoice={handleCreateInvoice}
-					showCreateAction={false}
-				/>
+            <div className={`transition-all ${isDrawerOpen ? "md:pr-[calc(50vw)]" : ""}`}>
+                <InvoiceList
+                    onInvoiceClick={handleInvoiceClick}
+                    onCreateInvoice={handleCreateInvoice}
+                    showCreateAction={false}
+                />
+            </div>
 
-				{selectedInvoiceId && (
-					<InvoiceDetail
-						invoiceId={selectedInvoiceId}
-						onEdit={() => {
-							// TODO: Open edit dialog
-						}}
-						onDelete={handleDeleteInvoice}
-					/>
-				)}
-			</div>
+            {selectedInvoiceId && (
+                <InvoiceDetail
+                    invoiceId={selectedInvoiceId}
+                    open={isDrawerOpen && Boolean(selectedInvoiceId)}
+                    onClose={() => {
+                        setIsDrawerOpen(false);
+                        setSelectedInvoiceId(null);
+                    }}
+                    onEdit={() => {
+                        // TODO: Open edit dialog
+                    }}
+                    onDelete={handleDeleteInvoice}
+                />
+            )}
+
+			<CreateInvoiceDialog
+				open={isCreateDialogOpen}
+				onOpenChange={setIsCreateDialogOpen}
+				onSuccess={handleCreateSuccess}
+			/>
 		</div>
 	);
 }

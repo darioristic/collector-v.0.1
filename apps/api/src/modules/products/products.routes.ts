@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
+import { createSearchPreValidation } from "../../lib/validation/search";
 
 import {
   adjustInventorySchema,
@@ -24,7 +25,11 @@ import {
 } from "./inventory.controller";
 
 const productsRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.get("/", { schema: listProductsSchema }, listProducts);
+  fastify.get(
+    "/",
+    { schema: listProductsSchema, preValidation: createSearchPreValidation(255, "search") },
+    listProducts
+  );
   fastify.get("/inventory", { schema: listInventorySchema }, listInventory);
   fastify.get("/:id/inventory", { schema: getProductInventorySchema }, getProductInventory);
   fastify.post(

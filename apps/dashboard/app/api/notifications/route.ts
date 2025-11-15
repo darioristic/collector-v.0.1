@@ -9,7 +9,11 @@ import { getCurrentAuth } from "@/lib/auth";
 import { notificationListResponseSchema } from "@/lib/validations/notifications";
 
 const getNotificationServiceUrl = () => {
-	return process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL || "http://localhost:4002";
+  return (
+    process.env.NOTIFICATION_SERVICE_URL ||
+    process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL ||
+    "http://localhost:4002"
+  );
 };
 
 export async function GET(request: NextRequest) {
@@ -63,15 +67,15 @@ export async function GET(request: NextRequest) {
 		}
 
 		return withNoStore(NextResponse.json(payload.data));
-	} catch (error) {
-		console.error("[notifications] Failed to list notifications", error);
-		return withNoStore(
-			NextResponse.json(
-				{
-					error: "Došlo je do greške pri preuzimanju notifikacija.",
-				},
-				{ status: 500 },
-			),
-		);
-	}
+    } catch (error) {
+        console.error("[notifications] Failed to list notifications", error);
+        return withNoStore(
+            NextResponse.json(
+                {
+                    error: "Servis notifikacija nije dostupan.",
+                },
+                { status: 503 },
+            ),
+        );
+    }
 }

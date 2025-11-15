@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Controller, type Control, type FieldPath, type FieldValues } from "react-hook-form";
 import { Check, ChevronsUpDown, Loader2, Plus } from "lucide-react";
-import type { Account } from "@crm/types";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { getCompanyInitials } from "@/lib/utils/company";
@@ -24,7 +24,6 @@ import {
 	PopoverTrigger,
 } from "@/components/ui/popover";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { CompanyCreationModal } from "./CompanyCreationModal";
 
 type CompanyAutocompleteProps<TFieldValues extends FieldValues = FieldValues> = {
 	value?: string;
@@ -35,13 +34,39 @@ type CompanyAutocompleteProps<TFieldValues extends FieldValues = FieldValues> = 
 	placeholder?: string;
 };
 
+const MIN_SEARCH_LENGTH = 2;
+const MIN_CREATE_LENGTH = 3;
+const MAX_VISIBLE_ITEMS = 50;
+
+function highlightMatch(text: string, query: string): React.ReactNode {
+	if (!query || !text) return text;
+	
+	const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	const parts = text.split(new RegExp(`(${escapedQuery})`, 'gi'));
+	
+	return parts.map((part, i) => 
+		part.toLowerCase() === query.toLowerCase() ? (
+			<mark key={i} className="bg-primary/20 text-primary font-medium rounded px-0.5">
+				{part}
+			</mark>
+		) : (
+			<span key={i}>{part}</span>
+		)
+	);
+}
+
+function isValidCompanyName(name: string): boolean {
+	const trimmed = name.trim();
+	return trimmed.length >= MIN_CREATE_LENGTH && trimmed.length <= 255;
+}
+
 export function CompanyAutocomplete<TFieldValues extends FieldValues = FieldValues>({
-    value,
-    onChange,
-    control,
-    name,
-    disabled = false,
-    placeholder = "Search or add company…",
+	value,
+	onChange,
+	control,
+	name,
+	disabled = false,
+	placeholder = "Search or add company…",
 }: CompanyAutocompleteProps<TFieldValues>) {
 	if (control && name) {
 		return (
@@ -76,36 +101,102 @@ function CompanyAutocompleteInner({
 	disabled = false,
 	placeholder = "Search or add company…",
 }: Omit<CompanyAutocompleteProps, "control" | "name">) {
+	const router = useRouter();
 	const [open, setOpen] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
-	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 	const { data: companies = [], isLoading } = useCompanySearch(searchQuery);
 	const { data: allAccounts = [] } = useAccounts();
 
-	const selectedCompany =
-		companies.find((c) => c.id === value) ||
-		allAccounts.find((c) => c.id === value);
+	const selectedCompany = useMemo(() => {
+		return companies.find((c) => c.id === value) ||
+			allAccounts.find((c) => c.id === value);
+	}, [companies, allAccounts, value]);
 
-	const handleSelect = (companyId: string) => {
+	const trimmedQuery = searchQuery.trim();
+
+	const sortedCompanies = useMemo(() => {
+		if (!companies.length || !trimmedQuery) {
+			return companies.slice(0, MAX_VISIBLE_ITEMS);
+		}
+		
+		const queryLower = trimmedQuery.toLowerCase();
+		
+		const sorted = [...companies].sort((a, b) => {
+			const aName = a.name.toLowerCase();
+			const bName = b.name.toLowerCase();
+			
+			if (aName === queryLower) return -1;
+			if (bName === queryLower) return 1;
+			
+			const aStarts = aName.startsWith(queryLower);
+			const bStarts = bName.startsWith(queryLower);
+			if (aStarts && !bStarts) return -1;
+			if (!aStarts && bStarts) return 1;
+			
+			const aContains = aName.includes(queryLower);
+			const bContains = bName.includes(queryLower);
+			if (aContains && !bContains) return -1;
+			if (!aContains && bContains) return 1;
+			
+			return aName.length - bName.length;
+		});
+
+		return sorted.slice(0, MAX_VISIBLE_ITEMS);
+	}, [companies, trimmedQuery]);
+
+	const hasExactMatch = useMemo(() => {
+		if (!trimmedQuery || companies.length === 0) return false;
+		const queryLower = trimmedQuery.toLowerCase();
+		return companies.some((c) => c.name.toLowerCase() === queryLower);
+	}, [companies, trimmedQuery]);
+
+	const hasPartialMatch = useMemo(() => {
+		if (!trimmedQuery || companies.length === 0) return false;
+		const queryLower = trimmedQuery.toLowerCase();
+		return companies.some((c) => {
+			const name = c.name.toLowerCase();
+			return name.startsWith(queryLower) || name.includes(queryLower);
+		});
+	}, [companies, trimmedQuery]);
+
+	const shouldShowCreate = useMemo(() => {
+		if (isLoading) return false;
+		if (trimmedQuery.length < MIN_CREATE_LENGTH) return false;
+		if (!isValidCompanyName(trimmedQuery)) return false;
+		
+		return !hasExactMatch && !hasPartialMatch;
+	}, [trimmedQuery, hasExactMatch, hasPartialMatch, isLoading]);
+
+	const visibleCompanies = sortedCompanies;
+	const hasMoreResults = companies.length > MAX_VISIBLE_ITEMS;
+
+	const handleSelect = useCallback((companyId: string) => {
 		onChange(companyId);
 		setOpen(false);
 		setSearchQuery("");
-	};
+	}, [onChange]);
 
-	const handleCreateNew = () => {
+	const handleCreateNew = useCallback(() => {
+		if (!isValidCompanyName(trimmedQuery)) return;
+		
 		setOpen(false);
-		setIsCreateModalOpen(true);
-	};
+		const params = new URLSearchParams({
+			create: "true",
+			name: trimmedQuery,
+		});
+		router.push(`/accounts/companies?${params.toString()}`);
+	}, [trimmedQuery, router]);
 
-	const handleCompanyCreated = (company: Account) => {
-		onChange(company.id);
-		setIsCreateModalOpen(false);
-		setSearchQuery("");
-	};
+	const handleOpenChange = useCallback((newOpen: boolean) => {
+		setOpen(newOpen);
+		if (!newOpen) {
+			setSearchQuery("");
+		}
+	}, []);
 
 	return (
 		<div className="w-full">
-			<Popover open={open} onOpenChange={setOpen}>
+			<Popover open={open} onOpenChange={handleOpenChange}>
 				<PopoverTrigger asChild>
 					<Button
 						variant="outline"
@@ -113,10 +204,11 @@ function CompanyAutocompleteInner({
 						aria-expanded={open}
 						className="w-full justify-between"
 						disabled={disabled}
+						type="button"
 					>
 						{selectedCompany ? (
-							<div className="flex items-center gap-2">
-								<Avatar className="size-6">
+							<div className="flex items-center gap-2 min-w-0 flex-1">
+								<Avatar className="size-6 shrink-0">
 									<AvatarFallback className="text-xs">
 										{getCompanyInitials(selectedCompany.name)}
 									</AvatarFallback>
@@ -124,12 +216,15 @@ function CompanyAutocompleteInner({
 								<span className="truncate">{selectedCompany.name}</span>
 							</div>
 						) : (
-							<span className="text-muted-foreground">{placeholder}</span>
+							<span className="text-muted-foreground truncate">{placeholder}</span>
 						)}
 						<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 					</Button>
 				</PopoverTrigger>
-				<PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+				<PopoverContent 
+					className="w-[var(--radix-popover-trigger-width)] p-0" 
+					align="start"
+				>
 					<AnimatePresence>
 						{open && (
 							<motion.div
@@ -144,59 +239,116 @@ function CompanyAutocompleteInner({
 										value={searchQuery}
 										onValueChange={setSearchQuery}
 									/>
-									<CommandList>
+									<CommandList className="max-h-[300px]">
 										{isLoading ? (
 											<div className="flex items-center justify-center py-6">
 												<Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
 											</div>
-										) : companies.length === 0 && searchQuery.trim().length > 0 ? (
-											<>
-												<CommandEmpty>No companies found.</CommandEmpty>
-												<CommandGroup>
-													<CommandItem onSelect={handleCreateNew}>
-														<Plus className="mr-2 h-4 w-4" />
-														<span className="font-medium">Add new company</span>
-													</CommandItem>
-												</CommandGroup>
-											</>
 										) : (
-											<CommandGroup>
-												{companies.map((company) => (
-													<CommandItem
-														key={company.id}
-														value={company.id}
-														onSelect={() => handleSelect(company.id)}
-													>
-														<Check
-															className={cn(
-																"mr-2 h-4 w-4",
-																value === company.id
-																	? "opacity-100"
-																	: "opacity-0",
-															)}
-														/>
-														<Avatar className="mr-2 size-6">
-															<AvatarFallback className="text-xs">
-																{getCompanyInitials(company.name)}
-															</AvatarFallback>
-														</Avatar>
-														<div className="flex flex-col">
-															<span>{company.name}</span>
-															{company.email && (
-																<span className="text-xs text-muted-foreground">
-																	{company.email}
-																</span>
-															)}
+											<>
+												{visibleCompanies.length === 0 && trimmedQuery.length > 0 && trimmedQuery.length < MIN_SEARCH_LENGTH && (
+													<CommandEmpty>
+														<div className="flex flex-col items-center justify-center py-6 text-center">
+															<div className="flex size-10 items-center justify-center rounded-full bg-muted mb-2">
+																<ChevronsUpDown className="h-5 w-5 text-muted-foreground/60" />
+															</div>
+															<span className="text-sm font-medium text-muted-foreground">
+																Type at least {MIN_SEARCH_LENGTH} characters
+															</span>
+															<span className="text-xs text-muted-foreground/70 mt-0.5">
+																to search for companies
+															</span>
 														</div>
-													</CommandItem>
-												))}
-												{searchQuery.trim().length > 0 && (
-													<CommandItem onSelect={handleCreateNew}>
-														<Plus className="mr-2 h-4 w-4" />
-														<span className="font-medium">Add new company</span>
-													</CommandItem>
+													</CommandEmpty>
 												)}
-											</CommandGroup>
+												{visibleCompanies.length === 0 && trimmedQuery.length >= MIN_SEARCH_LENGTH && !shouldShowCreate && (
+													<CommandEmpty>
+														<div className="flex flex-col items-center justify-center py-6 text-center">
+															<div className="flex size-10 items-center justify-center rounded-full bg-muted mb-2">
+																<ChevronsUpDown className="h-5 w-5 text-muted-foreground/60" />
+															</div>
+															<span className="text-sm font-medium text-muted-foreground">
+																No companies found
+															</span>
+															<span className="text-xs text-muted-foreground/70 mt-0.5">
+																Try a different search term
+															</span>
+														</div>
+													</CommandEmpty>
+												)}
+												{visibleCompanies.length > 0 && (
+													<CommandGroup 
+														heading={
+															<div className="flex items-center justify-between w-full">
+																<span>
+																	{visibleCompanies.length} {visibleCompanies.length === 1 ? "company" : "companies"}
+																	{hasMoreResults && ` (showing first ${MAX_VISIBLE_ITEMS})`}
+																</span>
+															</div>
+														}
+													>
+														{visibleCompanies.map((company) => (
+															<CommandItem
+																key={company.id}
+																value={company.id}
+																onSelect={() => handleSelect(company.id)}
+																className="cursor-pointer py-2.5 rounded-lg mx-1 hover:bg-accent focus:bg-accent"
+															>
+																<Check
+																	className={cn(
+																		"mr-2 h-4 w-4 shrink-0",
+																		value === company.id
+																			? "opacity-100"
+																			: "opacity-0",
+																	)}
+																/>
+																<Avatar className="mr-3 size-8 shrink-0">
+																	<AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
+																		{getCompanyInitials(company.name)}
+																	</AvatarFallback>
+																</Avatar>
+																<div className="flex flex-1 flex-col gap-0.5 min-w-0">
+																	<span className="font-medium text-sm leading-tight truncate">
+																		{highlightMatch(company.name, trimmedQuery)}
+																	</span>
+																	{company.email && (
+																		<span className="text-xs text-muted-foreground/80 truncate">
+																			{company.email}
+																		</span>
+																	)}
+																</div>
+															</CommandItem>
+														))}
+													</CommandGroup>
+												)}
+												{shouldShowCreate && (
+													<>
+														{visibleCompanies.length > 0 && (
+															<div className="h-px bg-border/50 mx-2 my-2" />
+														)}
+														<CommandGroup>
+															<CommandItem 
+																onSelect={handleCreateNew}
+																className="cursor-pointer !bg-gradient-to-r !from-primary/5 !to-primary/10 hover:!from-primary/10 hover:!to-primary/15 !border-t-2 !border-dashed !border-primary/40 !mt-2 !mx-2 !rounded-lg !py-3.5 !px-3"
+															>
+																<div className="flex items-start gap-3 w-full">
+																	<div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/20 ring-2 ring-primary/30 mt-0.5">
+																		<Plus className="h-5 w-5 text-primary" />
+																	</div>
+																	<div className="flex flex-1 flex-col gap-1 min-w-0 overflow-hidden">
+																		<span className="font-bold text-sm leading-tight text-primary line-clamp-2 break-words">
+																			Create "{trimmedQuery}"
+																		</span>
+																		<span className="text-xs leading-relaxed text-muted-foreground/80">
+																			Add new company to database
+																		</span>
+																	</div>
+																</div>
+															</CommandItem>
+														</CommandGroup>
+													</>
+												)}
+											</>
 										)}
 									</CommandList>
 								</Command>
@@ -205,13 +357,6 @@ function CompanyAutocompleteInner({
 					</AnimatePresence>
 				</PopoverContent>
 			</Popover>
-
-			<CompanyCreationModal
-				open={isCreateModalOpen}
-				onOpenChange={setIsCreateModalOpen}
-				onCompanyCreated={handleCompanyCreated}
-			/>
 		</div>
 	);
 }
-

@@ -1,16 +1,23 @@
 "use client";
 
 import type { Invoice } from "@crm/types";
+import * as React from "react";
 import { FileEdit, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
+import {
+    Sheet,
+    SheetContent,
+    SheetTitle,
+} from "@/components/ui/sheet";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Separator } from "@/components/ui/separator";
 import {
 	Table,
@@ -36,82 +43,112 @@ const statusVariants: Record<
 };
 
 type InvoiceDetailProps = {
-	invoiceId: string;
-	onEdit?: (invoice: Invoice) => void;
-	onDelete?: (invoiceId: string) => void;
+    invoiceId: string;
+    open?: boolean;
+    onClose?: () => void;
+    onEdit?: (invoice: Invoice) => void;
+    onDelete?: (invoiceId: string) => void;
 };
 
 export function InvoiceDetail({
-	invoiceId,
-	onEdit,
-	onDelete,
+    invoiceId,
+    open = true,
+    onClose,
+    onEdit,
+    onDelete,
 }: InvoiceDetailProps) {
-	const { data: invoice, isLoading } = useInvoice(invoiceId);
+    const { data: invoice, isLoading } = useInvoice(invoiceId);
 
-	if (isLoading) {
-		return (
-			<Card>
-				<CardContent className="flex h-64 items-center justify-center">
-					<p className="text-sm text-muted-foreground">
-						Loading invoice details...
-					</p>
-				</CardContent>
-			</Card>
-		);
-	}
+    React.useEffect(() => {
+        if (!open) return;
+        const original = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        return () => {
+            document.body.style.overflow = original;
+        };
+    }, [open]);
 
-	if (!invoice) {
-		return (
-			<Card>
-				<CardContent className="flex h-64 items-center justify-center">
-					<p className="text-sm text-muted-foreground">Invoice not found</p>
-				</CardContent>
-			</Card>
-		);
-	}
+    if (isLoading) {
+        return (
+            <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose?.()}>
+                <SheetContent side="right" className="w-full p-0 md:w-[calc(50vw)] md:max-w-[900px]">
+                    <VisuallyHidden>
+                        <SheetTitle>Invoice Details</SheetTitle>
+                    </VisuallyHidden>
+                    <Card>
+                        <CardContent className="flex h-64 items-center justify-center">
+                            <p className="text-sm text-muted-foreground">Loading invoice details...</p>
+                        </CardContent>
+                    </Card>
+                </SheetContent>
+            </Sheet>
+        );
+    }
 
-	return (
-		<Card>
-			<CardHeader>
-				<div className="flex items-center justify-between">
-					<div>
-						<CardTitle className="flex items-center gap-2">
-							Invoice {invoice.invoiceNumber}
-							<Badge variant={statusVariants[invoice.status]}>
-								{invoice.status}
-							</Badge>
-						</CardTitle>
-						<CardDescription>
-							Issued on {new Date(invoice.issuedAt).toLocaleDateString()}
-							{invoice.dueDate &&
-								` • Due: ${new Date(invoice.dueDate).toLocaleDateString()}`}
-						</CardDescription>
-					</div>
-					<div className="flex gap-2">
-						{onEdit && (
-							<Button
-								onClick={() => onEdit(invoice)}
-								variant="outline"
-								size="sm"
-							>
-								<FileEdit className="h-4 w-4 mr-2" />
-								Edit
-							</Button>
-						)}
-						{onDelete && (
-							<Button
-								onClick={() => onDelete(invoice.id)}
-								variant="outline"
-								size="sm"
-								className="text-destructive"
-							>
-								<Trash2 className="h-4 w-4 mr-2" />
-								Delete
-							</Button>
-						)}
-					</div>
-				</div>
-			</CardHeader>
+    if (!invoice) {
+        return (
+            <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose?.()}>
+                <SheetContent side="right" className="w-full p-0 md:w-[calc(50vw)] md:max-w-[900px]">
+                    <VisuallyHidden>
+                        <SheetTitle>Invoice Details</SheetTitle>
+                    </VisuallyHidden>
+                    <Card>
+                        <CardContent className="flex h-64 items-center justify-center">
+                            <p className="text-sm text-muted-foreground">Invoice not found</p>
+                        </CardContent>
+                    </Card>
+                </SheetContent>
+            </Sheet>
+        );
+    }
+
+    return (
+        <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose?.()}>
+            <SheetContent side="right" className="w-full p-0 md:w-[calc(50vw)] md:max-w-[900px]">
+                <VisuallyHidden>
+                    <SheetTitle>Invoice {invoice.invoiceNumber}</SheetTitle>
+                </VisuallyHidden>
+                <Card>
+            <CardHeader>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <CardTitle className="flex items-center gap-2">
+                            Invoice {invoice.invoiceNumber}
+                            <Badge variant={statusVariants[invoice.status]}>
+                                {invoice.status}
+                            </Badge>
+                        </CardTitle>
+                        <CardDescription>
+                            Issued on {new Date(invoice.issuedAt).toLocaleDateString()}
+                            {invoice.dueDate &&
+                                ` • Due: ${new Date(invoice.dueDate).toLocaleDateString()}`}
+                        </CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                        {onEdit && (
+                            <Button
+                                onClick={() => onEdit(invoice)}
+                                variant="outline"
+                                size="sm"
+                            >
+                                <FileEdit className="h-4 w-4 mr-2" />
+                                Edit
+                            </Button>
+                        )}
+                        {onDelete && (
+                            <Button
+                                onClick={() => onDelete(invoice.id)}
+                                variant="outline"
+                                size="sm"
+                                className="text-destructive"
+                            >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                            </Button>
+                        )}
+                    </div>
+                </div>
+            </CardHeader>
 
 			<CardContent className="space-y-6">
 				{/* Customer Information */}
@@ -279,7 +316,9 @@ export function InvoiceDetail({
 						{new Date(invoice.updatedAt).toLocaleString()}
 					</div>
 				</div>
-			</CardContent>
-		</Card>
-	);
+            </CardContent>
+                </Card>
+            </SheetContent>
+        </Sheet>
+    );
 }

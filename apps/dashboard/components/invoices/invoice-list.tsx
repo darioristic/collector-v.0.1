@@ -172,15 +172,17 @@ export function InvoiceList({
 									</TableRow>
 								</TableHeader>
 								<TableBody>
-									{invoices.map((invoice) => (
-										<TableRow
-											key={invoice.id}
-											className={onInvoiceClick ? "cursor-pointer" : ""}
-											onClick={() => onInvoiceClick?.(invoice.id)}
-										>
-											<TableCell className="font-medium">
-												{invoice.invoiceNumber}
-											</TableCell>
+                                    {invoices.map((invoice) => (
+                                        <TableRow key={invoice.id}>
+                                            <TableCell className="font-medium">
+                                                <button
+                                                    type="button"
+                                                    className="hover:underline"
+                                                    onClick={() => onInvoiceClick?.(invoice.id)}
+                                                >
+                                                    {invoice.invoiceNumber}
+                                                </button>
+                                            </TableCell>
 											<TableCell>{invoice.customerName}</TableCell>
 											<TableCell>
 												{new Date(invoice.issuedAt).toLocaleDateString()}

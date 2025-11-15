@@ -362,16 +362,36 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
       [toast]
     );
 
-    // Auto-open company from URL parameter
+    // Auto-open company from URL parameter or create dialog
     React.useEffect(() => {
-      if (typeof window === "undefined" || rows.length === 0) {
+      if (typeof window === "undefined") {
         return;
       }
 
       const searchParams = new URLSearchParams(window.location.search);
       const companyName = searchParams.get("company");
+      const createParam = searchParams.get("create");
+      const nameParam = searchParams.get("name");
 
-      if (companyName && !activeCompany) {
+      // If create=true and name is provided, open create dialog with pre-filled name
+      if (createParam === "true" && nameParam && !isDialogOpen) {
+        setDialogMode("create");
+        setEditingCompany(null);
+        form.reset({
+          ...DEFAULT_FORM_VALUES,
+          name: nameParam,
+        });
+        setIsDialogOpen(true);
+        // Clean up URL parameters
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete("create");
+        newUrl.searchParams.delete("name");
+        window.history.replaceState({}, "", newUrl.toString());
+        return;
+      }
+
+      // Existing logic for opening company sidebar (only if rows are loaded)
+      if (rows.length > 0 && companyName && !activeCompany) {
         const company = rows.find((row) =>
           row.name.toLowerCase().includes(companyName.toLowerCase())
         );
@@ -384,7 +404,7 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
           window.history.replaceState({}, "", newUrl.toString());
         }
       }
-    }, [rows, activeCompany, openSidebar]);
+    }, [rows, activeCompany, openSidebar, isDialogOpen, form]);
 
     const closeSidebar = React.useCallback(() => {
       setActiveCompany(null);
@@ -519,12 +539,56 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
         setDialogMode("create");
         form.reset({ ...DEFAULT_FORM_VALUES });
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Unable to save company.";
+        // Extract error message from response if available
+        let errorMessage = "Unable to save company.";
+        let statusCode: number | undefined;
+        
+        if (error instanceof Error) {
+          errorMessage = error.message;
+          // Extract status code if available from ensureResponse
+          if ("status" in error && typeof error.status === "number") {
+            statusCode = error.status;
+          }
+        } else if (error && typeof error === "object" && "message" in error) {
+          errorMessage = String(error.message);
+          if ("statusCode" in error && typeof error.statusCode === "number") {
+            statusCode = error.statusCode;
+          }
+        }
+
+        // Determine error type based on status code and message
+        const isConflict = statusCode === 409 || 
+                          errorMessage.toLowerCase().includes("already exists") || 
+                          errorMessage.toLowerCase().includes("conflict");
+        const isValidation = statusCode === 400 ||
+                            errorMessage.toLowerCase().includes("validation") ||
+                            errorMessage.toLowerCase().includes("required") ||
+                            errorMessage.toLowerCase().includes("invalid") ||
+                            errorMessage.toLowerCase().includes("provide a valid");
+
+        // Determine toast title based on error type
+        let toastTitle = "Failed to save";
+        if (isConflict) {
+          toastTitle = "Company already exists";
+        } else if (isValidation) {
+          toastTitle = "Validation error";
+        } else if (statusCode === 500) {
+          toastTitle = "Server error";
+        }
+
         toast({
           variant: "destructive",
-          title: "Failed to save",
-          description: message
+          title: toastTitle,
+          description: errorMessage
         });
+
+        // Don't close dialog on error - user should be able to fix and retry
+        // Keep dialog open so user can see validation errors or fix issues
+        // Only reset form if it's a server error (500) or conflict after showing error
+        if (statusCode === 500 || (isConflict && dialogMode === "create")) {
+          // For server errors or conflicts on create, keep dialog open but don't reset
+          // User can modify the form and try again
+        }
       } finally {
         setIsSubmitting(false);
       }

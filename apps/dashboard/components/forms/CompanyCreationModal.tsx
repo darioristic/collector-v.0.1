@@ -17,12 +17,14 @@ type CompanyCreationModalProps = {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	onCompanyCreated: (company: Account) => void;
+	initialName?: string;
 };
 
 export function CompanyCreationModal({
 	open,
 	onOpenChange,
 	onCompanyCreated,
+	initialName,
 }: CompanyCreationModalProps) {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const { toast } = useToast();
@@ -98,7 +100,10 @@ export function CompanyCreationModal({
 					onSubmit={handleSubmit}
 					onCancel={handleCancel}
 					isSubmitting={isSubmitting}
-					defaultValues={{ type: "customer" }}
+					defaultValues={{ 
+						type: "customer",
+						name: initialName || "",
+					}}
 				/>
 			</DialogContent>
 		</Dialog>

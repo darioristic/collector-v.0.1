@@ -56,6 +56,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn, formatCurrency } from "@/lib/utils";
 import { useContacts } from "@/src/hooks/useContacts";
 import { useCreateQuote } from "@/src/hooks/useQuotes";
+import Logo from "@/components/layout/logo";
 
 type CreateQuoteDialogProps = {
 	open: boolean;
@@ -92,6 +93,7 @@ export function CreateQuoteDialog({
 
 	const [issueDateOpen, setIssueDateOpen] = useState(false);
 	const [expiryDateOpen, setExpiryDateOpen] = useState(false);
+	const [showPreview, setShowPreview] = useState(false);
 
 	const methods = useForm<QuoteFormData>({
 		defaultValues: {
@@ -236,6 +238,11 @@ export function CreateQuoteDialog({
 							<SheetDescription className="mt-1.5 text-sm text-muted-foreground">
 								Fill in the details below to create a new quote. All fields marked with <span className="text-destructive">*</span> are required.
 							</SheetDescription>
+							<div className="mt-3 flex gap-2">
+								<Button type="button" variant="outline" size="sm" onClick={() => setShowPreview((v) => !v)}>
+									{showPreview ? "Sakrij preview" : "Prikaži preview"}
+								</Button>
+							</div>
 						</SheetHeader>
 
 						<div className="min-h-0 flex-1 overflow-y-auto">
@@ -453,6 +460,91 @@ export function CreateQuoteDialog({
 										</div>
 									</div>
 								</section>
+								
+								{showPreview && (
+									<div className="rounded-lg border">
+										<div className="bg-black text-white p-8">
+											<div className="flex items-start justify-between">
+												<div className="bg-white text-black w-12 h-12 flex items-center justify-center rounded-sm">
+													<Logo />
+												</div>
+												<div className="text-sm space-y-1">
+													<div className="flex gap-6">
+														<span className="text-zinc-400">Invoice NO:</span>
+														<span className="font-medium">{watch("quoteNumber")}</span>
+													</div>
+													<div className="flex gap-6">
+														<span className="text-zinc-400">Issue date:</span>
+														<span className="font-medium">{issueDate ? format(new Date(issueDate), "dd/MM/yyyy") : "—"}</span>
+													</div>
+													<div className="flex gap-6">
+														<span className="text-zinc-400">Due date:</span>
+														<span className="font-medium">{expiryDate ? format(new Date(expiryDate), "dd/MM/yyyy") : "—"}</span>
+													</div>
+												</div>
+											</div>
+
+											<div className="grid grid-cols-2 gap-16 mt-10">
+												<div className="space-y-2 text-sm">
+													<div className="text-zinc-400">From</div>
+													<div>Your Company</div>
+													<div>info@yourcompany.com</div>
+													<div>+381 60 000 0000</div>
+													<div>Address line</div>
+													<div>VAT ID: —</div>
+												</div>
+												<div className="space-y-2 text-sm">
+													<div className="text-zinc-400">To</div>
+													<div>{selectedCompanyId ? "Selected company" : "Company"}</div>
+													<div>{watch("contactId") ? "Selected contact" : "Contact"}</div>
+													<div>—</div>
+													<div>—</div>
+													<div>VAT ID: —</div>
+												</div>
+											</div>
+
+											<div className="grid grid-cols-3 gap-8 mt-12">
+												<div>
+													<div className="text-zinc-400 text-sm">Item</div>
+													<div className="mt-2 text-sm">{items[0]?.description || "Product / Service"}</div>
+												</div>
+												<div>
+													<div className="text-zinc-400 text-sm">Quantity</div>
+													<div className="mt-2 text-sm">{items[0]?.quantity || 1}</div>
+												</div>
+												<div className="text-right">
+													<div className="text-zinc-400 text-sm">Price</div>
+													<div className="mt-2 text-sm">{formatCurrency(items[0]?.unitPrice || 0, selectedCurrency)}</div>
+												</div>
+											</div>
+
+											<div className="mt-8 border-t border-zinc-800 pt-6">
+												<div className="flex items-center justify-between text-sm">
+													<span className="text-zinc-400">Sales tax</span>
+													<span>{formatCurrency(totals.tax, selectedCurrency)}</span>
+												</div>
+												<div className="mt-2 border-t border-zinc-800" />
+												<div className="flex items-center justify-between mt-6">
+													<span className="text-zinc-400">Total</span>
+													<span className="text-3xl font-bold">{formatCurrency(totals.total, selectedCurrency)}</span>
+												</div>
+											</div>
+
+											<div className="grid grid-cols-2 gap-16 mt-16 text-sm">
+												<div>
+													<div className="text-zinc-400">Payment details</div>
+													<div className="mt-2">Bank: —</div>
+													<div>Account number: —</div>
+													<div>Iban: —</div>
+												</div>
+												<div>
+													<div className="text-zinc-400">Note</div>
+													<div className="mt-2">{watch("notes") || "—"}</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								)}
 
 								<Separator className="my-6" />
 

@@ -417,6 +417,16 @@ export class InvoicesService {
   }
 
   private mapInvoiceFromDb(dbInvoice: InvoiceRow): Invoice {
+    const toIso = (value: unknown): string => {
+      const d = value instanceof Date ? value : new Date(value as string);
+      return Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+    };
+    const toIsoNullable = (value: unknown | null | undefined): string | null => {
+      if (value === null || value === undefined) return null;
+      const d = value instanceof Date ? value : new Date(value as string);
+      return Number.isNaN(d.getTime()) ? null : d.toISOString();
+    };
+
     return {
       id: dbInvoice.id,
       orderId: dbInvoice.orderId,
@@ -426,8 +436,8 @@ export class InvoicesService {
       customerEmail: dbInvoice.customerEmail,
       billingAddress: dbInvoice.billingAddress,
       status: dbInvoice.status,
-      issuedAt: dbInvoice.issuedAt.toISOString(),
-      dueDate: dbInvoice.dueDate ? dbInvoice.dueDate.toISOString() : null,
+      issuedAt: toIso(dbInvoice.issuedAt),
+      dueDate: toIsoNullable(dbInvoice.dueDate),
       amountBeforeDiscount: Number(dbInvoice.amountBeforeDiscount),
       discountTotal: Number(dbInvoice.discountTotal),
       subtotal: Number(dbInvoice.subtotal),
@@ -437,12 +447,13 @@ export class InvoicesService {
       balance: Number(dbInvoice.balance),
       currency: dbInvoice.currency,
       notes: dbInvoice.notes,
-      createdAt: dbInvoice.createdAt.toISOString(),
-      updatedAt: dbInvoice.updatedAt.toISOString()
+      createdAt: toIso(dbInvoice.createdAt),
+      updatedAt: toIso(dbInvoice.updatedAt)
     };
   }
 
   private mapInvoiceItemFromDb(dbItem: InvoiceItemRow): InvoiceItem {
+    const d = dbItem.createdAt instanceof Date ? dbItem.createdAt : new Date(dbItem.createdAt as unknown as string);
     return {
       id: dbItem.id,
       invoiceId: dbItem.invoiceId,
@@ -455,7 +466,7 @@ export class InvoicesService {
       totalExclVat: Number(dbItem.totalExclVat),
       vatAmount: Number(dbItem.vatAmount),
       totalInclVat: Number(dbItem.totalInclVat),
-      createdAt: dbItem.createdAt.toISOString()
+      createdAt: Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString()
     };
   }
 }

@@ -67,14 +67,19 @@ async function buildServer() {
     adapter: createAdapter(pubClient, subClient),
   });
 
-  // Attach Socket.IO to Fastify instance
-  (fastify as any).io = io;
-  (fastify as any).redis = pubClient;
+  // Attach Socket.IO and services to Fastify instance with typed assertions
+  const fastifyExtras = fastify as unknown as {
+    io: SocketIOServer;
+    redis: RedisClientType;
+    cache: ReturnType<typeof getCacheService>;
+  };
+  fastifyExtras.io = io;
+  fastifyExtras.redis = pubClient;
 
   // Setup cache service
   const cacheService = getCacheService(fastify.log);
   setCacheService(cacheService);
-  (fastify as any).cache = cacheService;
+  fastifyExtras.cache = cacheService;
 
   // Setup socket handlers
   setupSocketHandlers(io, pubClient);

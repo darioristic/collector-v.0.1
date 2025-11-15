@@ -21,16 +21,16 @@ async function searchCompanies(query: string): Promise<Account[]> {
 	);
 
 	const accounts = (await response.json()) as Account[];
-	return accounts.slice(0, 10);
+	return accounts;
 }
 
 export function useCompanySearch(searchQuery: string) {
-	const debouncedQuery = useDebounce(searchQuery, 300);
+	const debouncedQuery = useDebounce(searchQuery, 200);
 
 	return useQuery({
 		queryKey: ["companies", "search", debouncedQuery],
 		queryFn: () => searchCompanies(debouncedQuery),
-		enabled: debouncedQuery.trim().length > 0,
+		enabled: debouncedQuery.trim().length >= 2,
 		staleTime: 1000 * 60 * 5, // 5 minutes
 	});
 }

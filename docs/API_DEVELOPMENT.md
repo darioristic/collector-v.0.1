@@ -501,3 +501,18 @@ request.log.error({ err: error }, "Failed to fetch item");
 - [Drizzle ORM Dokumentacija](https://orm.drizzle.team/)
 - [Developer Guide](./DEVELOPER_GUIDE.md)
 
+## Search Input Limits
+
+- Polja sa ograničenjem dužine:
+  - `products.search`: maksimalno 255 karaktera
+  - `sales.orders.search`: maksimalno 255 karaktera
+  - `accounts.search`: maksimalno 255 karaktera
+- Truncation ponašanje:
+  - Uklanja leading/trailing whitespace (`trim`)
+  - Skraćuje string na tačno definisanu maksimalnu dužinu (`slice(0, limit)`)
+  - Primena se vrši u `preValidation` hook-u rute
+- Kako dodati ista pravila na nove endpointe:
+  - Importovati `createSearchPreValidation(limit, fieldName)` iz `apps/api/src/lib/validation/search.ts`
+  - Dodati u opcije rute: `{ preValidation: createSearchPreValidation(255, "search") }`
+  - Po potrebi ažurirati JSON Schema (`maxLength`) za specifičan parametar
+

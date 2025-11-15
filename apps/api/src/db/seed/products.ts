@@ -59,6 +59,7 @@ const productsSeed = (() => {
     status: typeof products.$inferSelect.status;
     categoryId: string;
     unitPrice: number;
+    specifications?: Record<string, unknown> | null;
     inventory: Array<{ locationId: string; quantity: number; reserved: number }>;
   }> = [];
 
@@ -82,6 +83,14 @@ const productsSeed = (() => {
         ? "Kiselinski neutralna kutija za skladištenje."
         : "Retki predmet iz limitirane serije sa sertifikatom.";
     const unitPrice = i % 4 === 3 ? 999 + i * 5 : 29 + i * 2;
+    const specifications =
+      i % 4 === 0
+        ? { tier: "gold", durationMonths: 12, supportLevel: "premium" }
+        : i % 4 === 1
+        ? { contents: ["album", "sleeves", "guide"], weightKg: 2.5 }
+        : i % 4 === 2
+        ? { material: "acid-free", size: "L", capacityItems: 200 }
+        : { edition: "limited", certificate: true, serial: `ART-${i + 1}` };
     const inventory = [
       { locationId: locationsSeed[0].id, quantity: 50 + (i % 20), reserved: 5 + (i % 3) },
       { locationId: locationsSeed[1].id, quantity: 20 + (i % 15), reserved: 2 + (i % 2) }
@@ -95,6 +104,7 @@ const productsSeed = (() => {
       status: DEFAULT_STATUS,
       categoryId: category.id,
       unitPrice,
+      specifications,
       inventory
     });
   }
@@ -164,6 +174,8 @@ export const seedProducts = async (database = defaultDb) => {
           unitPrice: Number.isFinite(product.unitPrice)
             ? (product.unitPrice as number).toFixed(2)
             : "0.00"
+        ,
+          specifications: product.specifications ?? null
         })
         .onConflictDoNothing()
         .returning();

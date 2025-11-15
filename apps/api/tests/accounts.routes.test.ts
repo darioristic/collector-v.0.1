@@ -47,6 +47,16 @@ describe("Accounts API routes", () => {
     });
   });
 
+  it("should trim long search inputs for accounts", async () => {
+    const longSearch = "y".repeat(300);
+    const response = await app.inject({
+      method: "GET",
+      url: `/api/accounts?search=${longSearch}`
+    });
+
+    expect(response.statusCode).toBe(200);
+  });
+
   it("should return a single account by id", async () => {
     const accountId = seededAccountIds[0];
 

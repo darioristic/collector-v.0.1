@@ -21,6 +21,9 @@ export function useChatSocket() {
 	const conversationUpdateCallbacksRef = useRef<
 		Set<(data: { conversationId: string }) => void>
 	>(new Set());
+	const typingCallbacksRef = useRef<
+		Set<(data: { conversationId: string; userId: string; isTyping: boolean }) => void>
+	>(new Set());
 
 	useEffect(() => {
 		console.log("[chat-socket] 🚀 useEffect triggered", { hasUser: !!user?.id });
@@ -90,8 +93,14 @@ export function useChatSocket() {
 			console.log("[chat-socket] ✅ Connected successfully!", {
 				socketId: newSocket.id,
 				transport: newSocket.io.engine.transport.name,
+				userId: user?.id,
 			});
 			setIsConnected(true);
+			
+			// Request initial online users list
+			if (user?.id) {
+				newSocket.emit("users:online:request", { userId: user.id });
+			}
 		});
 
 		newSocket.on("disconnect", (reason) => {
@@ -125,6 +134,22 @@ export function useChatSocket() {
 				setUserStatuses((prev) => ({
 					...prev,
 					[data.userId]: data.status,
+				}));
+			},
+		);
+
+		// Initial online users list when connected
+		newSocket.on(
+			"users:online",
+			(data: { users: Array<{ userId: string; status: "online" | "offline" | "away" }> }) => {
+				console.log("[chat-socket] Initial online users:", data);
+				const statusMap: Record<string, "online" | "offline" | "away"> = {};
+				data.users.forEach((user) => {
+					statusMap[user.userId] = user.status;
+				});
+				setUserStatuses((prev) => ({
+					...prev,
+					...statusMap,
 				}));
 			},
 		);
@@ -164,6 +189,21 @@ export function useChatSocket() {
 							"[chat-socket] Error in conversation update callback:",
 							error,
 						);
+					}
+				});
+			},
+		);
+
+		// Typing events - notify all registered callbacks
+		newSocket.on(
+			"chat:typing",
+			(data: { conversationId: string; userId: string; isTyping: boolean }) => {
+				console.log("[chat-socket] Typing event:", data);
+				typingCallbacksRef.current.forEach((callback) => {
+					try {
+						callback(data);
+					} catch (error) {
+						console.error("[chat-socket] Error in typing callback:", error);
 					}
 				});
 			},
@@ -235,6 +275,38 @@ export function useChatSocket() {
 		[],
 	);
 
+	// Subscribe to typing events
+	const onTyping = useCallback(
+		(
+			callback: (data: {
+				conversationId: string;
+				userId: string;
+				isTyping: boolean;
+			}) => void,
+		) => {
+			typingCallbacksRef.current.add(callback);
+			// Return unsubscribe function
+			return () => {
+				typingCallbacksRef.current.delete(callback);
+			};
+		},
+		[],
+	);
+
+	// Emit typing event
+	const emitTyping = useCallback(
+		(conversationId: string, isTyping: boolean) => {
+			if (socket && isConnected && user?.id) {
+				socket.emit("typing", {
+					conversationId,
+					userId: user.id,
+					isTyping,
+				});
+			}
+		},
+		[socket, isConnected, user?.id],
+	);
+
 	return {
 		socket,
 		isConnected,
@@ -244,6 +316,8 @@ export function useChatSocket() {
 		getUserStatus,
 		onNewMessage,
 		onConversationUpdate,
+		onTyping,
+		emitTyping,
 	};
 }
 

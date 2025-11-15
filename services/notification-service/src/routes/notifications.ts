@@ -1,4 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
+import type { Server as SocketIOServer } from "socket.io";
+import type { CacheService } from "../lib/cache.service.js";
 import {
   createNotification,
   getUnreadCount,
@@ -26,7 +28,7 @@ const notificationsRoutes: FastifyPluginAsync = async (fastify) => {
     const unreadOnly = request.query.unreadOnly === "true";
 
     try {
-      const cache = (fastify as any).cache;
+      const cache = (fastify as unknown as { cache?: CacheService }).cache;
       const result = await listNotifications(
         request.user.userId,
         request.user.companyId,
@@ -49,7 +51,7 @@ const notificationsRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     try {
-      const cache = (fastify as any).cache;
+      const cache = (fastify as unknown as { cache?: CacheService }).cache;
       const count = await getUnreadCount(
         request.user.userId,
         request.user.companyId,
@@ -77,7 +79,7 @@ const notificationsRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     try {
-      const cache = (fastify as any).cache;
+      const cache = (fastify as unknown as { cache?: CacheService }).cache;
       const result = await markAsRead(
         request.user.userId,
         request.user.companyId,
@@ -86,9 +88,9 @@ const notificationsRoutes: FastifyPluginAsync = async (fastify) => {
       );
 
       // Emit socket event
-      const io = (fastify as any).io;
+      const io = (fastify as unknown as { io?: SocketIOServer }).io;
       if (io) {
-        const cache = (fastify as any).cache;
+        const cache = (fastify as unknown as { cache?: CacheService }).cache;
         io.to(`user:${request.user.userId}`).emit("notification:read", {
           updatedIds: result.updatedIds,
           unreadCount: await getUnreadCount(
@@ -131,7 +133,7 @@ const notificationsRoutes: FastifyPluginAsync = async (fastify) => {
     const { title, message, type = "info", link, recipientId } = request.body;
 
     try {
-      const cache = (fastify as any).cache;
+      const cache = (fastify as unknown as { cache?: CacheService }).cache;
       const notification = await createNotification(
         request.user.companyId,
         recipientId,
@@ -143,7 +145,7 @@ const notificationsRoutes: FastifyPluginAsync = async (fastify) => {
       );
 
       // Emit socket event
-      const io = (fastify as any).io;
+      const io = (fastify as unknown as { io?: SocketIOServer }).io;
       if (io) {
         io.to(`user:${recipientId}`).emit("notification:new", notification);
       }

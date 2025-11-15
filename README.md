@@ -138,6 +138,24 @@ NEXT_PUBLIC_GA_ID=
 
 Copy the snippet above into `.env.local` (in the repo root) or into the respective workspace `.env` files before running the applications.
 
+### Test environment autoload
+
+Tests automatically load environment variables from `apps/api/.env.test` when `NODE_ENV=test`.
+
+```
+NODE_ENV=test
+HOST=127.0.0.1
+PORT=4000
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/collector_test
+REDIS_URL=redis://127.0.0.1:6379
+ALLOWED_ORIGINS=*
+ACCOUNTS_REPOSITORY=memory
+```
+
+- No shell-level exports are required; the loader reads `.env.test` for test runs.
+- If `apps/api/.env.test` is missing, tests fall back to `apps/api/.env`.
+- Production and development environments are unaffected.
+
 ### Database scripts
 
 Additional helper scripts are available from the workspace root:

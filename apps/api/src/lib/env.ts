@@ -1,4 +1,25 @@
 import { z } from "zod";
+import { config } from "dotenv";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const appDir = join(__dirname, "../../");
+const defaultEnvPath = join(appDir, ".env");
+const testEnvPath = join(appDir, ".env.test");
+const isTest = process.env.NODE_ENV === "test";
+try {
+  const pathToLoad = isTest && existsSync(testEnvPath) ? testEnvPath : defaultEnvPath;
+  config({ path: pathToLoad });
+  if (isTest && !existsSync(testEnvPath)) {
+    console.warn(`.env.test not found at ${testEnvPath}, falling back to .env`);
+  }
+} catch {
+  if (isTest) {
+    console.warn("Failed to load .env.test, falling back to defaults");
+  }
+}
 
 /**
  * Environment Variables Schema & Validation
@@ -64,6 +85,11 @@ const envSchema = z.object({
 			z.number().positive()
 		)
 		.default(30),
+
+	// Metrics
+	DB_METRICS_ENABLED: z
+		.preprocess((val) => (val === "true" ? true : false), z.boolean())
+		.default(false),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -89,6 +115,7 @@ export function validateEnv(): Env {
 			console.log(`  DATABASE_URL: ${maskConnectionString(parsed.DATABASE_URL)}`);
 			console.log(`  REDIS_URL: ${maskConnectionString(parsed.REDIS_URL)}`);
 			console.log(`  ALLOWED_ORIGINS: ${parsed.ALLOWED_ORIGINS || "*"}`);
+			console.log(`  DB_METRICS_ENABLED: ${process.env.DB_METRICS_ENABLED === "true" ? "true" : "false"}`);
 		}
 
 		return parsed;

@@ -99,7 +99,7 @@ export const listAccountsSchema: FastifySchema = {
   querystring: {
     type: "object",
     properties: {
-      search: { type: "string", minLength: 1 }
+      search: { type: "string", minLength: 1, maxLength: 255 }
     },
     additionalProperties: false
   },

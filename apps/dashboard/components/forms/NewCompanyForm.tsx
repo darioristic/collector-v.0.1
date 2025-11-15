@@ -67,6 +67,7 @@ type NewCompanyFormProps = {
 	onCancel: () => void;
 	defaultValues?: Partial<CompanyFormValues>;
 	isSubmitting?: boolean;
+	mode?: "create" | "edit";
 };
 
 export function NewCompanyForm({
@@ -74,6 +75,7 @@ export function NewCompanyForm({
 	onCancel,
 	defaultValues,
 	isSubmitting = false,
+	mode = "create",
 }: NewCompanyFormProps) {
 	const form = useForm<CompanyFormValues>({
 		resolver: zodResolver(formSchema),
@@ -272,10 +274,10 @@ export function NewCompanyForm({
 						{isSubmitting ? (
 							<>
 								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-								Creating…
+								{mode === "edit" ? "Updating…" : "Creating…"}
 							</>
 						) : (
-							"Create company"
+							mode === "edit" ? "Update company" : "Create company"
 						)}
 					</Button>
 				</div>

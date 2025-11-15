@@ -64,3 +64,62 @@ export async function GET(request: NextRequest) {
 	}
 }
 
+export async function POST(request: NextRequest) {
+	try {
+		const body = await request.json();
+		const url = `${API_BASE_URL}/api/products`;
+
+		const headers: HeadersInit = {
+			"Content-Type": "application/json",
+		};
+
+		const cookie = request.headers.get("cookie");
+		if (cookie) {
+			headers["Cookie"] = cookie;
+		}
+
+		const authorization = request.headers.get("authorization");
+		if (authorization) {
+			headers["Authorization"] = authorization;
+		}
+
+		const response = await fetch(url, {
+			method: "POST",
+			headers,
+			body: JSON.stringify(body),
+			cache: "no-store",
+		});
+
+		if (!response.ok) {
+			const errorText = await response.text().catch(() => "Unknown error");
+			console.error(`[products] API error:`, {
+				status: response.status,
+				statusText: response.statusText,
+				error: errorText,
+			});
+			return NextResponse.json(
+				{ error: errorText || "Failed to create product" },
+				{ status: response.status },
+			);
+		}
+
+		const data = await response.json();
+		return NextResponse.json(data, {
+			headers: {
+				"Cache-Control": "no-store",
+			},
+		});
+	} catch (error) {
+		console.error(`[products] Error creating product:`, error);
+		return NextResponse.json(
+			{
+				error:
+					error instanceof Error
+						? error.message
+						: "Internal server error",
+			},
+			{ status: 500 },
+		);
+	}
+}
+

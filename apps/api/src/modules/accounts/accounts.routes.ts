@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
+import { createSearchPreValidation } from "../../lib/validation/search";
 
 import {
   createAccountHandler,
@@ -18,7 +19,11 @@ import {
 } from "./accounts.schema";
 
 const accountsRoutes: FastifyPluginAsync = async (app) => {
-  app.get("/", { schema: listAccountsSchema }, listAccountsHandler);
+  app.get(
+    "/",
+    { schema: listAccountsSchema, preValidation: createSearchPreValidation(255, "search") },
+    listAccountsHandler
+  );
   app.get("/contacts", { schema: listContactsSchema }, listContactsHandler);
   app.get("/:id", { schema: getAccountSchema }, getAccountHandler);
   app.post("/", { schema: createAccountSchema }, createAccountHandler);

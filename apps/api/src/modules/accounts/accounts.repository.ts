@@ -329,36 +329,64 @@ class DrizzleAccountsRepository implements AccountsRepository {
 	}
 
 	async create(input: AccountCreateInput): Promise<Account> {
-		const [row] = await this.database
-			.insert(accountsTable)
-			.values({
-				name: input.name,
-				type: input.type,
-				email: input.email,
-				phone: input.phone ?? null,
-				website: input.website ?? null,
-				taxId: input.taxId,
-				country: input.country,
-				legalName: input.legalName ?? null,
-				registrationNumber: input.registrationNumber ?? null,
-				dateOfIncorporation: input.dateOfIncorporation
-					? new Date(input.dateOfIncorporation)
-					: null,
-				industry: input.industry ?? null,
-				numberOfEmployees: input.numberOfEmployees ?? null,
-				annualRevenueRange: input.annualRevenueRange ?? null,
-				legalStatus: input.legalStatus ?? null,
-				companyType: input.companyType ?? null,
-				description: input.description ?? null,
-				socialMediaLinks: input.socialMediaLinks ?? null,
-			})
-			.returning();
+		try {
+			const [row] = await this.database
+				.insert(accountsTable)
+				.values({
+					name: input.name,
+					type: input.type,
+					email: input.email,
+					phone: input.phone ?? null,
+					website: input.website ?? null,
+					taxId: input.taxId,
+					country: input.country,
+					legalName: input.legalName ?? null,
+					registrationNumber: input.registrationNumber ?? null,
+					dateOfIncorporation: input.dateOfIncorporation
+						? new Date(input.dateOfIncorporation)
+						: null,
+					industry: input.industry ?? null,
+					numberOfEmployees: input.numberOfEmployees ?? null,
+					annualRevenueRange: input.annualRevenueRange ?? null,
+					legalStatus: input.legalStatus ?? null,
+					companyType: input.companyType ?? null,
+					description: input.description ?? null,
+					socialMediaLinks: input.socialMediaLinks ?? null,
+				})
+				.returning();
 
-		if (!row) {
-			throw new Error("Failed to create account");
+			if (!row) {
+				logger.error({ input }, "Failed to create account: no row returned");
+				throw new Error("Failed to create account: database returned no row");
+			}
+
+			return mapAccount(row);
+		} catch (error) {
+			// PostgreSQL unique constraint violation error code
+			if (
+				error &&
+				typeof error === "object" &&
+				"code" in error &&
+				(error as { code: string }).code === "23505"
+			) {
+				const pgError = error as { code: string; detail?: string; constraint?: string };
+				logger.warn({ input, error: pgError }, "Unique constraint violation on account creation");
+				
+				// Extract which constraint was violated
+				if (pgError.constraint?.includes("email")) {
+					throw new Error(`Account with email ${input.email} already exists`);
+				}
+				if (pgError.constraint?.includes("tax_id")) {
+					throw new Error(`Account with tax ID ${input.taxId} already exists`);
+				}
+				
+				throw new Error("Account with these details already exists");
+			}
+
+			// Re-throw other errors with context
+			logger.error({ input, error }, "Failed to create account");
+			throw error;
 		}
-
-		return mapAccount(row);
 	}
 
 	async update(

@@ -11,6 +11,8 @@ const MIGRATION_SKIP_LIST = new Set([
 	"0008_performance_indexes.sql",
 	"0010_products_inventory_indexes.sql",
 	"0015_add_missing_composite_indexes.sql",
+	"0014_past_shadowcat.sql",
+	"0016_trigram_text_indexes.sql",
 ]);
 
 const migrationFileComparator = (a: string, b: string): number => {
@@ -661,30 +663,13 @@ export const createTestPool = async (): Promise<Pool> => {
 	ensureTestCompatibility(db);
 
 	const adapter = db.adapters.createPg();
-	const pool = patchQueryable(new adapter.Pool()) as Pool;
+	const rawPool = new adapter.Pool();
+	const pool = patchQueryable(rawPool) as Pool;
 
-	const originalConnect = pool.connect.bind(pool);
-	pool.connect = (async (...args: unknown[]) => {
-        const client = (await originalConnect(
-            ...(args as Parameters<typeof pool.connect>)
-        )) as unknown as PoolClient;
-        return patchQueryable(client) as PoolClient;
-	}) as typeof pool.connect;
-
-	return pool as unknown as Pool;
-};
-export const createTestPool = async (): Promise<Pool> => {
-	const db = newDb({
-		autoCreateForeignKeyIndices: true,
-		noAstCoverageCheck: true,
-	});
-	registerExtensions(db);
-	registerLanguages(db);
-	await applyMigrations(db);
-	ensureTestCompatibility(db);
-
-	const adapter = db.adapters.createPg();
-	const pool = patchQueryable(new adapter.Pool()) as Pool;
+	// @ts-expect-error pg-mem adapter may lack .end; provide a no-op to satisfy tests
+	if (typeof (pool as unknown as { end?: () => Promise<void> }).end !== "function") {
+		(pool as unknown as { end: () => Promise<void> }).end = async () => { /* no-op */ };
+	}
 
 	const originalConnect = pool.connect.bind(pool);
 	pool.connect = (async (...args: unknown[]) => {

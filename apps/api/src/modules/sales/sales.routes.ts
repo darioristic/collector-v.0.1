@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
+import { createSearchPreValidation } from "../../lib/validation/search";
 
 import {
   createDealHandler,
@@ -81,7 +82,11 @@ const salesRoutes: FastifyPluginAsync = async (app) => {
   app.delete("/quotes/:id", { schema: deleteQuoteSchema }, deleteQuoteHandler);
 
   // Order routes
-  app.get("/orders", { schema: listOrdersSchema }, listOrdersHandler);
+  app.get(
+    "/orders",
+    { schema: listOrdersSchema, preValidation: createSearchPreValidation(255, "search") },
+    listOrdersHandler
+  );
   app.get("/orders/:id", { schema: getOrderSchema }, getOrderHandler);
   app.post("/orders", { schema: createOrderSchema }, createOrderHandler);
   app.patch("/orders/:id", { schema: updateOrderSchema }, updateOrderHandler);

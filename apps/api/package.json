@@ -19,7 +19,8 @@
     "db:seed:help": "bun src/db/seed/index.ts --help",
     "db:reset": "bun scripts/migrate-and-seed.ts --drop",
     "db:setup": "bun scripts/migrate-and-seed.ts",
-    "db:check-user": "bun scripts/check-user.ts"
+    "db:check-user": "bun scripts/check-user.ts",
+    "db:update-collector-labs": "bun src/db/scripts/update-collector-labs.ts"
   },
   "dependencies": {
     "@crm/types": "workspace:*",

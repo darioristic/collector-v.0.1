@@ -7,7 +7,7 @@ import {
 	SendIcon,
 	SmileIcon,
 } from "lucide-react";
-import { type FormEvent, type KeyboardEvent, useState } from "react";
+import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { sendMessage, type ChatMessage } from "@/app/(protected)/apps/chat/api";
 import useChatStore from "@/app/(protected)/apps/chat/useChatStore";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -26,6 +26,7 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { useChatSocket } from "@/hooks/use-chat-socket";
 
 export function ChatFooter() {
 	const [message, setMessage] = useState("");
@@ -33,6 +34,9 @@ export function ChatFooter() {
 	const { selectedChat, addMessage, removeMessage } = useChatStore();
 	const { user } = useAuth();
 	const { toast } = useToast();
+	const { emitTyping, isConnected } = useChatSocket();
+	const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+	const lastTypingEmitRef = useRef<boolean>(false);
 
 	const handleSend = async (e?: FormEvent) => {
 		e?.preventDefault();
@@ -95,6 +99,15 @@ export function ChatFooter() {
 			},
 		};
 
+		// Debug: Log message being sent
+		console.log("[chat-footer] Sending message:", {
+			optimisticId,
+			senderId: user.id,
+			senderIdType: typeof user.id,
+			content: trimmedMessage,
+			conversationId: selectedChat.conversationId,
+		});
+
 		// Add optimistic message immediately
 		addMessage(optimisticMessage);
 
@@ -137,6 +150,46 @@ export function ChatFooter() {
 			handleSend();
 		}
 	};
+
+	// Emit typing events when user types
+	useEffect(() => {
+		if (!selectedChat?.conversationId || !isConnected) {
+			return;
+		}
+
+		// Clear existing timeout
+		if (typingTimeoutRef.current) {
+			clearTimeout(typingTimeoutRef.current);
+		}
+
+		// If message has content, emit typing
+		if (message.trim().length > 0 && !lastTypingEmitRef.current) {
+			emitTyping(selectedChat.conversationId, true);
+			lastTypingEmitRef.current = true;
+		}
+
+		// Set timeout to stop typing after 2 seconds of inactivity
+		typingTimeoutRef.current = setTimeout(() => {
+			if (lastTypingEmitRef.current) {
+				emitTyping(selectedChat.conversationId, false);
+				lastTypingEmitRef.current = false;
+			}
+		}, 2000);
+
+		return () => {
+			if (typingTimeoutRef.current) {
+				clearTimeout(typingTimeoutRef.current);
+			}
+		};
+	}, [message, selectedChat?.conversationId, isConnected, emitTyping]);
+
+	// Stop typing when message is sent
+	useEffect(() => {
+		if (isSending && lastTypingEmitRef.current && selectedChat?.conversationId) {
+			emitTyping(selectedChat.conversationId, false);
+			lastTypingEmitRef.current = false;
+		}
+	}, [isSending, selectedChat?.conversationId, emitTyping]);
 
 	if (!selectedChat) {
 		return null;

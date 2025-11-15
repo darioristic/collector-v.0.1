@@ -77,7 +77,7 @@ describe("Products API routes", () => {
 		client.release();
 	});
 
-	it("should list products", async () => {
+  it("should list products", async () => {
 		// Create a test product
 		await client.query(
 			`INSERT INTO products (id, name, sku, price, currency, category_id, status, created_at, updated_at)
@@ -88,7 +88,23 @@ describe("Products API routes", () => {
 		const response = await app.inject({
 			method: "GET",
 			url: "/api/products"
-		});
+  });
+
+  it("should trim long search inputs for products", async () => {
+    await client.query(
+      `INSERT INTO products (id, name, sku, price, currency, category_id, status, created_at, updated_at)
+       VALUES (gen_random_uuid(), 'Searchable Product', 'SKU-TRIM', 49.99, 'USD', $1, 'active', NOW(), NOW())`,
+      [categoryId]
+    );
+
+    const longSearch = "a".repeat(300);
+    const response = await app.inject({
+      method: "GET",
+      url: `/api/products?search=${longSearch}`
+    });
+
+    expect(response.statusCode).toBe(200);
+  });
 
 		expect(response.statusCode).toBe(200);
 		const payload = parseBody<{ data: unknown[]; total: number }>(response.body);

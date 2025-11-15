@@ -69,8 +69,11 @@ type CreateMessageResponse = {
 // Chat service API calls now go through Next.js API routes
 // This allows us to read httpOnly cookies on the server side
 const getChatApiUrl = (path: string) => {
-	return `/api/chat${path}`;
+    return `/api/chat${path}`;
 };
+
+// Track one-time silent auth refresh attempt to avoid infinite loops
+let __conversationsAuthRetry = false;
 
 export const fetchConversations = async (): Promise<ChatConversation[]> => {
 	try {
@@ -219,19 +222,60 @@ export const fetchConversations = async (): Promise<ChatConversation[]> => {
 				logDetails.responseText = "";
 			}
 
-			// Log actual errors (not service unavailable)
-			console.error(
-				"[fetchConversations] API error response:",
-				JSON.stringify(logDetails, null, 2),
-			);
-			console.error(
-				"[fetchConversations] API error response (object):",
-				logDetails,
-			);
+        // Handle unauthorized by attempting silent session refresh once
+        if (status === 401) {
+            console.warn("[fetchConversations] Unauthorized (401). Attempting session refresh.");
+            if (!__conversationsAuthRetry) {
+                __conversationsAuthRetry = true;
+                try {
+                    const refresh = await fetch("/api/auth/me", {
+                        method: "GET",
+                        headers: { Accept: "application/json" },
+                        cache: "no-store",
+                        credentials: "include",
+                    });
+                    if (refresh.ok) {
+                        try {
+                            const retryResponse = await fetch(apiUrl, {
+                                method: "GET",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                    Accept: "application/json",
+                                },
+                                cache: "no-store",
+                                credentials: "include",
+                            });
+                            __conversationsAuthRetry = false;
+                            if (retryResponse.ok) {
+                                const retryText = await retryResponse.text();
+                                const data = JSON.parse(retryText) as GetConversationsResponse;
+                                return Array.isArray(data.conversations) ? data.conversations : [];
+                            }
+                        } catch {
+                            // fall through to empty array
+                        }
+                    }
+                } catch {
+                    // ignore
+                }
+            }
+            // Return empty array to avoid noisy logs and let UI continue
+            return [];
+        }
 
-			const error = new Error(errorMessage);
-			(error as Error & { status?: number }).status = status;
-			throw error;
+        // Log actual errors (not service unavailable)
+        console.error(
+            "[fetchConversations] API error response:",
+            JSON.stringify(logDetails, null, 2),
+        );
+        console.error(
+            "[fetchConversations] API error response (object):",
+            logDetails,
+        );
+
+        const error = new Error(errorMessage);
+        (error as Error & { status?: number }).status = status;
+        throw error;
 		}
 
 		if (!contentType?.includes("application/json")) {

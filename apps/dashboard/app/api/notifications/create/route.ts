@@ -9,7 +9,11 @@ import { getCurrentAuth } from "@/lib/auth";
 import { createNotificationSchema } from "@/lib/validations/notifications";
 
 const getNotificationServiceUrl = () => {
-	return process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL || "http://localhost:4002";
+  return (
+    process.env.NOTIFICATION_SERVICE_URL ||
+    process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL ||
+    "http://localhost:4002"
+  );
 };
 
 export async function POST(request: NextRequest) {
@@ -73,9 +77,9 @@ export async function POST(request: NextRequest) {
     return withNoStore(
       NextResponse.json(
         {
-          error: "Failed to create notification",
+          error: "Servis notifikacija nije dostupan.",
         },
-        { status: 500 },
+        { status: 503 },
       ),
     );
   }

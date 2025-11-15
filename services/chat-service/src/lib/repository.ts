@@ -843,20 +843,42 @@ export const markMessagesAsRead = async ({
 }): Promise<void> => {
     const now = new Date();
 
-	await db
-		.update(chatMessages)
-		.set({
-			status: "read",
-			readAt: now,
-			updatedAt: now,
-		})
-		.where(
+    await db
+        .update(chatMessages)
+        .set({
+            status: "read",
+            readAt: now,
+            updatedAt: now,
+        })
+        .where(
             and(
                 eq(chatMessages.conversationId, conversationId),
                 ne(chatMessages.senderId, userId),
-                eq(chatMessages.status, "sent"),
+                isNull(chatMessages.readAt),
             ),
         );
+};
+
+export const invalidateConversationCaches = async ({
+    companyId,
+    userId1,
+    userId2,
+    cache,
+}: {
+    companyId: string;
+    userId1: string;
+    userId2: string;
+    cache?: CacheService | null;
+}): Promise<void> => {
+    const cacheService = cache || globalCache;
+    if (!cacheService) return;
+    const a = userId1 < userId2 ? userId1 : userId2;
+    const b = userId1 < userId2 ? userId2 : userId1;
+    await cacheService.delete(
+        `${CACHE_PREFIX}conversation:${companyId}:${a}:${b}`,
+        `${CACHE_PREFIX}conversations:${companyId}:${userId1}`,
+        `${CACHE_PREFIX}conversations:${companyId}:${userId2}`
+    );
 };
 
 export const getConversationById = async ({

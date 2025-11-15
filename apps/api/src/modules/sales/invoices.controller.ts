@@ -57,16 +57,21 @@ export const listInvoicesHandler = async (request: ListRequest, reply: FastifyRe
 };
 
 export const getInvoiceHandler = async (request: GetRequest, reply: FastifyReply) => {
-  const service = new InvoicesService(request.db, request.cache);
-  const { id } = request.params;
+  try {
+    const service = new InvoicesService(request.db, request.cache);
+    const { id } = request.params;
 
-  const invoice = await service.getById(id);
+    const invoice = await service.getById(id);
 
-  if (!invoice) {
-    return reply.status(404).send({ error: "Invoice not found" });
+    if (!invoice) {
+      return reply.status(404).send({ error: "Invoice not found" });
+    }
+
+    await reply.status(200).send({ data: invoice });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    await reply.status(500).send({ error: "Failed to fetch invoice", message });
   }
-
-  await reply.status(200).send({ data: invoice });
 };
 
 export const createInvoiceHandler = async (request: CreateRequest, reply: FastifyReply) => {

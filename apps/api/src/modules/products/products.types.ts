@@ -37,6 +37,7 @@ export type ProductEntity = {
   sku: string;
   name: string;
   description: string | null;
+  specifications?: Record<string, unknown> | null;
   status: ProductStatus;
   categoryId: string | null;
   categoryName: string | null;
@@ -83,6 +84,7 @@ export type CreateProductInput = {
   sku: string;
   name: string;
   description?: string | null;
+  specifications?: Record<string, unknown> | null;
   status?: ProductStatus;
   categoryId?: string | null;
   unitPrice?: number;
@@ -94,6 +96,7 @@ export type UpdateProductInput = {
   name?: string;
   sku?: string;
   description?: string | null;
+  specifications?: Record<string, unknown> | null;
   status?: ProductStatus;
   categoryId?: string | null;
   unitPrice?: number | null;

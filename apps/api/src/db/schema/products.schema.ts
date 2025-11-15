@@ -7,7 +7,8 @@ import {
   text,
   timestamp,
   uuid,
-  uniqueIndex
+  uniqueIndex,
+  jsonb
 } from "drizzle-orm/pg-core";
 
 import { users } from "./settings.schema";
@@ -34,6 +35,7 @@ export const products = pgTable(
     sku: text("sku").notNull(),
     name: text("name").notNull(),
     description: text("description"),
+    specifications: jsonb("specifications"),
     status: productStatus("status").default("active").notNull(),
     categoryId: uuid("category_id").references(() => productCategories.id, {
       onDelete: "set null"

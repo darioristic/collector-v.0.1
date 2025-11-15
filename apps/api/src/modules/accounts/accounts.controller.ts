@@ -83,6 +83,28 @@ export const getAccountHandler: RouteHandler<{
 };
 
 /**
+ * Helper funkcija za detekciju PostgreSQL unique constraint grešaka
+ */
+const isUniqueConstraintError = (error: unknown): boolean => {
+  return (
+    Boolean(error) &&
+    typeof error === "object" &&
+    "code" in (error as Record<string, unknown>) &&
+    (error as { code: string }).code === "23505"
+  );
+};
+
+/**
+ * Helper funkcija za detekciju da li greška je o postojanju email-a
+ */
+const isEmailExistsError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  return error.message.includes("email") && error.message.includes("already exists");
+};
+
+/**
  * Handler za kreiranje novog naloga.
  * 
  * @route POST /api/accounts
@@ -93,21 +115,41 @@ export const createAccountHandler: RouteHandler<{
   Body: CreateAccountBody;
   Reply: CreateAccountReply;
 }> = async (request, reply) => {
-  const exists = await request.accountsRepository.findByEmail(request.body.email);
+  try {
+    // Provera da li email već postoji (optimizacija da izbegnemo DB constraint error)
+    const exists = await request.accountsRepository.findByEmail(request.body.email);
 
-  if (exists) {
-    return reply
-      .status(409)
-      .send(
-        createHttpError(409, `Account with email ${request.body.email} already exists`, {
+    if (exists) {
+      return reply
+        .status(409)
+        .send(
+          createHttpError(409, `Account with email ${request.body.email} already exists`, {
+            error: "Conflict"
+          })
+        );
+    }
+
+    const account = await request.accountsRepository.create(request.body);
+
+    return reply.status(201).send(account);
+  } catch (error) {
+    // Hvatanje unique constraint grešaka iz repository-ja
+    if (isUniqueConstraintError(error) || isEmailExistsError(error)) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : `Account with email ${request.body.email} already exists`;
+
+      return reply.status(409).send(
+        createHttpError(409, errorMessage, {
           error: "Conflict"
         })
       );
+    }
+
+    // Re-throw za error handler plugin
+    throw error;
   }
-
-  const account = await request.accountsRepository.create(request.body);
-
-  return reply.status(201).send(account);
 };
 
 /**

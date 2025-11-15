@@ -65,7 +65,7 @@ export const listOrdersSchema: FastifySchema = {
       contactId: { type: "string", format: "uuid" },
       quoteId: { type: "string", pattern: "^[0-9]+$" },
       status: { type: "string" },
-      search: { type: "string" },
+      search: { type: "string", maxLength: 255 },
       limit: { type: "string", pattern: "^[0-9]+$" },
       offset: { type: "string", pattern: "^[0-9]+$" }
     },

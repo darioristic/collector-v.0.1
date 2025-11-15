@@ -12,7 +12,11 @@ import {
 } from "@/lib/validations/notifications";
 
 const getNotificationServiceUrl = () => {
-	return process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL || "http://localhost:4002";
+  return (
+    process.env.NOTIFICATION_SERVICE_URL ||
+    process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL ||
+    "http://localhost:4002"
+  );
 };
 
 export async function PATCH(request: NextRequest) {
@@ -67,13 +71,14 @@ export async function PATCH(request: NextRequest) {
 		const validated = notificationUpdateResponseSchema.parse(payload);
 
 		return withNoStore(NextResponse.json(validated));
-  } catch {
+  } catch (error) {
+    console.error("[notifications] Failed to mark as read", error);
     return withNoStore(
       NextResponse.json(
         {
-          error: "Failed to mark as read",
+          error: "Servis notifikacija nije dostupan.",
         },
-        { status: 500 },
+        { status: 503 },
       ),
     );
   }

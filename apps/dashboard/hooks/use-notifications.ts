@@ -10,7 +10,6 @@ import {
 	notificationPayloadSchema,
 	notificationUpdateResponseSchema,
 } from "@/lib/validations/notifications";
-import { SESSION_COOKIE_NAME } from "@/lib/session-constants";
 
 type UseNotificationsOptions = {
 	refreshOnFocus?: boolean;
@@ -64,27 +63,10 @@ export function useNotifications(
 		setIsLoading(true);
 
 		try {
-			const serviceUrl = process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL || "http://localhost:4002";
-			
-			// Get session token from cookie
-			const getSessionToken = () => {
-				if (typeof document === "undefined") return null;
-				const cookieValue = document.cookie
-					.split("; ")
-					.find((row) => row.startsWith(`${SESSION_COOKIE_NAME}=`))
-					?.split("=")[1];
-				return cookieValue ? decodeURIComponent(cookieValue) : null;
-			};
-
-			const token = getSessionToken();
-
-			const response = await fetch(`${serviceUrl}/api/notifications?limit=${limit}`, {
+			const response = await fetch(`/api/notifications?limit=${limit}`, {
 				method: "GET",
 				headers: {
 					"Content-Type": "application/json",
-					...(token && {
-						Authorization: `Bearer ${token}`,
-					}),
 				},
 				cache: "no-store",
 				signal,
@@ -265,26 +247,10 @@ export function useNotifications(
 			}
 
 		try {
-			const serviceUrl = process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL || "http://localhost:4002";
-			
-			// Get session token from cookie
-			const getSessionToken = () => {
-				if (typeof document === "undefined") return null;
-				const cookieValue = document.cookie
-					.split("; ")
-					.find((row) => row.startsWith(`${SESSION_COOKIE_NAME}=`))
-					?.split("=")[1];
-				return cookieValue ? decodeURIComponent(cookieValue) : null;
-			};
-
-			const token = getSessionToken();
-			const response = await fetch(`${serviceUrl}/api/notifications/mark-read`, {
+			const response = await fetch(`/api/notifications/read`, {
 				method: "PATCH",
 				headers: {
 					"Content-Type": "application/json",
-					...(token && {
-						Authorization: `Bearer ${token}`,
-					}),
 				},
 				body: JSON.stringify({ ids }),
 				credentials: "include",

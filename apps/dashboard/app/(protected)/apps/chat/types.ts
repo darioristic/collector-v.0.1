@@ -17,6 +17,7 @@ export type ChatMessageProps = {
 	type?: string;
 	own_message?: boolean;
 	read?: boolean;
+	status?: "sent" | "delivered" | "read" | "forwarded";
 	data?: ChatMessageDataProps;
 };
 

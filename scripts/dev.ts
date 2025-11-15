@@ -1754,6 +1754,7 @@ async function runLocalWorkflow(
 			NODE_ENV: process.env.NODE_ENV || "development",
 			ALWAYS_NOTIFY_DM_ONLINE: "true",
 			ALWAYS_NOTIFY_CHANNEL_ONLINE: "false",
+			DATABASE_URL: connectionString,
 		},
 	);
 
@@ -1784,6 +1785,8 @@ async function runLocalWorkflow(
 			PORT: String(webPort),
 			WEB_PORT: String(webPort),
 			SOCKET_PORT: String(socketPort),
+      NEXT_PUBLIC_NOTIFICATION_SERVICE_URL: `http://localhost:${notificationPort}`,
+      NOTIFICATION_SERVICE_URL: `http://localhost:${notificationPort}`,
 			// Enable Turbopack explicitly
 			TURBOPACK: "1",
 		},

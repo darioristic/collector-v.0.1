@@ -21,16 +21,35 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { generateAvatarFallback } from "@/lib/utils";
+import { useChatSocket } from "@/hooks/use-chat-socket";
 
 type ChatUser = ChatConversation["user1"] | ChatConversation["user2"];
 
 export function ChatHeader({ user }: { user: ChatUser }) {
 	const { setSelectedChat } = useChatStore();
+	const { getUserStatus } = useChatSocket();
+	
+	// Get real-time status from socket, fallback to user.status from API
+	const realTimeStatus = getUserStatus(user.id);
+	// If real-time status is available, use it; otherwise check API status
+	// Default to "online" if status is "online" in API, otherwise "offline"
+	const userStatus = realTimeStatus || (user.status === "online" ? "online" : "offline");
+	
+	// Debug logging
+	if (process.env.NODE_ENV === "development") {
+		console.log("[ChatHeader] Status check:", {
+			userId: user.id,
+			realTimeStatus,
+			apiStatus: user.status,
+			finalStatus: userStatus,
+		});
+	}
+	
 	const displayName =
 		user.displayName?.trim() ||
 		[user.firstName, user.lastName].filter(Boolean).join(" ") ||
 		user.email;
-	const onlineStatus = user.status === "online" ? "success" : "warning";
+	const onlineStatus = userStatus === "online" ? "success" : "warning";
 
 	return (
 		<div className="flex justify-between gap-4 lg:px-4">
@@ -50,7 +69,7 @@ export function ChatHeader({ user }: { user: ChatUser }) {
 				</Avatar>
 				<div className="flex flex-col gap-1">
 					<span className="text-sm font-semibold">{displayName}</span>
-					{user.status === "online" ? (
+					{userStatus === "online" ? (
 						<span className="text-xs text-green-500">Online</span>
 					) : (
 						<span className="text-muted-foreground text-xs">Offline</span>

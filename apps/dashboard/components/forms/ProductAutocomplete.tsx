@@ -39,11 +39,13 @@ type ProductAutocompleteProps = {
 };
 
 async function searchProducts(query: string, currency?: string): Promise<Product[]> {
-	const params = new URLSearchParams({
-		search: query,
-		limit: "20",
-		...(currency && { currency }),
-	});
+    const trimmed = query.trim();
+    const safeQuery = trimmed.slice(0, 255);
+    const params = new URLSearchParams({
+        search: safeQuery,
+        limit: "20",
+        ...(currency && { currency }),
+    });
 
 	const response = await ensureResponse(
 		fetch(`/api/products?${params.toString()}`, {

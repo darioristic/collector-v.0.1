@@ -77,7 +77,7 @@ describe("Orders API routes", () => {
 		client.release();
 	});
 
-	it("should list orders", async () => {
+  it("should list orders", async () => {
 		// Create a test order
 		const orderResult = await client.query(
 			`INSERT INTO orders (order_number, company_id, contact_id, order_date, currency, subtotal, tax, total, status, created_at, updated_at)
@@ -90,7 +90,23 @@ describe("Orders API routes", () => {
 		const response = await app.inject({
 			method: "GET",
 			url: "/api/sales/orders"
-		});
+  });
+
+  it("should trim long search inputs for orders", async () => {
+    await client.query(
+      `INSERT INTO orders (order_number, company_id, contact_id, order_date, currency, subtotal, tax, total, status, created_at, updated_at)
+       VALUES ('ORD-TRIM', $1, $2, CURRENT_DATE, 'USD', 50.00, 10.00, 60.00, 'pending', NOW(), NOW())`,
+      [companyId, contactId]
+    );
+
+    const longSearch = "x".repeat(300);
+    const response = await app.inject({
+      method: "GET",
+      url: `/api/sales/orders?search=${longSearch}`
+    });
+
+    expect(response.statusCode).toBe(200);
+  });
 
 		expect(response.statusCode).toBe(200);
 		const payload = parseBody<{ data: unknown[]; total: number }>(response.body);

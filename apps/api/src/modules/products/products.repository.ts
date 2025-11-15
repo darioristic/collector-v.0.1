@@ -106,8 +106,15 @@ const normalizeStatus = (
   status?: ProductStatus | null
 ): ProductStatus => status ?? "active";
 
-const buildSearchPattern = (value: string): string =>
-  `%${value.trim().replace(/\s+/g, "%")}%`;
+const buildSearchPattern = (value: string): string => {
+  // Remove any existing SQL LIKE wildcards (% and _) since we add our own
+  // Then trim and replace spaces with %
+  const cleaned = value.trim()
+    .replace(/[%_]/g, "")     // Remove % and _ wildcards
+    .replace(/\s+/g, "%");    // Replace spaces with %
+  
+  return `%${cleaned}%`;
+};
 
 const mapInventoryLocation = (
   item: InventoryRow,
@@ -146,6 +153,7 @@ const mapProductEntity = (
     sku: row.sku,
     name: row.name,
     description: row.description ?? null,
+    specifications: (row.specifications ?? null) as Record<string, unknown> | null,
     status: row.status,
     categoryId: row.categoryId ?? null,
     categoryName: category?.name ?? null,
@@ -371,6 +379,7 @@ class DrizzleProductsRepository implements ProductsRepository {
         sku: input.sku,
         name: input.name,
         description: input.description ?? null,
+        specifications: input.specifications ?? null,
         status: normalizeStatus(input.status),
         categoryId: input.categoryId ?? null,
         createdBy: input.createdBy ?? null
@@ -418,6 +427,7 @@ class DrizzleProductsRepository implements ProductsRepository {
           sku: input.sku,
           name: input.name,
           description: input.description ?? null,
+          specifications: input.specifications ?? null,
           status: normalizeStatus(input.status),
           categoryId: input.categoryId ?? null,
           createdBy: input.createdBy ?? null
@@ -518,6 +528,10 @@ class DrizzleProductsRepository implements ProductsRepository {
 
       if (input.description !== undefined) {
         payload.description = input.description ?? null;
+      }
+
+      if (input.specifications !== undefined) {
+        payload.specifications = input.specifications ?? null;
       }
 
       if (input.status !== undefined) {

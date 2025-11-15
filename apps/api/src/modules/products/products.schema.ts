@@ -18,6 +18,8 @@ const productEntitySchema = {
     sku: { type: "string", minLength: 1, maxLength: 64 },
     price: { type: "number", minimum: 0 },
     currency: { type: "string", minLength: 3, maxLength: 3, pattern: "^[A-Z]{3}$" },
+    description: { type: ["string", "null"] },
+    specifications: { type: ["object", "null"], additionalProperties: true },
     category: { type: ["string", "null"], maxLength: 255 },
     active: { type: "boolean" },
     relatedSalesOrders: {
@@ -37,6 +39,8 @@ const productCreateBodySchema = {
     sku: { type: "string", minLength: 1, maxLength: 64 },
     price: { type: "number", minimum: 0 },
     currency: { type: "string", minLength: 3, maxLength: 3, pattern: "^[A-Z]{3}$" },
+    description: { type: ["string", "null"] },
+    specifications: { type: ["object", "null"], additionalProperties: true },
     category: { type: ["string", "null"], maxLength: 255 },
     active: { type: "boolean", default: true }
   },
@@ -51,6 +55,8 @@ const productUpdateBodySchema = {
     sku: { type: "string", minLength: 1, maxLength: 64 },
     price: { type: "number", minimum: 0 },
     currency: { type: "string", minLength: 3, maxLength: 3, pattern: "^[A-Z]{3}$" },
+    description: { type: ["string", "null"] },
+    specifications: { type: ["object", "null"], additionalProperties: true },
     category: { type: ["string", "null"], maxLength: 255 },
     active: { type: "boolean" }
   },
@@ -334,6 +340,8 @@ export type ProductCreateBody = {
   sku: string;
   price: number;
   currency: string;
+  description?: string | null;
+  specifications?: Record<string, unknown> | null;
   category?: string | null;
   active?: boolean;
 };
@@ -342,6 +350,8 @@ export type ProductUpdateBody = {
   sku?: string;
   price?: number;
   currency?: string;
+  description?: string | null;
+  specifications?: Record<string, unknown> | null;
   category?: string | null;
   active?: boolean;
 };
