@@ -16,6 +16,7 @@ import {
     Sheet,
     SheetContent,
     SheetTitle,
+    SheetDescription,
 } from "@/components/ui/sheet";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Separator } from "@/components/ui/separator";
@@ -74,6 +75,7 @@ export function InvoiceDetail({
                 <SheetContent side="right" className="w-full p-0 md:w-[calc(50vw)] md:max-w-[900px]">
                     <VisuallyHidden>
                         <SheetTitle>Invoice Details</SheetTitle>
+                        <SheetDescription>Pregled računa</SheetDescription>
                     </VisuallyHidden>
                     <Card>
                         <CardContent className="flex h-64 items-center justify-center">
@@ -91,6 +93,7 @@ export function InvoiceDetail({
                 <SheetContent side="right" className="w-full p-0 md:w-[calc(50vw)] md:max-w-[900px]">
                     <VisuallyHidden>
                         <SheetTitle>Invoice Details</SheetTitle>
+                        <SheetDescription>Pregled računa</SheetDescription>
                     </VisuallyHidden>
                     <Card>
                         <CardContent className="flex h-64 items-center justify-center">
@@ -107,6 +110,7 @@ export function InvoiceDetail({
             <SheetContent side="right" className="w-full p-0 md:w-[calc(50vw)] md:max-w-[900px]">
                 <VisuallyHidden>
                     <SheetTitle>Invoice {invoice.invoiceNumber}</SheetTitle>
+                    <SheetDescription>Pregled računa</SheetDescription>
                 </VisuallyHidden>
                 <Card>
             <CardHeader>
@@ -151,39 +155,20 @@ export function InvoiceDetail({
             </CardHeader>
 
 			<CardContent className="space-y-6">
-				{/* Customer Information */}
-				<div className="grid grid-cols-2 gap-4">
-					<div>
-						<p className="text-sm font-medium text-muted-foreground">
-							Customer
-						</p>
-						<p className="text-sm font-semibold">{invoice.customerName}</p>
-						{invoice.customerEmail && (
-							<p className="text-sm text-muted-foreground">
-								{invoice.customerEmail}
-							</p>
-						)}
+				{/* From / To */}
+				<div className="grid grid-cols-2 gap-16">
+					<div className="space-y-2 text-sm">
+						<div className="text-muted-foreground">From</div>
+						<div>Your Company</div>
+						<div className="text-muted-foreground">info@yourcompany.test</div>
+						<div className="text-muted-foreground">Billing Office</div>
 					</div>
-					<div>
-						<p className="text-sm font-medium text-muted-foreground">
-							Currency
-						</p>
-						<p className="text-sm">{invoice.currency}</p>
+					<div className="space-y-2 text-sm">
+						<div className="text-muted-foreground">To</div>
+						<div>{invoice.customerName}</div>
+						<div className="text-muted-foreground">{invoice.customerEmail || "—"}</div>
+						<div className="text-muted-foreground">{invoice.billingAddress || "—"}</div>
 					</div>
-					{invoice.billingAddress && (
-						<div className="col-span-2">
-							<p className="text-sm font-medium text-muted-foreground">
-								Billing Address
-							</p>
-							<p className="text-sm">{invoice.billingAddress}</p>
-						</div>
-					)}
-					{invoice.notes && (
-						<div className="col-span-2">
-							<p className="text-sm font-medium text-muted-foreground">Notes</p>
-							<p className="text-sm">{invoice.notes}</p>
-						</div>
-					)}
 				</div>
 
 				<Separator />
@@ -195,41 +180,32 @@ export function InvoiceDetail({
 						<div className="rounded-md border">
 							<Table>
 								<TableHeader>
-									<TableRow>
-										<TableHead className="w-[40%]">Description</TableHead>
-										<TableHead className="text-right">Qty</TableHead>
-										<TableHead className="text-right">Unit Price</TableHead>
-										<TableHead className="text-right">Discount %</TableHead>
-										<TableHead className="text-right">VAT %</TableHead>
-										<TableHead className="text-right">Total</TableHead>
-									</TableRow>
+                                    <TableRow className="bg-muted/30">
+                                        <TableHead className="w-[50px] text-[12px] font-semibold tracking-wide text-muted-foreground">#</TableHead>
+                                        <TableHead className="text-[12px] font-semibold tracking-wide text-muted-foreground">Description</TableHead>
+                                        <TableHead className="w-[100px] text-right text-[12px] font-semibold tracking-wide text-muted-foreground">Qty</TableHead>
+                                        <TableHead className="w-[120px] text-right text-[12px] font-semibold tracking-wide text-muted-foreground">Unit Price</TableHead>
+                                        <TableHead className="w-[120px] text-right text-[12px] font-semibold tracking-wide text-muted-foreground">Total</TableHead>
+                                    </TableRow>
 								</TableHeader>
 								<TableBody>
-									{invoice.items.map((item) => (
-										<TableRow key={item.id}>
-											<TableCell>
-												{item.description || "—"}
-												<span className="text-xs text-muted-foreground block">
-													Unit: {item.unit}
-												</span>
-											</TableCell>
-											<TableCell className="text-right">
-												{item.quantity}
-											</TableCell>
-											<TableCell className="text-right">
-												{formatCurrency(item.unitPrice, invoice.currency)}
-											</TableCell>
-											<TableCell className="text-right">
-												{item.discountRate}%
-											</TableCell>
-											<TableCell className="text-right">
-												{item.vatRate}%
-											</TableCell>
-											<TableCell className="text-right font-medium">
-												{formatCurrency(item.totalInclVat, invoice.currency)}
-											</TableCell>
-										</TableRow>
-									))}
+                                    {invoice.items.map((item, index) => (
+                                        <TableRow key={item.id} className="hover:bg-muted/20">
+                                            <TableCell className="text-muted-foreground text-xs">{index + 1}</TableCell>
+                                            <TableCell className="text-sm">
+                                                {item.description || "—"}
+                                            </TableCell>
+                                            <TableCell className="text-right text-sm">
+                                                {item.quantity}
+                                            </TableCell>
+                                            <TableCell className="text-right text-sm">
+                                                {formatCurrency(item.unitPrice, invoice.currency)}
+                                            </TableCell>
+                                            <TableCell className="text-right text-sm font-medium">
+                                                {formatCurrency(item.totalInclVat, invoice.currency)}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
 								</TableBody>
 								<TableFooter>
 									<TableRow>
