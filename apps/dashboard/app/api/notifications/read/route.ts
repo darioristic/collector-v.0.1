@@ -67,14 +67,14 @@ export async function PATCH(request: NextRequest) {
 		const validated = notificationUpdateResponseSchema.parse(payload);
 
 		return withNoStore(NextResponse.json(validated));
-  } catch (_error) {
-		return withNoStore(
-			NextResponse.json(
-				{
-					error: "Failed to mark as read",
-				},
-				{ status: 500 },
-			),
-		);
-	}
+  } catch {
+    return withNoStore(
+      NextResponse.json(
+        {
+          error: "Failed to mark as read",
+        },
+        { status: 500 },
+      ),
+    );
+  }
 }

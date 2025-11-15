@@ -16,7 +16,7 @@ export type ScrollButtonProps = {
 } & React.ButtonHTMLAttributes<HTMLButtonElement>;
 
 function PromptScrollButton({
-    scrollRef,
+    scrollRef: _scrollRef,
     containerRef,
     className,
     threshold = 100,

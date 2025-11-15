@@ -39,22 +39,22 @@ export async function seedUsers(
 	}
 
 	// Get existing users
-	const existingUsers = await db
-		.select({ email: users.email })
-		.from(users);
+    const existingUsers = await db
+        .select({ email: users.email })
+        .from(users);
 
 	const existingEmails = new Set(
 		existingUsers.map((u) => u.email.toLowerCase()),
 	);
 
 	// Create users from employees
-	const usersToInsert = allEmployees
-		.filter((emp) => !existingEmails.has(emp.email.toLowerCase()))
-		.map((emp) => ({
-			email: emp.email,
-			name: `${emp.firstName} ${emp.lastName}`,
-			defaultCompanyId: company.id,
-		}));
+    let usersToInsert = allEmployees
+        .filter((emp) => !existingEmails.has(emp.email.toLowerCase()))
+        .map((emp) => ({
+            email: emp.email,
+            name: `${emp.firstName} ${emp.lastName}`,
+            defaultCompanyId: company.id,
+        }));
 
 	if (usersToInsert.length === 0 && !options.force) {
 		return {
@@ -63,27 +63,34 @@ export async function seedUsers(
 		};
 	}
 
-	if (options.force) {
-		// Delete existing users that match employees
-		const employeeEmails = new Set(
-			allEmployees.map((e) => e.email.toLowerCase()),
-		);
-		const usersToDelete = existingUsers.filter((u) =>
-			employeeEmails.has(u.email.toLowerCase()),
-		);
+    if (options.force) {
+        // Delete existing users that match employees
+        const employeeEmails = new Set(
+            allEmployees.map((e) => e.email.toLowerCase()),
+        );
+        const usersToDelete = existingUsers.filter((u) =>
+            employeeEmails.has(u.email.toLowerCase()),
+        );
 
-		if (usersToDelete.length > 0) {
-			const emailsToDelete = usersToDelete.map((u) => u.email);
-			await db
-				.delete(users)
-				.where(
-					inArray(
-						users.email,
-						emailsToDelete,
-					),
-				);
-		}
-	}
+        if (usersToDelete.length > 0) {
+            const emailsToDelete = usersToDelete.map((u) => u.email);
+            await db
+                .delete(users)
+                .where(
+                    inArray(
+                        users.email,
+                        emailsToDelete,
+                    ),
+                );
+        }
+
+        // Recompute insertion set to include all employees after deletion
+        usersToInsert = allEmployees.map((emp) => ({
+            email: emp.email,
+            name: `${emp.firstName} ${emp.lastName}`,
+            defaultCompanyId: company.id,
+        }));
+    }
 
 	if (usersToInsert.length > 0) {
 		await db.insert(users).values(usersToInsert);

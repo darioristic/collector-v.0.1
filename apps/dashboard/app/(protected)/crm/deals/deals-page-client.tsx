@@ -51,7 +51,6 @@ interface DealsPageClientProps {
 	error: string | null;
 }
 
-const statsFormatter = new Intl.NumberFormat("en-US");
 
 const viewOptions: Array<{
 	value: DealView;
@@ -121,7 +120,7 @@ const filterDeals = (deals: Deal[], filters: DealFiltersState): Deal[] => {
 export default function DealsPageClient({
 	initialDeals,
 	owners,
-	stageSummary,
+	_stageSummary,
 	error,
 }: DealsPageClientProps) {
 	const { toast } = useToast();
@@ -180,7 +179,7 @@ export default function DealsPageClient({
 		[deals, filters],
 	);
 
-	const stageStats = React.useMemo(() => summarizeStages(deals), [deals]);
+	const _stageStats = React.useMemo(() => summarizeStages(deals), [deals]);
 
 	const handleOpenModal = React.useCallback(
 		(mode: ModalMode, deal?: Deal | null) => {
@@ -328,12 +327,6 @@ export default function DealsPageClient({
 		[deals, moveDeal, startTransition, toast, updateDealInStore],
 	);
 
-	const latestStageStats = React.useMemo(() => {
-		if (deals.length === 0) {
-			return stageSummary;
-		}
-		return stageStats;
-	}, [deals.length, stageStats, stageSummary]);
 
 	const currentView =
 		viewOptions.find((option) => option.value === view) ?? viewOptions[0];

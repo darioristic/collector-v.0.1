@@ -1,0 +1,1 @@
+export const isUuid = (s: string): boolean => /^[0-9a-fA-F-]{36}$/.test(s);

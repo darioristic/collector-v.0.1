@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
 import { type IMemoryDb, newDb } from "pg-mem";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -21,7 +21,7 @@ const migrationFileComparator = (a: string, b: string): number => {
 
 	const aVersion = extractVersion(a);
 	const bVersion = extractVersion(b);
-w
+
 	if (aVersion !== null && bVersion !== null) {
 		if (aVersion !== bVersion) {
 			return aVersion - bVersion;
@@ -144,7 +144,7 @@ const registerExtensions = (db: IMemoryDb): void => {
 		schema.registerFunction({
 			name: "gen_random_uuid",
 			// biome-ignore lint/suspicious/noExplicitAny: pg-mem types limitation - "uuid" not supported in returns type
-			returns: "uuid" as any,
+            returns: "uuid" as unknown as string,
 			implementation: () => randomUUID(),
 			impure: true,
 		});
@@ -158,7 +158,7 @@ const registerExtensions = (db: IMemoryDb): void => {
 	db.public.registerFunction({
 		name: "gen_random_uuid",
 		// biome-ignore lint/suspicious/noExplicitAny: pg-mem types limitation - "uuid" not supported in returns type
-		returns: "uuid" as any,
+        returns: "uuid" as unknown as string,
 		implementation: () => randomUUID(),
 		impure: true,
 	});
@@ -665,12 +665,33 @@ export const createTestPool = async (): Promise<Pool> => {
 
 	const originalConnect = pool.connect.bind(pool);
 	pool.connect = (async (...args: unknown[]) => {
-		const client = (await originalConnect(
-			...(args as Parameters<typeof pool.connect>),
-			// biome-ignore lint/suspicious/noExplicitAny: pg-mem adapter types don't match pg types exactly
-		)) as any;
-		// biome-ignore lint/suspicious/noExplicitAny: client needs to be patched but types don't match exactly
-		return patchQueryable(client) as any;
+        const client = (await originalConnect(
+            ...(args as Parameters<typeof pool.connect>)
+        )) as unknown as PoolClient;
+        return patchQueryable(client) as PoolClient;
+	}) as typeof pool.connect;
+
+	return pool as unknown as Pool;
+};
+export const createTestPool = async (): Promise<Pool> => {
+	const db = newDb({
+		autoCreateForeignKeyIndices: true,
+		noAstCoverageCheck: true,
+	});
+	registerExtensions(db);
+	registerLanguages(db);
+	await applyMigrations(db);
+	ensureTestCompatibility(db);
+
+	const adapter = db.adapters.createPg();
+	const pool = patchQueryable(new adapter.Pool()) as Pool;
+
+	const originalConnect = pool.connect.bind(pool);
+	pool.connect = (async (...args: unknown[]) => {
+        const client = (await originalConnect(
+            ...(args as Parameters<typeof pool.connect>)
+        )) as unknown as PoolClient;
+        return patchQueryable(client) as PoolClient;
 	}) as typeof pool.connect;
 
 	return pool as unknown as Pool;

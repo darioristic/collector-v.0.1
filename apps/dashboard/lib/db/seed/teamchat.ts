@@ -16,9 +16,10 @@ type TeamchatSeedResult = {
 };
 
 export async function seedTeamchat(
-	db: DashboardDatabase,
-	_options: { force?: boolean } = {},
+    db: DashboardDatabase,
+    _options: { force?: boolean } = {},
 ): Promise<TeamchatSeedResult> {
+  const messagesTarget = parseInt(process.env.SEED_TEAMCHAT_MESSAGES_COUNT || "25", 10);
   let [company] = await db
     .select()
     .from(companies)
@@ -148,39 +149,25 @@ export async function seedTeamchat(
 			}
 		}
 
-		// Create some sample messages in general channel
-		if (generalChannelId && teamchatUserMap.size > 0) {
-			const userIds = Array.from(teamchatUserMap.values());
-			const sampleMessages = [
-				{
-					content: "Dobrodošli u Collector Dashboard! 👋",
-					senderId: userIds[0],
-					channelId: generalChannelId,
-				},
-				{
-					content: "Hvala! Radujem se saradnji!",
-					senderId: userIds[1 % userIds.length],
-					channelId: generalChannelId,
-				},
-				{
-					content: "Ako imate pitanja, slobodno pitajte.",
-					senderId: userIds[0],
-					channelId: generalChannelId,
-				},
-				{
-					content: "Kada je sastanak tima?",
-					senderId: userIds[2 % userIds.length],
-					channelId: generalChannelId,
-				},
-				{
-					content: "Sastanak je zakazan za petak u 10:00.",
-					senderId: userIds[0],
-					channelId: generalChannelId,
-				},
-			];
-
-			await tx.insert(teamchatMessages).values(sampleMessages);
-		}
+        if (generalChannelId && teamchatUserMap.size > 0) {
+            const userIds = Array.from(teamchatUserMap.values());
+            const toInsert = [] as Array<{ content: string; senderId: string; channelId: string }>
+            for (let i = 0; i < messagesTarget; i++) {
+                const senderId = userIds[i % userIds.length];
+                const content =
+                    i % 5 === 0
+                        ? "Dobrodošli u Collector Dashboard! 👋"
+                        : i % 5 === 1
+                        ? "Hvala! Radujem se saradnji!"
+                        : i % 5 === 2
+                        ? "Ako imate pitanja, slobodno pitajte."
+                        : i % 5 === 3
+                        ? "Kada je sastanak tima?"
+                        : "Sastanak je zakazan za petak u 10:00.";
+                toInsert.push({ content, senderId, channelId: generalChannelId });
+            }
+            await tx.insert(teamchatMessages).values(toInsert);
+        }
 	});
 
 	// Count created records

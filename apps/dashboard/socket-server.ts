@@ -138,10 +138,10 @@ httpServer.on("request", (req, res) => {
 					res.writeHead(400, { "Content-Type": "application/json" });
 					res.end(JSON.stringify({ error: "Missing userId or event" }));
 				}
-			} catch (_error) {
-				res.writeHead(400, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ error: "Invalid JSON" }));
-			}
+            } catch {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ error: "Invalid JSON" }));
+            }
 		});
 	} else {
 		res.writeHead(404, { "Content-Type": "application/json" });

@@ -49,83 +49,86 @@ const locationsSeed = [
   }
 ];
 
-const productsSeed = [
-  {
-    id: formatSeedUuid(3000, 1),
-    sku: "MEM-PREMIUM-001",
-    name: "Premium Collector Membership",
-    description:
-      "Godišnja članarina koja uključuje ekskluzivan pristup aukcijama i privatnim događajima.",
-    status: "active" as const,
-    categoryId: categoriesSeed[0].id,
-    unitPrice: 199.99,
-    inventory: [
-      { locationId: locationsSeed[0].id, quantity: 150, reserved: 12 },
-      { locationId: locationsSeed[1].id, quantity: 60, reserved: 5 }
-    ]
-  },
-  {
-    id: formatSeedUuid(3000, 2),
-    sku: "KIT-START-101",
-    name: "Collector Starter Kit",
-    description:
-      "Komplet sa albumom, zaštitnim futrolama i vodičem za početnike.",
-    status: "active" as const,
-    categoryId: categoriesSeed[1].id,
-    unitPrice: 89.5,
-    inventory: [
-      { locationId: locationsSeed[0].id, quantity: 80, reserved: 10 },
-      { locationId: locationsSeed[1].id, quantity: 45, reserved: 4 }
-    ]
-  },
-  {
-    id: formatSeedUuid(3000, 3),
-    sku: "STG-BOX-050",
-    name: "Archival Storage Box",
-    description: "Kiselinski neutralna kutija za dugoročno skladištenje retkih predmeta.",
-    status: "active" as const,
-    categoryId: categoriesSeed[2].id,
-    unitPrice: 39.9,
-    inventory: [
-      { locationId: locationsSeed[0].id, quantity: 200, reserved: 25 }
-    ]
-  },
-  {
-    id: formatSeedUuid(3000, 4),
-    sku: "ART-LIMIT-777",
-    name: "Limited Artifact #777",
-    description:
-      "Ekstremno redak predmet iz limitirane serije sa sertifikatom autentičnosti.",
-    status: "active" as const,
-    categoryId: categoriesSeed[3].id,
-    unitPrice: 1299.0,
-    inventory: [
-      { locationId: locationsSeed[0].id, quantity: 12, reserved: 3 },
-      { locationId: locationsSeed[1].id, quantity: 6, reserved: 1 }
-    ]
+const productsSeed = (() => {
+  const count = parseInt(process.env.SEED_PRODUCTS_COUNT || "50", 10);
+  const items: Array<{
+    id: string;
+    sku: string;
+    name: string;
+    description: string;
+    status: typeof products.$inferSelect.status;
+    categoryId: string;
+    unitPrice: number;
+    inventory: Array<{ locationId: string; quantity: number; reserved: number }>;
+  }> = [];
+
+  for (let i = 0; i < count; i++) {
+    const category = categoriesSeed[i % categoriesSeed.length];
+    const id = formatSeedUuid(3000, i + 1);
+    const sku = `${["MEM","KIT","STG","ART"][i % 4]}-${String(i + 1).padStart(3, "0")}`;
+    const nameBase = [
+      "Premium Collector Membership",
+      "Collector Starter Kit",
+      "Archival Storage Box",
+      "Limited Artifact"
+    ][i % 4];
+    const name = `${nameBase} ${i + 1}`;
+    const description =
+      i % 4 === 0
+        ? "Godišnja članarina sa ekskluzivnim pristupom."
+        : i % 4 === 1
+        ? "Komplet sa albumom, futrolama i vodičem."
+        : i % 4 === 2
+        ? "Kiselinski neutralna kutija za skladištenje."
+        : "Retki predmet iz limitirane serije sa sertifikatom.";
+    const unitPrice = i % 4 === 3 ? 999 + i * 5 : 29 + i * 2;
+    const inventory = [
+      { locationId: locationsSeed[0].id, quantity: 50 + (i % 20), reserved: 5 + (i % 3) },
+      { locationId: locationsSeed[1].id, quantity: 20 + (i % 15), reserved: 2 + (i % 2) }
+    ];
+
+    items.push({
+      id,
+      sku,
+      name,
+      description,
+      status: DEFAULT_STATUS,
+      categoryId: category.id,
+      unitPrice,
+      inventory
+    });
   }
-];
+
+  return items;
+})();
 
 export const seedProducts = async (database = defaultDb) => {
-  await database.transaction(async (tx) => {
-    await Promise.all(
-      categoriesSeed.map((category) =>
-        tx
-          .insert(productCategories)
-          .values({
-            id: category.id,
-            name: category.name,
-            description: category.description
-          })
-          .onConflictDoUpdate({
-            target: productCategories.id,
-            set: {
-              name: category.name,
-              description: category.description
-            }
-          })
-      )
-    );
+  const tx = database;
+    const categoryIdByName = new Map<string, string>();
+    const existingCategories = await tx
+      .select({ id: productCategories.id, name: productCategories.name })
+      .from(productCategories);
+    for (const c of existingCategories) categoryIdByName.set(c.name, c.id);
+
+    for (const category of categoriesSeed) {
+      if (!categoryIdByName.has(category.name)) {
+        try {
+          const [row] = await tx
+            .insert(productCategories)
+            .values({ id: category.id, name: category.name, description: category.description })
+            .onConflictDoNothing()
+            .returning();
+          if (row?.id) categoryIdByName.set(category.name, row.id);
+        } catch {
+          const [row] = await tx
+            .select({ id: productCategories.id })
+            .from(productCategories)
+            .where(sql`"name" = ${category.name}`)
+            .limit(1);
+          if (row?.id) categoryIdByName.set(category.name, row.id);
+        }
+      }
+    }
 
     await Promise.all(
       locationsSeed.map((location) =>
@@ -146,60 +149,60 @@ export const seedProducts = async (database = defaultDb) => {
       )
     );
 
-    await Promise.all(
-      productsSeed.map((product) =>
-        tx
-          .insert(products)
-          .values({
-            id: product.id,
-            sku: product.sku,
-            name: product.name,
-            description: product.description,
-            status: product.status ?? DEFAULT_STATUS,
-            categoryId: product.categoryId,
-            unitPrice: product.unitPrice.toString(),
-            createdBy: null
-          })
-          .onConflictDoUpdate({
-            target: products.id,
-            set: {
-              sku: product.sku,
-              name: product.name,
-              description: product.description,
-              status: product.status ?? DEFAULT_STATUS,
-              categoryId: product.categoryId,
-              unitPrice: product.unitPrice.toString(),
-              updatedAt: sql`NOW()`
-            }
-          })
-      )
-    );
+    const productIdBySku = new Map<string, string>();
+    for (const product of productsSeed) {
+      const catId = categoryIdByName.get(categoriesSeed[(productsSeed.indexOf(product)) % categoriesSeed.length].name) ?? product.categoryId;
+      const [row] = await tx
+        .insert(products)
+        .values({
+          id: product.id,
+          sku: product.sku,
+          name: product.name,
+          description: product.description,
+          status: product.status ?? DEFAULT_STATUS,
+          categoryId: catId ?? undefined,
+          unitPrice: Number.isFinite(product.unitPrice)
+            ? (product.unitPrice as number).toFixed(2)
+            : "0.00"
+        })
+        .onConflictDoNothing()
+        .returning();
+      if (row?.id) productIdBySku.set(product.sku, row.id);
+      if (!row?.id) {
+        const [existing] = await tx
+          .select({ id: products.id })
+          .from(products)
+          .where(sql`sku = ${product.sku}`)
+          .limit(1);
+        if (existing?.id) productIdBySku.set(product.sku, existing.id);
+      }
+    }
 
-    await Promise.all(
-      productsSeed.map((product) =>
-        Promise.all(
-          product.inventory.map((entry) =>
-            tx
-              .insert(inventoryItems)
-              .values({
-                productId: product.id,
-                locationId: entry.locationId,
-                quantity: entry.quantity,
-                reserved: entry.reserved
-              })
-              .onConflictDoUpdate({
-                target: [inventoryItems.productId, inventoryItems.locationId],
-                set: {
-                  quantity: entry.quantity,
-                  reserved: entry.reserved,
-                  updatedAt: sql`NOW()`
-                }
-              })
-          )
-        )
-      )
-    );
-  });
+    for (const product of productsSeed) {
+      const pid = productIdBySku.get(product.sku) ?? product.id;
+      for (const entry of product.inventory) {
+        const updated = await tx
+          .update(inventoryItems)
+          .set({
+            quantity: entry.quantity,
+            reserved: entry.reserved,
+            updatedAt: sql`NOW()`
+          })
+          .where(sql`product_id = ${pid} AND location_id = ${entry.locationId}`)
+          .returning();
+
+        if (!updated?.length) {
+          await tx.insert(inventoryItems).values({
+            productId: pid,
+            locationId: entry.locationId,
+            quantity: entry.quantity,
+            reserved: entry.reserved
+          });
+        }
+      }
+    }
 };
+  
+export default seedProducts;
 
 

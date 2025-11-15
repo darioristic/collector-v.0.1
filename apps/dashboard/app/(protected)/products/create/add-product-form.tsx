@@ -72,7 +72,6 @@ const FormSchema = z.object({
 	active: z.boolean().default(true),
 });
 
-type FormValues = z.infer<typeof FormSchema>;
 type FormInput = z.input<typeof FormSchema>;
 
 export default function AddProductForm() {
@@ -252,10 +251,10 @@ export default function AddProductForm() {
 								</CardAction>
 							</CardHeader>
 							<CardContent>
-								<FormField
-									name="file"
-									control={form.control}
-									render={({ field }) => (
+                                <FormField
+                                    name="file"
+                                    control={form.control}
+                                    render={({ field: _field }) => (
 										<div className="flex flex-col gap-2">
 											<div
 												onDragEnter={handleDragEnter}

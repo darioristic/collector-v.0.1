@@ -68,7 +68,6 @@ const TodoDetailSheet: React.FC<TodoDetailSheetProps> = ({
 		deleteComment,
 		updateTodo,
 		addSubTask,
-		updateSubTask,
 		removeSubTask,
 		setSelectedTodoId,
 		setTodoSheetOpen,

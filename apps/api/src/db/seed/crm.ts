@@ -91,7 +91,9 @@ type LeadSeedEntry = {
 const buildLeadSeeds = (accountIds: string[]): LeadSeedEntry[] => {
 	const baseDate = new Date(2025, 0, 15, 9, 0, 0);
 
-	return Array.from({ length: 60 }, (_value, index) => {
+	const count = parseInt(process.env.SEED_LEADS_COUNT || "50", 10);
+
+	return Array.from({ length: count }, (_value, index) => {
 		const firstName = leadFirstNames[index % leadFirstNames.length];
 		const lastName = leadLastNames[(index * 3) % leadLastNames.length];
 		const name = `${firstName} ${lastName}`;
@@ -299,6 +301,10 @@ export const seedCrm = async (database = defaultDb) => {
 	`);
 
 	await database.transaction(async (tx) => {
+		const resetLeads = process.env.SEED_RESET_LEADS === "true";
+		if (resetLeads) {
+			await tx.delete(leads);
+		}
 		const existingAccounts = await tx
 			.select({ id: accounts.id, name: accounts.name })
 			.from(accounts);

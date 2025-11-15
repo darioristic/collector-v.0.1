@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { SESSION_COOKIE_NAME } from "@/lib/auth";
+import { SESSION_COOKIE_NAME } from "@/lib/session-constants";
 
 // Public routes that don't require authentication
 const publicRoutes = [

@@ -1752,6 +1752,8 @@ async function runLocalWorkflow(
 			PORT: String(notificationPort),
 			HOST: "0.0.0.0",
 			NODE_ENV: process.env.NODE_ENV || "development",
+			ALWAYS_NOTIFY_DM_ONLINE: "true",
+			ALWAYS_NOTIFY_CHANNEL_ONLINE: "false",
 		},
 	);
 

@@ -91,7 +91,7 @@ export default function PerformanceReviewsPageClient({
   const createMutation = useMutation({
     mutationFn: (values: PerformanceReviewFormValues) =>
       createPerformanceReview(mapFormValuesToApiPayload(values)),
-    onSuccess: (review) => {
+    onSuccess: (_review) => {
       toast({
         title: "Performance review created",
         description: `Performance review has been created successfully.`
@@ -111,7 +111,7 @@ export default function PerformanceReviewsPageClient({
   const updateMutation = useMutation({
     mutationFn: ({ id, values }: { id: string; values: Partial<PerformanceReviewFormValues> }) =>
       updatePerformanceReview(id, mapFormValuesToApiPayload(values)),
-    onSuccess: (review) => {
+    onSuccess: (_review) => {
       toast({
         title: "Performance review updated",
         description: `Performance review has been updated.`

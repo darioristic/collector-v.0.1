@@ -176,8 +176,8 @@ export function QuoteList({
                 }
               })
             );
-            const account = (await response.json()) as Account;
-            companies[id] = account;
+            const payload = (await response.json()) as { account: Account };
+            companies[id] = payload.account;
           } catch (error) {
             console.error(`Failed to fetch account ${id}:`, error);
           }

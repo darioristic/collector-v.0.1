@@ -85,7 +85,7 @@ describe("Orders API routes", () => {
        RETURNING id`,
 			[companyId, contactId]
 		);
-		const orderId = orderResult.rows[0].id;
+		const _orderId = orderResult.rows[0].id;
 
 		const response = await app.inject({
 			method: "GET",
@@ -205,7 +205,7 @@ describe("Orders API routes", () => {
 	});
 
 	it("should filter orders by companyId", async () => {
-		const orderResult = await client.query(
+		const _orderResult = await client.query(
 			`INSERT INTO orders (order_number, company_id, contact_id, order_date, currency, subtotal, tax, total, status, created_at, updated_at)
        VALUES ('ORD-006', $1, $2, CURRENT_DATE, 'USD', 100.00, 20.00, 120.00, 'pending', NOW(), NOW())
        RETURNING id`,

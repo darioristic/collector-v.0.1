@@ -2,7 +2,7 @@ import { faker } from "@faker-js/faker";
 import { sql } from "drizzle-orm";
 
 import { db as defaultDb } from "../index";
-import { accountAddresses, accountContacts, accounts } from "../schema/accounts.schema";
+import { accountContacts, accounts } from "../schema/accounts.schema";
 
 const COMPANY_COUNT = 50;
 const COMPANY_ID_OFFSET = 1;
@@ -11,19 +11,34 @@ const ACCOUNT_TAGS = ["customer", "partner", "vendor"] as const;
 
 const formatSeedUuid = (value: number) => `00000000-0000-0000-0000-${String(value).padStart(12, "0")}`;
 
+const REAL_COMPANIES: { name: string; domain: string }[] = [
+  { name: "Collector Labs", domain: "collectorlabs.test" },
+  { name: "Nordeus", domain: "nordeus.com" },
+  { name: "Seven Bridges", domain: "sevenbridges.com" },
+  { name: "Telekom Srbija", domain: "mts.rs" },
+  { name: "Comtrade", domain: "comtrade.com" },
+  { name: "Endava", domain: "endava.com" },
+  { name: "Levi9", domain: "levi9.com" },
+  { name: "Vega IT", domain: "vegait.rs" },
+  { name: "Quantox", domain: "quantox.com" },
+  { name: "Schneider Electric Serbia", domain: "se.com" }
+];
+
 const accountsSeedData = Array.from({ length: COMPANY_COUNT }, (_value, index) => {
   const sequence = COMPANY_ID_OFFSET + index;
   const companyId = formatSeedUuid(sequence);
-  const label = String(sequence).padStart(2, "0");
+  const real = REAL_COMPANIES[index] ?? null;
+  const companyName = real ? real.name : faker.company.name();
+  const domain = real ? real.domain : faker.internet.domainName();
 
   return {
     id: companyId,
-    name: `Company ${label}`,
+    name: companyName,
     type: ACCOUNT_TAGS[index % ACCOUNT_TAGS.length],
-    email: `company${sequence}@example.com`,
-    phone: `+381-60-${String(1000 + sequence).padStart(4, "0")}`,
-    website: null,
-    taxId: `RS${String(1000000 + sequence).padStart(7, "0")}`,
+    email: `info@${domain}`,
+    phone: faker.phone.number({ style: "international" }),
+    website: `https://${domain}`,
+    taxId: `RS${faker.number.int({ min: 1000000, max: 9999999 })}`,
     country: "RS",
     ownerId: null
   };
@@ -32,37 +47,53 @@ const accountsSeedData = Array.from({ length: COMPANY_COUNT }, (_value, index) =
 const contactsSeedData = accountsSeedData.flatMap((company, index) => {
   const primarySequence = CONTACT_ID_OFFSET + index * 2;
   const secondarySequence = primarySequence + 1;
+  const domain = company.email.includes("@") ? company.email.split("@")[1] : "example.com";
+
+  const pFirst = faker.person.firstName();
+  const pLast = faker.person.lastName();
+  const sFirst = faker.person.firstName();
+  const sLast = faker.person.lastName();
 
   return [
-  {
+    {
       id: formatSeedUuid(primarySequence),
       accountId: company.id,
-      name: `Primary Contact ${index + 1}`,
-      firstName: `Primary${index + 1}`,
-      lastName: "Contact",
-      fullName: `Primary${index + 1} Contact`,
+      name: `${pFirst} ${pLast}`,
+      firstName: pFirst,
+      lastName: pLast,
+      fullName: `${pFirst} ${pLast}`,
       title: "Account Manager",
-      email: `primary${index + 1}@company${index + 1}.example`,
-      phone: `+381-61-${String(2000 + index).padStart(4, "0")}`,
-    ownerId: null
-  },
-  {
+      email: `${pFirst.toLowerCase()}.${pLast.toLowerCase()}@${domain}`,
+      phone: faker.phone.number({ style: "international" }),
+      ownerId: null
+    },
+    {
       id: formatSeedUuid(secondarySequence),
       accountId: company.id,
-      name: `Secondary Contact ${index + 1}`,
-      firstName: `Secondary${index + 1}`,
-      lastName: "Contact",
-      fullName: `Secondary${index + 1} Contact`,
+      name: `${sFirst} ${sLast}`,
+      firstName: sFirst,
+      lastName: sLast,
+      fullName: `${sFirst} ${sLast}`,
       title: "Operations Lead",
-      email: `secondary${index + 1}@company${index + 1}.example`,
-      phone: `+381-62-${String(2000 + index).padStart(4, "0")}`,
-    ownerId: null
-  }
-];
+      email: `${sFirst.toLowerCase()}.${sLast.toLowerCase()}@${domain}`,
+      phone: faker.phone.number({ style: "international" }),
+      ownerId: null
+    }
+  ];
 });
 
 export const seedAccounts = async (database = defaultDb) => {
   await database.transaction(async (tx) => {
+    await tx.execute(sql`ALTER TABLE "accounts" ADD COLUMN IF NOT EXISTS "legal_name" text;`);
+    await tx.execute(sql`ALTER TABLE "accounts" ADD COLUMN IF NOT EXISTS "registration_number" text;`);
+    await tx.execute(sql`ALTER TABLE "accounts" ADD COLUMN IF NOT EXISTS "date_of_incorporation" timestamptz;`);
+    await tx.execute(sql`ALTER TABLE "accounts" ADD COLUMN IF NOT EXISTS "industry" text;`);
+    await tx.execute(sql`ALTER TABLE "accounts" ADD COLUMN IF NOT EXISTS "number_of_employees" integer;`);
+    await tx.execute(sql`ALTER TABLE "accounts" ADD COLUMN IF NOT EXISTS "annual_revenue_range" text;`);
+    await tx.execute(sql`ALTER TABLE "accounts" ADD COLUMN IF NOT EXISTS "legal_status" text;`);
+    await tx.execute(sql`ALTER TABLE "accounts" ADD COLUMN IF NOT EXISTS "company_type" text;`);
+    await tx.execute(sql`ALTER TABLE "accounts" ADD COLUMN IF NOT EXISTS "description" text;`);
+    await tx.execute(sql`ALTER TABLE "accounts" ADD COLUMN IF NOT EXISTS "social_media_links" jsonb;`);
     await Promise.all(
       accountsSeedData.map((item) =>
         tx
@@ -132,24 +163,23 @@ export const seedAccounts = async (database = defaultDb) => {
       }
     }
 
-    if (addressesData.length > 0) {
+    const SKIP_ADDRESSES = process.env.SEED_SKIP_ACCOUNT_ADDRESSES === "true";
+
+    if (!SKIP_ADDRESSES && addressesData.length > 0) {
       await Promise.all(
         addressesData.map((address) =>
-          tx
-            .insert(accountAddresses)
-            .values(address)
-            .onConflictDoUpdate({
-              target: accountAddresses.id,
-              set: {
-                accountId: address.accountId,
-                label: address.label,
-                street: address.street,
-                city: address.city,
-                state: address.state,
-                postalCode: address.postalCode,
-                country: address.country
-              }
-            })
+          tx.execute(sql`
+            INSERT INTO "account_addresses" ("id", "account_id", "label", "street", "city", "state", "postal_code", "country")
+            VALUES (${address.id}, ${address.accountId}, ${address.label}, ${address.street}, ${address.city}, ${address.state}, ${address.postalCode}, ${address.country})
+            ON CONFLICT ("id") DO UPDATE SET
+              "account_id" = ${address.accountId},
+              "label" = ${address.label},
+              "street" = ${address.street},
+              "city" = ${address.city},
+              "state" = ${address.state},
+              "postal_code" = ${address.postalCode},
+              "country" = ${address.country}
+          `)
         )
       );
     }

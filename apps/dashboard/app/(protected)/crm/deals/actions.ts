@@ -302,8 +302,7 @@ async function createOrderFromDeal(deal: Deal): Promise<void> {
 
 	// Calculate totals from deal value (tax = 20%)
 	const subtotal = deal.value;
-	const tax = subtotal * 0.2;
-	const total = subtotal + tax;
+	    const _tax = subtotal * 0.2;
 
 	// Generate order number
 	const orderNumber = `ORD-${Date.now()}-${deal.id.slice(0, 8).toUpperCase()}`;

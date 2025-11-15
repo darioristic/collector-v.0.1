@@ -213,31 +213,31 @@ export const columns: ColumnDef<Order>[] = [
 			);
 		},
 	},
-	{
-		id: "actions",
-		enableHiding: false,
-		cell: ({ row }) => {
-			return (
-				<div className="text-end">
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button variant="ghost" size="icon">
-								<span className="sr-only">Open menu</span>
-								<MoreHorizontal />
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end">
-							<DropdownMenuLabel>Actions</DropdownMenuLabel>
-							<DropdownMenuSeparator />
-							<DropdownMenuItem>Order Details</DropdownMenuItem>
-							<DropdownMenuItem>Edit</DropdownMenuItem>
-							<DropdownMenuItem>Delete</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
-				</div>
-			);
-		},
-	},
+    {
+        id: "actions",
+        enableHiding: false,
+        cell: () => {
+            return (
+                <div className="text-end">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem>Order Details</DropdownMenuItem>
+                            <DropdownMenuItem>Edit</DropdownMenuItem>
+                            <DropdownMenuItem>Delete</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+            );
+        },
+    },
 ];
 
 export default function OrdersDataTable({ data }: { data: Order[] }) {

@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { io, type ManagerOptions, type Socket, type SocketOptions } from "socket.io-client";
 import { useAuth } from "@/components/providers/auth-provider";
 import type { ChatMessage } from "@/app/(protected)/apps/chat/api";
+import { SESSION_COOKIE_NAME } from "@/lib/session-constants";
 
 const CHAT_SERVICE_URL =
 	process.env.NEXT_PUBLIC_CHAT_SERVICE_URL || "http://localhost:4001";
-const SESSION_COOKIE_NAME = "auth_session";
 
 export function useChatSocket() {
 	const { user } = useAuth();

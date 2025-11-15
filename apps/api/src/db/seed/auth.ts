@@ -51,29 +51,45 @@ const ROLE_DEFINITIONS: RoleSeed[] = [
 ];
 
 const USER_DEFINITIONS: UserSeed[] = [
-	{
-		email: "dario@collectorlabs.test",
-		name: "Dario Ristic",
-		password: "Collector!2025",
-		role: "admin",
-	},
-	{
-		email: "miha@collectorlabs.test",
-		name: "Miha Manager",
-		password: "Collector!2025",
-		role: "manager",
-	},
-	{
-		email: "tara@collectorlabs.test",
-		name: "Tara User",
-		password: "Collector!2025",
-		role: "user",
-	},
+    {
+        email: "dario@collectorlabs.test",
+        name: "Dario Ristić",
+        password: "Collector!2025",
+        role: "admin",
+    },
+    {
+        email: "miha@collectorlabs.test",
+        name: "Miha Jovanović",
+        password: "Collector!2025",
+        role: "manager",
+    },
+    {
+        email: "tara@collectorlabs.test",
+        name: "Tara Petrović",
+        password: "Collector!2025",
+        role: "user",
+    },
 ];
 
 export const seedAuth = async (database = defaultDb) => {
   await database.transaction(async (tx) => {
-    
+    await tx.execute(sql`DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'role_key') THEN
+        CREATE TYPE "role_key" AS ENUM ('admin', 'manager', 'user', 'sales_manager', 'sales_rep', 'support', 'viewer');
+      END IF;
+    END $$;`);
+
+    await tx.execute(sql`
+      CREATE TABLE IF NOT EXISTS "roles" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        "key" "role_key" NOT NULL,
+        "name" text NOT NULL,
+        "description" text,
+        "created_at" timestamptz NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    await tx.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS "roles_key_key" ON "roles" ("key");`);
 
       await Promise.all(
 			ROLE_DEFINITIONS.map((role) =>

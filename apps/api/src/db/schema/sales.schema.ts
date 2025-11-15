@@ -150,8 +150,8 @@ export const invoices = pgTable(
   "invoices",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    orderId: integer("order_id").references(() => orders.id, { onDelete: "cascade" }),
     invoiceNumber: text("invoice_number").notNull().unique(),
+    orderId: integer("order_id").references(() => orders.id, { onDelete: "cascade" }),
     customerId: uuid("customer_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "restrict" }),

@@ -86,7 +86,7 @@ export const teamchatChannelMembers = pgTable(
 			.references(() => teamchatChannels.id, { onDelete: "cascade" }),
 		userId: uuid("user_id")
 			.notNull()
-			.references(() => teamchatUsers.id, { onDelete: "cascade" }),
+			.references(() => teamchatUsers.id, { onDelete: "cascade", onUpdate: "cascade" }),
 		joinedAt: timestamp("joined_at", { withTimezone: true })
 			.defaultNow()
 			.notNull(),
@@ -116,7 +116,7 @@ export const teamchatMessages = pgTable(
 		fileUrl: text("file_url"),
 		senderId: uuid("sender_id")
 			.notNull()
-			.references(() => teamchatUsers.id, { onDelete: "cascade" }),
+			.references(() => teamchatUsers.id, { onDelete: "cascade", onUpdate: "cascade" }),
 		channelId: uuid("channel_id")
 			.notNull()
 			.references(() => teamchatChannels.id, { onDelete: "cascade" }),

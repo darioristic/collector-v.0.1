@@ -121,15 +121,16 @@ const getCountryName = (code: string | null | undefined): string => {
 };
 
 async function fetchAccount(id: string): Promise<Account> {
-	const response = await ensureResponse(
-		fetch(`/api/accounts/${id}`, {
-			cache: "no-store",
-			headers: {
-				Accept: "application/json",
-			},
-		}),
-	);
-	return (await response.json()) as Account;
+  const response = await ensureResponse(
+    fetch(`/api/accounts/${id}`, {
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+      },
+    }),
+  );
+  const payload = (await response.json()) as { account: Account };
+  return payload.account;
 }
 
 export function CreateQuote() {

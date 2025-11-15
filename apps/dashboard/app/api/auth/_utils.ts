@@ -1,8 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 import { getApiUrl } from "@/src/lib/fetch-utils";
+import { SESSION_COOKIE_NAME } from "@/lib/session-constants";
 
-export const SESSION_COOKIE_NAME = "auth_session";
+// Re-export for backward compatibility
+export { SESSION_COOKIE_NAME };
+
 const isProduction = process.env.NODE_ENV === "production";
 
 type BackendRequestInit = RequestInit & {

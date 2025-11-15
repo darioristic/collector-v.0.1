@@ -43,7 +43,7 @@ export function EcommerceSalesByLocationCard() {
 			</CardHeader>
 			<CardContent>
 				<div className="space-y-5">
-					{salesData.map((item, key) => (
+                    {salesData.map((item) => (
 						<div key={item.country} className="space-y-2">
 							<div className="flex items-center justify-between">
 								<div className="flex items-center gap-2">

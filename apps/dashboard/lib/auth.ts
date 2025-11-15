@@ -2,8 +2,7 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 
 import { getApiUrl } from "@/src/lib/fetch-utils";
-
-export const SESSION_COOKIE_NAME = "auth_session";
+import { SESSION_COOKIE_NAME } from "@/lib/session-constants";
 
 export type AuthCompany = {
 	id: string;

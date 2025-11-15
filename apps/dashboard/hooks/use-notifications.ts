@@ -10,6 +10,7 @@ import {
 	notificationPayloadSchema,
 	notificationUpdateResponseSchema,
 } from "@/lib/validations/notifications";
+import { SESSION_COOKIE_NAME } from "@/lib/session-constants";
 
 type UseNotificationsOptions = {
 	refreshOnFocus?: boolean;
@@ -53,64 +54,71 @@ export function useNotifications(
 	}, [disconnectSocket]);
 
 	const fetchNotifications = useCallback(
-		async (signal?: AbortSignal) => {
-			if (!userId) {
+	async (signal?: AbortSignal) => {
+		if (!userId) {
+			setNotifications([]);
+			setUnreadCount(0);
+			return;
+		}
+
+		setIsLoading(true);
+
+		try {
+			const serviceUrl = process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL || "http://localhost:4002";
+			
+			// Get session token from cookie
+			const getSessionToken = () => {
+				if (typeof document === "undefined") return null;
+				const cookieValue = document.cookie
+					.split("; ")
+					.find((row) => row.startsWith(`${SESSION_COOKIE_NAME}=`))
+					?.split("=")[1];
+				return cookieValue ? decodeURIComponent(cookieValue) : null;
+			};
+
+			const token = getSessionToken();
+
+			const response = await fetch(`${serviceUrl}/api/notifications?limit=${limit}`, {
+				method: "GET",
+				headers: {
+					"Content-Type": "application/json",
+					...(token && {
+						Authorization: `Bearer ${token}`,
+					}),
+				},
+				cache: "no-store",
+				signal,
+				credentials: "include",
+			});
+
+			if (response.status === 401) {
 				setNotifications([]);
 				setUnreadCount(0);
 				return;
 			}
 
-			setIsLoading(true);
-
-			try {
-				const serviceUrl = process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL || "http://localhost:4002";
-				const response = await fetch(`${serviceUrl}/api/notifications?limit=${limit}`, {
-					method: "GET",
-					headers: {
-						"Content-Type": "application/json",
-						...(document.cookie
-							.split("; ")
-							.find((row) => row.startsWith("auth_session="))
-							?.split("=")[1] && {
-							Authorization: `Bearer ${document.cookie
-								.split("; ")
-								.find((row) => row.startsWith("auth_session="))
-								?.split("=")[1]}`,
-						}),
-					},
-					cache: "no-store",
-					signal,
-					credentials: "include",
-				});
-
-				if (response.status === 401) {
-					setNotifications([]);
-					setUnreadCount(0);
-					return;
-				}
-
-				// Handle service unavailable (503) gracefully
-				if (response.status === 503) {
-					console.warn(
-						"[notifications] Service unavailable (503), notifications will not be loaded. Make sure notification service is running on port 4002.",
-					);
-					setNotifications([]);
-					setUnreadCount(0);
-					return;
-				}
-
-				if (!response.ok) {
-					throw new Error(
-						`Preuzimanje notifikacija nije uspelo (${response.status}).`,
-					);
-				}
-
-				const payload = notificationListResponseSchema.parse(
-					await response.json(),
+			// Handle service unavailable (503) gracefully
+			if (response.status === 503) {
+				console.warn(
+					"[notifications] Service unavailable (503), notifications will not be loaded. Make sure notification service is running on port 4002.",
 				);
+				setNotifications([]);
+				setUnreadCount(0);
+				return;
+			}
 
-				setNotifications(payload.data);
-				setUnreadCount(payload.data.filter((item) => !item.read).length);
+			if (!response.ok) {
+				throw new Error(
+					`Preuzimanje notifikacija nije uspelo (${response.status}).`,
+				);
+			}
+
+			const payload = notificationListResponseSchema.parse(
+				await response.json(),
+			);
+
+			setNotifications(payload.data);
+			setUnreadCount(payload.data.filter((item) => !item.read).length);
 			} catch (error) {
 				if ((error as Error).name === "AbortError") {
 					return;
@@ -160,18 +168,25 @@ export function useNotifications(
 			transports: ["websocket"],
 			query: { userId },
 			reconnection: true,
-			reconnectionAttempts: 5,
-			reconnectionDelay: 1000,
+			reconnectionAttempts: 3,
+			reconnectionDelay: 2000,
+			timeout: 5000,
 		});
 
 		socketRef.current = socket;
 
+		let hasLoggedConnectionError = false;
+
 		// Handle connection errors gracefully
 		socket.on("connect_error", (error) => {
-			console.warn(
-				"[notifications] Socket connection failed. Notifications will not be received in real-time. Make sure notification service is running on port 4002.",
-				error.message,
-			);
+			// Only log once to avoid spam
+			if (!hasLoggedConnectionError) {
+				hasLoggedConnectionError = true;
+				console.warn(
+					"[notifications] Socket connection failed. Notifications will not be received in real-time. Make sure notification service is running on port 4002.",
+					error.message,
+				);
+			}
 		});
 
 		socket.on("connect", () => {
@@ -249,55 +264,41 @@ export function useNotifications(
 				return;
 			}
 
-			try {
-				const serviceUrl = process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL || "http://localhost:4002";
-				const token = document.cookie
+		try {
+			const serviceUrl = process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL || "http://localhost:4002";
+			
+			// Get session token from cookie
+			const getSessionToken = () => {
+				if (typeof document === "undefined") return null;
+				const cookieValue = document.cookie
 					.split("; ")
-					.find((row) => row.startsWith("auth_session="))
+					.find((row) => row.startsWith(`${SESSION_COOKIE_NAME}=`))
 					?.split("=")[1];
-				const response = await fetch(`${serviceUrl}/api/notifications/mark-read`, {
-					method: "PATCH",
-					headers: {
-						"Content-Type": "application/json",
-						...(token && {
-							Authorization: `Bearer ${token}`,
-						}),
-					},
-					body: JSON.stringify({ ids }),
-					credentials: "include",
-				});
+				return cookieValue ? decodeURIComponent(cookieValue) : null;
+			};
 
-				// Handle service unavailable (503) gracefully
-				if (response.status === 503) {
-					console.warn(
-						"[notifications] Service unavailable (503), mark as read failed. Make sure notification service is running on port 4002.",
-					);
-					// Optimistically update local state even if service is unavailable
-					setNotifications((prev) =>
-						prev.map((item) =>
-							ids.includes(item.id)
-								? {
-										...item,
-										read: true,
-									}
-								: item,
-						),
-					);
-					setUnreadCount((prev) => Math.max(0, prev - ids.length));
-					return;
-				}
+			const token = getSessionToken();
+			const response = await fetch(`${serviceUrl}/api/notifications/mark-read`, {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					...(token && {
+						Authorization: `Bearer ${token}`,
+					}),
+				},
+				body: JSON.stringify({ ids }),
+				credentials: "include",
+			});
 
-				if (!response.ok) {
-					throw new Error(`Označavanje nije uspelo (${response.status}).`);
-				}
-
-				const payload = notificationUpdateResponseSchema.parse(
-					await response.json(),
+			// Handle service unavailable (503) gracefully
+			if (response.status === 503) {
+				console.warn(
+					"[notifications] Service unavailable (503), mark as read failed. Make sure notification service is running on port 4002.",
 				);
-
+				// Optimistically update local state even if service is unavailable
 				setNotifications((prev) =>
 					prev.map((item) =>
-						payload.updatedIds.includes(item.id)
+						ids.includes(item.id)
 							? {
 									...item,
 									read: true,
@@ -305,33 +306,55 @@ export function useNotifications(
 							: item,
 					),
 				);
-				setUnreadCount(payload.unreadCount);
-			} catch (error) {
-				const errorMessage = error instanceof Error ? error.message : String(error);
-				if (
-					errorMessage.includes("Failed to fetch") ||
-					errorMessage.includes("NetworkError") ||
-					errorMessage.includes("503")
-				) {
-					console.warn(
-						"[notifications] Service unavailable, mark as read failed. Make sure notification service is running on port 4002.",
-					);
-					// Optimistically update local state even if service is unavailable
-					setNotifications((prev) =>
-						prev.map((item) =>
-							ids.includes(item.id)
-								? {
-										...item,
-										read: true,
-									}
-								: item,
-						),
-					);
-					setUnreadCount((prev) => Math.max(0, prev - ids.length));
-				} else {
-					console.error("[notifications] Mark as read failed", error);
-				}
+				setUnreadCount((prev) => Math.max(0, prev - ids.length));
+				return;
 			}
+
+			if (!response.ok) {
+				throw new Error(`Označavanje nije uspelo (${response.status}).`);
+			}
+
+			const payload = notificationUpdateResponseSchema.parse(
+				await response.json(),
+			);
+
+			setNotifications((prev) =>
+				prev.map((item) =>
+					payload.updatedIds.includes(item.id)
+						? {
+								...item,
+								read: true,
+							}
+						: item,
+				),
+			);
+			setUnreadCount(payload.unreadCount);
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : String(error);
+			if (
+				errorMessage.includes("Failed to fetch") ||
+				errorMessage.includes("NetworkError") ||
+				errorMessage.includes("503")
+			) {
+				console.warn(
+					"[notifications] Service unavailable, mark as read failed. Make sure notification service is running on port 4002.",
+				);
+				// Optimistically update local state even if service is unavailable
+				setNotifications((prev) =>
+					prev.map((item) =>
+						ids.includes(item.id)
+							? {
+									...item,
+									read: true,
+								}
+							: item,
+					),
+				);
+				setUnreadCount((prev) => Math.max(0, prev - ids.length));
+			} else {
+				console.error("[notifications] Mark as read failed", error);
+			}
+		}
 		},
 		[userId],
 	);

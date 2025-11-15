@@ -383,6 +383,30 @@ const EMPLOYEES_DATA: EmployeeSeedData[] = [
 	},
 ];
 
+const TARGET_COUNT = parseInt(process.env.SEED_DASHBOARD_EMPLOYEE_COUNT || "50", 10);
+if (EMPLOYEES_DATA.length < TARGET_COUNT) {
+  const base = EMPLOYEES_DATA.length;
+  for (let i = 0; i < TARGET_COUNT - base; i++) {
+    const idx = base + i + 1;
+    const dept = ["Development","Operations","Sales","HR","Support"][idx % 5];
+    const role = dept === "Development" ? "Developer" : dept === "Operations" ? "Analyst" : dept === "Sales" ? "Sales Rep" : dept === "HR" ? "HR Specialist" : "Support Agent";
+    const status: EmployeeSeedData["status"] = idx % 13 === 0 ? "On Leave" : idx % 17 === 0 ? "Terminated" : "Active";
+    const employmentType: EmployeeSeedData["employmentType"] = idx % 11 === 0 ? "Intern" : idx % 7 === 0 ? "Contractor" : "Full-time";
+    EMPLOYEES_DATA.push({
+      firstName: `Emp${idx}`,
+      lastName: `Test${idx}`,
+      email: `employee${100 + idx}@collectorlabs.test`,
+      phone: `+381 60 ${String(100000 + idx).padStart(6, "0")}`,
+      department: dept,
+      role,
+      employmentType,
+      status,
+      startDate: new Date(2023, (idx % 12), ((idx % 27) + 1)),
+      salary: 100000 + (idx % 50) * 1000,
+    });
+  }
+}
+
 type EmployeesSeedResult = {
 	inserted: number;
 	skipped: number;

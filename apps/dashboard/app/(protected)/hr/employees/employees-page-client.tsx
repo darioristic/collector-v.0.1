@@ -187,12 +187,6 @@ export default function EmployeesPageClient({ initialQuery }: EmployeesPageClien
     }
   });
 
-  const handleOpenCreateOld = React.useCallback(() => {
-    setFormMode("create");
-    setFormInitialValues(undefined);
-    setIsFormOpen(true);
-    setEditingEmployee(null);
-  }, []);
 
   const handleOpenEdit = React.useCallback((employee: Employee) => {
     const values = mapEmployeeToFormValues(employee);

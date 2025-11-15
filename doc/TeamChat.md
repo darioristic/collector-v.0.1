@@ -126,5 +126,19 @@ apps/dashboard/
   - dodatna validacija i logika upload-a (virus scan, višestruki fajlovi);
   - CI skripte za migracije i lint/test pre deploy-a.
 
+## E2E i performanse
+- `apps/dashboard/__tests__/teamchat.test.ts` proverava:
+  - bootstrap šemu i inicijalizaciju;
+  - kreiranje DM kanala i članstva;
+  - slanje poruka i čitanje istorije;
+  - performanse za 500 poruka sa vremenskim pragom.
+- Pokretanje: `cd apps/dashboard && bun test __tests__/teamchat.test.ts`
+
+## Dev setup za više korisnika
+- Otvorite 3 prozora pregledača: Dario, Miha, Tara.
+- Ulogujte se u Dashboard, otvorite `Apps → TeamChat`.
+- Kreirajte DM kanale parova i proverite real-time tok poruka.
+- Status online/offline se menja pri konekciji/dis-konekciji socket klijenta.
+
 ---
 Za sva dodatna pitanja u vezi sa implementacijom ili proširenjem TeamChat funkcionalnosti, obratite se Core Frontend timu.

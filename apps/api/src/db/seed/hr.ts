@@ -140,6 +140,24 @@ const EMPLOYEES_DATA: EmployeeSeedData[] = [
 	},
 ];
 
+const EMPLOYEE_TARGET = parseInt(process.env.SEED_EMPLOYEE_COUNT || "50", 10);
+if (EMPLOYEES_DATA.length < EMPLOYEE_TARGET) {
+    const base = EMPLOYEES_DATA.length;
+    for (let i = 0; i < EMPLOYEE_TARGET - base; i++) {
+        const idx = base + i + 1;
+        EMPLOYEES_DATA.push({
+            email: `employee${idx}@collectorlabs.test`,
+            name: `Employee ${idx}`,
+            employeeNumber: `EMP${String(200 + idx).padStart(3, "0")}`,
+            department: ["Development","Operations","Sales","HR","Support"][idx % 5],
+            hiredAt: new Date(2023, (idx % 12), ((idx % 27) + 1)),
+            status: "active",
+            managerEmail: "marko.petrovic@collectorlabs.test",
+            roleKey: "user",
+        });
+    }
+}
+
 export const seedHr = async (database = defaultDb): Promise<void> => {
 	console.log("[HR Seed] Starting HR seed process...");
 	await database.transaction(async (tx) => {
@@ -170,31 +188,53 @@ export const seedHr = async (database = defaultDb): Promise<void> => {
 		const employeeMap = new Map<string, string>();
 		const managerMap = new Map<string, string>();
 
+const mapStatus = (
+    s: EmployeeSeedData["status"],
+): typeof employees.$inferInsert["status"] => s;
+
 		for (const empData of EMPLOYEES_DATA) {
 			const userId = userMap.get(empData.email.toLowerCase()) || null;
+			const dbStatus = mapStatus(empData.status);
 
-			const [employee] = await tx
-				.insert(employees)
-				.values({
-					userId,
-					employeeNumber: empData.employeeNumber,
-					status: empData.status,
-					department: empData.department,
-					hiredAt: empData.hiredAt,
-				})
-				.onConflictDoUpdate({
-					target: employees.employeeNumber,
-					set: {
-						status: empData.status,
+			let insertedId: string | undefined;
+			try {
+				const [employee] = await tx
+					.insert(employees)
+					.values({
+						userId,
+						employeeNumber: empData.employeeNumber,
+                        status: dbStatus,
 						department: empData.department,
 						hiredAt: empData.hiredAt,
-						updatedAt: sql`NOW()`,
-					},
-				})
-				.returning();
+					})
+					.onConflictDoUpdate({
+						target: employees.employeeNumber,
+						set: {
+                            status: dbStatus,
+							department: empData.department,
+							hiredAt: empData.hiredAt,
+							updatedAt: sql`NOW()`,
+						},
+					})
+					.returning();
+				insertedId = employee?.id;
+			} catch {
+				const result = await tx.execute(sql`
+					INSERT INTO "employees" ("user_id", "employee_number", "status", "department", "hired_at")
+					VALUES (${userId}, ${empData.employeeNumber}, ${dbStatus}::employment_status, ${empData.department}, ${empData.hiredAt})
+					ON CONFLICT ("employee_number") DO UPDATE SET
+						"status" = ${dbStatus}::employment_status,
+						"department" = ${empData.department},
+						"hired_at" = ${empData.hiredAt},
+						"updated_at" = NOW()
+					RETURNING "id"
+				`);
+				// @ts-expect-error drizzle returns rows
+				insertedId = result?.rows?.[0]?.id as string | undefined;
+			}
 
-			if (employee) {
-				employeeMap.set(empData.email.toLowerCase(), employee.id);
+			if (insertedId) {
+				employeeMap.set(empData.email.toLowerCase(), insertedId);
 				if (empData.managerEmail) {
 					managerMap.set(empData.email.toLowerCase(), empData.managerEmail);
 				}
@@ -355,37 +395,43 @@ export const seedHr = async (database = defaultDb): Promise<void> => {
 			["snezana.pavlovic@collectorlabs.test", 145000],
 		]);
 
-		for (let month = 0; month < 3; month++) {
-			const periodStart = new Date(today);
-			periodStart.setMonth(periodStart.getMonth() - month - 1);
-			periodStart.setDate(1);
-			periodStart.setHours(0, 0, 0, 0);
+        const totalPayrollTarget = parseInt(process.env.SEED_PAYROLL_COUNT || "50", 10);
+        let insertedPayroll = 0;
+        outer: for (let month = 0; month < 12; month++) {
+            const periodStart = new Date(today);
+            periodStart.setMonth(periodStart.getMonth() - month - 1);
+            periodStart.setDate(1);
+            periodStart.setHours(0, 0, 0, 0);
 
-			const periodEnd = new Date(periodStart);
-			periodEnd.setMonth(periodEnd.getMonth() + 1);
-			periodEnd.setDate(0);
-			periodEnd.setHours(23, 59, 59, 999);
+            const periodEnd = new Date(periodStart);
+            periodEnd.setMonth(periodEnd.getMonth() + 1);
+            periodEnd.setDate(0);
+            periodEnd.setHours(23, 59, 59, 999);
 
-			for (const [email, employeeId] of employeeMap.entries()) {
-				const grossPay = baseSalaries.get(email) || 100000;
-				const netPay = Math.round(grossPay * 0.7); // 30% tax approximation
+            for (const [email, employeeId] of employeeMap.entries()) {
+                const grossPay = baseSalaries.get(email) || 100000;
+                const netPay = Math.round(grossPay * 0.7);
 
-				payrollData.push({
-					employeeId,
-					periodStart,
-					periodEnd,
-					grossPay,
-					netPay,
-				});
-			}
-		}
+                payrollData.push({
+                    employeeId,
+                    periodStart,
+                    periodEnd,
+                    grossPay,
+                    netPay,
+                });
+                insertedPayroll++;
+                if (insertedPayroll >= totalPayrollTarget) {
+                    break outer;
+                }
+            }
+        }
 
 		if (payrollData.length > 0) {
 			await tx.insert(payrollEntries).values(payrollData);
 		}
 
 		// Create recruitment candidates
-		const candidatesData = [
+        const candidatesData = [
 			{
 				firstName: "Nikola",
 				lastName: "Stojanović",
@@ -647,7 +693,24 @@ export const seedHr = async (database = defaultDb): Promise<void> => {
 				status: "offer" as const,
 				source: "Job Board",
 			},
-		];
+        ];
+
+        const recruitmentTarget = parseInt(process.env.SEED_RECRUITMENT_COUNT || "50", 10);
+        if (candidatesData.length < recruitmentTarget) {
+            const baseLen = candidatesData.length;
+            for (let i = 0; i < recruitmentTarget - baseLen; i++) {
+                const n = baseLen + i + 1;
+                candidatesData.push({
+                    firstName: "Kandidat",
+                    lastName: String(n),
+                    email: `candidate${n}@example.com`,
+                    phone: `+381 60 ${String(100000 + n).padStart(6, "0")}`,
+                    position: ["Software Engineer","QA Engineer","DevOps Engineer","Product Manager"][n % 4],
+                    status: (["applied","screening","interview","offer","hired","rejected"][n % 6] as "applied" | "screening" | "interview" | "offer" | "hired" | "rejected"),
+                    source: ["LinkedIn","Job Board","Referral"][n % 3],
+                });
+            }
+        }
 
 		// Insert recruitment candidates
 		console.log(`[HR Seed] Inserting ${candidatesData.length} recruitment candidates...`);
@@ -797,7 +860,8 @@ export const seedHr = async (database = defaultDb): Promise<void> => {
 			([email]) => !email.includes("dejan.vasic") && !email.includes("maja.radosavljevic"),
 		);
 
-		for (let i = 0; i < Math.min(25, activeEmployees.length * 3); i++) {
+        const reviewsTarget = parseInt(process.env.SEED_PERFORMANCE_REVIEWS_COUNT || "50", 10);
+        for (let i = 0; i < Math.min(reviewsTarget, activeEmployees.length * 3); i++) {
 			const [employeeEmail] = activeEmployees[i % activeEmployees.length];
 			const managerEmail = managerMap.get(employeeEmail) || "marko.petrovic@collectorlabs.test";
 			const reviewerId = userMap.get(managerEmail.toLowerCase());

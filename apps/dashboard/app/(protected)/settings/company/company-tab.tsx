@@ -100,9 +100,9 @@ export default function CompanyTab() {
 					description: updatedCompany.description ?? "",
 				});
 			}
-		} catch (error) {
-			// Error is handled by the mutation's onError callback
-		}
+        } catch {
+            void 0;
+        }
 	};
 
 	if (isLoading) {

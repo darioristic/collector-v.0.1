@@ -38,8 +38,14 @@ export function TeamChatClient({ initialData, currentUserId }: TeamChatClientPro
     staleTime: 1000 * 60 * 5
   });
 
-  const channels = bootstrapQuery.data?.channels || [];
-  const directMessageTargets = bootstrapQuery.data?.directMessageTargets || [];
+  const channels = React.useMemo(
+    () => bootstrapQuery.data?.channels ?? [],
+    [bootstrapQuery.data?.channels]
+  );
+  const directMessageTargets = React.useMemo(
+    () => bootstrapQuery.data?.directMessageTargets ?? [],
+    [bootstrapQuery.data?.directMessageTargets]
+  );
 
   const messagesQuery = useQuery({
     queryKey: ["teamchat", "messages", selectedChannelId],

@@ -88,18 +88,6 @@ export function AddReminderDialog() {
 		setOpen(false);
 	};
 
-	const getPriorityColor = (priority: Priority) => {
-		switch (priority) {
-			case "low":
-				return "text-gray-400";
-			case "medium":
-				return "text-orange-400";
-			case "high":
-				return "text-red-500";
-			default:
-				return "text-gray-400";
-		}
-	};
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>

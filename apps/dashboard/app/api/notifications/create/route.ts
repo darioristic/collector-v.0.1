@@ -69,14 +69,14 @@ export async function POST(request: NextRequest) {
 				{ status: 201 },
 			),
 		);
-  } catch (_error) {
-		return withNoStore(
-			NextResponse.json(
-				{
-					error: "Failed to create notification",
-				},
-				{ status: 500 },
-			),
-		);
-	}
+  } catch {
+    return withNoStore(
+      NextResponse.json(
+        {
+          error: "Failed to create notification",
+        },
+        { status: 500 },
+      ),
+    );
+  }
 }

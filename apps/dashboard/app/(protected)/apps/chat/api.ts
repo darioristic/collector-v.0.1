@@ -394,16 +394,63 @@ export const fetchConversationMessages = async (
 				"Content-Type": "application/json",
 			},
 			cache: "no-store",
+			credentials: "include",
 		});
 
 		if (!response.ok) {
-			const error = await response
-				.json()
-				.catch(() => ({ error: "Preuzimanje poruka nije uspelo." }));
-			throw new Error(error.error || "Preuzimanje poruka nije uspelo.");
+			let errorData: { error?: string; message?: string; details?: string } = {};
+			try {
+				const text = await response.text();
+				if (text) {
+					errorData = JSON.parse(text) as typeof errorData;
+				}
+			} catch {
+				// Ignore parse errors
+			}
+
+			const errorMessage =
+				errorData.error ||
+				errorData.message ||
+				errorData.details ||
+				"Preuzimanje poruka nije uspelo.";
+
+			// Handle service unavailable (503) gracefully
+			if (response.status === 503) {
+				throw new Error(
+					errorMessage.includes("servis nije dostupan") ||
+					errorMessage.includes("service unavailable")
+						? errorMessage
+						: "Chat servis nije dostupan. Proverite da li je servis pokrenut na portu 4001.",
+				);
+			}
+
+			// Handle unauthorized (401) with clear message
+			if (response.status === 401) {
+				throw new Error("Niste autorizovani. Molimo prijavite se ponovo.");
+			}
+
+			throw new Error(errorMessage);
 		}
 
-		const data = (await response.json()) as GetMessagesResponse;
+		let data: GetMessagesResponse;
+		try {
+			data = (await response.json()) as GetMessagesResponse;
+		} catch (parseError) {
+			console.error("[fetchConversationMessages] Failed to parse response:", {
+				conversationId,
+				error: parseError instanceof Error ? parseError.message : String(parseError),
+			});
+			throw new Error("Neočekivan format odgovora od servera.");
+		}
+
+		if (!data || !data.messages || !Array.isArray(data.messages)) {
+			console.error("[fetchConversationMessages] Invalid response format:", {
+				conversationId,
+				data,
+			});
+			throw new Error("Neočekivan format odgovora od servera.");
+		}
+
 		return data.messages;
 	} catch (error) {
 		// Network errors (service unavailable) should be handled gracefully
@@ -412,18 +459,20 @@ export const fetchConversationMessages = async (
 			errorMessage.includes("Failed to fetch") ||
 			errorMessage.includes("NetworkError") ||
 			errorMessage.includes("ERR_CONNECTION_REFUSED") ||
-			errorMessage.includes("connection refused")
+			errorMessage.includes("connection refused") ||
+			errorMessage.includes("ECONNREFUSED")
 		) {
 			throw new Error(
 				"Chat servis nije dostupan. Proverite da li je servis pokrenut na portu 4001.",
 			);
 		}
+		// Re-throw other errors as-is (they already have proper messages)
 		throw error;
 	}
 };
 
 export const createConversation = async (
-	targetUserId: string,
+    targetUserId: string,
 ): Promise<ChatConversation> => {
 	const apiUrl = getChatApiUrl("/conversations");
 	let response: Response;
@@ -653,6 +702,101 @@ export const createConversation = async (
 	}
 
 	return payload.conversation;
+};
+
+export const createConversationByEmail = async (
+    targetEmail: string,
+): Promise<ChatConversation> => {
+    const apiUrl = getChatApiUrl("/conversations");
+    let response: Response;
+
+    try {
+        response = await fetch(apiUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+            },
+            body: JSON.stringify({ targetEmail }),
+            cache: "no-store",
+            credentials: "include",
+        });
+    } catch (fetchError) {
+        const errorMessage =
+            fetchError instanceof Error ? fetchError.message : String(fetchError);
+        if (
+            errorMessage.includes("Failed to fetch") ||
+            errorMessage.includes("NetworkError") ||
+            errorMessage.includes("ERR_CONNECTION_REFUSED") ||
+            errorMessage.includes("connection refused")
+        ) {
+            throw new Error(
+                "Chat servis nije dostupan. Proverite da li je servis pokrenut.",
+            );
+        }
+        throw new Error(`Neuspešan zahtev ka API-ju: ${errorMessage}`);
+    }
+
+    const status = response.status;
+    const statusText = response.statusText;
+    let responseText = "";
+    try {
+        responseText = await response.text();
+    } catch (readError) {
+        throw new Error(
+            `Neuspešno čitanje odgovora od servera: ${
+                readError instanceof Error ? readError.message : String(readError)
+            }`,
+        );
+    }
+
+    if (!response.ok) {
+        let errorData: { error?: string; details?: unknown } = {};
+        const trimmedText = responseText?.trim();
+        if (trimmedText) {
+            try {
+                const parsed = JSON.parse(trimmedText);
+                if (parsed && typeof parsed === "object") {
+                    errorData = parsed as typeof errorData;
+                } else {
+                    errorData = { error: trimmedText };
+                }
+            } catch {
+                errorData = { error: trimmedText };
+            }
+        }
+        let errorMessage = errorData.error || `HTTP ${status}: ${statusText}`;
+        if (errorData.details) {
+            errorMessage = `${errorMessage} - ${String(errorData.details)}`;
+        }
+        const isServiceUnavailable =
+            status === 503 ||
+            statusText?.toLowerCase().includes("service unavailable") ||
+            errorMessage.toLowerCase().includes("servis nije dostupan") ||
+            errorMessage.toLowerCase().includes("service unavailable") ||
+            errorMessage.toLowerCase().includes("nije dostupan");
+        if (isServiceUnavailable) {
+            throw new Error(
+                "Chat servis nije dostupan. Proverite da li je servis pokrenut.",
+            );
+        }
+        throw new Error(errorMessage);
+    }
+
+    if (!responseText || !responseText.trim()) {
+        throw new Error("Prazan odgovor od chat servisa.");
+    }
+    let data: unknown;
+    try {
+        data = JSON.parse(responseText);
+    } catch (parseError) {
+        throw new Error(
+            `Neuspešno parsiranje JSON odgovora od chat servisa: ${
+                parseError instanceof Error ? parseError.message : String(parseError)
+            }`,
+        );
+    }
+    return data as ChatConversation;
 };
 
 export const sendMessage = async ({

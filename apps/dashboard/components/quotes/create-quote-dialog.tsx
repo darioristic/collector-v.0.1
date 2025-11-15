@@ -3,13 +3,21 @@
 import type { QuoteItemCreateInput } from "@crm/types";
 import { QUOTE_STATUSES } from "@crm/types";
 import { format } from "date-fns";
-import { CalendarIcon, Loader2 } from "lucide-react";
-import { useEffect, useId, useState } from "react";
-import { FormProvider, useForm } from "react-hook-form";
+import {
+	CalendarIcon,
+	Loader2,
+	Plus,
+	Trash2,
+	Building2,
+	User,
+	FileText,
+} from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { FormProvider, useForm, useFieldArray } from "react-hook-form";
 import { CompanyAutocomplete } from "@/components/forms/CompanyAutocomplete";
+import { ProductAutocomplete } from "@/components/forms/ProductAutocomplete";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -34,13 +42,20 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableFooter,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { useContacts } from "@/src/hooks/useContacts";
 import { useCreateQuote } from "@/src/hooks/useQuotes";
-import { QuoteItemsTable } from "./QuoteItemsTable";
-import { QuoteTotals } from "./QuoteTotals";
 
 type CreateQuoteDialogProps = {
 	open: boolean;
@@ -67,12 +82,6 @@ export function CreateQuoteDialog({
 	companyId = "",
 	contactId = "",
 }: CreateQuoteDialogProps) {
-	const quoteNumberId = useId();
-	const currencyId = useId();
-	const statusId = useId();
-	const contactIdFieldId = useId();
-	const notesId = useId();
-
 	const [quoteNumber] = useState(() => {
 		const year = new Date().getFullYear();
 		const random = Math.floor(Math.random() * 1000)
@@ -96,9 +105,16 @@ export function CreateQuoteDialog({
 			notes: "",
 			items: [{ description: "", quantity: 1, unitPrice: 0 }],
 		},
+		mode: "onChange",
+		criteriaMode: "all",
 	});
 
-	const { register, handleSubmit, control, watch, reset, setValue } = methods;
+	const { register, handleSubmit, control, watch, reset, setValue, formState: { errors } } = methods;
+
+	const { fields, append, remove } = useFieldArray({
+		control,
+		name: "items",
+	});
 
 	useEffect(() => {
 		setValue("quoteNumber", quoteNumber);
@@ -123,6 +139,43 @@ export function CreateQuoteDialog({
 			});
 		}
 	}, [open, reset, companyId, contactId]);
+
+	const selectedCompanyId = watch("companyId");
+	const selectedCurrency = watch("currency");
+	const items = watch("items");
+	const issueDate = watch("issueDate");
+	const expiryDate = watch("expiryDate");
+
+	const filteredContacts = contacts.filter(
+		(contact) => !selectedCompanyId || contact.accountId === selectedCompanyId,
+	);
+
+	const totals = useMemo(() => {
+		const subtotal = items.reduce(
+			(sum, item) => sum + (item.quantity || 0) * (item.unitPrice || 0),
+			0,
+		);
+		const tax = subtotal * 0.2;
+		const total = subtotal + tax;
+		return { subtotal, tax, total };
+	}, [items]);
+
+	const handleProductSelect = (index: number, product: { id: string; name: string; price: number; description?: string | null } | null) => {
+		if (product) {
+			setValue(`items.${index}.productId`, product.id);
+			setValue(`items.${index}.description`, product.description || product.name);
+			setValue(`items.${index}.unitPrice`, product.price);
+		}
+	};
+
+	const handleAddItem = () => {
+		append({ description: "", quantity: 1, unitPrice: 0 });
+		// Focus first input of new row after a short delay
+		setTimeout(() => {
+			const newRow = document.querySelector("tbody tr:last-child input") as HTMLInputElement;
+			newRow?.focus();
+		}, 100);
+	};
 
 	const onSubmit = async (data: QuoteFormData) => {
 		const validItems = data.items.filter(
@@ -167,11 +220,6 @@ export function CreateQuoteDialog({
 		}
 	};
 
-	const selectedCompanyId = watch("companyId");
-	const filteredContacts = contacts.filter(
-		(contact) => !selectedCompanyId || contact.accountId === selectedCompanyId,
-	);
-
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange}>
 			<SheetContent
@@ -183,196 +231,44 @@ export function CreateQuoteDialog({
 						onSubmit={handleSubmit(onSubmit)}
 						className="flex h-full flex-col"
 					>
-						<SheetHeader className="shrink-0 px-6 py-4">
-							<SheetTitle>Create New Quote</SheetTitle>
-							<SheetDescription>
-								Create a new quote with line items. Totals will be calculated
-								automatically.
+						<SheetHeader className="shrink-0 border-b bg-muted/20 px-6 py-5">
+							<SheetTitle className="text-2xl font-bold tracking-tight">Create New Quote</SheetTitle>
+							<SheetDescription className="mt-1.5 text-sm text-muted-foreground">
+								Fill in the details below to create a new quote. All fields marked with <span className="text-destructive">*</span> are required.
 							</SheetDescription>
 						</SheetHeader>
 
-						<div className="min-h-0 flex-1 overflow-y-auto px-6">
-							<div className="grid gap-6 py-6 lg:grid-cols-2">
-								{/* Left Column: Quote Info & Client */}
-								<div className="space-y-6">
-									{/* Quote Info Card */}
-									<Card>
-										<CardHeader>
-											<CardTitle>Quote Information</CardTitle>
-										</CardHeader>
-										<CardContent className="space-y-4">
-											<div className="grid gap-2">
-												<Label htmlFor={quoteNumberId}>
-													Quote Number{" "}
-													<span className="text-destructive">*</span>
-												</Label>
-												<Input
-													id={quoteNumberId}
-													value={quoteNumber}
-													disabled
-													className="bg-muted"
-												/>
-											</div>
+						<div className="min-h-0 flex-1 overflow-y-auto">
+							<div className="space-y-8 p-6">
+								{/* Quote Information Section */}
+								<section className="space-y-4">
+									<div className="flex items-center gap-2 border-b pb-2">
+										<FileText className="size-4 text-primary" />
+										<h2 className="text-lg font-semibold text-foreground">Quote Information</h2>
+									</div>
 
-											<div className="grid grid-cols-2 gap-4">
-												<div className="grid gap-2">
-													<Label htmlFor={currencyId}>Currency</Label>
-													<Select
-														defaultValue="EUR"
-														onValueChange={(value) => {
-															setValue("currency", value);
-														}}
-													>
-														<SelectTrigger id={currencyId}>
-															<SelectValue />
-														</SelectTrigger>
-														<SelectContent>
-															<SelectItem value="EUR">EUR</SelectItem>
-															<SelectItem value="USD">USD</SelectItem>
-															<SelectItem value="GBP">GBP</SelectItem>
-														</SelectContent>
-													</Select>
-												</div>
+									{/* First Row - Quote Number & Company */}
+									<div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+										{/* Quote Number */}
+										<div className="lg:col-span-3">
+											<Label htmlFor="quoteNumber" className="mb-2 text-sm font-semibold text-foreground">
+												Quote Number
+											</Label>
+											<Input
+												id="quoteNumber"
+												value={quoteNumber}
+												disabled
+												className="mt-1.5 h-10 bg-muted/50 text-sm font-medium"
+											/>
+										</div>
 
-												<div className="grid gap-2">
-													<Label htmlFor={statusId}>Status</Label>
-													<Select
-														defaultValue="draft"
-														onValueChange={(value) => {
-															setValue("status", value);
-														}}
-													>
-														<SelectTrigger id={statusId}>
-															<SelectValue />
-														</SelectTrigger>
-														<SelectContent>
-															{QUOTE_STATUSES.map((status) => (
-																<SelectItem key={status} value={status}>
-																	{status.charAt(0).toUpperCase() +
-																		status.slice(1)}
-																</SelectItem>
-															))}
-														</SelectContent>
-													</Select>
-												</div>
-											</div>
-
-											<div className="grid grid-cols-2 gap-4">
-												<div className="grid gap-2">
-													<Label htmlFor="issueDate">Issue Date</Label>
-													<Popover
-														open={issueDateOpen}
-														onOpenChange={setIssueDateOpen}
-													>
-														<PopoverTrigger asChild>
-															<Button
-																variant="outline"
-																className={cn(
-																	"w-full justify-start text-left font-normal",
-																	!watch("issueDate") &&
-																		"text-muted-foreground",
-																)}
-															>
-																<CalendarIcon className="mr-2 h-4 w-4" />
-																{watch("issueDate") ? (
-																	format(
-																		new Date(watch("issueDate")),
-																		"dd.MM.yyyy",
-																	)
-																) : (
-																	<span>Pick a date</span>
-																)}
-															</Button>
-														</PopoverTrigger>
-														<PopoverContent
-															className="w-auto p-0"
-															align="start"
-														>
-															<Calendar
-																mode="single"
-																selected={
-																	watch("issueDate")
-																		? new Date(watch("issueDate"))
-																		: undefined
-																}
-																onSelect={(date) => {
-																	if (date) {
-																		setValue(
-																			"issueDate",
-																			date.toISOString().split("T")[0],
-																		);
-																		setIssueDateOpen(false);
-																	}
-																}}
-																initialFocus
-															/>
-														</PopoverContent>
-													</Popover>
-												</div>
-
-												<div className="grid gap-2">
-													<Label htmlFor="expiryDate">Expiry Date</Label>
-													<Popover
-														open={expiryDateOpen}
-														onOpenChange={setExpiryDateOpen}
-													>
-														<PopoverTrigger asChild>
-															<Button
-																variant="outline"
-																className={cn(
-																	"w-full justify-start text-left font-normal",
-																	!watch("expiryDate") &&
-																		"text-muted-foreground",
-																)}
-															>
-																<CalendarIcon className="mr-2 h-4 w-4" />
-																{watch("expiryDate") ? (
-																	format(
-																		new Date(watch("expiryDate")),
-																		"dd.MM.yyyy",
-																	)
-																) : (
-																	<span>Pick a date</span>
-																)}
-															</Button>
-														</PopoverTrigger>
-														<PopoverContent
-															className="w-auto p-0"
-															align="start"
-														>
-															<Calendar
-																mode="single"
-																selected={
-																	watch("expiryDate")
-																		? new Date(watch("expiryDate"))
-																		: undefined
-																}
-																onSelect={(date) => {
-																	if (date) {
-																		setValue(
-																			"expiryDate",
-																			date.toISOString().split("T")[0],
-																		);
-																		setExpiryDateOpen(false);
-																	}
-																}}
-																initialFocus
-															/>
-														</PopoverContent>
-													</Popover>
-												</div>
-											</div>
-										</CardContent>
-									</Card>
-
-									{/* Client Details Card */}
-									<Card>
-										<CardHeader>
-											<CardTitle>Client Details</CardTitle>
-										</CardHeader>
-										<CardContent className="space-y-4">
-											<div className="grid gap-2">
-												<Label>Company</Label>
+										{/* Company - Expanded */}
+										<div className="lg:col-span-9">
+											<Label className="mb-2 text-sm font-semibold text-foreground">
+												<Building2 className="mr-1.5 inline size-4 text-primary" />
+												Company <span className="text-destructive">*</span>
+											</Label>
+											<div className="mt-1.5">
 												<CompanyAutocomplete
 													control={control}
 													name="companyId"
@@ -380,11 +276,21 @@ export function CreateQuoteDialog({
 														setValue("companyId", value);
 														setValue("contactId", "");
 													}}
+													placeholder="Search or add company..."
 												/>
 											</div>
+										</div>
+									</div>
 
-											<div className="grid gap-2">
-												<Label htmlFor={contactIdFieldId}>Contact</Label>
+									{/* Second Row - Contact, Currency, Dates & Status */}
+									<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+										{/* Contact */}
+										<div className="lg:col-span-2">
+											<Label htmlFor="contactId" className="mb-2 text-sm font-semibold text-foreground">
+												<User className="mr-1.5 inline size-4 text-muted-foreground" />
+												Contact
+											</Label>
+											<div className="mt-1.5">
 												<Select
 													value={watch("contactId") || undefined}
 													onValueChange={(value) => {
@@ -392,11 +298,11 @@ export function CreateQuoteDialog({
 													}}
 													disabled={!selectedCompanyId}
 												>
-													<SelectTrigger id={contactIdFieldId}>
+													<SelectTrigger id="contactId" className="h-10 text-sm">
 														<SelectValue
 															placeholder={
 																selectedCompanyId
-																	? "Select contact (optional)"
+																	? "Select contact"
 																	: "Select company first"
 															}
 														/>
@@ -409,68 +315,336 @@ export function CreateQuoteDialog({
 														) : (
 															filteredContacts.map((contact) => (
 																<SelectItem key={contact.id} value={contact.id}>
-																	{contact.name}{" "}
-																	{contact.accountName
-																		? `(${contact.accountName})`
-																		: ""}
+																	{contact.name}
 																</SelectItem>
 															))
 														)}
 													</SelectContent>
 												</Select>
 											</div>
-										</CardContent>
-									</Card>
-								</div>
+										</div>
 
-								{/* Right Column: Items, Totals, Notes */}
-								<div className="space-y-6">
-									{/* Items Card */}
-									<Card>
-										<CardHeader>
-											<CardTitle>
-												Items <span className="text-destructive">*</span>
-											</CardTitle>
-										</CardHeader>
-										<CardContent>
-											<QuoteItemsTable control={control} />
-										</CardContent>
-									</Card>
+										{/* Currency */}
+										<div>
+											<Label htmlFor="currency" className="mb-2 text-sm font-semibold text-foreground">
+												Currency
+											</Label>
+											<Select
+												value={selectedCurrency}
+												onValueChange={(value) => {
+													setValue("currency", value);
+												}}
+											>
+												<SelectTrigger id="currency" className="mt-1.5 h-10 text-sm">
+													<SelectValue />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="EUR">EUR</SelectItem>
+													<SelectItem value="USD">USD</SelectItem>
+													<SelectItem value="GBP">GBP</SelectItem>
+												</SelectContent>
+											</Select>
+										</div>
 
-									{/* Totals Card - Sticky */}
-									<div className="sticky top-6">
-										<QuoteTotals control={control} />
+										{/* Issue Date */}
+										<div>
+											<Label className="mb-2 text-sm font-semibold text-foreground">
+												<CalendarIcon className="mr-1.5 inline size-4 text-muted-foreground" />
+												Issue Date
+											</Label>
+											<div className="mt-1.5">
+												<Popover open={issueDateOpen} onOpenChange={setIssueDateOpen}>
+													<PopoverTrigger asChild>
+														<Button
+															variant="outline"
+															className={cn(
+																"h-10 w-full justify-start text-left text-sm font-normal",
+																!issueDate && "text-muted-foreground",
+															)}
+														>
+															{issueDate ? (
+																format(new Date(issueDate), "dd.MM.yyyy")
+															) : (
+																<span>Pick date</span>
+															)}
+														</Button>
+													</PopoverTrigger>
+													<PopoverContent className="w-auto p-0" align="start">
+														<Calendar
+															mode="single"
+															selected={issueDate ? new Date(issueDate) : undefined}
+															onSelect={(date) => {
+																if (date) {
+																	setValue("issueDate", date.toISOString().split("T")[0]);
+																	setIssueDateOpen(false);
+																}
+															}}
+															initialFocus
+														/>
+													</PopoverContent>
+												</Popover>
+											</div>
+										</div>
+
+										{/* Expiry Date */}
+										<div>
+											<Label className="mb-2 text-sm font-semibold text-foreground">
+												<CalendarIcon className="mr-1.5 inline size-4 text-muted-foreground" />
+												Expiry Date
+											</Label>
+											<div className="mt-1.5">
+												<Popover open={expiryDateOpen} onOpenChange={setExpiryDateOpen}>
+													<PopoverTrigger asChild>
+														<Button
+															variant="outline"
+															className={cn(
+																"h-10 w-full justify-start text-left text-sm font-normal",
+																!expiryDate && "text-muted-foreground",
+															)}
+														>
+															{expiryDate ? (
+																format(new Date(expiryDate), "dd.MM.yyyy")
+															) : (
+																<span>Pick date</span>
+															)}
+														</Button>
+													</PopoverTrigger>
+													<PopoverContent className="w-auto p-0" align="start">
+														<Calendar
+															mode="single"
+															selected={expiryDate ? new Date(expiryDate) : undefined}
+															onSelect={(date) => {
+																if (date) {
+																	setValue("expiryDate", date.toISOString().split("T")[0]);
+																	setExpiryDateOpen(false);
+																}
+															}}
+															initialFocus
+														/>
+													</PopoverContent>
+												</Popover>
+											</div>
+										</div>
 									</div>
 
-									{/* Notes Card */}
-									<Card>
-										<CardHeader>
-											<CardTitle>Notes</CardTitle>
-										</CardHeader>
-										<CardContent>
-											<div className="grid gap-2">
-												<Textarea
-													id={notesId}
-													placeholder="Add any additional notes..."
-													rows={4}
-													{...register("notes")}
-												/>
-											</div>
-										</CardContent>
-									</Card>
-								</div>
+									{/* Status Row */}
+									<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+										<div>
+											<Label htmlFor="status" className="mb-2 text-sm font-semibold text-foreground">
+												Status
+											</Label>
+											<Select
+												value={watch("status")}
+												onValueChange={(value) => {
+													setValue("status", value);
+												}}
+											>
+												<SelectTrigger id="status" className="mt-1.5 h-10 text-sm">
+													<SelectValue />
+												</SelectTrigger>
+												<SelectContent>
+													{QUOTE_STATUSES.map((status) => (
+														<SelectItem key={status} value={status}>
+															{status.charAt(0).toUpperCase() + status.slice(1)}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</div>
+									</div>
+								</section>
+
+								<Separator className="my-6" />
+
+								{/* Items Section */}
+								<section className="space-y-4">
+									<div className="flex items-center justify-between border-b pb-2">
+										<div className="flex items-center gap-2">
+											<FileText className="size-4 text-primary" />
+											<h2 className="text-lg font-semibold text-foreground">Line Items</h2>
+											<span className="text-muted-foreground text-sm font-normal">
+												({items.length} {items.length === 1 ? "item" : "items"})
+											</span>
+										</div>
+										<Button
+											type="button"
+											variant="outline"
+											size="sm"
+											onClick={handleAddItem}
+											className="h-8 gap-1.5 text-xs"
+										>
+											<Plus className="size-3.5" />
+											Add Item
+										</Button>
+									</div>
+
+									<div className="rounded-lg border">
+										<Table>
+											<TableHeader>
+												<TableRow className="bg-muted/30">
+													<TableHead className="w-[50px] text-[12px] font-semibold tracking-wide text-[#6B7280]">#</TableHead>
+													<TableHead className="text-[12px] font-semibold tracking-wide text-[#6B7280]">Product</TableHead>
+													<TableHead className="text-[12px] font-semibold tracking-wide text-[#6B7280]">Description</TableHead>
+													<TableHead className="w-[100px] text-right text-[12px] font-semibold tracking-wide text-[#6B7280]">Qty</TableHead>
+													<TableHead className="w-[120px] text-right text-[12px] font-semibold tracking-wide text-[#6B7280]">Unit Price</TableHead>
+													<TableHead className="w-[120px] text-right text-[12px] font-semibold tracking-wide text-[#6B7280]">Total</TableHead>
+													<TableHead className="w-[50px]"></TableHead>
+												</TableRow>
+											</TableHeader>
+											<TableBody>
+												{fields.length === 0 ? (
+													<TableRow>
+														<TableCell colSpan={7} className="h-24 text-center text-sm text-muted-foreground">
+															No items. Click &quot;Add Item&quot; to add one.
+														</TableCell>
+													</TableRow>
+												) : (
+													fields.map((field, index) => {
+														const item = items[index];
+														const itemTotal = (item?.quantity || 0) * (item?.unitPrice || 0);
+														const hasError = errors.items?.[index];
+														return (
+															<TableRow key={field.id} className={cn("hover:bg-muted/20", hasError && "border-l-2 border-l-destructive")}>
+																<TableCell className="text-muted-foreground text-xs">
+																	{index + 1}
+																</TableCell>
+																<TableCell className="w-[200px]">
+																	<ProductAutocomplete
+																		value={item?.productId}
+																		onChange={(product) => handleProductSelect(index, product)}
+																		currency={selectedCurrency}
+																		placeholder="Search product..."
+																	/>
+																</TableCell>
+																<TableCell>
+																	<div className="space-y-0.5">
+																		<Input
+																			placeholder="Item description"
+																			value={item?.description || ""}
+																			onChange={(e) => {
+																				setValue(`items.${index}.description`, e.target.value, { shouldValidate: true });
+																			}}
+																			className={cn(
+																				"h-8 border-0 bg-transparent text-sm shadow-none focus-visible:ring-1",
+																				hasError && "ring-1 ring-destructive",
+																			)}
+																		/>
+																		{hasError && (
+																			<p className="text-destructive text-xs">
+																				{hasError.description?.message || "Description is required"}
+																			</p>
+																		)}
+																	</div>
+																</TableCell>
+																<TableCell className="text-right">
+																	<Input
+																		type="number"
+																		min="1"
+																		value={item?.quantity || 1}
+																		onChange={(e) => {
+																			const value = Number.parseInt(e.target.value, 10) || 1;
+																			setValue(`items.${index}.quantity`, value, { shouldValidate: true });
+																		}}
+																		className="h-8 w-full border-0 bg-transparent text-right text-sm shadow-none focus-visible:ring-1"
+																	/>
+																</TableCell>
+																<TableCell className="text-right">
+																	<Input
+																		type="number"
+																		min="0"
+																		step="0.01"
+																		value={item?.unitPrice || 0}
+																		onChange={(e) => {
+																			const value = Number.parseFloat(e.target.value) || 0;
+																			setValue(`items.${index}.unitPrice`, value, { shouldValidate: true });
+																		}}
+																		className="h-8 w-full border-0 bg-transparent text-right text-sm shadow-none focus-visible:ring-1"
+																	/>
+																</TableCell>
+																<TableCell className="text-right font-medium">
+																	{formatCurrency(itemTotal, selectedCurrency)}
+																</TableCell>
+																<TableCell>
+																	{fields.length > 1 && (
+																		<Button
+																			type="button"
+																			variant="ghost"
+																			size="sm"
+																			onClick={() => remove(index)}
+																			className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+																		>
+																			<Trash2 className="size-3.5" />
+																		</Button>
+																	)}
+																</TableCell>
+															</TableRow>
+														);
+													})
+												)}
+											</TableBody>
+											<TableFooter>
+												<TableRow>
+													<TableCell colSpan={5} className="text-right font-semibold">
+														Subtotal
+													</TableCell>
+													<TableCell className="text-right font-semibold">
+														{formatCurrency(totals.subtotal, selectedCurrency)}
+													</TableCell>
+													<TableCell></TableCell>
+												</TableRow>
+												<TableRow>
+													<TableCell colSpan={5} className="text-right font-semibold">
+														VAT (20%)
+													</TableCell>
+													<TableCell className="text-right font-semibold">
+														{formatCurrency(totals.tax, selectedCurrency)}
+													</TableCell>
+													<TableCell></TableCell>
+												</TableRow>
+												<TableRow className="bg-muted/30">
+													<TableCell colSpan={5} className="text-right text-base font-bold">
+														Total
+													</TableCell>
+													<TableCell className="text-right text-base font-bold">
+														{formatCurrency(totals.total, selectedCurrency)}
+													</TableCell>
+													<TableCell></TableCell>
+												</TableRow>
+											</TableFooter>
+										</Table>
+									</div>
+								</section>
+
+								<Separator className="my-6" />
+
+								{/* Notes Section */}
+								<section className="space-y-4">
+									<div className="flex items-center gap-2 border-b pb-2">
+										<FileText className="size-4 text-primary" />
+										<h2 className="text-lg font-semibold text-foreground">Additional Notes</h2>
+									</div>
+									<div className="space-y-2">
+										<Textarea
+											id="notes"
+											placeholder="Add any additional notes, terms, or conditions..."
+											rows={4}
+											{...register("notes")}
+											className="text-sm resize-none"
+										/>
+									</div>
+								</section>
 							</div>
 						</div>
 
 						<Separator className="shrink-0" />
 
-						<SheetFooter className="flex shrink-0 justify-end gap-2 px-6 py-4">
+						<SheetFooter className="flex shrink-0 justify-end gap-2 border-t bg-muted/20 px-6 py-4">
 							<SheetClose asChild>
-								<Button type="button" variant="ghost">
+								<Button type="button" variant="ghost" className="h-9">
 									Cancel
 								</Button>
 							</SheetClose>
-							<Button type="submit" disabled={createQuoteMutation.isPending}>
+							<Button type="submit" disabled={createQuoteMutation.isPending} className="h-9">
 								{createQuoteMutation.isPending ? (
 									<>
 										<Loader2 className="mr-2 h-4 w-4 animate-spin" />

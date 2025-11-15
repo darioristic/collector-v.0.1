@@ -259,7 +259,31 @@ export function ChatContent() {
 		);
 	}
 
-	const messages = selectedChat.messages || messagesQuery.data || [];
+	// Combine messages from store and query, removing duplicates
+	const storeMessages = selectedChat.messages || [];
+	const queryMessages = messagesQuery.data || [];
+	
+	// Create a map to deduplicate messages by ID
+	const messagesMap = new Map<string, ChatMessage>();
+	
+	// Add query messages first (they are the source of truth)
+	queryMessages.forEach((msg) => {
+		messagesMap.set(msg.id, msg);
+	});
+	
+	// Add store messages (new messages from socket that might not be in query yet)
+	storeMessages.forEach((msg) => {
+		if (!messagesMap.has(msg.id)) {
+			messagesMap.set(msg.id, msg);
+		}
+	});
+	
+	// Convert map to array and sort by createdAt
+	const messages = Array.from(messagesMap.values()).sort((a, b) => {
+		const dateA = new Date(a.createdAt).getTime();
+		const dateB = new Date(b.createdAt).getTime();
+		return dateA - dateB;
+	});
 
 	if (!otherUser) {
 		console.error("[chat-content] Cannot determine otherUser:", {
@@ -300,11 +324,16 @@ export function ChatContent() {
 								Učitavanje poruka...
 							</div>
 						)}
-						{messagesQuery.isError && (
-							<div className="text-destructive w-full text-center text-sm">
-								Greška pri učitavanju poruka.
-							</div>
-						)}
+					{messagesQuery.isError && (
+						<div className="text-destructive w-full text-center text-sm">
+							<p className="mb-1 font-medium">Greška pri učitavanju poruka.</p>
+							{messagesQuery.error instanceof Error && (
+								<p className="text-xs opacity-75">
+									{messagesQuery.error.message}
+								</p>
+							)}
+						</div>
+					)}
 						{messages.length > 0 &&
 							messages.map((message: ChatMessage) => {
 								const ownMessage = message.senderId === currentUserId;

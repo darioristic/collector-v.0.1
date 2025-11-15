@@ -229,30 +229,30 @@ export const columns: ColumnDef<Product>[] = [
 			);
 		},
 	},
-	{
-		id: "actions",
-		enableHiding: false,
-		cell: ({ row }) => {
-			return (
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<Button variant="ghost" className="h-8 w-8 p-0">
-							<span className="sr-only">Open menu</span>
-							<MoreHorizontal className="h-4 w-4" />
-						</Button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent align="end">
-						<DropdownMenuLabel>Actions</DropdownMenuLabel>
-						<DropdownMenuSeparator />
-						<DropdownMenuItem>View details</DropdownMenuItem>
-						<DropdownMenuItem>Edit</DropdownMenuItem>
-						<DropdownMenuItem>Copy ID</DropdownMenuItem>
-						<DropdownMenuItem>Delete</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
-			);
-		},
-	},
+    {
+        id: "actions",
+        enableHiding: false,
+        cell: () => {
+            return (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem>View details</DropdownMenuItem>
+                        <DropdownMenuItem>Edit</DropdownMenuItem>
+                        <DropdownMenuItem>Copy ID</DropdownMenuItem>
+                        <DropdownMenuItem>Delete</DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            );
+        },
+    },
 ];
 
 export default function ProductList({ data }: { data: Product[] }) {
@@ -345,11 +345,11 @@ export default function ProductList({ data }: { data: Product[] }) {
 										<CommandItem
 											key={status.value}
 											value={status.value}
-											onSelect={(currentValue) => {
-												// setValue(currentValue === value ? "" : currentValue);
-												// setOpen(false);
-											}}
-										>
+                                            onSelect={() => {
+                                                // setValue(currentValue === value ? "" : currentValue);
+                                                // setOpen(false);
+                                            }}
+                                        >
 											<div className="flex items-center space-x-3 py-1">
 												<Checkbox id={status.value} />
 												<label

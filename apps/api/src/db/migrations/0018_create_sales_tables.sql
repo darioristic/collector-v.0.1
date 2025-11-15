@@ -59,7 +59,7 @@ CREATE INDEX IF NOT EXISTS "quotes_contact_idx" ON "quotes" ("contact_id");
 CREATE TABLE IF NOT EXISTS "quote_items" (
   "id" serial PRIMARY KEY,
   "quote_id" integer NOT NULL REFERENCES "quotes"("id") ON DELETE CASCADE,
-  "product_id" uuid REFERENCES "products"("id") ON DELETE SET NULL,
+  "product_id" uuid,
   "description" text,
   "quantity" integer NOT NULL DEFAULT 1,
   "unit_price" numeric(14,2) NOT NULL DEFAULT 0,
@@ -97,7 +97,7 @@ CREATE INDEX IF NOT EXISTS "orders_quote_idx" ON "orders" ("quote_id");
 CREATE TABLE IF NOT EXISTS "order_items" (
   "id" serial PRIMARY KEY,
   "order_id" integer NOT NULL REFERENCES "orders"("id") ON DELETE CASCADE,
-  "product_id" uuid REFERENCES "products"("id") ON DELETE SET NULL,
+  "product_id" uuid,
   "description" text,
   "quantity" integer NOT NULL DEFAULT 1,
   "unit_price" numeric(14,2) NOT NULL DEFAULT 0,
@@ -107,6 +107,28 @@ CREATE TABLE IF NOT EXISTS "order_items" (
 
 CREATE INDEX IF NOT EXISTS "order_items_order_idx" ON "order_items" ("order_id");
 CREATE INDEX IF NOT EXISTS "order_items_product_idx" ON "order_items" ("product_id");
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'products'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'quote_items_product_id_products_id_fk'
+  ) THEN
+    ALTER TABLE "quote_items" ADD CONSTRAINT "quote_items_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "products"("id") ON DELETE SET NULL;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'products'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'order_items_product_id_products_id_fk'
+  ) THEN
+    ALTER TABLE "order_items" ADD CONSTRAINT "order_items_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "products"("id") ON DELETE SET NULL;
+  END IF;
+END $$;
 
 -- Invoices
 CREATE TABLE IF NOT EXISTS "invoices" (

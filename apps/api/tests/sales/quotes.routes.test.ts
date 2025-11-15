@@ -79,7 +79,7 @@ describe("Quotes API routes", () => {
 
 	it("should list quotes", async () => {
 		// Create a test quote
-		const quoteResult = await client.query(
+		const _quoteResult = await client.query(
 			`INSERT INTO quotes (quote_number, company_id, contact_id, quote_date, valid_until, currency, subtotal, tax, total, status, created_at, updated_at)
        VALUES ('QT-001', $1, $2, CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days', 'USD', 100.00, 20.00, 120.00, 'draft', NOW(), NOW())
        RETURNING id`,
@@ -204,7 +204,7 @@ describe("Quotes API routes", () => {
 	});
 
 	it("should filter quotes by status", async () => {
-		const quoteResult = await client.query(
+		const _quoteResult = await client.query(
 			`INSERT INTO quotes (quote_number, company_id, contact_id, quote_date, valid_until, currency, subtotal, tax, total, status, created_at, updated_at)
        VALUES ('QT-006', $1, $2, CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days', 'USD', 100.00, 20.00, 120.00, 'draft', NOW(), NOW())
        RETURNING id`,

@@ -15,10 +15,10 @@ import {
 } from "../schema/projects.schema";
 import { users } from "../schema/settings.schema";
 
-const PROJECT_COUNT = 10;
-const TASKS_PER_PROJECT = 25;
-const MILESTONES_PER_PROJECT = 5;
-const TEAM_MEMBERS_PER_PROJECT = 4;
+const PROJECT_COUNT = parseInt(process.env.SEED_PROJECT_COUNT || "50", 10);
+const TASKS_PER_PROJECT = parseInt(process.env.SEED_TASKS_PER_PROJECT || "50", 10);
+const MILESTONES_PER_PROJECT = parseInt(process.env.SEED_MILESTONES_PER_PROJECT || "5", 10);
+const TEAM_MEMBERS_PER_PROJECT = parseInt(process.env.SEED_TEAM_MEMBERS_PER_PROJECT || "4", 10);
 const BUDGET_CATEGORIES = ["Planning", "Execution", "Operations", "Quality", "Contingency"];
 const PROJECT_STATUSES = ["planned", "active", "on_hold", "completed"] as const;
 const TASK_STATUSES = ["todo", "in_progress", "blocked", "done"] as const;

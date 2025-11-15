@@ -88,10 +88,9 @@ export function QuoteActions({
 						if (onDelete) {
 							onDelete(quote.id);
 						}
-					} catch (_error) {
-						// Error handling je već u useDeleteQuote hook-u
-						// Ne treba dodatni toast jer hook već prikazuje grešku
-					}
+                    } catch {
+                        void 0;
+                    }
 				}
 				break;
 

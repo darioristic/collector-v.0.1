@@ -1,9 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
+import { SESSION_COOKIE_NAME } from "@/lib/session-constants";
+
 const CHAT_SERVICE_URL =
-	process.env.NEXT_PUBLIC_CHAT_SERVICE_URL || "http://localhost:4001";
-const SESSION_COOKIE_NAME = "auth_session";
+	process.env.CHAT_SERVICE_URL || process.env.NEXT_PUBLIC_CHAT_SERVICE_URL || "http://localhost:4001";
 
 const withNoStore = (response: NextResponse) => {
 	response.headers.set("Cache-Control", "no-store");
@@ -20,13 +21,10 @@ const unauthorized = () =>
 		),
 	);
 
-type RouteContext = {
-	params: Promise<{
-		id: string;
-	}>;
-};
-
-export async function GET(request: NextRequest, context: RouteContext) {
+export async function GET(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> },
+) {
 	try {
 		const cookieStore = await cookies();
 		const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
@@ -35,7 +33,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
 			return unauthorized();
 		}
 
-		const { id: conversationId } = await context.params;
+		const resolvedParams = await params;
+        const conversationId = resolvedParams?.id;
+        if (!conversationId) {
+            return withNoStore(
+                NextResponse.json(
+                    { error: "Nedostaje ID konverzacije." },
+                    { status: 400 },
+                ),
+            );
+        }
 		const limitParam = request.nextUrl.searchParams.get("limit");
 		const limit = limitParam ? parseInt(limitParam, 10) : 50;
 
@@ -55,39 +62,114 @@ export async function GET(request: NextRequest, context: RouteContext) {
 		);
 		url.searchParams.set("limit", limit.toString());
 
-		const response = await fetch(url.toString(), {
-			method: "GET",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${sessionToken}`,
-				"x-session-token": sessionToken,
-			},
-			cache: "no-store",
-		});
+		let response: Response;
+		try {
+			response = await fetch(url.toString(), {
+				method: "GET",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${sessionToken}`,
+					"x-session-token": sessionToken,
+				},
+				cache: "no-store",
+			});
+		} catch (fetchError) {
+			const errorMessage =
+				fetchError instanceof Error ? fetchError.message : String(fetchError);
+			console.error("[chat-api] Fetch error when fetching messages:", {
+				conversationId,
+				url: url.toString(),
+				error: errorMessage,
+			});
 
-		if (!response.ok) {
-			const error = await response
-				.json()
-				.catch(() => ({ error: "Preuzimanje poruka nije uspelo." }));
+			// Handle network errors gracefully
+			if (
+				errorMessage.includes("Failed to fetch") ||
+				errorMessage.includes("ECONNREFUSED") ||
+				errorMessage.includes("connection refused")
+			) {
+				return withNoStore(
+					NextResponse.json(
+						{
+							error: "Chat servis nije dostupan. Proverite da li je servis pokrenut na portu 4001.",
+						},
+						{ status: 503 },
+					),
+				);
+			}
+
 			return withNoStore(
 				NextResponse.json(
 					{
-						error: error.error || "Preuzimanje poruka nije uspelo.",
+						error: "Preuzimanje poruka nije uspelo.",
+						details: errorMessage,
+					},
+					{ status: 500 },
+				),
+			);
+		}
+
+		if (!response.ok) {
+			let errorData: { error?: string; message?: string } = {};
+			try {
+				const text = await response.text();
+				if (text) {
+					errorData = JSON.parse(text) as typeof errorData;
+				}
+			} catch {
+				// Ignore parse errors
+			}
+
+			const errorMessage =
+				errorData.error || errorData.message || "Preuzimanje poruka nije uspelo.";
+
+			console.error("[chat-api] Chat service returned error:", {
+				conversationId,
+				status: response.status,
+				statusText: response.statusText,
+				error: errorMessage,
+			});
+
+			return withNoStore(
+				NextResponse.json(
+					{
+						error: errorMessage,
 					},
 					{ status: response.status },
 				),
 			);
 		}
 
-		const data = await response.json();
+		let data: unknown;
+		try {
+			data = await response.json();
+		} catch (parseError) {
+			console.error("[chat-api] Failed to parse response:", {
+				conversationId,
+				error: parseError instanceof Error ? parseError.message : String(parseError),
+			});
+			return withNoStore(
+				NextResponse.json(
+					{
+						error: "Neočekivan format odgovora od chat servisa.",
+					},
+					{ status: 500 },
+				),
+			);
+		}
+
 		return withNoStore(NextResponse.json(data));
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error);
-		console.error("[chat-api] Error fetching messages:", errorMessage);
+		console.error("[chat-api] Unexpected error fetching messages:", {
+			error: errorMessage,
+			stack: error instanceof Error ? error.stack : undefined,
+		});
 		return withNoStore(
 			NextResponse.json(
 				{
 					error: "Preuzimanje poruka nije uspelo.",
+					details: errorMessage,
 				},
 				{ status: 500 },
 			),
@@ -95,7 +177,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
 	}
 }
 
-export async function POST(request: NextRequest, context: RouteContext) {
+export async function POST(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> },
+) {
 	try {
 		const cookieStore = await cookies();
 		const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
@@ -104,7 +189,16 @@ export async function POST(request: NextRequest, context: RouteContext) {
 			return unauthorized();
 		}
 
-		const { id: conversationId } = await context.params;
+		const resolvedParams = await params;
+        const conversationId = resolvedParams?.id;
+        if (!conversationId) {
+            return withNoStore(
+                NextResponse.json(
+                    { error: "Nedostaje ID konverzacije." },
+                    { status: 400 },
+                ),
+            );
+        }
 		const json = await request.json().catch(() => null);
 
 		if (!json || typeof json !== "object") {

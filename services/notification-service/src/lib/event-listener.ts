@@ -4,9 +4,9 @@ import { createNotification } from "./repository.js";
 import type { CacheService } from "./cache.service.js";
 
 export function setupEventListener(
-	redis: RedisClientType,
-	io: SocketIOServer,
-	cache?: CacheService | null,
+    redis: RedisClientType,
+    io: SocketIOServer,
+    cache?: CacheService | null,
 ): void {
 	// Listen for new message events
 	redis.subscribe("events:new_message", async (message) => {
@@ -21,16 +21,18 @@ export function setupEventListener(
 				companyId,
 			} = data;
 
-			// For 1-on-1 chat, check if recipient is offline
-			if (conversationId && recipientId && senderId) {
+            const alwaysNotifyDM = process.env.ALWAYS_NOTIFY_DM_ONLINE === "true";
+            const alwaysNotifyChannel = process.env.ALWAYS_NOTIFY_CHANNEL_ONLINE === "true";
+            // For 1-on-1 chat, check if recipient is offline
+            if (conversationId && recipientId && senderId) {
 				// Check if recipient is online via Socket.IO
 				const recipientSockets = await io
 					.in(`user:${recipientId}`)
 					.fetchSockets();
 				const isRecipientOnline = recipientSockets.length > 0;
 
-				// If recipient is offline, create notification
-				if (!isRecipientOnline && recipientStatus === "offline") {
+                // Create notification if recipient is offline (based on sockets), or always when enabled
+                if (alwaysNotifyDM || !isRecipientOnline) {
 					const notification = await createNotification(
 						companyId,
 						recipientId,
@@ -49,7 +51,7 @@ export function setupEventListener(
 					);
 				}
 			} else {
-				// For channel messages, create notifications for all members except sender
+                // For channel messages, create notifications for all members except sender
 				const memberIds = data.memberIds || [];
 				const channelId = data.channelId;
 
@@ -61,8 +63,8 @@ export function setupEventListener(
 							.fetchSockets();
 						const isMemberOnline = memberSockets.length > 0;
 
-						// Create notification if member is offline
-						if (!isMemberOnline) {
+                        // Create notification if member is offline, or always when enabled
+                        if (alwaysNotifyChannel || !isMemberOnline) {
 							const notification = await createNotification(
 								companyId || "",
 								memberId,

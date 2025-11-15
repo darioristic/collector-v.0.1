@@ -189,8 +189,7 @@ export function ListView({
 		);
 	};
 
-	const totalItems = total ?? sortedActivities.length;
-	const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
 	const currentPageIndex = currentPage - 1;
 	const pageStart = currentPageIndex * pageSize;
 	const pageEnd = pageStart + pageSize;

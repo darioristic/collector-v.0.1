@@ -15,70 +15,14 @@ type SeedTeamMember = {
 };
 
 const TEAM_MEMBERS: SeedTeamMember[] = [
-  {
-    firstName: "Jessica",
-    lastName: "Wong",
-    email: "jessica@example.com",
-    role: "Admin",
-    status: "online",
-    createdAt: "2026-01-24T09:00:00.000Z"
-  },
-  {
-    firstName: "Jason",
-    lastName: "Gabriel",
-    email: "jason@example.com",
-    role: "Designer",
-    status: "offline",
-    createdAt: "2026-01-26T09:00:00.000Z"
-  },
-  {
-    firstName: "Mona",
-    lastName: "Smith",
-    email: "mona@example.com",
-    role: "Researcher",
-    status: "idle",
-    createdAt: "2026-01-27T09:00:00.000Z"
-  },
-  {
-    firstName: "Julian",
-    lastName: "Nguyen",
-    email: "julian@example.com",
-    role: "Marketing",
-    status: "online",
-    createdAt: "2025-12-12T09:00:00.000Z"
-  },
-  {
-    firstName: "Tessa",
-    lastName: "Yorker",
-    email: "tessa@example.com",
-    role: "Designer",
-    status: "offline",
-    createdAt: "2025-11-17T09:00:00.000Z"
-  },
-  {
-    firstName: "Lana",
-    lastName: "Kate",
-    email: "kate@example.com",
-    role: "Manager",
-    status: "online",
-    createdAt: "2025-10-03T09:00:00.000Z"
-  },
-  {
-    firstName: "Han",
-    lastName: "Ming",
-    email: "han@example.com",
-    role: "Developer",
-    status: "offline",
-    createdAt: "2026-01-22T09:00:00.000Z"
-  },
-  {
-    firstName: "Casey",
-    lastName: "Westlister",
-    email: "casey@example.com",
-    role: "Marketing",
-    status: "idle",
-    createdAt: "2025-10-01T09:00:00.000Z"
-  }
+  { firstName: "Marko", lastName: "Janković", email: "marko.jankovic@example.com", role: "Sales", status: "online", createdAt: "2025-11-14T09:00:00.000Z" },
+  { firstName: "Jovana", lastName: "Petrović", email: "jovana.petrovic@example.com", role: "Designer", status: "offline", createdAt: "2025-11-12T09:00:00.000Z" },
+  { firstName: "Nikola", lastName: "Ilić", email: "nikola.ilic@example.com", role: "Developer", status: "idle", createdAt: "2025-11-10T09:00:00.000Z" },
+  { firstName: "Mina", lastName: "Simić", email: "mina.simic@example.com", role: "Marketing", status: "online", createdAt: "2025-11-08T09:00:00.000Z" },
+  { firstName: "Luka", lastName: "Radulović", email: "luka.radulovic@example.com", role: "Product", status: "offline", createdAt: "2025-11-06T09:00:00.000Z" },
+  { firstName: "Sara", lastName: "Kovačević", email: "sara.kovacevic@example.com", role: "Manager", status: "online", createdAt: "2025-11-04T09:00:00.000Z" },
+  { firstName: "Aleksa", lastName: "Milić", email: "aleksa.milic@example.com", role: "Researcher", status: "offline", createdAt: "2025-11-02T09:00:00.000Z" },
+  { firstName: "Tijana", lastName: "Đorđević", email: "tijana.djordjevic@example.com", role: "Support", status: "idle", createdAt: "2025-11-01T09:00:00.000Z" }
 ];
 
 const ensureTeamMembersSchema = async (db = defaultDb) => {

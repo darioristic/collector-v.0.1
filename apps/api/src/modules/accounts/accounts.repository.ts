@@ -10,6 +10,7 @@ import type {
 } from "@crm/types";
 import { and, asc, eq, ilike, or } from "drizzle-orm";
 import { db as defaultDb } from "../../db/index.js";
+import { logger } from "../../lib/logger";
 import {
 	accountAddresses as accountAddressesTable,
 	accountContacts as accountContactsTable,
@@ -221,14 +222,19 @@ class DrizzleAccountsRepository implements AccountsRepository {
 		);
 	}
 
-	async findById(id: string): Promise<Account | undefined> {
-		const [row] = await this.database
-			.select()
-			.from(accountsTable)
-			.where(eq(accountsTable.id, id))
-			.limit(1);
-		return row ? mapAccount(row) : undefined;
-	}
+    async findById(id: string): Promise<Account | undefined> {
+        try {
+            const [row] = await this.database
+                .select()
+                .from(accountsTable)
+                .where(eq(accountsTable.id, id))
+                .limit(1);
+            return row ? mapAccount(row) : undefined;
+        } catch (err) {
+            logger.error({ err, id }, "accounts.findById failed");
+            return undefined;
+        }
+    }
 
 	async findByIdWithDetails(
 		id: string,
@@ -238,32 +244,42 @@ class DrizzleAccountsRepository implements AccountsRepository {
 			return undefined;
 		}
 
-		const [addresses, contacts, executives, milestones] = await Promise.all([
-			this.database
-				.select()
-				.from(accountAddressesTable)
-				.where(eq(accountAddressesTable.accountId, id)),
-			this.database
-				.select({
-					contact: accountContactsTable,
-					accountName: accountsTable.name,
-				})
-				.from(accountContactsTable)
-				.leftJoin(
-					accountsTable,
-					eq(accountContactsTable.accountId, accountsTable.id),
-				)
-				.where(eq(accountContactsTable.accountId, id)),
-			this.database
-				.select()
-				.from(accountExecutivesTable)
-				.where(eq(accountExecutivesTable.accountId, id)),
-			this.database
-				.select()
-				.from(accountMilestonesTable)
-				.where(eq(accountMilestonesTable.accountId, id))
-				.orderBy(asc(accountMilestonesTable.date)),
-		]);
+        const addressesQuery = this.database
+            .select()
+            .from(accountAddressesTable)
+            .where(eq(accountAddressesTable.accountId, id));
+        const contactsQuery = this.database
+            .select({
+                contact: accountContactsTable,
+                accountName: accountsTable.name,
+            })
+            .from(accountContactsTable)
+            .leftJoin(
+                accountsTable,
+                eq(accountContactsTable.accountId, accountsTable.id),
+            )
+            .where(eq(accountContactsTable.accountId, id));
+        const executivesQuery = this.database
+            .select()
+            .from(accountExecutivesTable)
+            .where(eq(accountExecutivesTable.accountId, id));
+        const milestonesQuery = this.database
+            .select()
+            .from(accountMilestonesTable)
+            .where(eq(accountMilestonesTable.accountId, id))
+            .orderBy(asc(accountMilestonesTable.date));
+
+        const [addressesRes, contactsRes, executivesRes, milestonesRes] = await Promise.allSettled([
+            addressesQuery,
+            contactsQuery,
+            executivesQuery,
+            milestonesQuery,
+        ]);
+
+        const addresses = addressesRes.status === "fulfilled" ? addressesRes.value : (logger.error({ err: addressesRes.reason, id }, "account_addresses query failed"), []);
+        const contacts = contactsRes.status === "fulfilled" ? contactsRes.value : (logger.error({ err: contactsRes.reason, id }, "account_contacts query failed"), []);
+        const executives = executivesRes.status === "fulfilled" ? executivesRes.value : (logger.error({ err: executivesRes.reason, id }, "account_executives query failed"), []);
+        const milestones = milestonesRes.status === "fulfilled" ? milestonesRes.value : (logger.error({ err: milestonesRes.reason, id }, "account_milestones query failed"), []);
 
 		return {
 			account,

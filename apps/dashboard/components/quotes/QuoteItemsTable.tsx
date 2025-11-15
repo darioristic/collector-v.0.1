@@ -11,14 +11,10 @@ import { Plus, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useMemo } from "react";
 import {
-	type Control,
-	type FieldPath,
-	type FieldValues,
-	type Path,
-	type PathValue,
-	useFieldArray,
-	useFormContext,
-	useWatch,
+    type Control,
+    useFieldArray,
+    useFormContext,
+    useWatch,
 } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,25 +35,23 @@ type QuoteItemsFormValues = {
     items: QuoteItemCreateInput[];
 };
 
-type QuoteItemsTableProps<TFormValues extends QuoteItemsFormValues = QuoteItemsFormValues> = {
-	control: Control<TFormValues>;
+type QuoteItemsTableProps = {
+    control: Control<QuoteItemsFormValues>;
 };
 
-export function QuoteItemsTable<TFormValues extends QuoteItemsFormValues = QuoteItemsFormValues>({
-    control,
-}: QuoteItemsTableProps<TFormValues>) {
-    const { fields, append, remove } = useFieldArray<TFormValues, "items">({
+export function QuoteItemsTable({ control }: QuoteItemsTableProps) {
+    const { fields, append, remove } = useFieldArray<QuoteItemsFormValues>({
         control,
         name: "items",
         keyName: "id",
     });
 
-	const { setValue } = useFormContext<TFormValues>();
+    const { setValue } = useFormContext<QuoteItemsFormValues>();
 	const items =
 		(useWatch({
 			control,
-			name: "items" as Path<TFormValues>,
-		}) as QuoteItemCreateInput[] | undefined) ?? [];
+            name: "items",
+        }) as QuoteItemCreateInput[] | undefined) ?? [];
 
 	const tableItems: QuoteItem[] = fields.map((field, index) => ({
 		id: field.id,
@@ -78,10 +72,7 @@ export function QuoteItemsTable<TFormValues extends QuoteItemsFormValues = Quote
 							placeholder="Item description"
 							value={row.original.description || ""}
 							onChange={(e) => {
-								setValue(
-									`items.${index}.description` as Path<TFormValues>,
-									e.target.value as PathValue<TFormValues, Path<TFormValues>>,
-								);
+                                setValue(`items.${index}.description`, e.target.value);
 							}}
 							onKeyDown={(e) => {
 								if (e.key === "Enter") {
@@ -113,10 +104,7 @@ export function QuoteItemsTable<TFormValues extends QuoteItemsFormValues = Quote
 							value={row.original.quantity || 1}
 							onChange={(e) => {
 								const value = Number.parseFloat(e.target.value) || 1;
-								setValue(
-									`items.${index}.quantity` as Path<TFormValues>,
-									value as PathValue<TFormValues, Path<TFormValues>>,
-								);
+                                setValue(`items.${index}.quantity`, value);
 							}}
 							onKeyDown={(e) => {
 								if (e.key === "Enter" || e.key === "Tab") {
@@ -148,10 +136,7 @@ export function QuoteItemsTable<TFormValues extends QuoteItemsFormValues = Quote
 							value={row.original.unitPrice || 0}
 							onChange={(e) => {
 								const value = Number.parseFloat(e.target.value) || 0;
-								setValue(
-									`items.${index}.unitPrice` as Path<TFormValues>,
-									value as PathValue<TFormValues, Path<TFormValues>>,
-								);
+                                setValue(`items.${index}.unitPrice`, value);
 							}}
 							onKeyDown={(e) => {
 								if (e.key === "Enter") {
@@ -161,7 +146,7 @@ export function QuoteItemsTable<TFormValues extends QuoteItemsFormValues = Quote
 										quantity: 1,
 										unitPrice: 0,
 									};
-									append(emptyItem as TFormValues["items"][number]);
+                                    append(emptyItem);
 									// Focus first input of new row after a short delay
 									setTimeout(() => {
 										const tbody =
@@ -222,7 +207,7 @@ export function QuoteItemsTable<TFormValues extends QuoteItemsFormValues = Quote
 	});
 
 	const handleAddItem = () => {
-		append({ description: "", quantity: 1, unitPrice: 0 } as TFormValues["items"][number]);
+        append({ description: "", quantity: 1, unitPrice: 0 });
 		// Focus first input of new row after a short delay
 		setTimeout(() => {
 			const newRow = document.querySelector("tbody tr:last-child input") as HTMLInputElement;

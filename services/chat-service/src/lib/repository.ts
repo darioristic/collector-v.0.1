@@ -44,53 +44,71 @@ async function ensureTeamchatUsers(userIds: string[], companyId: string): Promis
 
 		// Fetch user data from main users table using raw SQL
 		// Note: users table is from API schema, not chat service schema
-		const usersData = await db.execute(sql`
-			SELECT 
-				id,
-				email,
-				name,
-				default_company_id as "defaultCompanyId"
-			FROM users
-			WHERE id = ANY(${sql.raw(`ARRAY[${missingIds.map((id) => `'${id}'::uuid`).join(",")}]`)})
-		`);
+        const usersData = await db.execute(sql`
+            SELECT 
+                id,
+                email,
+                name,
+                default_company_id as "defaultCompanyId"
+            FROM users
+            WHERE id = ANY(${sql.raw(`ARRAY[${missingIds.map((id) => `'${id}'::uuid`).join(",")}]`)})
+        `);
 
-		if (usersData.rows.length === 0) {
-			console.warn(`[chat-service] No users found in users table for IDs: ${missingIds.join(", ")}`);
-			return;
-		}
+        const foundIds = new Set<string>(usersData.rows.map((r: any) => r.id));
+        const stillMissing = missingIds.filter((id) => !foundIds.has(id));
+        if (usersData.rows.length === 0 && stillMissing.length === 0) {
+            console.warn(`[chat-service] No users found in users table for IDs: ${missingIds.join(", ")}`);
+        }
 
 		// Create teamchat_users entries
-		for (const userData of usersData.rows as Array<{
-			id: string;
-			email: string;
-			name: string;
-			defaultCompanyId: string | null;
-		}>) {
-			const nameParts = (userData.name || userData.email.split("@")[0]).split(" ");
-			const firstName = nameParts[0] || "";
-			const lastName = nameParts.slice(1).join(" ") || "";
+        for (const userData of usersData.rows as Array<{
+            id: string;
+            email: string;
+            name: string;
+            defaultCompanyId: string | null;
+        }>) {
+            const nameParts = (userData.name || userData.email.split("@")[0]).split(" ");
+            const firstName = nameParts[0] || "";
+            const lastName = nameParts.slice(1).join(" ") || "";
 
-			await db
-				.insert(teamchatUsers)
-				.values({
-					id: userData.id,
-					firstName,
-					lastName,
-					email: userData.email,
-					companyId: companyId,
-					status: "offline",
-				})
-				.onConflictDoUpdate({
-					target: teamchatUsers.email,
-					set: {
-						id: userData.id,
-						firstName,
-						lastName,
-						companyId: companyId,
-						updatedAt: new Date(),
-					},
-				});
-		}
+            await db
+                .insert(teamchatUsers)
+                .values({
+                    id: userData.id,
+                    firstName,
+                    lastName,
+                    email: userData.email,
+                    companyId: companyId,
+                    status: "offline",
+                })
+                .onConflictDoUpdate({
+                    target: teamchatUsers.email,
+                    set: {
+                        firstName,
+                        lastName,
+                        companyId: companyId,
+                        updatedAt: new Date(),
+                    },
+                });
+        }
+
+        // Fallback: create placeholder teamchat users for IDs not present in users table
+        if (stillMissing.length > 0) {
+            for (const id of stillMissing) {
+                const placeholderEmail = `user-${id}@placeholder.local`;
+                await db
+                    .insert(teamchatUsers)
+                    .values({
+                        id,
+                        firstName: "User",
+                        lastName: "Unknown",
+                        email: placeholderEmail,
+                        companyId,
+                        status: "offline",
+                    })
+                    .onConflictDoNothing();
+            }
+        }
 	} catch (error) {
 		console.error("[chat-service] Error ensuring teamchat users:", error);
 		// Don't throw - allow conversation loading to continue even if user sync fails
@@ -161,23 +179,82 @@ export const setCacheService = (cache: CacheService | null) => {
 };
 
 export const findOrCreateConversation = async ({
-	companyId,
-	currentUserId,
-	targetUserId,
-	cache,
+  companyId,
+  currentUserId,
+  targetUserId,
+  cache,
 }: {
-	companyId: string;
-	currentUserId: string;
-	targetUserId: string;
-	cache?: CacheService | null;
+  companyId: string;
+  currentUserId: string;
+  targetUserId: string;
+  cache?: CacheService | null;
 }): Promise<ChatConversationWithUsers> => {
-	const cacheService = cache || globalCache;
-	// Ensure both users exist in teamchat_users
-	// This is needed because chat service uses teamchat_users while API uses users
-	await ensureTeamchatUsers([currentUserId, targetUserId], companyId);
+  const cacheService = cache || globalCache;
+  // Resolve teamchat user IDs for both users (maps users.id -> teamchat_users.id)
+  const resolveTeamchatId = async (userId: string): Promise<string> => {
+    // Try direct match by id
+    const [byId] = await db
+      .select({ id: teamchatUsers.id })
+      .from(teamchatUsers)
+      .where(and(eq(teamchatUsers.companyId, companyId), eq(teamchatUsers.id, userId)))
+      .limit(1);
+    if (byId) return byId.id;
 
-	const userId1 = currentUserId < targetUserId ? currentUserId : targetUserId;
-	const userId2 = currentUserId < targetUserId ? targetUserId : currentUserId;
+    // Fetch user to get email/name
+    const usersData = await db.execute(sql`
+      SELECT id, email, name FROM users WHERE id = ${userId} LIMIT 1
+    `);
+    const user = usersData.rows[0] as { id: string; email: string; name: string } | undefined;
+    if (!user) {
+      // As last resort, create placeholder teamchat user with provided id
+      const [created] = await db
+        .insert(teamchatUsers)
+        .values({
+          id: userId,
+          firstName: "User",
+          lastName: "Unknown",
+          email: `user-${userId}@placeholder.local`,
+          companyId,
+          status: "offline",
+        })
+        .onConflictDoNothing()
+        .returning();
+      return created ? created.id : userId;
+    }
+
+    const nameParts = (user.name || user.email.split("@")[0]).split(" ");
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || "";
+
+    // Try match by email to reuse existing teamchat user id
+    const [byEmail] = await db
+      .select({ id: teamchatUsers.id })
+      .from(teamchatUsers)
+      .where(and(eq(teamchatUsers.companyId, companyId), eq(teamchatUsers.email, user.email)))
+      .limit(1);
+    if (byEmail) return byEmail.id;
+
+    // Create new teamchat user with the same id as users.id
+    const [created] = await db
+      .insert(teamchatUsers)
+      .values({
+        id: user.id,
+        firstName,
+        lastName,
+        email: user.email,
+        companyId,
+        status: "offline",
+      })
+      .onConflictDoNothing()
+      .returning();
+    return created ? created.id : user.id;
+  };
+
+  const teamchatIdCurrent = await resolveTeamchatId(currentUserId);
+  const teamchatIdTarget = await resolveTeamchatId(targetUserId);
+
+  const userId1 = teamchatIdCurrent < teamchatIdTarget ? teamchatIdCurrent : teamchatIdTarget;
+  const userId2 = teamchatIdCurrent < teamchatIdTarget ? teamchatIdTarget : teamchatIdCurrent;
 
 	// Try cache first
 	const cacheKey = getConversationCacheKey(companyId, userId1, userId2);
@@ -288,16 +365,16 @@ export const findOrCreateConversation = async ({
 	}
 
 	const now = new Date();
-	const [conversation] = await db
-		.insert(chatConversations)
-		.values({
-			userId1,
-			userId2,
-			companyId,
-			createdAt: now,
-			updatedAt: now,
-		})
-		.returning();
+  const [conversation] = await db
+    .insert(chatConversations)
+    .values({
+      userId1,
+      userId2,
+      companyId,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .returning();
 
 	if (!conversation) {
 		throw new Error("Kreiranje konverzacije nije uspelo.");
@@ -387,16 +464,36 @@ export const findOrCreateConversation = async ({
 };
 
 export const getConversations = async ({
-	companyId,
-	userId,
-	cache,
+  companyId,
+  userId,
+  cache,
 }: {
-	companyId: string;
-	userId: string;
-	cache?: CacheService | null;
+  companyId: string;
+  userId: string;
+  cache?: CacheService | null;
 }): Promise<ChatConversationWithUsers[]> => {
-	const cacheService = cache || globalCache;
-	const cacheKey = getConversationsListCacheKey(companyId, userId);
+  const cacheService = cache || globalCache;
+  // Resolve teamchat user id for the current user
+  const resolveTeamchatId = async (id: string): Promise<string> => {
+    const [byId] = await db
+      .select({ id: teamchatUsers.id })
+      .from(teamchatUsers)
+      .where(and(eq(teamchatUsers.companyId, companyId), eq(teamchatUsers.id, id)))
+      .limit(1);
+    if (byId) return byId.id;
+        const usersData = await db.execute(sql`SELECT id, email, name FROM users WHERE id = ${id} LIMIT 1`);
+    const user = usersData.rows[0] as { id: string; email: string; name: string } | undefined;
+    if (!user) return id;
+    const [byEmail] = await db
+      .select({ id: teamchatUsers.id })
+      .from(teamchatUsers)
+      .where(and(eq(teamchatUsers.companyId, companyId), eq(teamchatUsers.email, user.email)))
+      .limit(1);
+    return byEmail ? byEmail.id : id;
+  };
+
+  const teamchatUserId = await resolveTeamchatId(userId);
+  const cacheKey = getConversationsListCacheKey(companyId, teamchatUserId);
 
 	// Try cache first
 	if (cacheService) {
@@ -405,22 +502,22 @@ export const getConversations = async ({
 			return cached;
 		}
 	}
-	// Ensure current user exists in teamchat_users
-	await ensureTeamchatUsers([userId], companyId);
+  // Ensure current user exists in teamchat_users (by id or email)
+  await ensureTeamchatUsers([userId], companyId);
 
 	// First, get all conversation IDs for this user
-	const conversationIds = await db
-		.select({ id: chatConversations.id, userId1: chatConversations.userId1, userId2: chatConversations.userId2 })
-		.from(chatConversations)
-		.where(
-			and(
-				eq(chatConversations.companyId, companyId),
-				or(
-					eq(chatConversations.userId1, userId),
-					eq(chatConversations.userId2, userId),
-				),
-			),
-		);
+  const conversationIds = await db
+    .select({ id: chatConversations.id, userId1: chatConversations.userId1, userId2: chatConversations.userId2 })
+    .from(chatConversations)
+    .where(
+      and(
+        eq(chatConversations.companyId, companyId),
+        or(
+          eq(chatConversations.userId1, teamchatUserId),
+          eq(chatConversations.userId2, teamchatUserId),
+        ),
+      ),
+    );
 
 	// Collect all unique user IDs from conversations
 	const allUserIds = new Set<string>();
@@ -466,8 +563,8 @@ export const getConversations = async ({
 			and(
 				eq(chatConversations.companyId, companyId),
 				or(
-					eq(chatConversations.userId1, userId),
-					eq(chatConversations.userId2, userId),
+					eq(chatConversations.userId1, teamchatUserId),
+					eq(chatConversations.userId2, teamchatUserId),
 				),
 			),
 		)
@@ -478,22 +575,22 @@ export const getConversations = async ({
 
 	// Get unread counts for all conversations
 	const conversationIdsList = rows.map((row) => row.id);
-	const unreadCounts = conversationIdsList.length > 0
-		? await db
-				.select({
-					conversationId: chatMessages.conversationId,
-					count: sql<number>`COUNT(*)::int`,
-				})
-				.from(chatMessages)
-				.where(
-					and(
-						inArray(chatMessages.conversationId, conversationIdsList),
-						ne(chatMessages.senderId, userId),
-						isNull(chatMessages.readAt),
-					),
-				)
-				.groupBy(chatMessages.conversationId)
-		: [];
+  const unreadCounts = conversationIdsList.length > 0
+    ? await db
+        .select({
+          conversationId: chatMessages.conversationId,
+          count: sql<number>`COUNT(*)::int`,
+        })
+        .from(chatMessages)
+        .where(
+          and(
+            inArray(chatMessages.conversationId, conversationIdsList),
+            ne(chatMessages.senderId, teamchatUserId),
+            isNull(chatMessages.readAt),
+          ),
+        )
+        .groupBy(chatMessages.conversationId)
+    : [];
 
 	const unreadCountMap = new Map<string, number>();
 	for (const item of unreadCounts) {
@@ -539,14 +636,34 @@ export const getConversations = async ({
 };
 
 export const getConversationMessages = async ({
-	conversationId,
-	userId,
-	limit = 50,
+    conversationId,
+    userId,
+    limit = 50,
 }: {
-	conversationId: string;
-	userId: string;
-	limit?: number;
+    conversationId: string;
+    userId: string;
+    limit?: number;
 }): Promise<ChatMessageWithSender[]> => {
+    // Resolve teamchat user id for the current user
+    const resolveTeamchatId = async (id: string): Promise<string> => {
+        const [byId] = await db
+            .select({ id: teamchatUsers.id })
+            .from(teamchatUsers)
+            .where(eq(teamchatUsers.id, id))
+            .limit(1);
+        if (byId) return byId.id;
+        const usersData = await db.execute(sql`SELECT id, email, name FROM users WHERE id = ${id} LIMIT 1`);
+        const user = usersData.rows[0] as { id: string; email: string; name: string } | undefined;
+        if (!user) return id;
+        const [byEmail] = await db
+            .select({ id: teamchatUsers.id })
+            .from(teamchatUsers)
+            .where(eq(teamchatUsers.email, user.email))
+            .limit(1);
+        return byEmail ? byEmail.id : id;
+    };
+
+    const teamchatUserId = await resolveTeamchatId(userId);
 	const messages = await db
 		.select({
 			id: chatMessages.id,
@@ -595,10 +712,10 @@ export const getConversationMessages = async ({
 		},
 	}));
 
-	await markMessagesAsRead({
-		conversationId,
-		userId,
-	});
+    await markMessagesAsRead({
+        conversationId,
+        userId: teamchatUserId,
+    });
 
 	return result;
 };
@@ -718,13 +835,13 @@ export const createMessage = async ({
 };
 
 export const markMessagesAsRead = async ({
-	conversationId,
-	userId,
+    conversationId,
+    userId,
 }: {
-	conversationId: string;
-	userId: string;
+    conversationId: string;
+    userId: string;
 }): Promise<void> => {
-	const now = new Date();
+    const now = new Date();
 
 	await db
 		.update(chatMessages)
@@ -734,21 +851,41 @@ export const markMessagesAsRead = async ({
 			updatedAt: now,
 		})
 		.where(
-			and(
-				eq(chatMessages.conversationId, conversationId),
-				ne(chatMessages.senderId, userId),
-				eq(chatMessages.status, "sent"),
-			),
-		);
+            and(
+                eq(chatMessages.conversationId, conversationId),
+                ne(chatMessages.senderId, userId),
+                eq(chatMessages.status, "sent"),
+            ),
+        );
 };
 
 export const getConversationById = async ({
-	conversationId,
-	userId,
+    conversationId,
+    userId,
 }: {
-	conversationId: string;
-	userId: string;
+    conversationId: string;
+    userId: string;
 }): Promise<ChatConversationWithUsers | null> => {
+    // Resolve teamchat user id for access checks
+    const resolveTeamchatId = async (id: string): Promise<string> => {
+        const [byId] = await db
+            .select({ id: teamchatUsers.id })
+            .from(teamchatUsers)
+            .where(eq(teamchatUsers.id, id))
+            .limit(1);
+        if (byId) return byId.id;
+        const usersData = await db.execute(sql`SELECT id, email, name FROM users WHERE id = ${id} LIMIT 1`);
+        const user = usersData.rows[0] as { id: string; email: string; name: string } | undefined;
+        if (!user) return id;
+        const [byEmail] = await db
+            .select({ id: teamchatUsers.id })
+            .from(teamchatUsers)
+            .where(eq(teamchatUsers.email, user.email))
+            .limit(1);
+        return byEmail ? byEmail.id : id;
+    };
+
+    const teamchatUserId = await resolveTeamchatId(userId);
 	const [row] = await db
 		.select({
 			id: chatConversations.id,
@@ -777,15 +914,15 @@ export const getConversationById = async ({
 		.from(chatConversations)
 		.innerJoin(user1Alias, eq(chatConversations.userId1, user1Alias.id))
 		.innerJoin(user2Alias, eq(chatConversations.userId2, user2Alias.id))
-		.where(
-			and(
-				eq(chatConversations.id, conversationId),
-				or(
-					eq(chatConversations.userId1, userId),
-					eq(chatConversations.userId2, userId),
-				),
-			),
-		)
+        .where(
+            and(
+                eq(chatConversations.id, conversationId),
+                or(
+                    eq(chatConversations.userId1, teamchatUserId),
+                    eq(chatConversations.userId2, teamchatUserId),
+                ),
+            ),
+        )
 		.limit(1);
 
 	if (!row) {
@@ -798,13 +935,13 @@ export const getConversationById = async ({
 			count: sql<number>`COUNT(*)::int`,
 		})
 		.from(chatMessages)
-		.where(
-			and(
-				eq(chatMessages.conversationId, row.id),
-				ne(chatMessages.senderId, userId),
-				isNull(chatMessages.readAt),
-			),
-		);
+        .where(
+            and(
+                eq(chatMessages.conversationId, row.id),
+                ne(chatMessages.senderId, teamchatUserId),
+                isNull(chatMessages.readAt),
+            ),
+        );
 
 	const unreadCount = Number(unreadResult?.count) || 0;
 

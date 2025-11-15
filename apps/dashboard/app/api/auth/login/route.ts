@@ -39,10 +39,9 @@ export async function POST(request: NextRequest) {
 		const { POST: employeesLoginPOST } = await import("../employees-login/route");
 		const employeesLoginResponse = await employeesLoginPOST(request);
 
-		if (employeesLoginResponse.ok) {
-			const payload = await employeesLoginResponse.json();
-			return employeesLoginResponse;
-		}
+        if (employeesLoginResponse.ok) {
+            return employeesLoginResponse;
+        }
 
 		// If employees login fails with 401/403, return that error
 		if (

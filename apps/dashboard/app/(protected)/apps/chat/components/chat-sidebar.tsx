@@ -6,7 +6,7 @@ import { Search, Users } from "lucide-react";
 import React from "react";
 import {
 	type ChatConversation,
-	createConversation,
+	createConversationByEmail,
 	fetchConversations,
 } from "@/app/(protected)/apps/chat/api";
 import { ActionDropdown } from "@/app/(protected)/apps/chat/components/action-dropdown";
@@ -288,11 +288,11 @@ export function ChatSidebar() {
 			setChatServiceUnavailable(false);
 
 			try {
-				console.log(
-					"[chat] Calling createConversation with userId:",
-					member.userId,
-				);
-				const conversation = await createConversation(member.userId);
+            console.log(
+                "[chat] Calling createConversationByEmail with email:",
+                member.email,
+            );
+            const conversation = await createConversationByEmail(member.email);
 				console.log("[chat] Conversation created successfully:", conversation);
 
 				// If we successfully created a conversation, service is available

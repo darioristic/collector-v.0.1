@@ -22,7 +22,7 @@ export default function PerformanceReviewsToolbar({
   searchValue,
   onSearchChange,
   filters,
-  onFiltersChange,
+  onFiltersChange: _onFiltersChange,
   isDisabled = false,
   onResetFilters
 }: PerformanceReviewsToolbarProps) {

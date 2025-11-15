@@ -6,6 +6,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { drizzle as drizzlePostgresJs } from "drizzle-orm/postgres-js";
 import type { Pool } from "pg";
 import { newDb } from "pg-mem";
+import { randomUUID } from "node:crypto";
 import postgres from "postgres";
 
 type PostgresJsClient = ReturnType<typeof postgres>;
@@ -43,11 +44,17 @@ const shouldUseInMemoryDb =
 const globalForDb = globalThis as DatabaseGlobals;
 
 const createPgMemDatabase = (): {
-	client: Pool;
-	db: NodePgDatabase<Record<string, never>>;
+    client: Pool;
+    db: NodePgDatabase<Record<string, never>>;
 } => {
-	const memoryDb = newDb({ autoCreateForeignKeyIndices: true });
-	const adapter = memoryDb.adapters.createPg();
+    const memoryDb = newDb({ autoCreateForeignKeyIndices: true });
+    memoryDb.public.registerFunction({
+        name: "gen_random_uuid",
+        returns: "text",
+        implementation: () => randomUUID(),
+        impure: true,
+    });
+    const adapter = memoryDb.adapters.createPg();
 	const pool = new adapter.Pool();
 	const originalQuery = pool.query.bind(pool);
 	type QueryArgs = Parameters<typeof originalQuery>;

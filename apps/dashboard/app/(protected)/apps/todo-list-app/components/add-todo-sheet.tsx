@@ -65,15 +65,18 @@ const AddTodoSheet: React.FC<AddTodoSheetProps> = ({
 	const [assignedUsers, setAssignedUsers] = React.useState<string[]>([]);
 	const [newUser, setNewUser] = React.useState("");
 
-	const defaultValues = {
-		title: "",
-		description: "",
-		assignedTo: [],
-		status: EnumTodoStatus.Pending,
-		priority: EnumTodoPriority.Medium,
-		dueDate: undefined,
-		reminderDate: undefined,
-	};
+    const defaultValues = React.useMemo(
+        () => ({
+            title: "",
+            description: "",
+            assignedTo: [],
+            status: EnumTodoStatus.Pending,
+            priority: EnumTodoPriority.Medium,
+            dueDate: undefined,
+            reminderDate: undefined,
+        }),
+        [],
+    );
 
 	const form = useForm<TodoFormValues>({
 		resolver: zodResolver(todoFormSchema),
@@ -100,7 +103,7 @@ const AddTodoSheet: React.FC<AddTodoSheetProps> = ({
 			form.reset(defaultValues);
 			setAssignedUsers([]);
 		}
-	}, [editTodoId, todos, isOpen, form]);
+    }, [editTodoId, todos, isOpen, form, defaultValues]);
 
 	const onSubmit = (data: TodoFormValues) => {
 		// Ensure assignedTo is updated with the latest assignedUsers state

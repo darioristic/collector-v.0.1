@@ -1,17 +1,6 @@
 "use client";
 
-import {
-	Building2,
-	ExternalLink,
-	Facebook,
-	Globe,
-	Instagram,
-	Linkedin,
-	Mail,
-	MapPin,
-	Phone,
-	Twitter,
-} from "lucide-react";
+import { ExternalLink, Globe, Mail, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -247,65 +236,6 @@ export function CompanyDetails() {
 					</>
 				)}
 
-				{/* Social Media Links Section */}
-				{/* Note: Social media links are not yet in the schema.
-				    This section is prepared for future implementation.
-				    When social media fields are added to the schema, uncomment and use:
-				    company.facebookUrl, company.twitterUrl, company.linkedinUrl, company.instagramUrl */}
-				{false && (
-					<>
-						<Separator />
-						<section aria-labelledby="social-heading">
-							<h2
-								id="social-heading"
-								className="text-foreground mb-4 text-base font-semibold"
-							>
-								Društvene mreže
-							</h2>
-							<div className="flex flex-wrap items-center gap-3">
-								{/* Facebook */}
-								{/* {company.facebookUrl && (
-									<SocialMediaLink
-										href={company.facebookUrl}
-										icon={Facebook}
-										label="Facebook"
-										aria-label="Posetite našu Facebook stranicu"
-									/>
-								)} */}
-
-								{/* Twitter/X */}
-								{/* {company.twitterUrl && (
-									<SocialMediaLink
-										href={company.twitterUrl}
-										icon={Twitter}
-										label="Twitter"
-										aria-label="Posetite našu Twitter stranicu"
-									/>
-								)} */}
-
-								{/* LinkedIn */}
-								{/* {company.linkedinUrl && (
-									<SocialMediaLink
-										href={company.linkedinUrl}
-										icon={Linkedin}
-										label="LinkedIn"
-										aria-label="Posetite našu LinkedIn stranicu"
-									/>
-								)} */}
-
-								{/* Instagram */}
-								{/* {company.instagramUrl && (
-									<SocialMediaLink
-										href={company.instagramUrl}
-										icon={Instagram}
-										label="Instagram"
-										aria-label="Posetite našu Instagram stranicu"
-									/>
-								)} */}
-							</div>
-						</section>
-					</>
-				)}
 			</CardContent>
 		</Card>
 	);
@@ -394,33 +324,4 @@ function DetailItem({ label, value }: DetailItemProps) {
  * Social Media Link Component
  * Displays a social media link with icon, hover states, and smooth transitions
  */
-interface SocialMediaLinkProps {
-	href: string;
-	icon: React.ComponentType<{ className?: string }>;
-	label: string;
-	"aria-label"?: string;
-}
-
-function SocialMediaLink({
-	href,
-	icon: Icon,
-	label,
-	"aria-label": ariaLabel,
-}: SocialMediaLinkProps) {
-	return (
-		<Link
-			href={href}
-			target="_blank"
-			rel="noopener noreferrer"
-			aria-label={ariaLabel || `Posetite našu ${label} stranicu`}
-			className="group relative flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card transition-all hover:border-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-		>
-			<Icon
-				className="text-muted-foreground h-5 w-5 transition-colors group-hover:text-primary"
-				aria-hidden="true"
-			/>
-			<span className="sr-only">{label}</span>
-		</Link>
-	);
-}
 

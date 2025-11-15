@@ -241,7 +241,7 @@ export const seedSales = async (database = defaultDb) => {
 
         return {
           description: item.description,
-          quantity: formatMoney(item.quantity),
+          quantity: item.quantity,
           unit: "pcs",
           unitPrice: formatMoney(item.unitPrice),
           discountRate: formatRate(item.discountRate),
@@ -277,8 +277,8 @@ export const seedSales = async (database = defaultDb) => {
       const [invoiceRow] = await tx
         .insert(invoices)
         .values({
-          orderId,
           invoiceNumber: `INV-2025-${String(index + 1).padStart(4, "0")}`,
+          orderId,
           customerId: account.id,
           customerName: account.name,
           customerEmail: contact.email ?? account.email ?? `${account.name.toLowerCase().replace(/\s+/g, ".")}@example.com`,
@@ -300,12 +300,10 @@ export const seedSales = async (database = defaultDb) => {
 
       const invoiceId = invoiceRow.id;
 
-      await tx.insert(invoiceItems).values(
-        invoiceItemRecords.map((item) => ({
-          ...item,
-          invoiceId
-        }))
-      );
+      for (const item of invoiceItemRecords) {
+        await tx.execute(sql`insert into invoice_items (invoice_id, description, quantity, unit_price, total)
+          values (${invoiceId}, ${item.description}, ${item.quantity}, ${item.unitPrice}, ${item.totalInclVat})`);
+      }
 
       // Create payment for paid and overdue invoices
       if (invoiceStatus === "paid" || invoiceStatus === "overdue") {
@@ -321,7 +319,7 @@ export const seedSales = async (database = defaultDb) => {
           amount: formatMoney(amountPaid),
           currency,
           method: invoiceStatus === "paid" ? "bank_transfer" : "bank_transfer",
-          reference: `PAY-${invoiceRow.invoiceNumber}-${index + 1}`,
+          reference: `PAY-ORD-${orderId}-${index + 1}`,
           notes: invoiceStatus === "paid" 
             ? `Plaćeno ${formatDate(paymentDate)}`
             : `Delimično plaćeno - preostalo ${formatMoney(invoiceTotal - amountPaid)}`,
@@ -369,3 +367,4 @@ export const seedSales = async (database = defaultDb) => {
     }
   });
 };
+import { sql } from "drizzle-orm";

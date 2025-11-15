@@ -47,10 +47,17 @@ const chatStore: StateCreator<UseChatStore> = (set, get) => ({
 			state.selectedChat &&
 			state.selectedChat.conversationId === message.conversationId
 		) {
+			const existingMessages = state.selectedChat.messages || [];
+			// Check if message already exists to avoid duplicates
+			const messageExists = existingMessages.some((msg) => msg.id === message.id);
+			if (messageExists) {
+				console.log("[chat-store] Message already exists, skipping:", message.id);
+				return;
+			}
 			set({
 				selectedChat: {
 					...state.selectedChat,
-					messages: [...(state.selectedChat.messages || []), message],
+					messages: [...existingMessages, message],
 				},
 			});
 		}

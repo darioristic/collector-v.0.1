@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyPluginAsync } from "fastify";
+import { isUuid } from "../lib/validation.js";
 import type { RedisClientType } from "redis";
 import type { Server as SocketIOServer } from "socket.io";
 import { authMiddleware } from "../lib/auth.js";
@@ -14,6 +15,16 @@ interface FastifyWithSocket extends FastifyInstance {
 }
 
 const messagesRoutes: FastifyPluginAsync = async (fastify) => {
+
+	fastify.addHook("preValidation", async (request, reply) => {
+		const params: unknown = request.params;
+		if (params && typeof params === "object" && "id" in (params as any)) {
+			const id = (params as { id?: unknown }).id;
+			if (typeof id === "string" && !isUuid(id)) {
+				return reply.code(400).send({ error: "Nevalidan ID konverzacije." });
+			}
+		}
+	});
 	fastify.addHook("onRequest", authMiddleware);
 
 	fastify.get<{ Params: { id: string }; Querystring: { limit?: string } }>(
@@ -24,6 +35,9 @@ const messagesRoutes: FastifyPluginAsync = async (fastify) => {
 			}
 
 			const { id: conversationId } = request.params;
+			if (!isUuid(conversationId)) {
+				return reply.code(400).send({ error: "Nevalidan ID konverzacije." });
+			}
 			const limitParam = request.query.limit;
 			const limit = limitParam ? parseInt(limitParam, 10) : 50;
 
@@ -53,7 +67,7 @@ const messagesRoutes: FastifyPluginAsync = async (fastify) => {
 
 				return reply.send({ messages });
 			} catch (error) {
-				request.log.error(error, "Failed to fetch messages");
+				request.log.error({ err: error, conversationId, userId: request.user.userId }, "Failed to fetch messages");
 				return reply
 					.code(500)
 					.send({ error: "Preuzimanje poruka nije uspelo." });
@@ -109,16 +123,48 @@ const messagesRoutes: FastifyPluginAsync = async (fastify) => {
 				});
 			}
 
-			const cache = (fastify as any).cache;
-			const message = await createMessage({
-				conversationId,
-				senderId: request.user.userId,
-				content,
-				type,
-				fileUrl,
-				fileMetadata,
-				cache,
-			});
+            const cache = (fastify as any).cache;
+            const { db } = await import("../db/index.js");
+            const { sql } = await import("drizzle-orm");
+            const teamchatIdResult = await db.execute(sql`
+                SELECT id FROM teamchat_users WHERE email = ${request.user.email} LIMIT 1
+            `);
+            let teamchatSenderId = (teamchatIdResult.rows[0] as { id: string } | undefined)?.id || null;
+            if (!teamchatSenderId) {
+                const { teamchatUsers } = await import("../db/schema/teamchat.js");
+                const { and, eq } = await import("drizzle-orm");
+                // Double-check by company/email then create
+                const [existing] = await db
+                    .select({ id: teamchatUsers.id })
+                    .from(teamchatUsers)
+                    .where(and(eq(teamchatUsers.companyId, request.user.companyId), eq(teamchatUsers.email, request.user.email)))
+                    .limit(1);
+                if (existing) {
+                    teamchatSenderId = existing.id;
+                } else {
+                    const [created] = await db
+                        .insert(teamchatUsers)
+                        .values({
+                            email: request.user.email,
+                            firstName: request.user.email.split("@")[0] || "",
+                            lastName: "",
+                            companyId: request.user.companyId,
+                            status: "offline",
+                        })
+                        .returning({ id: teamchatUsers.id });
+                    teamchatSenderId = created?.id || request.user.userId;
+                }
+            }
+
+            const message = await createMessage({
+                conversationId,
+                senderId: teamchatSenderId,
+                content,
+                type,
+                fileUrl,
+                fileMetadata,
+                cache,
+            });
 
 			// Emit socket event
 			const io = (fastify as FastifyWithSocket).io;
@@ -207,7 +253,7 @@ const messagesRoutes: FastifyPluginAsync = async (fastify) => {
 
 			return reply.send({ message });
 		} catch (error) {
-			request.log.error(error, "Failed to create message");
+			request.log.error({ err: error, conversationId, userId: request.user.userId }, "Failed to create message");
 			return reply.code(500).send({ error: "Slanje poruke nije uspelo." });
 		}
 	});
@@ -221,6 +267,9 @@ const messagesRoutes: FastifyPluginAsync = async (fastify) => {
 			}
 
 			const { id: conversationId } = request.params;
+			if (!isUuid(conversationId)) {
+				return reply.code(400).send({ error: "Nevalidan ID konverzacije." });
+			}
 
 			try {
 				// Verify user is part of conversation
@@ -240,13 +289,19 @@ const messagesRoutes: FastifyPluginAsync = async (fastify) => {
 				const { sql } = await import("drizzle-orm");
 
 				// Mark all messages in conversation as read for current user
+				// Resolve teamchat user id for current user (chat_messages.sender_id stores teamchat_users.id)
+				const teamchatIdResult = await db.execute(sql`
+					SELECT id FROM teamchat_users WHERE email = ${request.user.email} LIMIT 1
+				`);
+				const teamchatUserId = (teamchatIdResult.rows[0] as { id: string } | undefined)?.id || request.user.userId;
+
 				await db.execute(sql`
 					UPDATE chat_messages
 					SET status = 'read',
 						read_at = NOW(),
 						updated_at = NOW()
 					WHERE conversation_id = ${conversationId}
-						AND sender_id != ${request.user.userId}
+						AND sender_id != ${teamchatUserId}
 						AND status != 'read'
 				`);
 
@@ -260,7 +315,7 @@ const messagesRoutes: FastifyPluginAsync = async (fastify) => {
 
 				return reply.send({ success: true });
 			} catch (error) {
-				request.log.error(error, "Failed to mark messages as read");
+				request.log.error({ err: error, conversationId, userId: request.user.userId }, "Failed to mark messages as read");
 				return reply
 					.code(500)
 					.send({ error: "Označavanje poruka kao pročitanih nije uspelo." });

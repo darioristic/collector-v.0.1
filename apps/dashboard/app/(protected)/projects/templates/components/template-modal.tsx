@@ -76,9 +76,9 @@ export function TemplateModal({ template, open, onClose }: TemplateModalProps) {
 			onClose();
 			form.reset();
 			router.push(`/projects/${project.id}`);
-		} catch (error) {
-			// Error handling is done in the hook
-		}
+        } catch {
+            void 0;
+        }
 	};
 
 	return (

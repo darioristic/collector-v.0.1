@@ -34,10 +34,13 @@ async function buildServer() {
 
   // CORS
   await fastify.register(corsPlugin, {
-    origin: process.env.NODE_ENV === "production"
-      ? process.env.ALLOWED_ORIGINS?.split(",") || "*"
-      : "*",
+    origin:
+      process.env.NODE_ENV === "production"
+        ? process.env.ALLOWED_ORIGINS?.split(",") || "*"
+        : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
     credentials: true,
+    methods: ["GET", "POST", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Authorization", "Content-Type", "X-Session-Token"],
   });
 
   // Create HTTP server
@@ -54,9 +57,10 @@ async function buildServer() {
   const io = new SocketIOServer(httpServer, {
     path: "/socket/notifications",
     cors: {
-      origin: process.env.NODE_ENV === "production"
-        ? process.env.ALLOWED_ORIGINS?.split(",") || "*"
-        : "*",
+      origin:
+        process.env.NODE_ENV === "production"
+          ? process.env.ALLOWED_ORIGINS?.split(",") || "*"
+          : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
       methods: ["GET", "POST"],
       credentials: true,
     },

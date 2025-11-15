@@ -9,7 +9,7 @@ config({ path: resolve(__dirname, "../../.env") });
 config({ path: resolve(__dirname, "../../.env.local") });
 
 // Resolve DATABASE_URL
-const databaseUrl = process.env.DATABASE_URL || "postgres://postgres:postgres@localhost:5432/collector_dashboard";
+const databaseUrl = process.env.DATABASE_URL || "postgres://postgres:postgres@localhost:5432/collector";
 
 export default defineConfig({
   dialect: "postgresql",

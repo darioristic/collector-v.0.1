@@ -21,6 +21,8 @@
  */
 
 import { execSync } from "child_process";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { pgClient, db } from "../src/db/index";
 import { runSeeds, type SeedModule } from "../src/db/seed/seed-runner";
 import { seedAuth } from "../src/db/seed/auth";
@@ -235,6 +237,8 @@ async function dropAllTables() {
       END $$;
     `);
 
+    await db.execute(`DROP SCHEMA IF EXISTS drizzle CASCADE;`);
+
     success("All tables and types dropped successfully");
   } catch (err) {
     error(`Failed to drop tables: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -247,8 +251,10 @@ async function runMigrations() {
 
   try {
     // Use migrate.ts to apply migrations
-    execSync("bun src/db/migrate.ts", {
-      cwd: process.cwd() + "/apps/api",
+    const scriptDir = dirname(fileURLToPath(import.meta.url));
+    const appRoot = scriptDir.endsWith("/scripts") ? dirname(scriptDir) : scriptDir;
+    execSync("bun run db:migrate", {
+      cwd: appRoot,
       stdio: "inherit"
     });
 
