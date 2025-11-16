@@ -160,76 +160,72 @@ export function InvoiceDetail({
     };
   }, [open]);
 
-  if (isLoading) {
-    return (
-      <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose?.()}>
-        <SheetContent
-          side="right"
-          className="w-full p-0 md:w-[calc(50vw-20px)] md:max-w-[calc(900px-20px)]">
-          <VisuallyHidden>
-            <SheetTitle>Invoice Details</SheetTitle>
-            <SheetDescription>Pregled računa</SheetDescription>
-          </VisuallyHidden>
-          <div className="space-y-4 p-4">
-            <div className="flex items-center justify-between">
-              <Skeleton className="h-6 w-48" />
-              <div className="flex gap-2">
-                <Skeleton className="h-8 w-8 rounded-full" />
-                <Skeleton className="h-8 w-8 rounded-full" />
-              </div>
+  const loadingView = isLoading ? (
+    <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose?.()}>
+      <SheetContent
+        side="right"
+        className="w-full p-0 md:w-[calc(50vw-20px)] md:max-w-[calc(900px-20px)]">
+        <VisuallyHidden>
+          <SheetTitle>Invoice Details</SheetTitle>
+          <SheetDescription>Pregled računa</SheetDescription>
+        </VisuallyHidden>
+        <div className="space-y-4 p-4">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-6 w-48" />
+            <div className="flex gap-2">
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <Skeleton className="h-8 w-8 rounded-full" />
             </div>
-            <Card>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                  <div className="space-y-3">
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-20 w-full" />
-                  </div>
-                  <div className="space-y-3">
-                    <Skeleton className="h-4 w-28" />
-                    <Skeleton className="h-20 w-full" />
-                  </div>
-                </div>
-                <div className="mt-6 space-y-3">
-                  <Skeleton className="h-4 w-36" />
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-10 w-3/4" />
-                </div>
-                <div className="mt-8 space-y-2">
-                  <Skeleton className="h-5 w-40" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-9 w-full" />
-                    <Skeleton className="h-9 w-full" />
-                    <Skeleton className="h-9 w-full" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
-        </SheetContent>
-      </Sheet>
-    );
-  }
-
-  if (!invoice) {
-    return (
-      <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose?.()}>
-        <SheetContent
-          side="right"
-          className="w-full p-0 md:w-[calc(50vw-20px)] md:max-w-[calc(900px-20px)]">
-          <VisuallyHidden>
-            <SheetTitle>Invoice Details</SheetTitle>
-            <SheetDescription>Pregled računa</SheetDescription>
-          </VisuallyHidden>
           <Card>
-            <CardContent className="flex h-64 items-center justify-center">
-              <p className="text-muted-foreground text-sm">Invoice not found</p>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div className="space-y-3">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-20 w-full" />
+                </div>
+                <div className="space-y-3">
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-20 w-full" />
+                </div>
+              </div>
+              <div className="mt-6 space-y-3">
+                <Skeleton className="h-4 w-36" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-3/4" />
+              </div>
+              <div className="mt-8 space-y-2">
+                <Skeleton className="h-5 w-40" />
+                <div className="space-y-2">
+                  <Skeleton className="h-9 w-full" />
+                  <Skeleton className="h-9 w-full" />
+                  <Skeleton className="h-9 w-full" />
+                </div>
+              </div>
             </CardContent>
           </Card>
-        </SheetContent>
-      </Sheet>
-    );
-  }
+        </div>
+      </SheetContent>
+    </Sheet>
+  ) : null;
+
+  const notFoundView = !invoice ? (
+    <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose?.()}>
+      <SheetContent
+        side="right"
+        className="w-full p-0 md:w-[calc(50vw-20px)] md:max-w-[calc(900px-20px)]">
+        <VisuallyHidden>
+          <SheetTitle>Invoice Details</SheetTitle>
+          <SheetDescription>Pregled računa</SheetDescription>
+        </VisuallyHidden>
+        <Card>
+          <CardContent className="flex h-64 items-center justify-center">
+            <p className="text-muted-foreground text-sm">Invoice not found</p>
+          </CardContent>
+        </Card>
+      </SheetContent>
+    </Sheet>
+  ) : null;
 
   const templateProps = mapInvoiceToTemplateProps;
 
@@ -314,7 +310,7 @@ export function InvoiceDetail({
     if (editLineNames.length === 0 && snapshot.length > 0) {
       setEditLineNames(snapshot);
     }
-  }, [invoice]);
+  }, [invoice, editLineNames.length]);
 
   // Debounced autosave for description changes
   React.useEffect(() => {
@@ -356,7 +352,7 @@ export function InvoiceDetail({
         }
         await updateInvoice({
           id: invoice.id,
-          input: { items: fullItems } as unknown as any
+          input: { items: fullItems } as import("@crm/types").InvoiceUpdateInput
         });
         setLastSavedItems(editLineNames.slice());
         setPendingItems({});
@@ -370,6 +366,8 @@ export function InvoiceDetail({
     }, 700);
     return () => clearTimeout(timer);
   }, [invoice, editLineNames, pendingItems, lastSavedItems, updateInvoice, toast]);
+  if (loadingView) return loadingView;
+  if (notFoundView) return notFoundView;
   return (
     <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose?.()}>
       <SheetContent
@@ -377,7 +375,7 @@ export function InvoiceDetail({
         className="w-full border-l-0 p-0 md:w-[calc(50vw-20px)] md:max-w-[calc(900px-20px)] [&>button]:hidden"
         style={{ top: 15, right: 15, bottom: 15 }}>
         <VisuallyHidden>
-          <SheetTitle>Invoice {invoice.invoiceNumber}</SheetTitle>
+          <SheetTitle>Invoice {invoice?.invoiceNumber ?? ""}</SheetTitle>
           <SheetDescription>Pregled računa</SheetDescription>
         </VisuallyHidden>
 
@@ -401,7 +399,7 @@ export function InvoiceDetail({
                   Save
                 </DropdownMenuItem>
               )}
-              {onDelete && (
+              {invoice && onDelete && (
                 <DropdownMenuItem onClick={() => onDelete(invoice.id)} className="text-destructive">
                   Delete
                 </DropdownMenuItem>
@@ -416,7 +414,7 @@ export function InvoiceDetail({
                         "Content-Type": "application/json"
                       },
                       body: JSON.stringify({
-                        email: invoice.customerEmail ?? undefined
+                        email: invoice?.customerEmail ?? undefined
                       })
                     });
 
@@ -428,7 +426,7 @@ export function InvoiceDetail({
                     await response.json();
                     toast({
                       title: "Invoice sent",
-                      description: `Invoice link has been sent to ${invoice.customerEmail || "customer"}`
+                      description: `Invoice link has been sent to ${invoice?.customerEmail || "customer"}`
                     });
                   } catch (error) {
                     toast({
@@ -440,7 +438,7 @@ export function InvoiceDetail({
                     setIsSending(false);
                   }
                 }}
-                disabled={isSending || !invoice.customerEmail}>
+                disabled={isSending || !invoice?.customerEmail}>
                 <Mail className="mr-2 h-4 w-4" />
                 {isSending ? "Sending..." : "Send Invoice"}
               </DropdownMenuItem>

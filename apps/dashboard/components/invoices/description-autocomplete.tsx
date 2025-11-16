@@ -63,6 +63,8 @@ export function DescriptionAutocompleteInline({
   const [options, setOptions] = React.useState<Product[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [selectedIdx, setSelectedIdx] = React.useState(-1);
+  const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
+  const [menuWidth, setMenuWidth] = React.useState<number | undefined>(undefined);
 
   React.useEffect(() => {
     setQuery(value || "");
@@ -109,9 +111,10 @@ export function DescriptionAutocompleteInline({
     <div className="relative w-full">
       <div className="relative">
         {showIcon ? (
-          <Search className="text-muted-foreground/60 absolute top-2 left-2 h-3.5 w-3.5" />
+          <Search className="text-muted-foreground/60 pointer-events-none absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2" />
         ) : null}
         <textarea
+          ref={textareaRef}
           id={textareaId}
           value={query}
           onChange={(e) => {
@@ -119,23 +122,31 @@ export function DescriptionAutocompleteInline({
             onChange(e.target.value);
             setIsOpen(e.target.value.trim().length > 0);
             setSelectedIdx(-1);
+            if (textareaRef.current) {
+              setMenuWidth(textareaRef.current.offsetWidth);
+            }
           }}
           onKeyDown={(e) => {
-            // When suggestions are closed, allow newline and stop propagation to avoid dialog shortcuts
-            if (!isOpen && e.key === "Enter") {
-              e.stopPropagation();
+            // Default: allow typing/newlines; only intercept when navigating/confirming a selection
+            if (!isOpen) {
+              // Prevent parent shortcuts on Enter but keep newline
+              if (e.key === "Enter") e.stopPropagation();
               return;
             }
-            if (!isOpen) return;
             if (e.key === "ArrowDown") {
               e.preventDefault();
               setSelectedIdx((i) => (i < options.length - 1 ? i + 1 : i));
-            } else if (e.key === "ArrowUp") {
+              return;
+            }
+            if (e.key === "ArrowUp") {
               e.preventDefault();
               setSelectedIdx((i) => (i > 0 ? i - 1 : -1));
-            } else if (e.key === "Enter") {
-              e.preventDefault();
+              return;
+            }
+            if (e.key === "Enter") {
+              // If an item is highlighted, select it; otherwise allow newline in textarea
               if (selectedIdx >= 0 && selectedIdx < options.length) {
+                e.preventDefault();
                 const picked = options[selectedIdx];
                 const text =
                   picked.description && picked.description.trim().length > 0
@@ -144,21 +155,31 @@ export function DescriptionAutocompleteInline({
                 setQuery(text);
                 onChange(text);
                 setIsOpen(false);
+                return;
               }
-            } else if (e.key === "Escape") {
+              // No selection -> treat as newline in textarea, but avoid parent handlers
+              e.stopPropagation();
+              return;
+            }
+            if (e.key === "Escape") {
+              e.preventDefault();
               setIsOpen(false);
               setSelectedIdx(-1);
+              return;
             }
           }}
           onFocus={() => {
             if (query.trim().length > 0) setIsOpen(true);
+            if (textareaRef.current) {
+              setMenuWidth(textareaRef.current.offsetWidth);
+            }
           }}
           onBlur={() => {
             setTimeout(() => setIsOpen(false), 200);
           }}
-          rows={3}
+          rows={2}
           className={cn(
-            "focus:border-muted-foreground/20 max-h-64 w-full resize-none overflow-y-auto rounded-md border border-transparent bg-transparent py-1 pr-2 font-mono text-[11px] leading-4 wrap-break-word whitespace-pre-wrap outline-none focus:ring-0",
+            "focus:border-muted-foreground/20 max-h-64 w-full resize-none overflow-y-auto rounded-md border border-transparent bg-transparent py-0.5 pr-2 font-mono text-[11px] leading-4 wrap-break-word whitespace-pre-wrap outline-none focus:ring-0",
             showIcon ? "pl-7" : "pl-1.5"
           )}
           // Let CSS handle scrolling; avoid JS autosize jitter
@@ -166,7 +187,10 @@ export function DescriptionAutocompleteInline({
         />
       </div>
       {isOpen && (
-        <div className="border-border/80 bg-popover absolute left-0 z-50 mt-1.5 w-[42vw] max-w-[600px] rounded-lg border shadow-2xl backdrop-blur-md">
+        <div
+          className="border-border/80 bg-popover pointer-events-auto absolute left-0 z-50 mt-1.5 max-w-[640px] rounded-lg border shadow-xl transition-all duration-150 ease-out data-[state=closed]:-translate-y-1 data-[state=closed]:opacity-0 data-[state=open]:translate-y-0 data-[state=open]:opacity-100"
+          style={{ width: menuWidth ? `${menuWidth}px` : undefined }}
+          data-state={isOpen ? "open" : "closed"}>
           {loading ? (
             <div className="text-muted-foreground px-4 py-3 text-xs">Searching…</div>
           ) : options.length > 0 ? (
