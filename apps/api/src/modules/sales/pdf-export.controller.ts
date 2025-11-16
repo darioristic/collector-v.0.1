@@ -7,19 +7,17 @@ import type { InvoicePDFProps } from "../../lib/invoice-pdf/types";
 
 type ExportInvoicePDFParams = FastifyRequest<{
 	Params: { id: string };
-}>;
+}>; 
 
 type ExportQuotePDFParams = FastifyRequest<{
 	Params: { id: string };
 }>;
 
 // Helper function to create editor content from text
-function createEditorContent(text: string | null | undefined): JSON | undefined {
+import type { EditorDoc } from "../../lib/invoice-pdf/types";
+function createEditorContent(text: string | null | undefined): EditorDoc | undefined {
 	if (!text) {
-		return {
-			type: "doc",
-			content: [],
-		} as JSON;
+		return { type: "doc", content: [] };
 	}
 	return {
 		type: "doc",
@@ -27,14 +25,11 @@ function createEditorContent(text: string | null | undefined): JSON | undefined 
 			{
 				type: "paragraph",
 				content: [
-					{
-						type: "text",
-						text: text,
-					},
+					{ type: "text", text: text },
 				],
 			},
 		],
-	} as JSON;
+	};
 }
 
 export const exportInvoicePDFHandler = async (
@@ -88,7 +83,7 @@ export const exportInvoicePDFHandler = async (
 	// Handle notes - can be JSON (Tiptap format) or string (backward compatibility)
 	const noteDetails = invoice.notes
 		? (typeof invoice.notes === "object"
-			? (invoice.notes as JSON)
+			? (invoice.notes as unknown as EditorDoc)
 			: createEditorContent(String(invoice.notes)))
 		: undefined;
 
@@ -201,4 +196,3 @@ export const exportQuotePDFHandler = async (
 		throw error;
 	}
 };
-

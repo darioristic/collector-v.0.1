@@ -29,6 +29,8 @@ const createProject = (
 	tasks: [],
 	timeline: [],
 	team: [],
+	teams: [],
+	timeEntries: [],
 	quickStats: {
 		totalTasks: 10,
 		completedTasks: 6,

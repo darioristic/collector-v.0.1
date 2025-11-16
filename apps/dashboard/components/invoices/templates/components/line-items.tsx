@@ -9,6 +9,9 @@ type Props = {
   priceLabel: string;
   totalLabel: string;
   includeVAT?: boolean;
+  editable?: boolean;
+  onChangeDescription?: (index: number, description: string) => void;
+  onAddLineItem?: () => void;
 };
 
 export function LineItems({
@@ -19,6 +22,9 @@ export function LineItems({
   priceLabel,
   totalLabel,
   includeVAT = false,
+  editable = false,
+  onChangeDescription,
+  onAddLineItem,
 }: Props) {
   // Use a more flexible grid that shows all columns
   const gridCols = includeVAT
@@ -55,7 +61,23 @@ export function LineItems({
             key={`line-item-${index.toString()}`}
             className={`grid ${gridCols} gap-2 items-end relative group mb-1 w-full py-1`}
           >
-            <div className="text-[11px]">{item.name}</div>
+            <div className="text-[11px]">
+              {editable ? (
+                <textarea
+                  className="w-full bg-transparent font-mono text-[11px] leading-4 outline-none focus:ring-0 resize-none whitespace-pre-wrap"
+                  value={item.name}
+                  rows={1}
+                  onInput={(e) => {
+                    const t = e.currentTarget;
+                    t.style.height = "auto";
+                    t.style.height = `${t.scrollHeight}px`;
+                  }}
+                  onChange={(e) => onChangeDescription?.(index, e.target.value)}
+                />
+              ) : (
+                <span className="whitespace-pre-wrap break-words">{item.name}</span>
+              )}
+            </div>
             <div className="text-[11px] text-right">{item.quantity}</div>
             <div className="text-[11px] text-right">{item.unit || "—"}</div>
             <div className="text-[11px] text-right">
@@ -77,6 +99,17 @@ export function LineItems({
           </div>
         );
       })}
+      {editable && (
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={onAddLineItem}
+            className="text-[11px] font-mono text-primary underline underline-offset-2 hover:opacity-80"
+          >
+            + Add item
+          </button>
+        </div>
+      )}
     </div>
   );
 }

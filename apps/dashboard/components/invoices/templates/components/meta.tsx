@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import Image from "next/image";
 import type { TemplateConfig } from "../types";
 
 type Props = {
@@ -8,9 +9,9 @@ type Props = {
   dueDate?: string | null;
 };
 
-export function Meta({ template: _template, invoiceNumber, issueDate, dueDate }: Props) {
+export function Meta({ template, invoiceNumber, issueDate, dueDate }: Props) {
   return (
-    <div className="flex items-start justify-between">
+    <div className="flex items-start justify-between gap-4">
       <div className="text-sm font-mono">
         <div className="mb-2 text-[1.2em]">
           <span className="text-muted-foreground">Invoice NO: </span>
@@ -31,6 +32,17 @@ export function Meta({ template: _template, invoiceNumber, issueDate, dueDate }:
           </div>
         )}
       </div>
+      {template.logo_url && (
+        <div className="flex-shrink-0">
+          <Image
+            src={template.logo_url}
+            alt="Company Logo"
+            width={120}
+            height={48}
+            className="h-12 w-auto max-w-[120px] object-contain"
+          />
+        </div>
+      )}
     </div>
   );
 }

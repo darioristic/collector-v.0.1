@@ -31,7 +31,7 @@ export const teamMemberApiSchema = z.object({
 	role: z.string(),
 	status: teamMemberStatusSchema,
 	avatarUrl: z.string().nullable().optional(),
-	userId: z.string().nullable(),
+	userId: z.string().nullable().optional(),
 	createdAt: z.string().datetime(),
 	updatedAt: z.string().datetime(),
 });

@@ -37,7 +37,7 @@ const mockCompanies: Account[] = [
 	{
 		id: "1",
 		name: "Acme Corporation",
-		type: "company",
+		type: "customer",
 		email: "contact@acme.com",
 		phone: "+1234567890",
 		website: null,
@@ -59,7 +59,7 @@ const mockCompanies: Account[] = [
 	{
 		id: "2",
 		name: "Beta Industries",
-		type: "company",
+		type: "customer",
 		email: "info@beta.com",
 		phone: null,
 		website: "https://beta.com",
@@ -235,12 +235,7 @@ describe("CompanyAutocomplete E2E Tests", () => {
 			await userEvent.click(companyItem);
 		}
 
-		rerender(
-			<CompanyAutocomplete value="1" onChange={onChange} />,
-			{
-				wrapper: createWrapper(),
-			}
-		);
+		rerender(<CompanyAutocomplete value="1" onChange={onChange} />);
 
 		await waitFor(() => {
 			expect(screen.getByText("Acme Corporation")).toBeInTheDocument();
@@ -311,4 +306,3 @@ describe("CompanyAutocomplete E2E Tests", () => {
 		});
 	});
 });
-

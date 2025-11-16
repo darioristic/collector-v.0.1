@@ -154,6 +154,13 @@ export function useChatSocket() {
 			},
 		);
 
+		const resyncInterval = setInterval(() => {
+			const s = socketRef.current;
+			if (s && s.connected && user?.id) {
+				s.emit("users:online:request", { userId: user.id });
+			}
+		}, 60000);
+
 		// Message events - notify all registered callbacks
 		newSocket.on(
 			"chat:message:new",
@@ -211,8 +218,8 @@ export function useChatSocket() {
 
 		setSocket(newSocket);
 
-		// Cleanup
 		return () => {
+			clearInterval(resyncInterval);
 			if (newSocket) {
 				newSocket.disconnect();
 				socketRef.current = null;

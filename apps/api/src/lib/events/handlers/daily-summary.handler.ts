@@ -11,7 +11,8 @@ import { setupInvoiceHandler } from "./invoice.handler.js";
  * Handle daily summary event
  */
 export function setupDailySummaryHandler(): void {
-  eventEmitter.on("daily.summary", async (event: DailySummaryEvent) => {
+  eventEmitter.on("daily.summary", async (...args: unknown[]) => {
+    const [event] = args as [DailySummaryEvent];
     try {
       const summary = event.summary;
       const summaryItems: string[] = [];
@@ -86,4 +87,3 @@ export function setupAllEventHandlers(): void {
 
   console.log("✅ All event handlers registered");
 }
-

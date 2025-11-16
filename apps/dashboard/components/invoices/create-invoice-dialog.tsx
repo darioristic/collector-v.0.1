@@ -64,7 +64,7 @@ const invoiceItemSchema = z.object({
 const invoiceFormSchema = z.object({
   invoiceNumber: z.string().min(1, "Invoice number is required"),
   customerId: z.string().min(1, "Customer is required"),
-  customerName: z.string().min(1, "Customer name is required"),
+  customerName: z.string().optional(),
   customerEmail: z.string().email().optional().or(z.literal("")),
   billingAddress: z.string().optional(),
   issuedAt: z.string().min(1, "Issue date is required"),
@@ -554,7 +554,7 @@ function DescriptionAutocomplete({
                   handleSelect(trimmedQuery);
                   setIsOpen(false);
                 }}
-                className="border-primary/40 from-primary/5 to-primary/10 hover:border-primary/60 hover:from-primary/10 hover:to-primary/15 focus:ring-primary/30 active:from-primary/15 active:to-primary/20 w-full rounded-lg border-2 border-dashed bg-gradient-to-r p-4 text-left transition-all duration-200 hover:shadow-md focus:ring-2 focus:outline-none">
+                className="border-primary/40 from-primary/5 to-primary/10 hover:border-primary/60 hover:from-primary/10 hover:to-primary/15 focus:ring-primary/30 active:from-primary/15 active:to-primary/20 w-full rounded-lg border-2 border-dashed bg-linear-to-r p-4 text-left transition-all duration-200 hover:shadow-md focus:ring-2 focus:outline-none">
                 <div className="flex items-start gap-3">
                   <div className="bg-primary/20 ring-primary/30 mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-lg ring-2">
                     <Plus className="text-primary h-5 w-5" />
@@ -1079,7 +1079,8 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSuccess }: CreateInv
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent
           side="right"
-          className="w-full overflow-y-auto p-0 md:w-[calc(50vw)] md:max-w-[900px] [&>button]:hidden">
+          className="w-full overflow-y-auto p-0 md:w-[calc(50vw)] md:max-w-[900px] [&>button]:hidden"
+          style={{ top: 15, right: 15, bottom: 15 }}>
           <VisuallyHidden>
             <SheetTitle>Create New Invoice</SheetTitle>
             <SheetDescription>Fill in the details below to create a new invoice.</SheetDescription>
@@ -1099,12 +1100,14 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSuccess }: CreateInv
                     (errors) => {
                       const collect = (obj: unknown): string[] => {
                         const out: string[] = [];
-                        const walk = (o: any) => {
+                        const walk = (o: unknown) => {
                           if (!o || typeof o !== "object") return;
-                          for (const k of Object.keys(o)) {
-                            const v = o[k];
+                          const objRecord = o as Record<string, unknown>;
+                          for (const k of Object.keys(objRecord)) {
+                            const v = objRecord[k] as unknown;
                             if (!v) continue;
-                            if (typeof v.message === "string") out.push(v.message);
+                            const maybeMessage = (v as { message?: unknown }).message;
+                            if (typeof maybeMessage === "string") out.push(maybeMessage);
                             else if (Array.isArray(v)) v.forEach((item) => walk(item));
                             else if (typeof v === "object") walk(v);
                           }
@@ -1831,16 +1834,18 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSuccess }: CreateInv
                   (errors) => {
                     const collect = (obj: unknown): string[] => {
                       const out: string[] = [];
-                      const walk = (o: any) => {
-                        if (!o || typeof o !== "object") return;
-                        for (const k of Object.keys(o)) {
-                          const v = o[k];
-                          if (!v) continue;
-                          if (typeof v.message === "string") out.push(v.message);
-                          else if (Array.isArray(v)) v.forEach((item) => walk(item));
-                          else if (typeof v === "object") walk(v);
-                        }
-                      };
+                        const walk = (o: unknown) => {
+                          if (!o || typeof o !== "object") return;
+                          const objRecord = o as Record<string, unknown>;
+                          for (const k of Object.keys(objRecord)) {
+                            const v = objRecord[k] as unknown;
+                            if (!v) continue;
+                            const maybeMessage = (v as { message?: unknown }).message;
+                            if (typeof maybeMessage === "string") out.push(maybeMessage);
+                            else if (Array.isArray(v)) v.forEach((item) => walk(item));
+                            else if (typeof v === "object") walk(v);
+                          }
+                        };
                       walk(obj);
                       return out;
                     };

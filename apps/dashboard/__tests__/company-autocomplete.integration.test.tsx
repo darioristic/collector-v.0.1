@@ -30,7 +30,7 @@ describe("CompanyAutocomplete Integration Tests", () => {
 			const testAccount: Account = {
 				id: "",
 				name: `Test Company ${Date.now()}`,
-				type: "company",
+				type: "customer",
 				email: `test-${Date.now()}@example.com`,
 				phone: null,
 				website: null,
@@ -118,14 +118,14 @@ describe("CompanyAutocomplete Integration Tests", () => {
 
 	it("should handle API errors gracefully", async () => {
 		const originalFetch = global.fetch;
-		global.fetch = vi.fn(() =>
+		global.fetch = (vi.fn(() =>
 			Promise.resolve({
 				ok: false,
 				status: 500,
 				statusText: "Internal Server Error",
 				json: async () => ({ error: "Internal Server Error" }),
 			})
-		) as typeof fetch;
+		) as unknown) as typeof fetch;
 
 		const onChange = vi.fn();
 		render(<CompanyAutocomplete value={undefined} onChange={onChange} />, {
@@ -178,4 +178,3 @@ describe("CompanyAutocomplete Integration Tests", () => {
 		fetchSpy.mockRestore();
 	});
 });
-

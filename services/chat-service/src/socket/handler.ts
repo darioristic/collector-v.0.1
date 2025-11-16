@@ -228,6 +228,32 @@ export function setupSocketHandlers(
 			},
 		);
 
+		// Presence sync: respond with current statuses for all company users
+		socket.on(
+			"users:online:request",
+			async (_payload: { userId?: string }) => {
+				try {
+					const companyUsers = await db.execute(sql`
+						SELECT id as "userId", status
+						FROM teamchat_users
+						WHERE company_id = ${user.companyId}
+					`);
+
+					const users = (companyUsers.rows as Array<{ userId: string; status: string }>).map(
+						(row) => ({ userId: row.userId, status: (row.status as "online" | "offline" | "away") || "offline" }),
+					);
+
+					// Emit only to the requesting socket
+					socket.emit("users:online", { users });
+					console.log(
+						`[chat-service] Sent users:online list (${users.length}) to user ${user.userId}`,
+					);
+				} catch (error) {
+					console.error("[chat-service] Error responding to users:online:request", error);
+				}
+			},
+		);
+
 		// Handle leaving rooms
 		socket.on(
 			"leave",

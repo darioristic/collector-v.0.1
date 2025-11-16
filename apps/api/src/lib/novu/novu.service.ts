@@ -135,15 +135,15 @@ export class NovuService {
     const novu = getNovuClient();
 
     try {
-      await novu.trigger(workflowId, {
+      await novu.trigger(workflowId, ({
         to: {
           subscriberId,
         },
-        payload: novuPayload,
+        payload: novuPayload as any,
         actor: {
           subscriberId,
         },
-      });
+      } as any));
     } catch (error) {
       console.error("Failed to send notification via Novu:", error);
       throw error;
@@ -230,4 +230,3 @@ export class NovuService {
 }
 
 export const novuService = new NovuService();
-

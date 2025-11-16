@@ -8,7 +8,8 @@ import type { MultiChannelNotificationPayload } from "../../novu/novu.types.js";
  * Handle invoice sent event
  */
 export function setupInvoiceHandler(): void {
-  eventEmitter.on("invoice.sent", async (event: InvoiceSentEvent) => {
+  eventEmitter.on("invoice.sent", async (...args: unknown[]) => {
+    const [event] = args as [InvoiceSentEvent];
     try {
       const recipients = Array.isArray(event.recipientEmail)
         ? event.recipientEmail
@@ -68,4 +69,3 @@ export function setupInvoiceHandler(): void {
 
   console.log("✅ Invoice event handler registered");
 }
-

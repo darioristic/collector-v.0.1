@@ -8,7 +8,8 @@ import type { MultiChannelNotificationPayload } from "../../novu/novu.types.js";
  * Handle payment received event
  */
 export function setupPaymentHandler(): void {
-  eventEmitter.on("payment.received", async (event: PaymentReceivedEvent) => {
+  eventEmitter.on("payment.received", async (...args: unknown[]) => {
+    const [event] = args as [PaymentReceivedEvent];
     try {
       const payload: MultiChannelNotificationPayload = {
         userId: event.userId,
@@ -65,4 +66,3 @@ export function setupPaymentHandler(): void {
 
   console.log("✅ Payment event handler registered");
 }
-

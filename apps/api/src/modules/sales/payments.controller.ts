@@ -1,12 +1,12 @@
-import type { FastifyReply, FastifyRequest } from "fastify";
-import { eq } from "drizzle-orm";
-import { PaymentsService } from "./payments.service.js";
-import type { PaymentCreateBody, PaymentIdParams } from "./payments.schema.js";
 import { PAYMENT_STATUSES, type PaymentStatus } from "@crm/types";
-import { eventEmitter } from "../../lib/events/event-emitter.js";
+import { eq } from "drizzle-orm";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import { invoices } from "../../db/schema/sales.schema.js";
+import { eventEmitter } from "../../lib/events/event-emitter.js";
 import type { PaymentReceivedEvent } from "../../lib/events/notification-events.js";
-import type { AuthenticatedRequest } from "../../types/auth.js";
+import type { AuthenticatedUser } from "../../types/auth.js";
+import type { PaymentCreateBody, PaymentIdParams } from "./payments.schema.js";
+import { PaymentsService } from "./payments.service.js";
 
 type ListRequest = FastifyRequest<{
 	Querystring: {
@@ -17,8 +17,9 @@ type ListRequest = FastifyRequest<{
 	};
 }>;
 type GetRequest = FastifyRequest<{ Params: PaymentIdParams }>;
-type CreateRequest = FastifyRequest<{ Body: PaymentCreateBody }> &
-	AuthenticatedRequest;
+type CreateRequest = FastifyRequest<{ Body: PaymentCreateBody }> & {
+	user?: AuthenticatedUser;
+};
 type DeleteRequest = FastifyRequest<{ Params: PaymentIdParams }>;
 
 export const listPaymentsHandler = async (

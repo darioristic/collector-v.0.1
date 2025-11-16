@@ -6,7 +6,8 @@ import { INVOICE_STATUSES, type InvoiceCreateInput, type InvoiceUpdateInput, typ
 import { invoiceLinks } from "../../db/schema/sales.schema.js";
 import { eventEmitter } from "../../lib/events/event-emitter.js";
 import type { InvoiceSentEvent } from "../../lib/events/notification-events.js";
-import type { AuthenticatedRequest } from "../../types/auth.js";
+import type { AuthenticatedUser } from "../../types/auth.js";
+import type { EditorDoc } from "../../lib/invoice-pdf/types";
 
 type ListRequest = FastifyRequest<{
   Querystring: {
@@ -42,7 +43,7 @@ type SendInvoiceRequest = (FastifyRequest<{
     email?: string | string[];
     expiresInDays?: number;
   };
-}> & AuthenticatedRequest);
+}> & { user?: AuthenticatedUser });
 
 export const listInvoicesHandler = async (request: ListRequest, reply: FastifyReply) => {
   const service = new InvoicesService(request.db, request.cache);
@@ -200,12 +201,9 @@ export const getInvoiceByTokenHandler = async (
       discountRate: item.discountRate ? Number(item.discountRate) : undefined,
     }));
 
-    function createEditorContent(text: string | null | undefined): JSON | undefined {
+    function createEditorContent(text: string | null | undefined): EditorDoc | undefined {
       if (!text) {
-        return {
-          type: "doc",
-          content: [],
-        } as JSON;
+        return { type: "doc", content: [] };
       }
       return {
         type: "doc",
@@ -213,14 +211,11 @@ export const getInvoiceByTokenHandler = async (
           {
             type: "paragraph",
             content: [
-              {
-                type: "text",
-                text: text,
-              },
+              { type: "text", text: text },
             ],
           },
         ],
-      } as JSON;
+      };
     }
 
     const fromDetails = createEditorContent(
@@ -235,7 +230,7 @@ export const getInvoiceByTokenHandler = async (
 
     const noteDetails = invoice.notes
       ? (typeof invoice.notes === "object"
-        ? (invoice.notes as JSON)
+        ? (invoice.notes as unknown as EditorDoc)
         : createEditorContent(String(invoice.notes)))
       : undefined;
 
@@ -359,7 +354,7 @@ export const sendInvoiceHandler = async (request: SendInvoiceRequest, reply: Fas
 
     // Get user and company ID from request (from headers or authenticated user)
     const userId = request.user?.id || (request.headers["x-user-id"] as string | undefined) || "system";
-    const companyId = request.user?.companyId || (request.headers["x-company-id"] as string | undefined) || invoice.companyId || "";
+    const companyId = request.user?.companyId || (request.headers["x-company-id"] as string | undefined) || "";
 
     // Emit invoice sent event (notification will be handled by event handler)
     const invoiceSentEvent: InvoiceSentEvent = {
@@ -370,7 +365,7 @@ export const sendInvoiceHandler = async (request: SendInvoiceRequest, reply: Fas
       recipientEmail: recipientEmails,
       invoiceLink,
       customerName: invoice.customerName || undefined,
-      amount: invoice.totalAmount ? Number(invoice.totalAmount) : undefined,
+      amount: typeof invoice.total === "number" ? Number(invoice.total) : undefined,
       currency: invoice.currency || undefined,
       timestamp: new Date(),
       metadata: {

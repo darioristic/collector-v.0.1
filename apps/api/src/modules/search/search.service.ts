@@ -186,7 +186,7 @@ export class SearchService {
 					type: "invoice",
 					id: invoice.id,
 					title: `Invoice ${invoice.invoiceNumber}`,
-					description: invoice.notes ?? undefined,
+          description: typeof invoice.notes === "string" ? invoice.notes : undefined,
 					metadata: {
 						status: invoice.status
 					}
@@ -335,4 +335,3 @@ export class SearchService {
 		return Array.from(suggestions).slice(0, limit);
 	}
 }
-

@@ -95,7 +95,7 @@ export type ProjectBudgetSummary = {
 	total: number;
 	spent: number;
 	remaining: number;
-	totalHours: number;
+	totalHours?: number;
 	categories: ProjectBudgetCategory[];
 };
 

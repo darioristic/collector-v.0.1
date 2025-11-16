@@ -13,14 +13,13 @@ import { InvoiceTemplate } from "./template";
  * @returns Readable stream of PDF data
  */
 export async function renderInvoiceToStream(
-	props: InvoicePDFProps
+    props: InvoicePDFProps
 ): Promise<ReadableStream<Uint8Array>> {
-	const document = <InvoiceTemplate {...props} />;
-	return await renderToStream(document);
+    const document = <InvoiceTemplate {...props} />;
+    return (await renderToStream(document)) as unknown as ReadableStream<Uint8Array>;
 }
 
 /**
  * Export InvoiceTemplate component for use in API endpoints
  */
 export { InvoiceTemplate } from "./template";
-

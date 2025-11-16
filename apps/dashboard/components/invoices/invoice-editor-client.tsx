@@ -45,6 +45,11 @@ export function InvoiceEditorClient({ invoiceId }: InvoiceEditorClientProps) {
 		);
 	}
 
-	return <InvoiceEditor invoice={invoice} onSave={() => router.push("/invoices")} />;
+  return (
+    <InvoiceEditor
+      invoice={invoice}
+      onCancel={() => router.push("/invoices")}
+      onSaved={() => router.push("/invoices")}
+    />
+  );
 }
-

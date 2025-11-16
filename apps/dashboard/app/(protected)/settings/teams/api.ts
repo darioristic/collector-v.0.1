@@ -27,67 +27,66 @@ const buildQueryString = (params: ListTeamMembersQuery): string => {
 };
 
 const handleResponse = async <T>(response: Response): Promise<T> => {
-    if (!response.ok) {
-        let message = "Došlo je do greške.";
-        try {
-            const contentType = (response as any).headers?.get?.("content-type");
-            if (contentType?.includes("application/json")) {
-                const body = (await (response as any).json?.()) as { error?: string };
-                if (body?.error) {
-                    message = body.error;
-                }
-            } else {
-                // Prefer JSON even if content-type is missing (common in tests)
-                try {
-                    const body = (await (response as any).json?.()) as { error?: string };
-                    if (body?.error) {
-                        message = body.error;
-                    } else if (body) {
-                        message = JSON.stringify(body);
-                    }
-                } catch {
-                    const text = await (response as any).text?.();
-                    if (text) {
-                        message = String(text);
-                    }
-                }
-            }
-        } catch (error) {
-            console.error("Failed to parse error response:", error);
-        }
-        const error = new Error(message);
-        (error as Error & { status?: number }).status = response.status;
-        throw error;
-    }
+	if (!response.ok) {
+		let message = "Došlo je do greške.";
+		try {
+			const contentType = response.headers.get("content-type");
+			if (contentType?.includes("application/json")) {
+				const body = (await response.json()) as { error?: string };
+				if (body?.error) {
+					message = body.error;
+				}
+			} else {
+				try {
+					const body = (await response.json()) as { error?: string };
+					if (body?.error) {
+						message = body.error;
+					} else if (body) {
+						message = JSON.stringify(body);
+					}
+				} catch {
+					const text = await response.text();
+					if (text) {
+						message = String(text);
+					}
+				}
+			}
+		} catch (error) {
+			console.error("Failed to parse error response:", error);
+		}
+		const err = new Error(message);
+		(err as Error & { status?: number }).status = response.status;
+		throw err;
+	}
 
-    // Success path: prefer JSON without relying on headers
-    try {
-        return (await (response as any).json?.()) as T;
-    } catch {
-        const text = await (response as any).text?.();
-        if (!text) {
-            throw new Error("Očekivani JSON odgovor nije primljen.");
-        }
-        try {
-            return JSON.parse(String(text)) as T;
-        } catch {
-            throw new Error("Očekivani JSON odgovor nije primljen.");
-        }
-    }
+	try {
+		return (await response.json()) as T;
+	} catch {
+		const text = await response.text();
+		if (!text) {
+			throw new Error("Očekivani JSON odgovor nije primljen.");
+		}
+		try {
+			return JSON.parse(String(text)) as T;
+		} catch {
+			throw new Error("Očekivani JSON odgovor nije primljen.");
+		}
+	}
 };
 
 export type TeamMember = Omit<TeamMemberApi, "createdAt" | "updatedAt"> & {
 	createdAt: Date;
 	updatedAt: Date;
 	fullName: string;
-	userId: string | null;
+	userId: string | null | undefined;
 };
 
 const mapTeamMember = (member: TeamMemberApi): TeamMember => ({
 	...member,
 	createdAt: new Date(member.createdAt),
 	updatedAt: new Date(member.updatedAt),
-	fullName: `${member.firstName} ${member.lastName}`.trim(),
+	fullName: `${member.firstName ?? ""} ${member.lastName ?? ""}`.trim(),
+	userId: member.userId ?? null,
 });
 
 export const fetchTeamMembers = async (
@@ -120,17 +119,16 @@ export const fetchTeamMembers = async (
 			);
 		}
 
-		// Success shortcut for test mocks: prefer JSON if available
 		if (response.ok) {
 			try {
-				const payload = (await (response as any).json?.()) as
+				const payload = (await response.json()) as
 					| { data: TeamMemberApi[] }
 					| undefined;
 				if (payload && Array.isArray(payload.data)) {
 					return payload.data.map(mapTeamMember);
 				}
-			} catch {
-				// Fall through to the existing response text parsing logic
+			} catch (_err) {
+				void _err;
 			}
 		}
 

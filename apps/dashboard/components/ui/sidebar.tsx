@@ -155,13 +155,12 @@ function SidebarProvider({
     [state, open, setOpen, isMobile, openMobile, toggleSidebar, frozenDefaultOpen, isMounted]
   );
 
-  // Extract data-slot and className from props to prevent override
+  // Extract className and style from props to allow merging
   const {
-    "data-slot": _,
     className: propsClassName,
     style: propsStyle,
     ...restProps
-  } = props as any;
+  } = props as React.ComponentProps<"div">;
 
   return (
     <SidebarContext.Provider value={contextValue}>
@@ -202,16 +201,22 @@ function Sidebar({
   variant?: "sidebar" | "floating" | "inset";
   collapsible?: "offcanvas" | "icon" | "none";
 }) {
-  const { isMobile, defaultOpen, openMobile, setOpenMobile, isMounted } = useSidebar();
+  const { isMobile, defaultOpen, openMobile, setOpenMobile } = useSidebar();
 
   // Freeze defaultOpen value on first render to prevent hydration mismatch
+  // Use the actual value from context but freeze it immediately to prevent any changes during hydration
   // This ensures server and client always render the same value
-  const [frozenDefaultOpen] = React.useState<boolean>(() => defaultOpen);
+  const [frozenDefaultOpen] = React.useState<boolean>(() => {
+    // On server, always use the value from context
+    // On client first render, use the same value to match server
+    return defaultOpen ?? true;
+  });
 
   // Freeze displayState to frozenDefaultOpen value to prevent hydration mismatch
   // This ensures server and client always render the same value
   // The actual sidebar open/close behavior is controlled by CSS and the open state
   // Use useState with function initializer to freeze the value on first render
+  // This value should NEVER change during hydration to prevent mismatch
   const [displayState] = React.useState<"expanded" | "collapsed">(() => {
     return frozenDefaultOpen ? "expanded" : "collapsed";
   });
@@ -279,7 +284,7 @@ function Sidebar({
       data-variant={variant}
       data-side={side}
       data-slot="sidebar"
-      suppressHydrationWarning>
+      suppressHydrationWarning={true}>
       {/* This is what handles the sidebar gap on desktop */}
       <div
         data-slot="sidebar-gap"

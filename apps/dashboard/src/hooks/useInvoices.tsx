@@ -23,7 +23,7 @@ type UseInvoicesOptions = {
 };
 
 export function useInvoices(options: UseInvoicesOptions = {}) {
-  const { toast } = useToast();
+  const _unusedToast = useToast();
   return useQuery<Awaited<ReturnType<typeof fetchInvoices>>>({
     queryKey: invoiceKeys.list(options),
     queryFn: () => fetchInvoices(options)
@@ -31,7 +31,7 @@ export function useInvoices(options: UseInvoicesOptions = {}) {
 }
 
 export function useInvoicesByCustomer(customerId: string) {
-  const { toast } = useToast();
+  const _unusedToast = useToast();
   return useQuery({
     queryKey: invoiceKeys.byCustomer(customerId),
     queryFn: () => fetchInvoices({ customerId }),
@@ -40,7 +40,7 @@ export function useInvoicesByCustomer(customerId: string) {
 }
 
 export function useInvoicesByOrder(orderId: number) {
-  const { toast } = useToast();
+  const _unusedToast = useToast();
   return useQuery({
     queryKey: invoiceKeys.byOrder(orderId),
     queryFn: () => fetchInvoices({ orderId }),
@@ -49,7 +49,7 @@ export function useInvoicesByOrder(orderId: number) {
 }
 
 export function useInvoice(id: string, options: { enabled?: boolean } = {}) {
-  const { toast } = useToast();
+  const _unusedToast = useToast();
   return useQuery<Awaited<ReturnType<typeof fetchInvoice>>>({
     queryKey: invoiceKeys.detail(id),
     queryFn: () => fetchInvoice(id),
@@ -66,7 +66,9 @@ export function useCreateInvoice() {
 
   return useMutation({
     mutationFn: async (input: InvoiceCreateInput) => createInvoice(input),
-    onSuccess: async () => {
+    onSuccess: async (invoice) => {
+      // Seed detail cache immediately for instant render on navigation
+      queryClient.setQueryData(invoiceKeys.detail(invoice.id), invoice);
       await queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() });
       toast({
         title: "Invoice created",

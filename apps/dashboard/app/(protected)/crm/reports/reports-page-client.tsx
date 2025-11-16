@@ -240,10 +240,10 @@ export default function CRMReportsPage() {
 								</div>
 							</div>
 							<div
-								className={cn(
-									"h-2 w-full rounded-full bg-gradient-to-r",
-									metric.sparklineClass,
-								)}
+                            className={cn(
+                                "h-2 w-full rounded-full bg-linear-to-r",
+                                metric.sparklineClass,
+                            )}
 							/>
 						</CardContent>
 					</Card>

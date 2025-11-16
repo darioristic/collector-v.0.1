@@ -1,6 +1,7 @@
 "use client";
 
 import { NovuProvider as NovuProviderBase } from "@novu/react";
+import React from "react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { getNovuSubscriberId, getNovuAppId, isNovuConfigured } from "./novu-client";
 
@@ -16,12 +17,14 @@ interface NovuProviderProps {
  */
 export function NovuProvider({ children }: NovuProviderProps) {
   const { user } = useAuth();
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
   const appId = getNovuAppId();
   const subscriberId = getNovuSubscriberId(user?.id);
-
-  // Only render Novu provider if configured and user is authenticated
-  if (!isNovuConfigured() || !appId || !subscriberId) {
-    // Return children without Novu provider if not configured
+  const enabled = mounted && isNovuConfigured() && !!appId && !!subscriberId;
+  if (!enabled) {
     return <>{children}</>;
   }
 

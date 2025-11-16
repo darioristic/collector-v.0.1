@@ -1,9 +1,9 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { Bell } from "@novu/react";
 import { useAuth } from "@/components/providers/auth-provider";
-import { getNovuSubscriberId, isNovuConfigured, getNovuAppId } from "@/lib/novu/novu-client";
+import { getNovuAppId, getNovuSubscriberId, isNovuConfigured } from "@/lib/novu/novu-client";
+import { Bell } from "@novu/react";
+import dynamic from "next/dynamic";
 
 const NovuInbox = dynamic(() => import("@novu/react").then((m) => m.Inbox), {
   ssr: false,

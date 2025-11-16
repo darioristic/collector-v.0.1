@@ -16,7 +16,7 @@ export async function renderInvoiceToStream(
   props: InvoicePDFProps
 ): Promise<ReadableStream<Uint8Array>> {
   const document = <InvoiceTemplate {...props} />;
-  return await renderToStream(document);
+  return (await renderToStream(document)) as unknown as ReadableStream<Uint8Array>;
 }
 
 /**

@@ -7,10 +7,10 @@ export interface InvoicePDFProps {
 	due_date?: string | null;
 	template: TemplateConfig;
 	line_items: LineItem[];
-	customer_details?: JSON;
-	from_details?: JSON;
-	payment_details?: JSON;
-	note_details?: JSON;
+	customer_details?: EditorDoc;
+	from_details?: EditorDoc;
+	payment_details?: EditorDoc;
+	note_details?: EditorDoc;
 	currency: string;
 	customer_name: string;
 	width?: string | number;
@@ -70,4 +70,3 @@ export interface EditorMark {
 	type: string;
 	attrs?: Record<string, unknown>;
 }
-

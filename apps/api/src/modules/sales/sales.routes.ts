@@ -154,7 +154,11 @@ const salesRoutes: FastifyPluginAsync = async (app) => {
   // Payment routes
   app.get("/payments", { schema: listPaymentsSchema }, listPaymentsHandler);
   app.get("/payments/:id", { schema: getPaymentSchema }, getPaymentHandler);
-  app.post("/payments", { schema: createPaymentSchema }, createPaymentHandler);
+  app.post<{ Body: import("./payments.schema").PaymentCreateBody }>(
+    "/payments",
+    { schema: createPaymentSchema },
+    createPaymentHandler
+  );
   app.delete("/payments/:id", { schema: deletePaymentSchema }, deletePaymentHandler);
 
   // Deal routes
@@ -172,5 +176,3 @@ const salesRoutes: FastifyPluginAsync = async (app) => {
 };
 
 export default salesRoutes;
-
-

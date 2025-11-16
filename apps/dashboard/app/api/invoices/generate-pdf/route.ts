@@ -1,18 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { renderInvoiceToStream } from "@/lib/invoice-pdf/renderer";
-import type { InvoicePDFProps } from "@/lib/invoice-pdf/types";
+import type { InvoicePDFProps, EditorDoc } from "@/lib/invoice-pdf/types";
 import { fetchInvoice } from "@/src/queries/invoices";
 
 export async function POST(req: NextRequest) {
 	try {
-		const body = (await req.json()) as { invoiceId?: string; props?: InvoicePDFProps };
+		const body = (await req.json()) as {
+			invoiceId?: string;
+			props?: InvoicePDFProps;
+		};
 
 		if (body.invoiceId) {
 			// Fetch invoice by ID
 			const invoice = await fetchInvoice(body.invoiceId);
 
 			if (!invoice) {
-				return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+				return NextResponse.json(
+					{ error: "Invoice not found" },
+					{ status: 404 },
+				);
 			}
 
 			// Transform invoice to PDF props (similar to pdf-export.controller.ts)
@@ -40,11 +46,13 @@ export async function POST(req: NextRequest) {
 				discountRate: item.discountRate ? Number(item.discountRate) : undefined,
 			}));
 
-			const createEditorContent = (text: string | null | undefined): JSON | undefined => {
+			const createEditorContent = (
+				text: string | null | undefined,
+			): EditorDoc | undefined => {
 				if (!text) {
-					return { type: "doc", content: [] } as JSON;
+					return { type: "doc", content: [] };
 				}
-				return {
+				const doc: EditorDoc = {
 					type: "doc",
 					content: [
 						{
@@ -52,24 +60,28 @@ export async function POST(req: NextRequest) {
 							content: [{ type: "text", text: text }],
 						},
 					],
-				} as JSON;
+				};
+				return doc;
 			};
 
 			const fromDetails = createEditorContent(
-				`Your Company\ninfo@yourcompany.com\n+381 60 000 0000\nAddress line\nVAT ID: —`
+				`Your Company\ninfo@yourcompany.com\n+381 60 000 0000\nAddress line\nVAT ID: —`,
 			);
 
 			const customerDetails = createEditorContent(
-				`${invoice.customerName}\n${invoice.customerEmail || ""}\n${invoice.billingAddress || ""}\nVAT ID: —`
+				`${invoice.customerName}\n${invoice.customerEmail || ""}\n${invoice.billingAddress || ""}\nVAT ID: —`,
 			);
 
-			const paymentDetails = createEditorContent("Bank: — | Account number: — | IBAN: —");
+			const paymentDetails = createEditorContent(
+				"Bank: — | Account number: — | IBAN: —",
+			);
 
-			const noteDetails = invoice.notes
-				? typeof invoice.notes === "object"
-					? (invoice.notes as JSON)
-					: createEditorContent(String(invoice.notes))
-				: undefined;
+			const noteDetails =
+				invoice.notes && typeof invoice.notes === "object"
+					? (invoice.notes as unknown as EditorDoc)
+					: createEditorContent(
+							invoice.notes ? String(invoice.notes) : undefined,
+						);
 
 			const pdfProps: InvoicePDFProps = {
 				invoice_number: invoice.invoiceNumber,
@@ -114,7 +126,7 @@ export async function POST(req: NextRequest) {
 		} else {
 			return NextResponse.json(
 				{ error: "Either invoiceId or props must be provided" },
-				{ status: 400 }
+				{ status: 400 },
 			);
 		}
 	} catch (error) {
@@ -124,8 +136,7 @@ export async function POST(req: NextRequest) {
 				error: "PDF generation failed",
 				message: error instanceof Error ? error.message : "Unknown error",
 			},
-			{ status: 500 }
+			{ status: 500 },
 		);
 	}
 }
-

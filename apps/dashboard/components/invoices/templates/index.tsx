@@ -4,9 +4,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import type { TemplateProps } from "./types";
 import { EditorContent } from "./components/editor-content";
 import { LineItems } from "./components/line-items";
-import { Logo } from "./components/logo";
 import { Meta } from "./components/meta";
 import { Summary } from "./components/summary";
+import MinimalTiptapEditor from "@/components/ui/custom/minimal-tiptap/minimal-tiptap";
 
 export function HtmlTemplate({
   invoice_number,
@@ -19,7 +19,7 @@ export function HtmlTemplate({
   payment_details,
   note_details,
   currency,
-  customer_name,
+  customer_name: _customer_name,
   width = "100%",
   height: _height = "100%",
   amountBeforeDiscount = 0,
@@ -27,7 +27,45 @@ export function HtmlTemplate({
   subtotal = 0,
   totalVat = 0,
   total = 0,
+  editable = false,
+  editors,
 }: TemplateProps) {
+  // Helpers to convert between plain text (with \n) and Tiptap JSON doc
+  const stringToDoc = (text: string) => {
+    const lines = (text ?? "").split("\n");
+    return {
+      type: "doc",
+      content: lines.map((line) => ({
+        type: "paragraph",
+        content: line ? [{ type: "text", text: line }] : [],
+      })),
+    };
+  };
+  const contentToString = (content: unknown): string => {
+    // Expecting Tiptap JSON: doc -> paragraphs -> text nodes (ignore marks)
+    try {
+      const doc = content as { content?: Array<{ content?: Array<{ text?: string }> }> };
+      if (!doc?.content) return "";
+      return doc.content
+        .map((p) => (p?.content ? p.content.map((n) => n.text ?? "").join("") : ""))
+        .join("\n");
+    } catch {
+      return typeof content === "string" ? content : "";
+    }
+  };
+  // Approximate pagination to A4-like sections by limiting number of line items per page.
+  // This improves layout (prevents toolbar overlap) and prepares for PDF rendering later.
+  const itemsPerPage = template.include_vat ? 14 : 18;
+  const pages: Array<typeof line_items> = [];
+  for (let i = 0; i < line_items.length; i += itemsPerPage) {
+    pages.push(line_items.slice(i, i + itemsPerPage));
+  }
+  const isMultiPage = pages.length > 1;
+
+  const PageContainer = ({ children, isLast }: { children: React.ReactNode; isLast?: boolean }) => (
+    <div className={isLast ? "" : "break-after-page"}>{children}</div>
+  );
+
   return (
     <ScrollArea
       className="bg-background w-full md:w-auto h-full"
@@ -38,12 +76,19 @@ export function HtmlTemplate({
       }}
     >
       <div className="p-4 sm:p-6 md:p-8 h-full flex flex-col">
-        <div className="flex flex-col">
-          {template.logo_url && (
-            <Logo logo={template.logo_url} customerName={customer_name || ""} />
-          )}
-        </div>
-
+        {/* Print helpers */}
+        <style>{`
+          @media print {
+            .break-after-page { page-break-after: always; }
+          }
+        `}</style>
+        {pages.map((items, pageIndex) => {
+          const isFirst = pageIndex === 0;
+          const isLast = pageIndex === pages.length - 1;
+          return (
+            <PageContainer key={`page-${pageIndex}`} isLast={isLast}>
+              {isFirst && (
+                <>
         <div className="mt-8">
           <Meta
             template={template}
@@ -58,28 +103,57 @@ export function HtmlTemplate({
             <p className="text-[11px] text-[#878787] font-mono mb-2 block">
               {template.from_label}
             </p>
+                      {editable && editors?.from ? (
+                        <MinimalTiptapEditor
+                className="mt-0"
+                          value={stringToDoc(editors.from.value)}
+                          onChange={(val) => editors.from && editors.from.onChange(contentToString(val))}
+                          editorContentClassName="min-h-24 font-mono text-[11px] leading-4 whitespace-pre-wrap"
+                hideToolbar
+                unstyled
+              />
+            ) : (
             <EditorContent content={from_details} />
+            )}
           </div>
           <div className="mt-4 md:mt-0">
             <p className="text-[11px] text-[#878787] font-mono mb-2 block">
               {template.customer_label}
             </p>
+                      {editable && editors?.customer ? (
+                        <MinimalTiptapEditor
+                className="mt-0"
+                          value={stringToDoc(editors.customer.value)}
+                          onChange={(val) => editors.customer && editors.customer.onChange(contentToString(val))}
+                          editorContentClassName="min-h-24 font-mono text-[11px] leading-4 whitespace-pre-wrap"
+                hideToolbar
+                unstyled
+              />
+            ) : (
             <EditorContent content={customer_details} />
+            )}
           </div>
         </div>
+                </>
+              )}
 
         <div className="mt-4">
           <LineItems
-            lineItems={line_items}
+                  lineItems={items}
             currency={currency}
             descriptionLabel={template.description_label}
             quantityLabel={template.quantity_label}
             priceLabel={template.price_label}
             totalLabel={template.total_label}
             includeVAT={template.include_vat}
+                  editable={editable && Boolean(editors?.onLineItemDescriptionChange)}
+                  onChangeDescription={editors?.onLineItemDescriptionChange}
+                  onAddLineItem={isLast ? editors?.onAddLineItem : undefined}
           />
         </div>
 
+              {isLast && (
+                <>
         <div className="mt-6 md:mt-8 flex justify-end mb-6 md:mb-8">
           <div className="w-full max-w-md">
             <Summary
@@ -101,23 +175,52 @@ export function HtmlTemplate({
         </div>
 
         <div className="flex flex-col space-y-6 md:space-y-8 mt-auto">
-          {note_details && (
             <div>
               <p className="text-[11px] text-[#878787] font-mono mb-2 block">
                 {template.note_label}
               </p>
-              <EditorContent content={note_details} />
+                    {editable && editors?.notes ? (
+                      <MinimalTiptapEditor
+                        className="mt-0"
+                        value={
+                          typeof editors.notes.value === "string"
+                            ? stringToDoc(String(editors.notes.value))
+                            : (editors.notes.value as object)
+                        }
+                        onChange={(val) => editors.notes && editors.notes.onChange(val)}
+                        output="json"
+                        editorContentClassName="min-h-24 font-mono text-[11px] leading-4 whitespace-pre-wrap"
+                        hideToolbar
+                        unstyled
+                      />
+                    ) : (
+              note_details ? <EditorContent content={note_details} /> : null
+            )}
             </div>
-          )}
 
           <div className="pt-6 border-t border-border mt-auto">
             <div className="text-[11px] text-[#878787] font-mono">
+                        {editable && editors?.payment ? (
+                          <MinimalTiptapEditor
+                  className="mt-0"
+                            value={stringToDoc(editors.payment.value)}
+                            onChange={(val) => editors.payment && editors.payment.onChange(contentToString(val))}
+                            editorContentClassName="min-h-24 font-mono text-[11px] leading-4 whitespace-pre-wrap"
+                  hideToolbar
+                  unstyled
+                />
+              ) : (
               <EditorContent content={payment_details} />
+              )}
             </div>
           </div>
         </div>
+                </>
+              )}
+            </PageContainer>
+          );
+        })}
       </div>
     </ScrollArea>
   );
 }
-

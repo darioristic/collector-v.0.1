@@ -7,103 +7,106 @@ import { View, Text, StyleSheet, Link } from "@react-pdf/renderer";
 import type { EditorDoc, EditorNode, EditorInlineContent, EditorMark } from "./types";
 
 const styles = StyleSheet.create({
-	paragraph: {
-		marginBottom: 4,
-		fontFamily: "Courier",
-		fontSize: 11,
-		lineHeight: 1.4,
-	},
-	text: {
-		fontFamily: "Courier",
-		fontSize: 11,
-	},
-	bold: {
-		fontWeight: "bold",
-	},
-	italic: {
-		fontStyle: "italic",
-	},
-	link: {
-		color: "#0066cc",
-		textDecoration: "underline",
-	},
+  paragraph: {
+    marginBottom: 4,
+    fontFamily: "Courier",
+    fontSize: 11,
+    lineHeight: 1.4
+  },
+  text: {
+    fontFamily: "Courier",
+    fontSize: 11
+  },
+  bold: {
+    fontWeight: "bold"
+  },
+  italic: {
+    fontStyle: "italic"
+  },
+  link: {
+    color: "#0066cc",
+    textDecoration: "underline"
+  }
 });
 
 interface EditorContentProps {
-	content?: JSON | EditorDoc;
+  content?: EditorDoc;
 }
 
 export function EditorContent({ content }: EditorContentProps) {
-	if (!content || typeof content !== "object") {
-		return null;
-	}
+  if (!content || typeof content !== "object") {
+    return null;
+  }
 
-	const doc = content as EditorDoc;
+  const doc = content as EditorDoc;
 
-	if (!doc.content || !Array.isArray(doc.content)) {
-		return null;
-	}
+  if (!doc.content || !Array.isArray(doc.content)) {
+    return null;
+  }
 
-	return (
-		<View>
-			{doc.content.map((node: EditorNode, nodeIndex: number) => {
-				if (node.type === "paragraph") {
-					return (
-						<View key={`paragraph-${nodeIndex}`} style={styles.paragraph}>
-							{node.content?.map((inlineContent: EditorInlineContent, inlineIndex: number) => {
-								if (inlineContent.type === "text") {
-									const text = inlineContent.text || "";
-									const marks = inlineContent.marks || [];
+  return (
+    <View>
+      {doc.content.map((node: EditorNode, nodeIndex: number) => {
+        if (node.type === "paragraph") {
+          return (
+            <View key={`paragraph-${nodeIndex}`} style={styles.paragraph}>
+              {node.content?.map((inlineContent: EditorInlineContent, inlineIndex: number) => {
+                if (inlineContent.type === "text") {
+                  const text = inlineContent.text || "";
+                  const marks = inlineContent.marks || [];
 
-									// Build style based on marks
-									const textStyle = [styles.text];
-									if (marks.some((m: EditorMark) => m.type === "bold")) {
-										textStyle.push(styles.bold);
-									}
-									if (marks.some((m: EditorMark) => m.type === "italic")) {
-										textStyle.push(styles.italic);
-									}
+                  type TextStyle = NonNullable<React.ComponentProps<typeof Text>["style"]>;
+                  type LinkStyle = NonNullable<React.ComponentProps<typeof Link>["style"]>;
 
-									// Check if it's a link
-									const linkMark = marks.find((m: EditorMark) => m.type === "link");
-									const href = linkMark?.attrs?.href as string | undefined;
+                  const textStyle: TextStyle = {
+                    ...(styles.text as object),
+                    ...(marks.some((m: EditorMark) => m.type === "bold") ? (styles.bold as object) : {}),
+                    ...(marks.some((m: EditorMark) => m.type === "italic") ? (styles.italic as object) : {})
+                  } as TextStyle;
 
-									// Check if text looks like an email
-									const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text);
+                  // Check if it's a link
+                  const linkMark = marks.find((m: EditorMark) => m.type === "link");
+                  const href = linkMark?.attrs?.href as string | undefined;
 
-									if (href || isEmail) {
-										const linkHref = href || (isEmail ? `mailto:${text}` : text);
-										return (
-											<Link
-												key={`link-${nodeIndex}-${inlineIndex}`}
-												src={linkHref}
-												style={[textStyle, styles.link]}
-											>
-												{text}
-											</Link>
-										);
-									}
+                  // Check if text looks like an email
+                  const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text);
 
-									return (
-										<Text key={`text-${nodeIndex}-${inlineIndex}`} style={textStyle}>
-											{text}
-										</Text>
-									);
-								}
+                  if (href || isEmail) {
+                    const linkHref = href || (isEmail ? `mailto:${text}` : text);
+                    const linkStyle: LinkStyle = {
+                      ...(textStyle as object),
+                      ...(styles.link as object)
+                    } as LinkStyle;
+                    return (
+                      <Link
+                        key={`link-${nodeIndex}-${inlineIndex}`}
+                        src={linkHref}
+                        style={linkStyle as any}
+                      >
+                        {text}
+                      </Link>
+                    );
+                  }
 
-								if (inlineContent.type === "hardBreak") {
-									return <Text key={`break-${nodeIndex}-${inlineIndex}`}>{"\n"}</Text>;
-								}
+                  return (
+                    <Text key={`text-${nodeIndex}-${inlineIndex}`} style={textStyle as any}>
+                      {text}
+                    </Text>
+                  );
+                }
 
-								return null;
-							})}
-						</View>
-					);
-				}
+                if (inlineContent.type === "hardBreak") {
+                  return <Text key={`break-${nodeIndex}-${inlineIndex}`}>{"\n"}</Text>;
+                }
 
-				return null;
-			})}
-		</View>
-	);
+                return null;
+              })}
+            </View>
+          );
+        }
+
+        return null;
+      })}
+    </View>
+  );
 }
-

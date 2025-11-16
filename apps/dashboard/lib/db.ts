@@ -50,7 +50,7 @@ const createPgMemDatabase = (): {
     const memoryDb = newDb({ autoCreateForeignKeyIndices: true });
     memoryDb.public.registerFunction({
         name: "gen_random_uuid",
-        returns: "text" as any,
+        returns: "text" as unknown as DataType,
         implementation: () => randomUUID(),
         impure: true,
     });
@@ -124,3 +124,4 @@ export async function getDb(): Promise<DatabaseInstance> {
 	ensureDatabase();
 	return globalForDb._drizzle as DatabaseInstance;
 }
+import type { DataType } from "pg-mem";

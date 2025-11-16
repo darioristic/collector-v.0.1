@@ -33,7 +33,7 @@ export function ChatHeader({ user }: { user: ChatUser }) {
 	const realTimeStatus = getUserStatus(user.id);
 	// If real-time status is available, use it; otherwise check API status
 	// Default to "online" if status is "online" in API, otherwise "offline"
-	const userStatus = realTimeStatus || (user.status === "online" ? "online" : "offline");
+    const userStatus = realTimeStatus || (user.status || "offline");
 	
 	// Debug logging
 	if (process.env.NODE_ENV === "development") {
@@ -49,7 +49,7 @@ export function ChatHeader({ user }: { user: ChatUser }) {
 		user.displayName?.trim() ||
 		[user.firstName, user.lastName].filter(Boolean).join(" ") ||
 		user.email;
-	const onlineStatus = userStatus === "online" ? "success" : "warning";
+    const onlineStatus = userStatus === "online" ? "success" : userStatus === "away" ? "warning" : "danger";
 
 	return (
 		<div className="flex justify-between gap-4 lg:px-4">
@@ -69,11 +69,13 @@ export function ChatHeader({ user }: { user: ChatUser }) {
 				</Avatar>
 				<div className="flex flex-col gap-1">
 					<span className="text-sm font-semibold">{displayName}</span>
-					{userStatus === "online" ? (
-						<span className="text-xs text-green-500">Online</span>
-					) : (
-						<span className="text-muted-foreground text-xs">Offline</span>
-					)}
+                    {userStatus === "online" ? (
+                        <span className="text-xs text-green-500">Online</span>
+                    ) : userStatus === "away" ? (
+                        <span className="text-xs text-orange-500">Away</span>
+                    ) : (
+                        <span className="text-muted-foreground text-xs">Offline</span>
+                    )}
 				</div>
 			</div>
 			<div className="flex gap-2">

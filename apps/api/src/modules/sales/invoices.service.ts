@@ -491,6 +491,19 @@ export class InvoicesService {
   }
 
   private mapInvoiceFromDb(dbInvoice: InvoiceRow): Invoice {
+    const tiptapToString = (value: unknown): string | null => {
+      if (!value) return null;
+      if (typeof value === "string") return value;
+      try {
+        const doc = value as { content?: Array<{ content?: Array<{ text?: string }> }> };
+        if (!doc?.content) return null;
+        return doc.content
+          .map((p) => (p?.content ? p.content.map((n) => n.text ?? "").join("") : ""))
+          .join("\n");
+      } catch {
+        return null;
+      }
+    };
     const toIso = (value: unknown): string => {
       const d = value instanceof Date ? value : new Date(value as string);
       return Number.isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
@@ -520,7 +533,7 @@ export class InvoicesService {
       amountPaid: Number(dbInvoice.amountPaid),
       balance: Number(dbInvoice.balance),
       currency: dbInvoice.currency,
-      notes: dbInvoice.notes,
+      notes: tiptapToString(dbInvoice.notes),
       createdAt: toIso(dbInvoice.createdAt),
       updatedAt: toIso(dbInvoice.updatedAt)
     };

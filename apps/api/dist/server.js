@@ -11,6 +11,10 @@ import openApiPlugin from "./plugins/openapi";
 import rateLimitPlugin from "./plugins/rate-limit";
 import healthRoutes from "./routes/health";
 import metricsRoutes from "./routes/metrics";
+import { initializeNovu } from "./lib/novu/novu.client.js";
+import { initializeNotificationQueue } from "./lib/queues/notification.queue.js";
+import { initializeNotificationWorker } from "./lib/queues/notification.processor.js";
+import { setupAllEventHandlers } from "./lib/events/handlers/index.js";
 const createLogger = () => {
     const baseLevel = process.env.LOG_LEVEL ??
         (process.env.NODE_ENV === "production" ? "info" : "debug");
@@ -111,6 +115,18 @@ export const buildServer = async () => {
     await registerHealthcheck(app);
     await registerMetrics(app);
     await registerModules(app);
+    // Initialize Novu notification system
+    try {
+        initializeNovu();
+        initializeNotificationQueue();
+        initializeNotificationWorker();
+        setupAllEventHandlers();
+        app.log.info("Novu notification system initialized");
+    }
+    catch (error) {
+        app.log.error({ err: error }, "Failed to initialize Novu notification system");
+        // Don't fail server startup if Novu fails, but log the error
+    }
     return app;
 };
 const fastify = await buildServer();

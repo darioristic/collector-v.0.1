@@ -10,7 +10,8 @@ import type { MultiChannelNotificationPayload } from "../../novu/novu.types.js";
 export function setupTransactionHandler(): void {
   eventEmitter.on(
     "transaction.created",
-    async (event: TransactionCreatedEvent) => {
+    async (...args: unknown[]) => {
+      const [event] = args as [TransactionCreatedEvent];
       try {
         const payload: MultiChannelNotificationPayload = {
           userId: event.userId,
@@ -37,7 +38,7 @@ export function setupTransactionHandler(): void {
             },
           },
           channels: ["in_app"],
-          fallback: true, // Fallback to email if in-app fails
+          fallback: true,
         };
 
         await notificationQueue.add("transaction-created", {
@@ -56,4 +57,3 @@ export function setupTransactionHandler(): void {
 
   console.log("✅ Transaction event handler registered");
 }
-

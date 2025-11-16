@@ -325,7 +325,7 @@ function CompanyAutocompleteInner({
 														<CommandGroup>
 															<CommandItem 
 																onSelect={handleCreateNew}
-																className="cursor-pointer !bg-gradient-to-r !from-primary/5 !to-primary/10 hover:!from-primary/10 hover:!to-primary/15 !border-t-2 !border-dashed !border-primary/40 !mt-2 !mx-2 !rounded-lg !py-3.5 !px-3"
+										className="cursor-pointer !bg-linear-to-r !from-primary/5 !to-primary/10 hover:!from-primary/10 hover:!to-primary/15 !border-t-2 !border-dashed !border-primary/40 !mt-2 !mx-2 !rounded-lg !py-3.5 !px-3"
 															>
 																<div className="flex items-start gap-3 w-full">
 																	<div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/20 ring-2 ring-primary/30 mt-0.5">

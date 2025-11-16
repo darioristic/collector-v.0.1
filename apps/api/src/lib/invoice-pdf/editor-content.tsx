@@ -30,7 +30,7 @@ const styles = StyleSheet.create({
 });
 
 interface EditorContentProps {
-  content?: JSON | EditorDoc;
+  content?: EditorDoc;
 }
 
 export function EditorContent({ content }: EditorContentProps) {
@@ -55,14 +55,11 @@ export function EditorContent({ content }: EditorContentProps) {
                   const text = inlineContent.text || "";
                   const marks = inlineContent.marks || [];
 
-                  // Build style based on marks
-                  const textStyle = [styles.text];
-                  if (marks.some((m: EditorMark) => m.type === "bold")) {
-                    textStyle.push(styles.bold);
-                  }
-                  if (marks.some((m: EditorMark) => m.type === "italic")) {
-                    textStyle.push(styles.italic);
-                  }
+                  const textStyleObj = {
+                    ...(styles.text as object),
+                    ...(marks.some((m: EditorMark) => m.type === "bold") ? (styles.bold as object) : {}),
+                    ...(marks.some((m: EditorMark) => m.type === "italic") ? (styles.italic as object) : {}),
+                  };
 
                   // Check if it's a link
                   const linkMark = marks.find((m: EditorMark) => m.type === "link");
@@ -74,14 +71,18 @@ export function EditorContent({ content }: EditorContentProps) {
                   if (href || isEmail) {
                     const linkHref = href || (isEmail ? `mailto:${text}` : text);
                     return (
-                      <Link key={`link-${nodeIndex}-${inlineIndex}`} src={linkHref} style={[textStyle, styles.link]}>
+                      <Link
+                        key={`link-${nodeIndex}-${inlineIndex}`}
+                        src={linkHref}
+                        style={{ ...(textStyleObj as object), ...(styles.link as object) } as any}
+                      >
                         {text}
                       </Link>
                     );
                   }
 
                   return (
-                    <Text key={`text-${nodeIndex}-${inlineIndex}`} style={textStyle}>
+                    <Text key={`text-${nodeIndex}-${inlineIndex}`} style={textStyleObj as any}>
                       {text}
                     </Text>
                   );
@@ -102,4 +103,3 @@ export function EditorContent({ content }: EditorContentProps) {
     </View>
   );
 }
-
