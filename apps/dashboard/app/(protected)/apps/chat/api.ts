@@ -194,6 +194,19 @@ export const fetchConversations = async (): Promise<ChatConversation[]> => {
 				return [];
 			}
 
+			// Gracefully handle server errors (5xx) by returning empty data instead of breaking UI
+			if (status >= 500) {
+				console.warn("[fetchConversations] Server error, returning empty conversations", {
+					status,
+					statusText,
+					url: responseUrl || apiUrl,
+					apiUrl,
+					contentType,
+					responseTextPreview: trimmedText?.slice(0, 200)
+				});
+				return [];
+			}
+
 			// Build log details for actual errors (not service unavailable)
 			const logDetails: Record<string, unknown> = {
 				status: typeof status === "number" ? status : "unknown",
@@ -279,16 +292,16 @@ export const fetchConversations = async (): Promise<ChatConversation[]> => {
 		}
 
 		if (!contentType?.includes("application/json")) {
-			const errorMessage = `Očekivani JSON odgovor nije primljen. Content-Type: ${contentType || "unknown"}`;
-			console.error("[fetchConversations] Invalid content type", {
+			// If content type is not JSON (e.g., HTML error page), don't break the UI
+			console.warn("[fetchConversations] Non-JSON response received, returning empty list", {
 				status,
 				statusText,
 				url: responseUrl,
 				apiUrl,
 				contentType,
-				responseText: responseText.substring(0, 200),
+				responseTextPreview: responseText.substring(0, 200),
 			});
-			throw new Error(errorMessage);
+			return [];
 		}
 
 		if (!responseText || !responseText.trim()) {

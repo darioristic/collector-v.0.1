@@ -50,6 +50,10 @@ export function InvoiceDetail({
   // Autosave: track pending edits and last saved snapshots
   const [pendingItems, setPendingItems] = React.useState<Record<number, string>>({});
   const [lastSavedItems, setLastSavedItems] = React.useState<string[]>([]);
+  // Keep autocomplete active for the newly added row until user commits
+  const [activeAutocompleteIndex, setActiveAutocompleteIndex] = React.useState<number | undefined>(
+    undefined
+  );
 
   React.useEffect(() => {
     if (invoice) {
@@ -76,6 +80,7 @@ export function InvoiceDetail({
     };
 
     const lineItems: LineItem[] = (invoice.items || []).map((item: InvoiceItem) => ({
+      id: (item as unknown as { id?: string }).id,
       name: item.description || "Product / Service",
       price: item.unitPrice,
       quantity: item.quantity,
@@ -302,15 +307,12 @@ export function InvoiceDetail({
     }
   };
 
-  // Initialize lastSavedItems snapshot when invoice loads/changes
+  // Initialize lastSavedItems snapshot when invoice loads/changes (don't overwrite user edits)
   React.useEffect(() => {
     if (!invoice) return;
     const snapshot = (invoice.items || []).map((it) => it.description || "");
     setLastSavedItems(snapshot);
-    if (editLineNames.length === 0 && snapshot.length > 0) {
-      setEditLineNames(snapshot);
-    }
-  }, [invoice, editLineNames.length]);
+  }, [invoice]);
 
   // Debounced autosave for description changes
   React.useEffect(() => {
@@ -363,7 +365,7 @@ export function InvoiceDetail({
           description: e instanceof Error ? e.message : "Nepoznata greška"
         });
       }
-    }, 700);
+    }, 1200);
     return () => clearTimeout(timer);
   }, [invoice, editLineNames, pendingItems, lastSavedItems, updateInvoice, toast]);
   if (loadingView) return loadingView;
@@ -472,6 +474,7 @@ export function InvoiceDetail({
                       });
                     } else {
                       out.push({
+                        id: undefined,
                         name: editLineNames[i] ?? "",
                         price: 0,
                         quantity: 1
@@ -517,7 +520,33 @@ export function InvoiceDetail({
                       setPendingItems((p) => ({ ...p, [idx]: text }));
                       return next;
                     }),
-                  onAddLineItem: () => setEditLineNames((prev) => [...prev, ""])
+                  onAddLineItem: () =>
+                    setEditLineNames((prev) => {
+                      const next = [...prev, ""];
+                      setActiveAutocompleteIndex(next.length - 1);
+                      return next;
+                    }),
+                  activeAutocompleteIndex,
+                  onAutocompleteCommit: (idx: number) => {
+                    // Switch row to plain textarea on next render
+                    if (activeAutocompleteIndex === idx) {
+                      setActiveAutocompleteIndex(undefined);
+                    }
+                  },
+                  onDeleteLineItem: (idx: number) => {
+                    setEditLineNames((prev) => {
+                      const next = prev.slice(0, idx).concat(prev.slice(idx + 1));
+                      // mark subsequent items as pending (their indices shift)
+                      setPendingItems((p) => {
+                        const updated: Record<number, string> = {};
+                        next.forEach((val, i) => {
+                          updated[i] = val;
+                        });
+                        return updated;
+                      });
+                      return next;
+                    });
+                  }
                 }}
               />
             ) : null}

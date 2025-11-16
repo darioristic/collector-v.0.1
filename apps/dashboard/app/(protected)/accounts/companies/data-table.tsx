@@ -3,43 +3,32 @@
 import type { Account } from "@crm/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type {
-	ColumnDef,
-	HeaderContext,
-	SortingState,
-	VisibilityState,
+  ColumnDef,
+  HeaderContext,
+  SortingState,
+  VisibilityState
 } from "@tanstack/react-table";
 import {
-	flexRender,
-	getCoreRowModel,
-	getFilteredRowModel,
-	getPaginationRowModel,
-	getSortedRowModel,
-	useReactTable,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable
 } from "@tanstack/react-table";
 import {
-	ArrowDown,
-	ArrowUp,
-	ArrowUpDown,
-	Briefcase,
-	Building2,
-	CalendarClock,
-	Clock,
-	Eye,
-	Facebook,
-	FileText,
-	Globe,
-	Instagram,
-	Linkedin,
-	Loader2,
-	Mail,
-	MapPin,
-	Pencil,
-	Phone,
-	ReceiptIcon,
-	Trash2,
-	TrendingUp,
-	Twitter,
-	Users,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Building2,
+  CalendarClock,
+  Eye,
+  Loader2,
+  Mail,
+  Pencil,
+  Phone,
+  Trash2,
+  Receipt as ReceiptIcon
 } from "lucide-react";
 import * as React from "react";
 import { useForm } from "react-hook-form";
@@ -57,7 +46,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+// import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Accordion,
@@ -87,7 +76,7 @@ import {
   FormMessage
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+// import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -96,14 +85,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   Table,
   TableBody,
@@ -114,31 +96,32 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { ensureResponse, getApiUrl } from "@/src/lib/fetch-utils";
+import CompanyDrawer from "@/components/company/company-drawer";
 
 export type CompanyRow = Account & {
   primaryContactName?: string | null;
   primaryContactEmail?: string | null;
   primaryContactPhone?: string | null;
-    legalName?: string | null;
-    description?: string | null;
-    socialMediaLinks?: {
-        linkedin?: string | null;
-        facebook?: string | null;
-        twitter?: string | null;
-        instagram?: string | null;
-    } | null;
-    registrationNumber?: string | null;
-    dateOfIncorporation?: string | null;
-    legalStatus?: string | null;
-    companyType?: string | null;
-    industry?: string | null;
-    numberOfEmployees?: number | null;
-    annualRevenueRange?: string | null;
-    contacts?: Array<{
-        id: string;
-        name: string;
-        email?: string | null;
-        phone?: string | null;
+  legalName?: string | null;
+  description?: string | null;
+  socialMediaLinks?: {
+    linkedin?: string | null;
+    facebook?: string | null;
+    twitter?: string | null;
+    instagram?: string | null;
+  } | null;
+  registrationNumber?: string | null;
+  dateOfIncorporation?: string | null;
+  legalStatus?: string | null;
+  companyType?: string | null;
+  industry?: string | null;
+  numberOfEmployees?: number | null;
+  annualRevenueRange?: string | null;
+  contacts?: Array<{
+    id: string;
+    name: string;
+    email?: string | null;
+    phone?: string | null;
     title?: string | null;
   }>;
 };
@@ -158,7 +141,10 @@ const formSchema = z.object({
   contactPerson: z.string().trim().optional().or(z.literal("")),
   type: z.enum(ACCOUNT_TAG_OPTIONS),
   taxId: z.string().trim().min(1, "Tax ID is required."),
-  country: z.string().trim().length(2, "Country code must be exactly 2 characters (ISO 3166-1 alpha-2).")
+  country: z
+    .string()
+    .trim()
+    .length(2, "Country code must be exactly 2 characters (ISO 3166-1 alpha-2).")
 });
 
 type CompanyFormValues = z.infer<typeof formSchema>;
@@ -379,7 +365,7 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
         setEditingCompany(null);
         form.reset({
           ...DEFAULT_FORM_VALUES,
-          name: nameParam,
+          name: nameParam
         });
         setIsDialogOpen(true);
         // Clean up URL parameters
@@ -542,7 +528,7 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
         // Extract error message from response if available
         let errorMessage = "Unable to save company.";
         let statusCode: number | undefined;
-        
+
         if (error instanceof Error) {
           errorMessage = error.message;
           // Extract status code if available from ensureResponse
@@ -557,14 +543,16 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
         }
 
         // Determine error type based on status code and message
-        const isConflict = statusCode === 409 || 
-                          errorMessage.toLowerCase().includes("already exists") || 
-                          errorMessage.toLowerCase().includes("conflict");
-        const isValidation = statusCode === 400 ||
-                            errorMessage.toLowerCase().includes("validation") ||
-                            errorMessage.toLowerCase().includes("required") ||
-                            errorMessage.toLowerCase().includes("invalid") ||
-                            errorMessage.toLowerCase().includes("provide a valid");
+        const isConflict =
+          statusCode === 409 ||
+          errorMessage.toLowerCase().includes("already exists") ||
+          errorMessage.toLowerCase().includes("conflict");
+        const isValidation =
+          statusCode === 400 ||
+          errorMessage.toLowerCase().includes("validation") ||
+          errorMessage.toLowerCase().includes("required") ||
+          errorMessage.toLowerCase().includes("invalid") ||
+          errorMessage.toLowerCase().includes("provide a valid");
 
         // Determine toast title based on error type
         let toastTitle = "Failed to save";
@@ -1007,7 +995,7 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
                     <TableRow
                       key={row.id}
                       data-state={row.getIsSelected() && "selected"}
-                      className="cursor-pointer transition-colors hover:bg-muted/50"
+                      className="hover:bg-muted/50 cursor-pointer transition-colors"
                       onClick={(e) => {
                         // Don't open if clicking on action buttons or checkbox
                         const target = e.target as HTMLElement;
@@ -1108,434 +1096,47 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
           </div>
         </div>
 
-        <Sheet
+        <CompanyDrawer
           open={Boolean(activeCompany)}
-          onOpenChange={(open) => (open ? null : closeSidebar())}>
-          <SheetContent className="flex h-full flex-col sm:max-w-2xl">
-            {activeCompany && (
-              <>
-                <SheetHeader className="pb-4">
-                  <SheetTitle className="text-foreground text-2xl font-bold">
-                    Company Details
-                  </SheetTitle>
-                  <SheetDescription>
-                    Review contact information, registration data, and metadata for the selected
-                    company.
-                  </SheetDescription>
-                </SheetHeader>
-
-                {isLoadingDetails ? (
-                  <div className="flex flex-1 items-center justify-center">
-                    <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-                  </div>
-                ) : (
-                  <ScrollArea className="flex-1 pr-6">
-                    <div className="space-y-6 pb-6">
-                      {/* Hero Section */}
-                      <Card className="overflow-hidden border-2 p-6 transition-all hover:shadow-lg">
-                        <div className="flex items-start gap-4">
-                          <div className="bg-primary/10 flex h-16 w-16 shrink-0 items-center justify-center rounded-lg">
-                            <Building2 className="text-primary h-8 w-8" />
-                          </div>
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-center gap-3">
-                              <h2 className="text-foreground text-2xl font-bold">
-                                {activeCompany.name}
-                              </h2>
-                              <Badge variant="secondary" className="capitalize">
-                                {formatTag(activeCompany.type)}
-                              </Badge>
-                            </div>
-                            {activeCompany.legalName && (
-                              <p className="text-muted-foreground text-sm">
-                                Legal name: {activeCompany.legalName}
-                              </p>
-                            )}
-                            {activeCompany.description && (
-                              <p className="text-muted-foreground text-sm leading-relaxed">
-                                {activeCompany.description}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </Card>
-
-                      {/* Contact Information Section */}
-                      <Card className="p-6 transition-all hover:shadow-md">
-                        <div className="mb-4 flex items-center gap-2">
-                          <Mail className="text-primary h-5 w-5" />
-                          <h3 className="text-foreground text-lg font-semibold">
-                            Contact Information
-                          </h3>
-                        </div>
-                        <div className="space-y-4">
-                          <div className="grid gap-4 md:grid-cols-2">
-                            {activeCompany.email && (
-                              <div className="flex items-start gap-3">
-                                <Mail className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
-                                <div className="min-w-0 flex-1">
-                                  <Label className="text-muted-foreground text-xs">Email</Label>
-                                  <a
-                                    href={`mailto:${activeCompany.email}`}
-                                    className="text-primary block truncate text-sm font-medium transition-colors hover:underline">
-                                    {activeCompany.email}
-                                  </a>
-                                </div>
-                              </div>
-                            )}
-                            {activeCompany.phone && (
-                              <div className="flex items-start gap-3">
-                                <Phone className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
-                                <div className="min-w-0 flex-1">
-                                  <Label className="text-muted-foreground text-xs">Phone</Label>
-                                  <a
-                                    href={`tel:${activeCompany.phone}`}
-                                    className="text-primary block truncate text-sm font-medium transition-colors hover:underline">
-                                    {activeCompany.phone}
-                                  </a>
-                                </div>
-                              </div>
-                            )}
-                            {activeCompany.website && (
-                              <div className="flex items-start gap-3">
-                                <Globe className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
-                                <div className="min-w-0 flex-1">
-                                  <Label className="text-muted-foreground text-xs">Website</Label>
-                                  <a
-                                    href={
-                                      activeCompany.website.startsWith("http")
-                                        ? activeCompany.website
-                                        : `https://${activeCompany.website}`
-                                    }
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-primary block truncate text-sm font-medium transition-colors hover:underline">
-                                    {activeCompany.website}
-                                  </a>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Social Media Links */}
-                          {activeCompany.socialMediaLinks && (
-                            <div className="space-y-2">
-                              <Label className="text-muted-foreground text-xs">Social Media</Label>
-                              <div className="flex flex-wrap gap-2">
-                                {activeCompany.socialMediaLinks.linkedin && (
-                                  <a
-                                    href={activeCompany.socialMediaLinks.linkedin}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 rounded-md bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900">
-                                    <Linkedin className="h-3.5 w-3.5" />
-                                    LinkedIn
-                                  </a>
-                                )}
-                                {activeCompany.socialMediaLinks.facebook && (
-                                  <a
-                                    href={activeCompany.socialMediaLinks.facebook}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 rounded-md bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900">
-                                    <Facebook className="h-3.5 w-3.5" />
-                                    Facebook
-                                  </a>
-                                )}
-                                {activeCompany.socialMediaLinks.twitter && (
-                                  <a
-                                    href={activeCompany.socialMediaLinks.twitter}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 rounded-md bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-700 transition-colors hover:bg-sky-100 dark:bg-sky-950 dark:text-sky-300 dark:hover:bg-sky-900">
-                                    <Twitter className="h-3.5 w-3.5" />
-                                    Twitter
-                                  </a>
-                                )}
-                                {activeCompany.socialMediaLinks.instagram && (
-                                  <a
-                                    href={activeCompany.socialMediaLinks.instagram}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 rounded-md bg-pink-50 px-3 py-1.5 text-xs font-medium text-pink-700 transition-colors hover:bg-pink-100 dark:bg-pink-950 dark:text-pink-300 dark:hover:bg-pink-900">
-                                    <Instagram className="h-3.5 w-3.5" />
-                                    Instagram
-                                  </a>
-                                )}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Addresses */}
-                          {companyDetails?.addresses && companyDetails.addresses.length > 0 && (
-                            <div className="space-y-3">
-                              <Label className="text-muted-foreground text-xs">Addresses</Label>
-                              {companyDetails.addresses.map((address) => (
-                                <div
-                                  key={address.id}
-                                  className="border-border rounded-lg border p-3">
-                                  <div className="flex items-start gap-2">
-                                    <MapPin className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
-                                    <div className="min-w-0 flex-1 space-y-1">
-                                      {address.label && (
-                                        <Badge variant="outline" className="text-xs">
-                                          {address.label}
-                                        </Badge>
-                                      )}
-                                      <div className="text-foreground text-sm">
-                                        {address.street && <div>{address.street}</div>}
-                                        <div>
-                                          {address.city}
-                                          {address.state && `, ${address.state}`}
-                                          {address.postalCode && ` ${address.postalCode}`}
-                                        </div>
-                                        {address.country && <div>{address.country}</div>}
-                                      </div>
-                                      {/* Map Placeholder */}
-                                      {address.latitude && address.longitude && (
-                                        <div className="bg-muted mt-2 h-32 w-full rounded-md border">
-                                          <div className="flex h-full items-center justify-center">
-                                            <div className="text-center">
-                                              <MapPin className="text-muted-foreground mx-auto mb-1 h-6 w-6" />
-                                              <p className="text-muted-foreground text-xs">
-                                                Map placeholder
-                                              </p>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </Card>
-
-                      {/* Registration Data Section */}
-                      <Card className="p-6 transition-all hover:shadow-md">
-                        <div className="mb-4 flex items-center gap-2">
-                          <FileText className="text-primary h-5 w-5" />
-                          <h3 className="text-foreground text-lg font-semibold">
-                            Registration Data
-                          </h3>
-                        </div>
-                        <div className="grid gap-4 md:grid-cols-2">
-                          <div className="space-y-1">
-                            <Label className="text-muted-foreground text-xs">
-                              Registration Number
-                            </Label>
-                            <p className="text-foreground text-sm font-medium">
-                              {activeCompany.registrationNumber ||
-                                getCompanyRegistrationNumber(activeCompany)}
-                            </p>
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-muted-foreground text-xs">Tax ID</Label>
-                            <p className="text-foreground text-sm font-medium">
-                              {activeCompany.taxId}
-                            </p>
-                          </div>
-                          {activeCompany.dateOfIncorporation && (
-                            <div className="space-y-1">
-                              <Label className="text-muted-foreground text-xs">
-                                Date of Incorporation
-                              </Label>
-                              <p className="text-foreground text-sm font-medium">
-                                {dateFormatter.format(new Date(activeCompany.dateOfIncorporation))}
-                              </p>
-                            </div>
-                          )}
-                          <div className="space-y-1">
-                            <Label className="text-muted-foreground text-xs">Country</Label>
-                            <p className="text-foreground text-sm font-medium uppercase">
-                              {activeCompany.country}
-                            </p>
-                          </div>
-                          {activeCompany.legalStatus && (
-                            <div className="space-y-1">
-                              <Label className="text-muted-foreground text-xs">Legal Status</Label>
-                              <p className="text-foreground text-sm font-medium">
-                                {activeCompany.legalStatus}
-                              </p>
-                            </div>
-                          )}
-                          {activeCompany.companyType && (
-                            <div className="space-y-1">
-                              <Label className="text-muted-foreground text-xs">Company Type</Label>
-                              <p className="text-foreground text-sm font-medium">
-                                {activeCompany.companyType}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                        {/* Business Registration Documents Placeholder */}
-                        <div className="mt-4 rounded-lg border border-dashed p-4 text-center">
-                          <FileText className="text-muted-foreground mx-auto mb-2 h-8 w-8" />
-                          <p className="text-muted-foreground text-xs">
-                            Business registration documents
-                          </p>
-                        </div>
-                      </Card>
-
-                      {/* Metadata Section */}
-                      <Card className="p-6 transition-all hover:shadow-md">
-                        <div className="mb-4 flex items-center gap-2">
-                          <Briefcase className="text-primary h-5 w-5" />
-                          <h3 className="text-foreground text-lg font-semibold">Metadata</h3>
-                        </div>
-                        <div className="grid gap-4 md:grid-cols-2">
-                          {activeCompany.industry && (
-                            <div className="space-y-1">
-                              <Label className="text-muted-foreground text-xs">Industry</Label>
-                              <p className="text-foreground text-sm font-medium">
-                                {activeCompany.industry}
-                              </p>
-                            </div>
-                          )}
-                          {activeCompany.numberOfEmployees !== null &&
-                            activeCompany.numberOfEmployees !== undefined && (
-                              <div className="space-y-1">
-                                <Label className="text-muted-foreground text-xs">
-                                  Number of Employees
-                                </Label>
-                                <div className="flex items-center gap-2">
-                                  <Users className="text-muted-foreground h-4 w-4" />
-                                  <p className="text-foreground text-sm font-medium">
-                                    {activeCompany.numberOfEmployees.toLocaleString()}
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-                          {activeCompany.annualRevenueRange && (
-                            <div className="space-y-1">
-                              <Label className="text-muted-foreground text-xs">
-                                Annual Revenue Range
-                              </Label>
-                              <div className="flex items-center gap-2">
-                                <TrendingUp className="text-muted-foreground h-4 w-4" />
-                                <p className="text-foreground text-sm font-medium">
-                                  {activeCompany.annualRevenueRange}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                          <div className="space-y-1">
-                            <Label className="text-muted-foreground text-xs">Created</Label>
-                            <div className="flex items-center gap-2">
-                              <CalendarClock className="text-muted-foreground h-4 w-4" />
-                              <p className="text-foreground text-sm font-medium">
-                                {dateFormatter.format(new Date(activeCompany.createdAt))}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-muted-foreground text-xs">Last Updated</Label>
-                            <div className="flex items-center gap-2">
-                              <Clock className="text-muted-foreground h-4 w-4" />
-                              <p className="text-foreground text-sm font-medium">
-                                {dateFormatter.format(
-                                  new Date(activeCompany.updatedAt || activeCompany.createdAt)
-                                )}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Key Executives */}
-                        {companyDetails?.executives && companyDetails.executives.length > 0 && (
-                          <div className="mt-6 space-y-3">
-                            <Label className="text-muted-foreground text-xs">Key Executives</Label>
-                            <div className="space-y-2">
-                              {companyDetails.executives.map((exec) => (
-                                <div key={exec.id} className="border-border rounded-lg border p-3">
-                                  <div className="flex items-start justify-between">
-                                    <div className="min-w-0 flex-1">
-                                      <p className="text-foreground text-sm font-medium">
-                                        {exec.name}
-                                      </p>
-                                      {exec.title && (
-                                        <p className="text-muted-foreground text-xs">
-                                          {exec.title}
-                                        </p>
-                                      )}
-                                      <div className="mt-1 flex flex-wrap gap-3">
-                                        {exec.email && (
-                                          <a
-                                            href={`mailto:${exec.email}`}
-                                            className="text-primary text-xs transition-colors hover:underline">
-                                            {exec.email}
-                                          </a>
-                                        )}
-                                        {exec.phone && (
-                                          <a
-                                            href={`tel:${exec.phone}`}
-                                            className="text-primary text-xs transition-colors hover:underline">
-                                            {exec.phone}
-                                          </a>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Company Milestones */}
-                        {companyDetails?.milestones && companyDetails.milestones.length > 0 && (
-                          <div className="mt-6 space-y-3">
-                            <Label className="text-muted-foreground text-xs">
-                              Company Milestones
-                            </Label>
-                            <div className="relative space-y-4 pl-4">
-                              {companyDetails.milestones.map((milestone, index) => (
-                                <div key={milestone.id} className="relative">
-                                  {index < companyDetails.milestones.length - 1 && (
-                                    <div className="bg-border absolute top-6 -left-4 h-full w-0.5" />
-                                  )}
-                                  <div className="bg-primary border-background absolute top-1.5 -left-6 h-3 w-3 rounded-full border-2" />
-                                  <div className="border-border bg-card rounded-lg border p-3">
-                                    <div className="flex items-start justify-between gap-2">
-                                      <div className="min-w-0 flex-1">
-                                        <p className="text-foreground text-sm font-medium">
-                                          {milestone.title}
-                                        </p>
-                                        {milestone.description && (
-                                          <p className="text-muted-foreground mt-1 text-xs">
-                                            {milestone.description}
-                                          </p>
-                                        )}
-                                      </div>
-                                      <div className="flex shrink-0 items-center gap-2">
-                                        <CalendarClock className="text-muted-foreground h-3.5 w-3.5" />
-                                        <span className="text-muted-foreground text-xs">
-                                          {dateFormatter.format(new Date(milestone.date))}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </Card>
-                    </div>
-                  </ScrollArea>
-                )}
-
-                <SheetFooter className="border-t pt-4">
-                  <Button variant="outline" className="w-full" onClick={closeSidebar}>
-                    Close
-                  </Button>
-                </SheetFooter>
-              </>
-            )}
-          </SheetContent>
-        </Sheet>
+          onClose={closeSidebar}
+          company={
+            activeCompany
+              ? {
+                  id: activeCompany.id,
+                  name: activeCompany.name,
+                  email: activeCompany.email,
+                  phone: activeCompany.phone,
+                  website: activeCompany.website,
+                  legalName: activeCompany.legalName ?? null,
+                  description: activeCompany.description ?? null,
+                  type: activeCompany.type ?? null,
+                  taxId: activeCompany.taxId,
+                  country: activeCompany.country,
+                  industry: activeCompany.industry ?? null,
+                  numberOfEmployees: activeCompany.numberOfEmployees ?? null,
+                  annualRevenueRange: activeCompany.annualRevenueRange ?? null,
+                  createdAt: activeCompany.createdAt,
+                  updatedAt: activeCompany.updatedAt ?? null,
+                  socialMediaLinks: activeCompany.socialMediaLinks ?? null,
+                  registrationNumber:
+                    activeCompany.registrationNumber ?? getCompanyRegistrationNumber(activeCompany),
+                  dateOfIncorporation: activeCompany.dateOfIncorporation ?? null,
+                  legalStatus: activeCompany.legalStatus ?? null,
+                  companyType: activeCompany.companyType ?? null
+                }
+              : null
+          }
+          details={
+            companyDetails
+              ? {
+                  addresses: companyDetails.addresses,
+                  executives: companyDetails.executives,
+                  milestones: companyDetails.milestones
+                }
+              : null
+          }
+          isLoadingDetails={isLoadingDetails}
+        />
 
         <Sheet
           open={isDialogOpen}

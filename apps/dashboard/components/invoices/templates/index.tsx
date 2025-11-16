@@ -60,7 +60,7 @@ export function HtmlTemplate({
   for (let i = 0; i < line_items.length; i += itemsPerPage) {
     pages.push(line_items.slice(i, i + itemsPerPage));
   }
-  const isMultiPage = pages.length > 1;
+  const _isMultiPage = pages.length > 1;
 
   const PageContainer = ({ children, isLast }: { children: React.ReactNode; isLast?: boolean }) => (
     <div className={isLast ? "" : "break-after-page"}>{children}</div>
@@ -149,6 +149,9 @@ export function HtmlTemplate({
                   editable={editable && Boolean(editors?.onLineItemDescriptionChange)}
                   onChangeDescription={editors?.onLineItemDescriptionChange}
                   onAddLineItem={isLast ? editors?.onAddLineItem : undefined}
+                  activeAutocompleteIndex={editors?.activeAutocompleteIndex}
+                  onAutocompleteCommit={editors?.onAutocompleteCommit}
+                  onDeleteLineItem={editors?.onDeleteLineItem}
           />
         </div>
 

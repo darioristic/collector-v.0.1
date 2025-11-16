@@ -59,6 +59,7 @@ import {
 	settingsSchema,
 } from "@/lib/validations/settings";
 import CompanyTab from "./company/company-tab";
+import ImapTab from "./integrations/imap-tab";
 import {
 	fetchTeamMembers,
 	type TeamMember,
@@ -1202,17 +1203,22 @@ export default function SettingsPage() {
 					<CompanyTab />
 				</TabsContent>
 
-				<TabsContent value="teams" className="mt-0">
-					<TeamsTab />
-				</TabsContent>
+                <TabsContent value="teams" className="mt-0">
+                  <TeamsTab />
+                </TabsContent>
+
+                <TabsContent value="integrations" className="mt-0">
+                  <ImapTab />
+                </TabsContent>
 
 				{tabs
 					.filter(
-						(tab) =>
-							tab.value !== "profile" &&
-							tab.value !== "notifications" &&
-							tab.value !== "teams" &&
-							tab.value !== "company",
+                    (tab) =>
+                      tab.value !== "profile" &&
+                      tab.value !== "notifications" &&
+                      tab.value !== "teams" &&
+                      tab.value !== "company" &&
+                      tab.value !== "integrations",
 					)
 					.map((tab) => {
 						const Icon = tab.icon;

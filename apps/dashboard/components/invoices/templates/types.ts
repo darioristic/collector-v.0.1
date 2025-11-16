@@ -22,6 +22,7 @@ export interface EditorMark {
 }
 
 export interface LineItem {
+	id?: string;
 	name: string;
 	price: number;
 	quantity: number;
@@ -75,5 +76,8 @@ export interface TemplateProps {
 		notes?: { value: unknown; onChange: (value: unknown) => void };
 		onLineItemDescriptionChange?: (index: number, text: string) => void;
 		onAddLineItem?: () => void;
+		activeAutocompleteIndex?: number;
+		onAutocompleteCommit?: (index: number, value: string) => void;
+		onDeleteLineItem?: (index: number) => void;
 	};
 }

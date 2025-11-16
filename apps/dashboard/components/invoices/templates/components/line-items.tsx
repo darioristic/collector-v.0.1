@@ -1,4 +1,5 @@
 import { formatNumber } from "@/lib/utils";
+import { X } from "lucide-react";
 import { DescriptionAutocompleteInline } from "../../description-autocomplete";
 import type { LineItem } from "../types";
 
@@ -13,7 +14,10 @@ type Props = {
   editable?: boolean;
   onChangeDescription?: (index: number, description: string) => void;
   onAddLineItem?: () => void;
-  useAutocomplete?: boolean;
+  _useAutocomplete?: boolean;
+  activeAutocompleteIndex?: number;
+  onAutocompleteCommit?: (index: number, value: string) => void;
+  onDeleteLineItem?: (index: number) => void;
 };
 
 export function LineItems({
@@ -27,7 +31,10 @@ export function LineItems({
   editable = false,
   onChangeDescription,
   onAddLineItem,
-  useAutocomplete = true
+  _useAutocomplete = true,
+  activeAutocompleteIndex,
+  onAutocompleteCommit,
+  onDeleteLineItem
 }: Props) {
   // Use a more flexible grid that shows all columns
   const gridCols = includeVAT
@@ -63,43 +70,37 @@ export function LineItems({
 
         return (
           <div
-            key={`line-item-${index.toString()}`}
+            key={item.id ? `line-item-${item.id}` : `line-item-${index.toString()}`}
             className={`grid ${gridCols} group relative mb-1 w-full items-start gap-2 py-1`}>
             <div className="self-start text-right text-[11px]">{index + 1}</div>
             <div className="text-[11px]">
               {editable ? (
                 (() => {
                   const enableAutocomplete =
-                    index === lineItems.length - 1 && (!item.name || item.name.length === 0);
+                    typeof activeAutocompleteIndex === "number"
+                      ? index === activeAutocompleteIndex
+                      : index === lineItems.length - 1 && (!item.name || item.name.length === 0);
                   if (enableAutocomplete) {
                     return (
                       <DescriptionAutocompleteInline
                         value={item.name}
                         onChange={(val) => onChangeDescription?.(index, val)}
                         autoFocus
-                        showIcon
+                        showIcon={false}
+                        onCommit={(val) => onAutocompleteCommit?.(index, val)}
                       />
                     );
                   }
                   return (
                     <textarea
-                      className="max-h-64 w-full resize-none overflow-y-auto bg-transparent font-mono text-[11px] leading-4 wrap-break-word whitespace-pre-wrap outline-none focus:ring-0"
+                      dir="ltr"
+                      className="max-h-64 w-full resize-none overflow-y-auto bg-transparent font-mono text-left text-[11px] leading-4 wrap-break-word whitespace-pre-wrap outline-none focus:ring-0"
                       value={item.name}
                       rows={3}
                       spellCheck={false}
                       onKeyDown={(e) => {
-                        // Allow native newline; just stop bubbling so no parent handler fires
                         if (e.key === "Enter") {
-                          e.stopPropagation();
-                        }
-                      }}
-                      onKeyUp={(e) => {
-                        if (e.key === "Enter") {
-                          e.stopPropagation();
-                        }
-                      }}
-                      onKeyPress={(e) => {
-                        if (e.key === "Enter") {
+                          // Allow newline; prevent parent handlers
                           e.stopPropagation();
                         }
                       }}
@@ -125,6 +126,15 @@ export function LineItems({
               </>
             )}
             <div className="self-start text-right text-[11px]">{formatNumber(itemTotal)}</div>
+            {editable && (
+              <button
+                type="button"
+                aria-label="Delete line"
+                className="invisible group-hover:visible absolute right-0 top-0.5 text-muted-foreground hover:text-destructive"
+                onClick={() => onDeleteLineItem?.(index)}>
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         );
       })}

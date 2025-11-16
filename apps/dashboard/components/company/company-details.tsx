@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -100,7 +102,6 @@ export function CompanyDetails() {
 	return (
 		<Card>
 			<CardHeader>
-				{/* Header Section: Logo and Company Name */}
 				<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
 					<Avatar className="h-20 w-20 rounded-xl border-2 border-border shadow-sm sm:h-24 sm:w-24">
 						{company.logoUrl ? (
@@ -119,22 +120,71 @@ export function CompanyDetails() {
 						<h1 className="text-foreground text-2xl font-semibold tracking-tight sm:text-3xl">
 							{company.name}
 						</h1>
-						{company.legalName && company.legalName !== company.name && (
-							<p className="text-muted-foreground text-sm">{company.legalName}</p>
-						)}
-						{company.industry && (
-							<div className="flex flex-wrap items-center gap-2">
+						<div className="flex flex-wrap items-center gap-2">
+							{company.industry && (
 								<Badge variant="secondary" size="sm">
 									{company.industry}
 								</Badge>
-							</div>
+							)}
+							{company.employees !== null &&
+								company.employees !== undefined && (
+									<Badge variant="outline" size="sm">
+										{company.employees.toLocaleString()} zaposlenih
+									</Badge>
+								)}
+							{company.brandColor && (
+								<span className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-xs">
+									<span
+										aria-hidden="true"
+										className="h-3 w-3 rounded"
+										style={{ backgroundColor: company.brandColor ?? undefined }}
+									/>
+									<code className="text-muted-foreground">{company.brandColor}</code>
+								</span>
+							)}
+						</div>
+						{company.legalName && company.legalName !== company.name && (
+							<p className="text-muted-foreground text-sm">{company.legalName}</p>
 						)}
 					</div>
 				</div>
 			</CardHeader>
 
 			<CardContent className="space-y-6">
-				{/* About/Description Section */}
+				{/* Quick Actions */}
+				<div className="flex flex-wrap gap-2">
+					{company.email && (
+						<Button asChild variant="secondary" size="sm">
+							<a href={`mailto:${company.email}`} aria-label={`Pošalji email na ${company.email}`}>
+								<Mail className="mr-2 h-4 w-4" />
+								Email
+							</a>
+						</Button>
+					)}
+					{company.phone && (
+						<Button asChild variant="secondary" size="sm">
+							<a href={`tel:${company.phone}`} aria-label={`Pozovi ${company.phone}`}>
+								<Phone className="mr-2 h-4 w-4" />
+								Poziv
+							</a>
+						</Button>
+					)}
+					{company.website && (
+						<Button asChild variant="outline" size="sm">
+							<a
+								href={company.website}
+								target="_blank"
+								rel="noopener noreferrer"
+								aria-label={`Otvori sajt ${company.website}`}
+							>
+								<Globe className="mr-2 h-4 w-4" />
+								Sajt
+							</a>
+						</Button>
+					)}
+				</div>
+
+				{/* About/Description */}
 				{company.description && (
 					<section aria-labelledby="about-heading">
 						<h2
@@ -204,7 +254,7 @@ export function CompanyDetails() {
 					</div>
 				</section>
 
-				{/* Company Details Section */}
+				{/* Company Details */}
 				{(company.legalName ||
 					company.registrationNo ||
 					company.taxId ||
@@ -219,6 +269,9 @@ export function CompanyDetails() {
 								Detalji kompanije
 							</h2>
 							<div className="grid gap-4 sm:grid-cols-2">
+								{company.legalName && (
+									<DetailItem label="Pravno ime" value={company.legalName} />
+								)}
 								{company.registrationNo && (
 									<DetailItem label="Registracioni broj" value={company.registrationNo} />
 								)}
@@ -231,6 +284,89 @@ export function CompanyDetails() {
 										value={company.employees.toLocaleString()}
 									/>
 								)}
+								<DetailItem
+									label="Kreirano"
+									value={new Intl.DateTimeFormat("sr-RS", {
+										dateStyle: "medium",
+									}).format(new Date(company.createdAt))}
+								/>
+								<DetailItem
+									label="Ažurirano"
+									value={new Intl.DateTimeFormat("sr-RS", {
+										dateStyle: "medium",
+									}).format(new Date(company.updatedAt))}
+								/>
+							</div>
+						</section>
+					</>
+				)}
+
+				{/* Visual Identity */}
+				{(company.logoUrl || company.faviconUrl || company.brandColor) && (
+					<>
+						<Separator />
+						<section aria-labelledby="branding-heading">
+							<h2
+								id="branding-heading"
+								className="text-foreground mb-4 text-base font-semibold"
+							>
+								Vizuelni identitet
+							</h2>
+							<div className="grid gap-4 sm:grid-cols-3">
+								<div className="flex items-center gap-3 rounded-lg border border-border bg-card/50 p-3">
+									<div className="flex size-10 items-center justify-center rounded-md border">
+                    {company.faviconUrl ? (
+                      <Image
+                        src={company.faviconUrl}
+                        alt="Favicon"
+                        width={24}
+                        height={24}
+                        className="h-6 w-6"
+                      />
+                    ) : (
+                      <span className="text-muted-foreground text-xs">—</span>
+                    )}
+									</div>
+									<div className="min-w-0">
+										<Label className="text-muted-foreground text-xs">Favicon</Label>
+										<p className="text-foreground truncate text-sm">
+											{company.faviconUrl ?? "Nije postavljeno"}
+										</p>
+									</div>
+								</div>
+								<div className="flex items-center gap-3 rounded-lg border border-border bg-card/50 p-3">
+									<div className="flex size-10 items-center justify-center rounded-md border">
+                    {company.logoUrl ? (
+                      <Image
+                        src={company.logoUrl}
+                        alt="Logo"
+                        width={72}
+                        height={32}
+                        className="max-h-8 max-w-[72px] object-contain"
+                      />
+                    ) : (
+                      <span className="text-muted-foreground text-xs">—</span>
+                    )}
+									</div>
+									<div className="min-w-0">
+										<Label className="text-muted-foreground text-xs">Logo</Label>
+										<p className="text-foreground truncate text-sm">
+											{company.logoUrl ?? "Nije postavljeno"}
+										</p>
+									</div>
+								</div>
+								<div className="flex items-center gap-3 rounded-lg border border-border bg-card/50 p-3">
+									<div
+										className="h-10 w-10 rounded-md border"
+										style={{ backgroundColor: company.brandColor ?? undefined }}
+									/>
+									<div className="min-w-0">
+										<Label className="text-muted-foreground text-xs">Primarna boja</Label>
+										<p className="text-foreground truncate text-sm">
+											{company.brandColor ?? "Nije postavljeno"}
+										</p>
+									</div>
+								</div>
 							</div>
 						</section>
 					</>
@@ -324,4 +460,4 @@ function DetailItem({ label, value }: DetailItemProps) {
  * Social Media Link Component
  * Displays a social media link with icon, hover states, and smooth transitions
  */
-
+import Image from "next/image";

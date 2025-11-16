@@ -30,6 +30,7 @@ export interface UseMinimalTiptapEditorProps extends UseEditorOptions {
 	throttleDelay?: number;
 	onUpdate?: (content: Content) => void;
 	onBlur?: (content: Content) => void;
+	immediatelyRender?: boolean;
 }
 
 const createExtensions = (placeholder: string) => [
@@ -167,6 +168,7 @@ export const useMinimalTiptapEditor = ({
 	throttleDelay = 0,
 	onUpdate,
 	onBlur,
+	immediatelyRender = false,
 	...props
 }: UseMinimalTiptapEditorProps) => {
 	const throttledSetValue = useThrottle(
@@ -203,6 +205,7 @@ export const useMinimalTiptapEditor = ({
 				class: cn("focus:outline-hidden", editorClassName),
 			},
 		},
+		immediatelyRender,
 		onUpdate: ({ editor }) => handleUpdate(editor),
 		onCreate: ({ editor }) => handleCreate(editor),
 		onBlur: ({ editor }) => handleBlur(editor),

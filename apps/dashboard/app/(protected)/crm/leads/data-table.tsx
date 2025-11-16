@@ -67,6 +67,8 @@ import { Separator } from "@/components/ui/separator";
 import {
 	Sheet,
 	SheetContent,
+		SheetDescription,
+		SheetTitle,
 } from "@/components/ui/sheet";
 import {
 	Table,
@@ -113,6 +115,30 @@ const statusClasses: Record<LeadStatus, string> = {
 	won: "bg-green-50 text-green-700 ring-1 ring-inset ring-green-200",
 	lost: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
 };
+
+	const RECENT_LEAD_ACTIVITY = [
+		{
+			title: "Status updated",
+			description: "Lead moved to Contacted after initial outreach.",
+			timestamp: "2 days ago",
+			icon: Sparkles,
+			color: "text-blue-600",
+		},
+		{
+			title: "Call scheduled",
+			description: "Introductory call planned to qualify the opportunity.",
+			timestamp: "5 days ago",
+			icon: PhoneCall,
+			color: "text-emerald-600",
+		},
+		{
+			title: "Notes added",
+			description: "Captured discovery notes from email exchange.",
+			timestamp: "1 week ago",
+			icon: NotebookPen,
+			color: "text-purple-600",
+		},
+	] as const;
 
 const statusFilters = [
 	{ id: "all" as const, label: "All statuses" },
@@ -178,6 +204,10 @@ export const LeadsDataTable = React.forwardRef<
 		status: "new" as LeadStatus,
 		source: "",
 		notes: "",
+	});
+	const [nextStepsCompleted, setNextStepsCompleted] = React.useState({
+		call: false,
+		rep: false,
 	});
 
 	const editFormId = React.useId();
@@ -966,76 +996,57 @@ export const LeadsDataTable = React.forwardRef<
 					{activeLead ? (
 						<div className="flex h-full flex-col">
 							<div className="border-b px-6 py-5">
-								<h1 className="text-xl font-bold tracking-tight lg:text-2xl">
-									{activeLead.name} — Lead Details
-								</h1>
+								<div className="space-y-1">
+									<SheetTitle className="text-2xl leading-tight font-semibold">
+										Lead details
+									</SheetTitle>
+									<SheetDescription>
+										Review status, origin, and next steps for {activeLead.name}.
+									</SheetDescription>
+								</div>
 							</div>
 
 							<ScrollArea className="h-[calc(100vh-200px)] flex-1">
 								<div className="space-y-6 px-6 py-5">
+									{/* Profile */}
 									<section className="space-y-4">
 										<div className="flex items-start gap-4">
 											<Avatar className="size-16">
-												<AvatarFallback>
+												<AvatarFallback className="text-lg font-semibold">
 													{generateAvatarFallback(activeLead.name)}
 												</AvatarFallback>
 											</Avatar>
 											<div className="flex flex-col gap-2 flex-1">
+												<div className="flex flex-wrap items-center gap-3">
+													<h2 className="text-xl font-semibold">{activeLead.name}</h2>
+													<Badge
+														className={cn(
+															"rounded-full px-2.5 py-0.5 text-xs",
+															statusClasses[activeLead.status],
+														)}
+													>
+														<Sparkles className="mr-1.5 h-3.5 w-3.5" />
+														{statusLabels[activeLead.status]}
+													</Badge>
+												</div>
 												<p className="text-muted-foreground text-sm leading-relaxed">
-													This lead originates from{" "}
+													Origin:{" "}
 													<span className="text-foreground font-medium">
 														{activeLead.source || "Unknown"}
 													</span>
-													. Define the next actions and turn it into an
-													opportunity.
 												</p>
-											</div>
-										</div>
-									</section>
-
-									<Separator />
-
-									<section className="space-y-4">
-										<h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-											Status
-										</h2>
-										<div className="space-y-3">
-											<Badge
-												className={cn(
-													"rounded-full px-3 py-1 text-sm",
-													statusClasses[activeLead.status],
-												)}
-											>
-												<Sparkles className="mr-1.5 h-3.5 w-3.5" />
-												{statusLabels[activeLead.status]}
-											</Badge>
-											<div className="space-y-2 text-sm text-muted-foreground">
-												<div className="flex items-center gap-2">
-													<CalendarClock
-														className="h-4 w-4 text-muted-foreground"
-														aria-hidden="true"
-													/>
-													<span>
-														Lead created on {formatLeadDate(activeLead.createdAt)}
+												<div className="flex flex-wrap items-center gap-2">
+													<Badge variant="outline" className="text-xs font-medium">
+														{activeLead.source || "Unknown source"}
+													</Badge>
+													<span className="text-muted-foreground text-xs flex items-center gap-1.5">
+														<CalendarClock className="h-3.5 w-3.5" />
+														Created {formatLeadDate(activeLead.createdAt)}
 													</span>
 												</div>
-												{activeLead.updatedAt && activeLead.updatedAt !== activeLead.createdAt && (
-													<div className="flex items-center gap-2">
-														<NotebookPen
-															className="h-4 w-4 text-muted-foreground"
-															aria-hidden="true"
-														/>
-														<span>
-															Last updated on{" "}
-															{formatLeadDate(activeLead.updatedAt)}
-														</span>
-													</div>
-												)}
 											</div>
 										</div>
 									</section>
-
-									<Separator />
 
 									<section className="space-y-4">
 										<h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -1080,33 +1091,172 @@ export const LeadsDataTable = React.forwardRef<
 										<h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
 											Next Steps
 										</h2>
-										<ul className="space-y-2 text-sm text-muted-foreground">
-											<li className="flex items-center gap-2">
-												<PhoneCall
-													className="h-4 w-4 text-primary"
-													aria-hidden="true"
-												/>
-												Schedule an introductory call and confirm the business
-												needs.
-											</li>
-											<li className="flex items-center gap-2">
-												<UserRound
-													className="h-4 w-4 text-primary"
-													aria-hidden="true"
-												/>
-												Loop in the assigned sales rep for continued follow-up.
-											</li>
-											<li className="flex items-center gap-2">
-												<NotebookPen
-													className="h-4 w-4 text-primary"
-													aria-hidden="true"
-												/>
-												Capture key notes after the first conversation.
-											</li>
-										</ul>
+										<div className="space-y-3 text-sm">
+											<div className="bg-muted/30 hover:bg-muted/50 border-border flex items-center justify-between gap-3 rounded-md border p-3 transition">
+												<div className="flex items-start gap-3">
+													<Checkbox
+														checked={nextStepsCompleted.call}
+														onCheckedChange={(checked) =>
+															setNextStepsCompleted((p) => ({ ...p, call: Boolean(checked) }))
+														}
+														aria-label="Mark call as done"
+													/>
+													<div className="text-muted-foreground flex items-center gap-2">
+														<PhoneCall className="h-4 w-4 text-primary" aria-hidden="true" />
+														<span>
+															Schedule an introductory call and confirm the business needs.
+														</span>
+													</div>
+												</div>
+												<div className="flex items-center gap-2">
+													<Button
+														type="button"
+														variant="outline"
+														size="sm"
+														onClick={() =>
+															toast({
+																title: "Email draft",
+																description: `Drafting intro email to ${activeLead?.email || "lead"}.`,
+															})
+														}
+													>
+														Send email
+													</Button>
+													<Button
+														type="button"
+														size="sm"
+														onClick={() =>
+															toast({
+																title: "Call scheduled",
+																description: "Introductory call scheduled (simulation).",
+															})
+														}
+													>
+														Schedule call
+													</Button>
+												</div>
+											</div>
+
+											<div className="bg-muted/30 hover:bg-muted/50 border-border flex items-center justify-between gap-3 rounded-md border p-3 transition">
+												<div className="flex items-start gap-3">
+													<Checkbox
+														checked={nextStepsCompleted.rep}
+														onCheckedChange={(checked) =>
+															setNextStepsCompleted((p) => ({ ...p, rep: Boolean(checked) }))
+														}
+														aria-label="Mark rep handoff as done"
+													/>
+													<div className="text-muted-foreground flex items-center gap-2">
+														<UserRound className="h-4 w-4 text-primary" aria-hidden="true" />
+														<span>
+															Loop in the assigned sales rep for continued follow-up.
+														</span>
+													</div>
+												</div>
+												<div className="flex items-center gap-2">
+													<Button
+														type="button"
+														variant="outline"
+														size="sm"
+														onClick={() =>
+															toast({
+																title: "Rep assigned",
+																description: "Sales rep assignment updated (simulation).",
+															})
+														}
+													>
+														Assign rep
+													</Button>
+													<Button
+														type="button"
+														size="sm"
+														onClick={() =>
+															toast({
+																title: "Rep notified",
+																description: "Sales rep notified about this lead (simulation).",
+															})
+														}
+													>
+														Notify
+													</Button>
+												</div>
+											</div>
+
+											<div className="text-muted-foreground flex items-center gap-2">
+												<NotebookPen className="h-4 w-4 text-primary" aria-hidden="true" />
+												<span>Capture key notes after the first conversation.</span>
+											</div>
+										</div>
+									</section>
+
+									<Separator />
+
+									<section className="space-y-4">
+										<h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+											Recent Activity
+										</h2>
+										<div className="relative space-y-6">
+											<div className="border-muted absolute left-4 top-0 h-full border-l-2" />
+											{RECENT_LEAD_ACTIVITY.map((item) => {
+												const Icon = item.icon;
+												return (
+													<div key={item.title} className="relative flex gap-4">
+														<div className="bg-background border-muted relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full border-2">
+															<Icon className={`size-4 ${item.color}`} />
+														</div>
+														<div className="flex-1 pb-6">
+															<div className="flex items-start justify-between gap-2">
+																<div>
+																	<p className="font-medium leading-tight">{item.title}</p>
+																	<p className="text-muted-foreground mt-1 text-sm leading-relaxed">
+																		{item.description}
+																	</p>
+																</div>
+																<span className="text-muted-foreground shrink-0 text-xs">
+																	{item.timestamp}
+																</span>
+															</div>
+														</div>
+													</div>
+												);
+											})}
+										</div>
 									</section>
 								</div>
 							</ScrollArea>
+							{/* Footer Actions */}
+							<div className="border-t bg-background px-6 py-4">
+								<div className="flex justify-end gap-2">
+									<Button
+										type="button"
+										variant="outline"
+										onClick={() => {
+											setDeleteTargets([activeLead]);
+											setIsDeleteDialogOpen(true);
+										}}
+									>
+										<Trash2 className="mr-2 size-4" aria-hidden="true" />
+										Delete
+									</Button>
+									<Button
+										type="button"
+										onClick={() => {
+											setEditTarget(activeLead);
+											setEditFormState({
+												name: activeLead.name,
+												email: activeLead.email,
+												status: activeLead.status,
+												source: activeLead.source ?? "",
+												notes: "",
+											});
+											setIsEditDialogOpen(true);
+										}}
+									>
+										<UserRound className="mr-2 size-4" aria-hidden="true" />
+										Edit Lead
+									</Button>
+								</div>
+							</div>
 						</div>
 					) : null}
 				</SheetContent>

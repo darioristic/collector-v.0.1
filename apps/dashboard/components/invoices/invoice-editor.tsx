@@ -38,7 +38,7 @@ function parseNumber(value: string, fallback = 0): number {
 }
 
 type Props = {
-  invoice: Invoice;
+	invoice: Invoice;
   onCancel: () => void;
   onSaved?: (invoice: Invoice) => void;
 };
@@ -154,7 +154,7 @@ export function InvoiceEditor({ invoice, onCancel, onSaved }: Props) {
     }
   };
 
-  return (
+	return (
     <div className="flex h-full flex-col">
       <div className="px-4 pt-4">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -231,7 +231,7 @@ export function InvoiceEditor({ invoice, onCancel, onSaved }: Props) {
               unstyled
             />
           </div>
-          <div>
+				<div>
             <Label>Payment details</Label>
             <MinimalTiptapEditor
               className="mt-2"
@@ -244,11 +244,11 @@ export function InvoiceEditor({ invoice, onCancel, onSaved }: Props) {
               unstyled
             />
           </div>
-        </div>
-      </div>
+				</div>
+			</div>
 
       <div className="mt-4 px-4">
-        <Card>
+			<Card>
           <CardContent className="p-4">
             <div className="mb-3 flex items-center justify-between">
               <Label className="text-sm">Line items</Label>
@@ -299,12 +299,12 @@ export function InvoiceEditor({ invoice, onCancel, onSaved }: Props) {
                     <Button variant="ghost" size="sm" onClick={() => removeLineItem(idx)}>
                       Remove
                     </Button>
-                  </div>
+						</div>
                 </div>
               ))}
-            </div>
-          </CardContent>
-        </Card>
+					</div>
+				</CardContent>
+			</Card>
       </div>
 
       <div className="mt-4 px-4">
@@ -327,6 +327,6 @@ export function InvoiceEditor({ invoice, onCancel, onSaved }: Props) {
           {isPending ? "Saving..." : "Save changes"}
         </Button>
       </div>
-    </div>
-  );
+		</div>
+	);
 }

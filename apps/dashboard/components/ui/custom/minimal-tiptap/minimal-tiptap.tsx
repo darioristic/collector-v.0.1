@@ -121,6 +121,7 @@ export const MinimalTiptapEditor = React.forwardRef<
 	const editor = useMinimalTiptapEditor({
 		value,
 		onUpdate: onChange,
+		immediatelyRender: false,
 		...props,
 	});
 

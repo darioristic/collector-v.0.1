@@ -1,0 +1,193 @@
+"use client";
+
+import * as React from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+
+type ImapSettings = {
+  host: string;
+  port: number;
+  secure: boolean;
+  username: string;
+  password: string;
+  syncEmails: boolean;
+  syncContacts: boolean;
+  syncCalendar: boolean;
+  folders?: string[];
+  intervalSeconds?: number;
+};
+
+type ImapStatus = { connected?: boolean; lastSync?: string; message?: string };
+async function apiGetStatus(): Promise<ImapStatus> {
+  const res = await fetch("/api/integrations/imap/status", { cache: "no-store" });
+  return res.json();
+}
+
+async function apiSaveSettings(payload: ImapSettings): Promise<{ ok: boolean }> {
+  const res = await fetch("/api/integrations/imap/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  return res.json();
+}
+
+async function apiConnect(): Promise<{ ok: boolean; mailboxes?: Array<{ path: string; flags: string[] }> }> {
+  const res = await fetch("/api/integrations/imap/connect", { method: "POST" });
+  return res.json();
+}
+
+async function apiSync(): Promise<{ ok: boolean; lastSync?: string }> {
+  const res = await fetch("/api/integrations/imap/sync", { method: "POST" });
+  return res.json();
+}
+
+export default function ImapTab() {
+  const { toast } = useToast();
+  const [settings, setSettings] = React.useState<ImapSettings>({
+    host: "",
+    port: 993,
+    secure: true,
+    username: "",
+    password: "",
+    syncEmails: true,
+    syncContacts: true,
+    syncCalendar: true,
+    folders: ["INBOX"],
+    intervalSeconds: 600
+  });
+
+  const { data: statusData, refetch: refetchStatus, isFetching: statusLoading } = useQuery({
+    queryKey: ["imap-status"],
+    queryFn: apiGetStatus
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: apiSaveSettings,
+    onSuccess: () => {
+      toast({ title: "Settings saved" });
+      refetchStatus();
+    },
+    onError: () => toast({ title: "Failed to save settings" })
+  });
+
+  const connectMutation = useMutation({
+    mutationFn: apiConnect,
+    onSuccess: () => {
+      toast({ title: "Connected to IMAP" });
+      refetchStatus();
+    },
+    onError: () => toast({ title: "Failed to connect" })
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: apiSync,
+    onSuccess: () => {
+      toast({ title: "Sync triggered" });
+      refetchStatus();
+    },
+    onError: () => toast({ title: "Failed to sync" })
+  });
+
+  return (
+    <Card className="border-none bg-transparent shadow-none">
+      <div className="flex flex-col gap-6 rounded-2xl border border-border bg-card p-6 md:p-8">
+        <div className="flex flex-col gap-2">
+          <h2 className="text-2xl font-semibold text-foreground">IMAP Integration</h2>
+          <p className="text-sm text-muted-foreground">
+            Configure your IMAP connection for syncing emails, contacts and calendar.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <Label>Host</Label>
+            <Input
+              placeholder="imap.example.com"
+              value={settings.host}
+              onChange={(e) => setSettings((s) => ({ ...s, host: e.target.value }))}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label>Port</Label>
+            <Input
+              type="number"
+              placeholder="993"
+              value={String(settings.port)}
+              onChange={(e) => setSettings((s) => ({ ...s, port: Number(e.target.value || 0) }))}
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <Switch checked={settings.secure} onCheckedChange={(v) => setSettings((s) => ({ ...s, secure: v }))} />
+            <Label>Use SSL/TLS</Label>
+          </div>
+          <div />
+          <div className="flex flex-col gap-2">
+            <Label>Username</Label>
+            <Input value={settings.username} onChange={(e) => setSettings((s) => ({ ...s, username: e.target.value }))} />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label>Password</Label>
+            <Input type="password" value={settings.password} onChange={(e) => setSettings((s) => ({ ...s, password: e.target.value }))} />
+          </div>
+        </div>
+
+        <Separator />
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="flex items-center gap-3">
+            <Switch checked={settings.syncEmails} onCheckedChange={(v) => setSettings((s) => ({ ...s, syncEmails: v }))} />
+            <Label>Sync Emails</Label>
+          </div>
+          <div className="flex items-center gap-3">
+            <Switch checked={settings.syncContacts} onCheckedChange={(v) => setSettings((s) => ({ ...s, syncContacts: v }))} />
+            <Label>Sync Contacts</Label>
+          </div>
+          <div className="flex items-center gap-3">
+            <Switch checked={settings.syncCalendar} onCheckedChange={(v) => setSettings((s) => ({ ...s, syncCalendar: v }))} />
+            <Label>Sync Calendar</Label>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <Label>Folders (comma separated)</Label>
+            <Input
+              placeholder="INBOX,Sent"
+              value={(settings.folders || []).join(",")}
+              onChange={(e) => setSettings((s) => ({ ...s, folders: e.target.value.split(",").map((x) => x.trim()).filter(Boolean) }))}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label>Refresh Interval (seconds)</Label>
+            <Input
+              type="number"
+              placeholder="600"
+              value={String(settings.intervalSeconds || "")}
+              onChange={(e) => setSettings((s) => ({ ...s, intervalSeconds: Number(e.target.value || 0) }))}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <Button onClick={() => saveMutation.mutate(settings)} disabled={saveMutation.isPending}>Save settings</Button>
+          <Button variant="secondary" onClick={() => connectMutation.mutate()} disabled={connectMutation.isPending}>Connect</Button>
+          <Button variant="outline" onClick={() => syncMutation.mutate()} disabled={syncMutation.isPending}>Sync now</Button>
+        </div>
+
+        <Separator />
+
+        <div className="text-sm text-muted-foreground">
+          <div>Status: {statusLoading ? "Loading..." : statusData?.connected ? "Connected" : "Disconnected"}</div>
+          <div>Last sync: {statusData?.lastSync || "—"}</div>
+        </div>
+      </div>
+    </Card>
+  );
+}

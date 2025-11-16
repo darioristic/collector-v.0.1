@@ -3,7 +3,6 @@
 import * as React from "react";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ensureResponse } from "@/src/lib/fetch-utils";
 
 type Product = {
   id: string;
@@ -13,18 +12,18 @@ type Product = {
   description?: string | null;
 };
 
-async function searchProducts(query: string): Promise<Product[]> {
+async function searchProducts(query: string, signal?: AbortSignal): Promise<Product[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
   const cleaned = trimmed.replace(/[%_]/g, "").slice(0, 255);
   const params = new URLSearchParams({ search: cleaned, limit: "10" });
   try {
-    const res = await ensureResponse(
-      fetch(`/api/products?${params.toString()}`, {
-        cache: "no-store",
-        headers: { Accept: "application/json" }
-      })
-    );
+    const res = await fetch(`/api/products?${params.toString()}`, {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+      signal
+    });
+    if (!res.ok) return [];
     const data = (await res.json()) as { data?: unknown };
     const list = Array.isArray(data.data) ? (data.data as unknown[]) : [];
     return list.map((raw) => {
@@ -51,12 +50,14 @@ export function DescriptionAutocompleteInline({
   value,
   onChange,
   autoFocus = false,
-  showIcon = true
+  showIcon = false,
+  onCommit
 }: {
   value: string;
   onChange: (value: string) => void;
   autoFocus?: boolean;
   showIcon?: boolean;
+  onCommit?: (value: string) => void;
 }) {
   const [query, setQuery] = React.useState(value || "");
   const [isOpen, setIsOpen] = React.useState(false);
@@ -65,6 +66,7 @@ export function DescriptionAutocompleteInline({
   const [selectedIdx, setSelectedIdx] = React.useState(-1);
   const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
   const [menuWidth, setMenuWidth] = React.useState<number | undefined>(undefined);
+  const abortRef = React.useRef<AbortController | null>(null);
 
   React.useEffect(() => {
     setQuery(value || "");
@@ -74,21 +76,30 @@ export function DescriptionAutocompleteInline({
     let cancelled = false;
     const run = async () => {
       const q = query.trim();
-      if (!isOpen || q.length < 2) {
+      if (!isOpen || q.length < 3) {
         setOptions([]);
         return;
       }
+      // abort previous request
+      if (abortRef.current) {
+        abortRef.current.abort();
+      }
+      const controller = new AbortController();
+      abortRef.current = controller;
       setLoading(true);
-      const res = await searchProducts(q);
+      const res = await searchProducts(q, controller.signal).catch(() => []);
       if (!cancelled) {
         setOptions(res);
         setLoading(false);
       }
     };
-    const t = setTimeout(run, 200);
+    const t = setTimeout(run, 250);
     return () => {
       cancelled = true;
       clearTimeout(t);
+      if (abortRef.current) {
+        abortRef.current.abort();
+      }
     };
   }, [query, isOpen]);
 
@@ -104,14 +115,13 @@ export function DescriptionAutocompleteInline({
         }
       }, 0);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoFocus, textareaId]);
 
   return (
     <div className="relative w-full">
       <div className="relative">
         {showIcon ? (
-          <Search className="text-muted-foreground/60 pointer-events-none absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-1/2" />
+          <Search className="text-muted-foreground/60 pointer-events-none absolute top-1/2 left-2 h-3.5 w-3.5 -translate-y-[45%]" />
         ) : null}
         <textarea
           ref={textareaRef}
@@ -120,7 +130,7 @@ export function DescriptionAutocompleteInline({
           onChange={(e) => {
             setQuery(e.target.value);
             onChange(e.target.value);
-            setIsOpen(e.target.value.trim().length > 0);
+            // do not auto-open while typing to avoid flicker; user can press Ctrl+Space to open
             setSelectedIdx(-1);
             if (textareaRef.current) {
               setMenuWidth(textareaRef.current.offsetWidth);
@@ -128,6 +138,12 @@ export function DescriptionAutocompleteInline({
           }}
           onKeyDown={(e) => {
             // Default: allow typing/newlines; only intercept when navigating/confirming a selection
+            if (e.ctrlKey && e.code === "Space") {
+              // explicit open
+              setIsOpen(true);
+              e.preventDefault();
+              return;
+            }
             if (!isOpen) {
               // Prevent parent shortcuts on Enter but keep newline
               if (e.key === "Enter") e.stopPropagation();
@@ -154,6 +170,7 @@ export function DescriptionAutocompleteInline({
                     : picked.name;
                 setQuery(text);
                 onChange(text);
+                onCommit?.(text);
                 setIsOpen(false);
                 return;
               }
@@ -207,6 +224,7 @@ export function DescriptionAutocompleteInline({
                         : opt.name;
                     setQuery(text);
                     onChange(text);
+                    onCommit?.(text);
                     setIsOpen(false);
                   }}
                   className={cn(
