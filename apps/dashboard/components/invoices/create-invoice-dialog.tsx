@@ -288,7 +288,7 @@ function DescriptionAutocomplete({
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["products", "description", query, index],
@@ -384,25 +384,16 @@ function DescriptionAutocomplete({
     setSelectedIndex(-1);
   };
 
-  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    const pastedText = e.clipboardData.getData("text");
-
-    // If pasted text contains newlines, parse it intelligently
-    if (pastedText.includes("\n") || pastedText.includes("\r")) {
-      const parsed = parsePastedDescription(pastedText);
-      setQuery(parsed);
-      onChange(parsed);
-      setIsOpen(parsed.trim().length > 0);
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    // Preserve pasted content including newlines
+    // Let browser insert it, then sync value in next tick
+    setTimeout(() => {
+      const value = e.currentTarget.value;
+      setQuery(value);
+      onChange(value);
+      setIsOpen(value.trim().length > 0);
       setSelectedIndex(-1);
-    } else {
-      // Single line paste, handle normally
-      const newValue = pastedText;
-      setQuery(newValue);
-      onChange(newValue);
-      setIsOpen(newValue.trim().length > 0);
-      setSelectedIndex(-1);
-    }
+    }, 0);
   };
 
   const handleInputFocus = () => {
@@ -411,8 +402,9 @@ function DescriptionAutocomplete({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (!isOpen) {
+      // Allow Enter to create new line in textarea when suggestions are closed
       return;
     }
 
@@ -436,8 +428,8 @@ function DescriptionAutocomplete({
   return (
     <div ref={containerRef} className="relative w-full">
       <div className="relative">
-        <Search className="text-muted-foreground/60 absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2" />
-        <Input
+        <Search className="text-muted-foreground/60 absolute top-2 left-3 h-3.5 w-3.5" />
+        <textarea
           ref={inputRef}
           value={query}
           onChange={handleInputChange}
@@ -451,7 +443,13 @@ function DescriptionAutocomplete({
           }}
           onKeyDown={handleKeyDown}
           placeholder="Item description"
-          className="border-border/60 bg-background h-8 pr-3 pl-9 text-sm"
+          rows={2}
+          className="border-border/60 bg-background resize-none rounded-md border py-1.5 pr-3 pl-9 font-mono text-sm leading-4 whitespace-pre-wrap"
+          onInput={(e) => {
+            const t = e.currentTarget;
+            t.style.height = "auto";
+            t.style.height = `${t.scrollHeight}px`;
+          }}
           autoComplete="off"
         />
       </div>
@@ -1017,7 +1015,7 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSuccess }: CreateInv
       const invoiceData: InvoiceCreateInput = {
         invoiceNumber: data.invoiceNumber,
         customerId: data.customerId,
-        customerName: data.customerName,
+        customerName: (data.customerName && data.customerName.trim()) || customer?.name || "—",
         customerEmail:
           data.customerEmail && data.customerEmail.trim() ? data.customerEmail.trim() : undefined,
         billingAddress:
@@ -1121,7 +1119,8 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSuccess }: CreateInv
                         toast({
                           variant: "destructive",
                           title: "Validation Error",
-                          description: messages[0] ?? "Please check all required fields and fix any errors."
+                          description:
+                            messages[0] ?? "Please check all required fields and fix any errors."
                         });
                       }
                     }
@@ -1178,7 +1177,9 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSuccess }: CreateInv
                               </span>
                             )}
                             <span className="text-muted-foreground text-sm">•</span>
-                            <span className="text-muted-foreground text-sm" suppressHydrationWarning>
+                            <span
+                              className="text-muted-foreground text-sm"
+                              suppressHydrationWarning>
                               {mounted ? `Updated: ${formatDate(new Date())}` : "Updated:"}
                             </span>
                           </div>
@@ -1834,18 +1835,18 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSuccess }: CreateInv
                   (errors) => {
                     const collect = (obj: unknown): string[] => {
                       const out: string[] = [];
-                        const walk = (o: unknown) => {
-                          if (!o || typeof o !== "object") return;
-                          const objRecord = o as Record<string, unknown>;
-                          for (const k of Object.keys(objRecord)) {
-                            const v = objRecord[k] as unknown;
-                            if (!v) continue;
-                            const maybeMessage = (v as { message?: unknown }).message;
-                            if (typeof maybeMessage === "string") out.push(maybeMessage);
-                            else if (Array.isArray(v)) v.forEach((item) => walk(item));
-                            else if (typeof v === "object") walk(v);
-                          }
-                        };
+                      const walk = (o: unknown) => {
+                        if (!o || typeof o !== "object") return;
+                        const objRecord = o as Record<string, unknown>;
+                        for (const k of Object.keys(objRecord)) {
+                          const v = objRecord[k] as unknown;
+                          if (!v) continue;
+                          const maybeMessage = (v as { message?: unknown }).message;
+                          if (typeof maybeMessage === "string") out.push(maybeMessage);
+                          else if (Array.isArray(v)) v.forEach((item) => walk(item));
+                          else if (typeof v === "object") walk(v);
+                        }
+                      };
                       walk(obj);
                       return out;
                     };
@@ -1855,7 +1856,8 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSuccess }: CreateInv
                       toast({
                         variant: "destructive",
                         title: "Validation Error",
-                        description: messages[0] ?? "Please check all required fields and fix any errors."
+                        description:
+                          messages[0] ?? "Please check all required fields and fix any errors."
                       });
                     }
                   }

@@ -22,18 +22,24 @@ export function InvoiceToolbar({
   isEditing = false
 }: Props) {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const anchorIdRef = React.useRef<string | undefined>(anchorId);
+
+  React.useEffect(() => {
+    anchorIdRef.current = anchorId;
+  }, [anchorId]);
 
   const recenter = React.useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
-    const anchor = anchorId ? document.getElementById(anchorId) : null;
+    const currentAnchorId = anchorIdRef.current;
+    const anchor = currentAnchorId ? document.getElementById(currentAnchorId) : null;
     const rect = anchor?.getBoundingClientRect();
     if (!rect) {
       el.style.left = `${window.innerWidth / 2}px`;
     } else {
       el.style.left = `${rect.left + rect.width / 2}px`;
     }
-  }, [anchorId]);
+  }, []);
 
   React.useEffect(() => {
     recenter();
@@ -41,9 +47,33 @@ export function InvoiceToolbar({
     const onScroll = () => recenter();
     window.addEventListener("resize", onResize);
     window.addEventListener("scroll", onScroll, { passive: true });
+    // Observe anchor resize
+    const currentAnchorId = anchorIdRef.current;
+    const anchor = currentAnchorId ? document.getElementById(currentAnchorId) : null;
+    const ro = anchor ? new ResizeObserver(() => recenter()) : null;
+    if (anchor && ro) ro.observe(anchor);
+    // Observe scrollable parent (e.g., ScrollArea viewport)
+    const findScrollableParent = (node: HTMLElement | null): HTMLElement | null => {
+      let current: HTMLElement | null = node;
+      while (current && current !== document.body) {
+        const style = window.getComputedStyle(current);
+        const overflowY = style.overflowY;
+        if (overflowY === "auto" || overflowY === "scroll") return current;
+        current = current.parentElement;
+      }
+      return null;
+    };
+    const scrollParent = findScrollableParent(anchor as HTMLElement | null);
+    if (scrollParent) {
+      scrollParent.addEventListener("scroll", onScroll, { passive: true });
+    }
     return () => {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("scroll", onScroll);
+      if (scrollParent) {
+        scrollParent.removeEventListener("scroll", onScroll);
+      }
+      if (ro && anchor) ro.unobserve(anchor);
     };
   }, [recenter]);
   const handleCopyLink = () => {

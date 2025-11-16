@@ -480,7 +480,7 @@ export type InvoiceCreateInput = {
   dueDate?: string;
   currency?: string;
   status?: InvoiceStatus;
-  notes?: string;
+  notes?: string | object;
   items: InvoiceItemCreateInput[];
 };
 

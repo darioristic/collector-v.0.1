@@ -81,7 +81,7 @@ export function EditorContent({ content }: EditorContentProps) {
                       <Link
                         key={`link-${nodeIndex}-${inlineIndex}`}
                         src={linkHref}
-                        style={linkStyle as any}
+                        style={linkStyle}
                       >
                         {text}
                       </Link>
@@ -89,7 +89,7 @@ export function EditorContent({ content }: EditorContentProps) {
                   }
 
                   return (
-                    <Text key={`text-${nodeIndex}-${inlineIndex}`} style={textStyle as any}>
+                    <Text key={`text-${nodeIndex}-${inlineIndex}`} style={textStyle}>
                       {text}
                     </Text>
                   );

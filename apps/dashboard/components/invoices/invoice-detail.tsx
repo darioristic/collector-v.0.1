@@ -290,7 +290,7 @@ export function InvoiceDetail({
             : undefined;
       await updateInvoice({
         id: invoice.id,
-        input: { ...payload, notes: notesDoc } as unknown as any
+        input: { ...payload, notes: notesDoc }
       });
       setIsEditing(false);
       toast({ title: "Sačuvano", description: "Izmene su uspešno sačuvane." });
