@@ -402,7 +402,7 @@ export type InvoiceCreateInput = {
     dueDate?: string;
     currency?: string;
     status?: InvoiceStatus;
-    notes?: string;
+    notes?: string | object;
     items: InvoiceItemCreateInput[];
 };
 export type InvoiceUpdateInput = Partial<Omit<InvoiceCreateInput, "invoiceNumber" | "customerId">>;

@@ -55,14 +55,11 @@ export function EditorContent({ content }: EditorContentProps) {
                   const text = inlineContent.text || "";
                   const marks = inlineContent.marks || [];
 
-                  type TextStyle = NonNullable<React.ComponentProps<typeof Text>["style"]>;
-                  type LinkStyle = NonNullable<React.ComponentProps<typeof Link>["style"]>;
-
-                  const textStyle: TextStyle = {
+                  const textStyle: Record<string, unknown> = {
                     ...(styles.text as object),
                     ...(marks.some((m: EditorMark) => m.type === "bold") ? (styles.bold as object) : {}),
                     ...(marks.some((m: EditorMark) => m.type === "italic") ? (styles.italic as object) : {})
-                  } as TextStyle;
+                  };
 
                   // Check if it's a link
                   const linkMark = marks.find((m: EditorMark) => m.type === "link");
@@ -73,15 +70,15 @@ export function EditorContent({ content }: EditorContentProps) {
 
                   if (href || isEmail) {
                     const linkHref = href || (isEmail ? `mailto:${text}` : text);
-                    const linkStyle: LinkStyle = {
+                    const linkStyle: Record<string, unknown> = {
                       ...(textStyle as object),
                       ...(styles.link as object)
-                    } as LinkStyle;
+                    };
                     return (
                       <Link
                         key={`link-${nodeIndex}-${inlineIndex}`}
                         src={linkHref}
-                        style={linkStyle}
+                        style={linkStyle as any}
                       >
                         {text}
                       </Link>
@@ -89,7 +86,7 @@ export function EditorContent({ content }: EditorContentProps) {
                   }
 
                   return (
-                    <Text key={`text-${nodeIndex}-${inlineIndex}`} style={textStyle}>
+                    <Text key={`text-${nodeIndex}-${inlineIndex}`} style={textStyle as any}>
                       {text}
                     </Text>
                   );

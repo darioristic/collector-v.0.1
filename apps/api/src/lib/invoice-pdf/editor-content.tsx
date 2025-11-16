@@ -55,9 +55,7 @@ export function EditorContent({ content }: EditorContentProps) {
                   const text = inlineContent.text || "";
                   const marks = inlineContent.marks || [];
 
-                  type TextStyle = NonNullable<React.ComponentProps<typeof Text>["style"]>;
-                  type LinkStyle = NonNullable<React.ComponentProps<typeof Link>["style"]>;
-                  const textStyleObj: TextStyle = {
+                  const textStyleObj: Record<string, unknown> = {
                     ...(styles.text as object),
                     ...(marks.some((m: EditorMark) => m.type === "bold") ? (styles.bold as object) : {}),
                     ...(marks.some((m: EditorMark) => m.type === "italic") ? (styles.italic as object) : {}),
@@ -76,7 +74,7 @@ export function EditorContent({ content }: EditorContentProps) {
                       <Link
                         key={`link-${nodeIndex}-${inlineIndex}`}
                         src={linkHref}
-                        style={{ ...(textStyleObj as object), ...(styles.link as object) } as LinkStyle}
+                        style={{ ...(textStyleObj as object), ...(styles.link as object) } as any}
                       >
                         {text}
                       </Link>
@@ -84,7 +82,7 @@ export function EditorContent({ content }: EditorContentProps) {
                   }
 
                   return (
-                    <Text key={`text-${nodeIndex}-${inlineIndex}`} style={textStyleObj}>
+                    <Text key={`text-${nodeIndex}-${inlineIndex}`} style={textStyleObj as any}>
                       {text}
                     </Text>
                   );

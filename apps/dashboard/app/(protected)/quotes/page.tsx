@@ -2,7 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { useState } from "react";
-import { CreateQuoteDialog } from "@/components/quotes/create-quote-dialog";
+import { InvoiceCreateSheet } from "@/components/invoices/invoice-create-sheet";
 import { QuoteDetail } from "@/components/quotes/quote-detail";
 import { QuoteList } from "@/components/quotes/quote-list";
 import { Button } from "@/components/ui/button";
@@ -20,9 +20,9 @@ export default function QuotesPage() {
 		setIsDrawerOpen(true);
 	};
 
-	const handleCreateQuote = () => {
-		setIsCreateDialogOpen(true);
-	};
+  const handleCreateQuote = () => {
+    setIsCreateDialogOpen(true);
+  };
 
 	const handleDeleteQuote = async (quoteId: number) => {
 		// Confirm se već radi u QuoteActions komponenti
@@ -38,18 +38,18 @@ export default function QuotesPage() {
 		setSelectedQuoteId(null);
 	};
 
-	return (
-		<div className="space-y-8">
-			<TablePageHeader
-				title="Quotes"
-				description="Manage and track your sales quotes across accounts and stakeholders."
-				actions={
-					<Button type="button" onClick={handleCreateQuote} className="gap-2">
-						<Plus className="size-4" aria-hidden="true" />
-						New Quote
-					</Button>
-				}
-			/>
+  return (
+    <div className="space-y-8">
+      <TablePageHeader
+        title="Offers"
+        description="Manage and track your sales offers across accounts and stakeholders."
+        actions={
+          <Button type="button" onClick={handleCreateQuote} className="gap-2">
+            <Plus className="size-4" aria-hidden="true" />
+            New Offer
+          </Button>
+        }
+      />
 
 			<QuoteList onQuoteClick={handleQuoteClick} showCreateAction={false} />
 
@@ -63,10 +63,9 @@ export default function QuotesPage() {
 				onDelete={handleDeleteQuote}
 			/>
 
-			<CreateQuoteDialog
-				open={isCreateDialogOpen}
-				onOpenChange={setIsCreateDialogOpen}
-			/>
-		</div>
-	);
+      {isCreateDialogOpen && (
+        <InvoiceCreateSheet open={isCreateDialogOpen} onClose={() => setIsCreateDialogOpen(false)} />
+      )}
+    </div>
+  );
 }

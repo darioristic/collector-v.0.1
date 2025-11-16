@@ -1,6 +1,6 @@
 "use client";
 
-import type { Invoice, InvoiceItem } from "@crm/types";
+import type { Invoice, InvoiceItem, InvoiceUpdateInput } from "@crm/types";
 import * as React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -290,7 +290,7 @@ export function InvoiceDetail({
             : undefined;
       await updateInvoice({
         id: invoice.id,
-        input: { ...payload, notes: notesDoc }
+        input: { ...payload, notes: notesDoc } as InvoiceUpdateInput
       });
       setIsEditing(false);
       toast({ title: "Sačuvano", description: "Izmene su uspešno sačuvane." });
@@ -390,7 +390,7 @@ export function InvoiceDetail({
               position: "relative"
             }}
             id={contentId}
-            className="pb-[15px]">
+            className="pb-[90px]">
             {templateProps ? (
               <HtmlTemplate
                 {...templateProps}
@@ -475,7 +475,7 @@ export function InvoiceDetail({
               position: "relative"
             }}
             id={contentId}
-            className="pb-[15px]">
+            className="pb-[90px]">
             {templateProps ? <HtmlTemplate {...templateProps} /> : null}
 
             {templateProps && (

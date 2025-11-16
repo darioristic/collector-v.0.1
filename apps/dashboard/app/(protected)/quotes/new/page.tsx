@@ -1,6 +1,5 @@
-import { CreateQuote } from "@/components/quotes/CreateQuote";
+import { InvoiceCreateSheet } from "@/components/invoices/invoice-create-sheet";
 
 export default function NewQuotePage() {
-	return <CreateQuote />;
+	return <InvoiceCreateSheet open={true} onClose={undefined} />;
 }
-

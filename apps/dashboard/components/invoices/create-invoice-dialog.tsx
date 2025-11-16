@@ -376,7 +376,7 @@ function DescriptionAutocomplete({
     }
   }, [isOpen]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
     setQuery(newValue);
     onChange(newValue);
