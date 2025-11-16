@@ -11,7 +11,9 @@ import {
   getInvoiceHandler,
   updateInvoiceHandler,
   deleteInvoiceHandler,
-  sendInvoiceHandler
+  sendInvoiceHandler,
+  getInvoiceByTokenHandler,
+  trackInvoiceViewHandler
 } from "./invoices.controller";
 import {
   createOrderHandler,
@@ -118,7 +120,11 @@ const salesRoutes: FastifyPluginAsync = async (app) => {
       limit?: string;
       offset?: string;
     };
-  }>("/invoices", { schema: listInvoicesSchema }, listInvoicesHandler);
+  }>(
+    "/invoices",
+    { schema: listInvoicesSchema, preValidation: createSearchPreValidation(255, "search") },
+    listInvoicesHandler
+  );
   app.get<{ Params: { id: string } }>("/invoices/:id", { schema: getInvoiceSchema }, getInvoiceHandler);
   app.post<{ Body: import("@crm/types").InvoiceCreateInput }>(
     "/invoices",
@@ -135,6 +141,14 @@ const salesRoutes: FastifyPluginAsync = async (app) => {
     "/invoices/:id/send",
     { schema: sendInvoiceSchema },
     sendInvoiceHandler
+  );
+  app.get<{ Params: { token: string } }>(
+    "/invoices/token/:token",
+    getInvoiceByTokenHandler
+  );
+  app.post<{ Params: { token: string } }>(
+    "/invoices/token/:token/track",
+    trackInvoiceViewHandler
   );
 
   // Payment routes

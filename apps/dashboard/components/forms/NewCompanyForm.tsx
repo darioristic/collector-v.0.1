@@ -39,8 +39,7 @@ const formSchema = z.object({
 	country: z
 		.string()
 		.trim()
-		.min(2, "Use ISO country code.")
-		.max(3, "Use ISO country code."),
+		.length(2, "Country code must be exactly 2 characters (ISO 3166-1 alpha-2)."),
 	contactPerson: z.string().trim().optional().or(z.literal("")),
 });
 
@@ -232,9 +231,9 @@ export function NewCompanyForm({
 									<Input
 										{...field}
 										placeholder="RS"
-										maxLength={3}
+										maxLength={2}
 										onChange={(event) =>
-											field.onChange(event.target.value.toUpperCase())
+											field.onChange(event.target.value.toUpperCase().slice(0, 2))
 										}
 									/>
 								</FormControl>

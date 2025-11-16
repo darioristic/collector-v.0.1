@@ -120,7 +120,6 @@ const filterDeals = (deals: Deal[], filters: DealFiltersState): Deal[] => {
 export default function DealsPageClient({
 	initialDeals,
 	owners,
-	_stageSummary,
 	error,
 }: DealsPageClientProps) {
 	const { toast } = useToast();

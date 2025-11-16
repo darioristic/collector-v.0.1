@@ -21,7 +21,7 @@ export function HtmlTemplate({
   currency,
   customer_name,
   width = "100%",
-  height = "100%",
+  height: _height = "100%",
   amountBeforeDiscount = 0,
   discountTotal = 0,
   subtotal = 0,

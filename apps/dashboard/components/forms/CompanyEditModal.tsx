@@ -43,7 +43,7 @@ export function CompanyEditModal({
 				website: values.website?.trim() ? values.website.trim() : undefined,
 				type: values.type,
 				taxId: values.taxId.trim(),
-				country: values.country.trim().toUpperCase(),
+				country: values.country.trim().toUpperCase().slice(0, 2),
 			};
 
 			const response = await ensureResponse(

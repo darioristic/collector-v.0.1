@@ -27,17 +27,13 @@ describe("Employees UI", () => {
 
 		await user.type(screen.getByLabelText(/First name/i), "Ana");
 		await user.type(screen.getByLabelText(/Last name/i), "Jovanovic");
-		await user.type(screen.getByLabelText(/Email/i), "ana@example.com");
+		await user.type(screen.getByLabelText(/^Email$/i), "ana@example.com");
 		await user.type(screen.getByLabelText(/Phone/i), "+381601234567");
 		await user.type(screen.getByLabelText(/Department/i), "Engineering");
-		await user.type(
-			screen.getByLabelText(/Role \/ Position/i),
-			"Frontend Developer",
-		);
 		await user.type(screen.getByLabelText(/Start date/i), "2024-01-15");
 		await user.type(screen.getByLabelText(/Salary \(optional\)/i), "85000");
 
-		await user.click(screen.getByRole("button", { name: /Create employee/i }));
+		await user.click(screen.getByRole("button", { name: /Save Changes/i }));
 
 		await waitFor(() => expect(handleSubmit).toHaveBeenCalledTimes(1));
 
@@ -47,7 +43,7 @@ describe("Employees UI", () => {
 		expect(payload.lastName).toBe("Jovanovic");
 		expect(payload.email).toBe("ana@example.com");
 		expect(payload.department).toBe("Engineering");
-		expect(payload.role).toBe("Frontend Developer");
+		expect(payload.role).toBeUndefined();
 		expect(payload.startDate).toBeInstanceOf(Date);
 		expect(payload.salary).toBe(85000);
 	});

@@ -1,8 +1,11 @@
 "use server";
 
 import { and, count, desc, eq, ilike, or } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
-import { getDb } from "@/lib/db";
+// Lazy import DB to avoid Vitest mock hoisting issues
+async function getDbConn() {
+  const { getDb } = await import("@/lib/db");
+  return getDb();
+}
 import { type Deal, deals } from "@/lib/db/schema/deals";
 import { getApiUrl, ensureResponse } from "@/src/lib/fetch-utils";
 import type { OrderCreateInput } from "@crm/types";
@@ -27,12 +30,15 @@ export interface DealStageSummary {
 export type DealInput = DealFormValues;
 export type DealFilters = DealFiltersValues;
 
-const revalidateDeals = () => revalidatePath("/crm/deals");
+const revalidateDeals = async () => {
+  const { revalidatePath } = await import("next/cache");
+  revalidatePath("/crm/deals");
+};
 
-const dbPromise = getDb();
+// Avoid evaluating DB at module load to play well with test mocks
 
 export async function fetchDeals(params?: DealFilters) {
-	const db = await dbPromise;
+    const db = await getDbConn();
 	const filters = dealFiltersSchema.parse(params);
 
 	const conditions = [];
@@ -73,7 +79,7 @@ export async function fetchDeals(params?: DealFilters) {
 }
 
 export async function fetchDealMetadata() {
-	const db = await dbPromise;
+    const db = await getDbConn();
 	const ownersPromise = db
 		.select({ owner: deals.owner })
 		.from(deals)
@@ -117,7 +123,7 @@ export async function fetchDealMetadata() {
 }
 
 export async function createDeal(input: DealFormValues) {
-	const db = await dbPromise;
+    const db = await getDbConn();
 	const data = dealFormSchema.parse(input);
 
 	const [deal] = await db
@@ -133,13 +139,13 @@ export async function createDeal(input: DealFormValues) {
 		})
 		.returning();
 
-	revalidateDeals();
+  await revalidateDeals();
 
 	return deal;
 }
 
 export async function updateDeal(id: string, input: Record<string, unknown>) {
-	const db = await dbPromise;
+    const db = await getDbConn();
 	if (!id) {
 		throw new Error("Deal id is required.");
 	}
@@ -163,24 +169,24 @@ export async function updateDeal(id: string, input: Record<string, unknown>) {
 		.where(eq(deals.id, id))
 		.returning();
 
-	revalidateDeals();
+  await revalidateDeals();
 
 	return deal;
 }
 
 export async function deleteDeal(id: string) {
-	const db = await dbPromise;
+    const db = await getDbConn();
 	if (!id) {
 		throw new Error("Deal id is required.");
 	}
 
 	await db.delete(deals).where(eq(deals.id, id));
 
-	revalidateDeals();
+  await revalidateDeals();
 }
 
 export async function updateDealStage(args: Record<string, unknown>) {
-	const db = await dbPromise;
+    const db = await getDbConn();
 	const payload = stageUpdateSchema.parse(args);
 
 	// Get current deal to check if stage is changing to "Closed Won"
@@ -225,7 +231,7 @@ export async function updateDealStage(args: Record<string, unknown>) {
 export async function bulkUpdateDealStages(
 	updates: Array<Record<string, unknown>>,
 ) {
-	const db = await dbPromise;
+    const db = await getDbConn();
 	if (updates.length === 0) {
 		return [];
 	}

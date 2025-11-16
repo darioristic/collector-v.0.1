@@ -158,7 +158,7 @@ const formSchema = z.object({
   contactPerson: z.string().trim().optional().or(z.literal("")),
   type: z.enum(ACCOUNT_TAG_OPTIONS),
   taxId: z.string().trim().min(1, "Tax ID is required."),
-  country: z.string().trim().min(2, "Use ISO country code.").max(3, "Use ISO country code.")
+  country: z.string().trim().length(2, "Country code must be exactly 2 characters (ISO 3166-1 alpha-2).")
 });
 
 type CompanyFormValues = z.infer<typeof formSchema>;
@@ -479,7 +479,7 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
         website: values.website?.trim() ? values.website.trim() : undefined,
         type: values.type,
         taxId: values.taxId.trim(),
-        country: values.country.trim().toUpperCase()
+        country: values.country.trim().toUpperCase().slice(0, 2)
       };
 
       setIsSubmitting(true);
@@ -1738,10 +1738,10 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
                                   <Input
                                     {...field}
                                     placeholder="RS"
-                                    maxLength={3}
+                                    maxLength={2}
                                     className="h-9"
                                     onChange={(event) =>
-                                      field.onChange(event.target.value.toUpperCase())
+                                      field.onChange(event.target.value.toUpperCase().slice(0, 2))
                                     }
                                   />
                                 </FormControl>

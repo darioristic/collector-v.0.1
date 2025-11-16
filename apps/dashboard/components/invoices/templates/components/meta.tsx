@@ -8,7 +8,7 @@ type Props = {
   dueDate?: string | null;
 };
 
-export function Meta({ template, invoiceNumber, issueDate, dueDate }: Props) {
+export function Meta({ template: _template, invoiceNumber, issueDate, dueDate }: Props) {
   return (
     <div className="flex items-start justify-between">
       <div className="text-sm font-mono">

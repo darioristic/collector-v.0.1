@@ -1,230 +1,258 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-	Form,
-	FormControl,
-	FormDescription,
-	FormField,
-	FormItem,
-	FormLabel,
-	FormMessage,
-} from "@/components/ui/form";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { getApiUrl } from "@/src/lib/fetch-utils";
 
-const notificationsFormSchema = z.object({
-	type: z.enum(["all", "mentions", "none"], {
-		required_error: "You need to select a notification type.",
-	}),
-	mobile: z.boolean().default(false).optional(),
-	communication_emails: z.boolean().default(false).optional(),
-	social_emails: z.boolean().default(false).optional(),
-	marketing_emails: z.boolean().default(false).optional(),
-	security_emails: z.boolean(),
-});
+type NotificationPreferenceType =
+  | "invoice"
+  | "payment"
+  | "transaction"
+  | "daily_summary"
+  | "quote"
+  | "deal"
+  | "project"
+  | "task"
+  | "system";
 
-type NotificationsFormValues = z.infer<typeof notificationsFormSchema>;
-
-// This can come from your database or API.
-const defaultValues: Partial<NotificationsFormValues> = {
-	communication_emails: false,
-	marketing_emails: false,
-	social_emails: true,
-	security_emails: true,
+type NotificationPreference = {
+  userId: string;
+  notificationType: NotificationPreferenceType;
+  emailEnabled: boolean;
+  inAppEnabled: boolean;
 };
 
-export default function Page() {
-	const form = useForm<NotificationsFormValues>({
-		resolver: zodResolver(notificationsFormSchema),
-		defaultValues,
-	});
+const NOTIFICATION_TYPES: Array<{
+  type: NotificationPreferenceType;
+  label: string;
+  description: string;
+}> = [
+  {
+    type: "invoice",
+    label: "Invoices",
+    description: "Notifications when invoices are sent or updated",
+  },
+  {
+    type: "payment",
+    label: "Payments",
+    description: "Notifications when payments are received",
+  },
+  {
+    type: "transaction",
+    label: "Transactions",
+    description: "Notifications for new transactions",
+  },
+  {
+    type: "daily_summary",
+    label: "Daily Summary",
+    description: "Daily summary of your activity",
+  },
+  {
+    type: "quote",
+    label: "Quotes",
+    description: "Notifications when quotes are approved or updated",
+  },
+  {
+    type: "deal",
+    label: "Deals",
+    description: "Notifications when deals are won or updated",
+  },
+  {
+    type: "project",
+    label: "Projects",
+    description: "Notifications for project milestones and updates",
+  },
+  {
+    type: "task",
+    label: "Tasks",
+    description: "Notifications when tasks are assigned or updated",
+  },
+  {
+    type: "system",
+    label: "System",
+    description: "System alerts and important notifications",
+  },
+];
 
-	function onSubmit(data: NotificationsFormValues) {
-		toast("You submitted the following values:", {
-			description: (
-				<pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
-					<code className="text-white">{JSON.stringify(data, null, 2)}</code>
-				</pre>
-			),
-		});
-	}
+export default function NotificationsPage() {
+  const [preferences, setPreferences] = useState<NotificationPreference[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
-	return (
-		<Card>
-			<CardContent>
-				<Form {...form}>
-					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-						<FormField
-							control={form.control}
-							name="type"
-							render={({ field }) => (
-								<FormItem className="space-y-3">
-									<FormLabel>Notify me about...</FormLabel>
-									<FormControl>
-										<RadioGroup
-											onValueChange={field.onChange}
-											defaultValue={field.value}
-											className="flex flex-col space-y-1"
-										>
-											<FormItem className="flex items-center">
-												<FormControl>
-													<RadioGroupItem value="all" />
-												</FormControl>
-												<FormLabel className="font-normal">
-													All new messages
-												</FormLabel>
-											</FormItem>
-											<FormItem className="flex items-center">
-												<FormControl>
-													<RadioGroupItem value="mentions" />
-												</FormControl>
-												<FormLabel className="font-normal">
-													Direct messages and mentions
-												</FormLabel>
-											</FormItem>
-											<FormItem className="flex items-center">
-												<FormControl>
-													<RadioGroupItem value="none" />
-												</FormControl>
-												<FormLabel className="font-normal">Nothing</FormLabel>
-											</FormItem>
-										</RadioGroup>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-						<div>
-							<h3 className="mb-4 text-lg font-medium">Email Notifications</h3>
-							<div className="space-y-4">
-								<FormField
-									control={form.control}
-									name="communication_emails"
-									render={({ field }) => (
-										<FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-											<div className="space-y-0.5">
-												<FormLabel className="text-base">
-													Communication emails
-												</FormLabel>
-												<FormDescription>
-													Receive emails about your account activity.
-												</FormDescription>
-											</div>
-											<FormControl>
-												<Switch
-													checked={field.value}
-													onCheckedChange={field.onChange}
-												/>
-											</FormControl>
-										</FormItem>
-									)}
-								/>
-								<FormField
-									control={form.control}
-									name="marketing_emails"
-									render={({ field }) => (
-										<FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-											<div className="space-y-0.5">
-												<FormLabel className="text-base">
-													Marketing emails
-												</FormLabel>
-												<FormDescription>
-													Receive emails about new products, features, and more.
-												</FormDescription>
-											</div>
-											<FormControl>
-												<Switch
-													checked={field.value}
-													onCheckedChange={field.onChange}
-												/>
-											</FormControl>
-										</FormItem>
-									)}
-								/>
-								<FormField
-									control={form.control}
-									name="social_emails"
-									render={({ field }) => (
-										<FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-											<div className="space-y-0.5">
-												<FormLabel className="text-base">
-													Social emails
-												</FormLabel>
-												<FormDescription>
-													Receive emails for friend requests, follows, and more.
-												</FormDescription>
-											</div>
-											<FormControl>
-												<Switch
-													checked={field.value}
-													onCheckedChange={field.onChange}
-												/>
-											</FormControl>
-										</FormItem>
-									)}
-								/>
-								<FormField
-									control={form.control}
-									name="security_emails"
-									render={({ field }) => (
-										<FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-											<div className="space-y-0.5">
-												<FormLabel className="text-base">
-													Security emails
-												</FormLabel>
-												<FormDescription>
-													Receive emails about your account activity and
-													security.
-												</FormDescription>
-											</div>
-											<FormControl>
-												<Switch
-													checked={field.value}
-													onCheckedChange={field.onChange}
-													disabled
-													aria-readonly
-												/>
-											</FormControl>
-										</FormItem>
-									)}
-								/>
-							</div>
-						</div>
-						<FormField
-							control={form.control}
-							name="mobile"
-							render={({ field }) => (
-								<FormItem className="flex flex-row items-start">
-									<FormControl>
-										<Checkbox
-											checked={field.value}
-											onCheckedChange={field.onChange}
-										/>
-									</FormControl>
-									<div className="space-y-1 leading-none">
-										<FormLabel>
-											Use different settings for my mobile devices
-										</FormLabel>
-										<FormDescription>
-											You can manage your mobile notifications in the{" "}
-											<Link href="/examples/forms">mobile settings</Link> page.
-										</FormDescription>
-									</div>
-								</FormItem>
-							)}
-						/>
-						<Button type="submit">Update notifications</Button>
-					</form>
-				</Form>
-			</CardContent>
-		</Card>
-	);
+  useEffect(() => {
+    loadPreferences();
+  }, []);
+
+  const loadPreferences = async () => {
+    try {
+      setIsLoading(true);
+      const apiUrl = getApiUrl("/notifications/preferences");
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to load preferences");
+      }
+
+      const data = await response.json();
+      setPreferences(data.preferences || []);
+    } catch (error) {
+      console.error("Failed to load preferences:", error);
+      toast.error("Failed to load notification preferences");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updatePreference = async (
+    type: NotificationPreferenceType,
+    field: "emailEnabled" | "inAppEnabled",
+    value: boolean
+  ) => {
+    const currentPref = preferences.find((p) => p.notificationType === type);
+    const updatedPreferences = preferences.map((p) =>
+      p.notificationType === type
+        ? { ...p, [field]: value }
+        : p
+    );
+
+    // If preference doesn't exist, add it
+    if (!currentPref) {
+      updatedPreferences.push({
+        userId: preferences[0]?.userId || "",
+        notificationType: type,
+        emailEnabled: field === "emailEnabled" ? value : true,
+        inAppEnabled: field === "inAppEnabled" ? value : true,
+      });
+    }
+
+    setPreferences(updatedPreferences);
+
+    try {
+      setIsSaving(true);
+      const apiUrl = getApiUrl("/notifications/preferences");
+      const response = await fetch(apiUrl, {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          preferences: updatedPreferences.map((p) => ({
+            notificationType: p.notificationType,
+            emailEnabled: p.emailEnabled,
+            inAppEnabled: p.inAppEnabled,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update preferences");
+      }
+
+      toast.success("Notification preferences updated");
+    } catch (error) {
+      console.error("Failed to update preferences:", error);
+      toast.error("Failed to update notification preferences");
+      // Revert on error
+      loadPreferences();
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const getPreference = (type: NotificationPreferenceType): NotificationPreference => {
+    return (
+      preferences.find((p) => p.notificationType === type) || {
+        userId: "",
+        notificationType: type,
+        emailEnabled: true,
+        inAppEnabled: true,
+      }
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Notification Preferences</CardTitle>
+          <CardDescription>
+            Manage your notification preferences for different types of events.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">Loading preferences...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Notification Preferences</CardTitle>
+        <CardDescription>
+          Manage your notification preferences for different types of events.
+          You can control whether to receive notifications via email or in-app
+          for each type.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {NOTIFICATION_TYPES.map(({ type, label, description }, index) => {
+          const pref = getPreference(type);
+          return (
+            <div key={type}>
+              <div className="flex items-start justify-between space-x-4 rounded-lg border p-4">
+                <div className="space-y-1 flex-1">
+                  <Label className="text-base font-medium">{label}</Label>
+                  <p className="text-sm text-muted-foreground">{description}</p>
+                </div>
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center space-x-2">
+                    <Label htmlFor={`${type}-email`} className="text-sm">
+                      Email
+                    </Label>
+                    <Switch
+                      id={`${type}-email`}
+                      checked={pref.emailEnabled}
+                      onCheckedChange={(checked) =>
+                        updatePreference(type, "emailEnabled", checked)
+                      }
+                      disabled={isSaving}
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Label htmlFor={`${type}-inapp`} className="text-sm">
+                      In-App
+                    </Label>
+                    <Switch
+                      id={`${type}-inapp`}
+                      checked={pref.inAppEnabled}
+                      onCheckedChange={(checked) =>
+                        updatePreference(type, "inAppEnabled", checked)
+                      }
+                      disabled={isSaving}
+                    />
+                  </div>
+                </div>
+              </div>
+              {index < NOTIFICATION_TYPES.length - 1 && (
+                <Separator className="my-4" />
+              )}
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
 }

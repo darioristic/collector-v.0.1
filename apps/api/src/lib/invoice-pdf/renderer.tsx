@@ -23,4 +23,3 @@ export async function renderInvoiceToStream(
  * Export InvoiceTemplate component for use in API endpoints
  */
 export { InvoiceTemplate } from "./template";
-

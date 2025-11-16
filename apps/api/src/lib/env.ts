@@ -52,6 +52,10 @@ const envSchema = z.object({
 	// Redis
 	REDIS_URL: z.string().url("REDIS_URL must be a valid Redis connection URL"),
 
+	// Novu
+	NOVU_API_KEY: z.string().min(1, "NOVU_API_KEY is required"),
+	NOVU_APP_ID: z.string().min(1, "NOVU_APP_ID is required").optional(),
+
 	// CORS
 	ALLOWED_ORIGINS: z
 		.string()

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { Controller, type Control, type FieldPath, type FieldValues } from "react-hook-form";
 import { Check, ChevronsUpDown, Loader2, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -102,7 +101,6 @@ function CompanyAutocompleteInner({
 	disabled = false,
 	placeholder = "Search or add company…",
 }: Omit<CompanyAutocompleteProps, "control" | "name">) {
-	const router = useRouter();
 	const [open, setOpen] = useState(false);
 	const [createOpen, setCreateOpen] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");

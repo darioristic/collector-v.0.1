@@ -43,7 +43,7 @@ interface MetaProps {
   dueDate?: string | null;
 }
 
-export function Meta({ template, invoiceNumber, issueDate, dueDate }: MetaProps) {
+export function Meta({ template: _template, invoiceNumber, issueDate, dueDate }: MetaProps) {
   const formatDate = (dateString: string): string => {
     try {
       const date = new Date(dateString);

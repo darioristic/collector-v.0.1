@@ -32,15 +32,24 @@ export function CompanyCreationModal({
 	const handleSubmit = async (values: CompanyFormValues): Promise<Account> => {
 		setIsSubmitting(true);
 		try {
-			const payload = {
+			const payload: Record<string, string> = {
 				name: values.name.trim(),
 				email: values.email.trim(),
-				phone: values.phone?.trim() ? values.phone.trim() : undefined,
-				website: values.website?.trim() ? values.website.trim() : undefined,
 				type: values.type,
 				taxId: values.taxId.trim(),
-				country: values.country.trim().toUpperCase(),
+				country: values.country.trim().toUpperCase().slice(0, 2),
 			};
+
+			// Add optional fields only if they have values
+			const trimmedPhone = values.phone?.trim();
+			if (trimmedPhone) {
+				payload.phone = trimmedPhone;
+			}
+
+			const trimmedWebsite = values.website?.trim();
+			if (trimmedWebsite) {
+				payload.website = trimmedWebsite;
+			}
 
 			const response = await ensureResponse(
 				fetch(getApiUrl("accounts"), {

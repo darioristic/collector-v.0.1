@@ -4,13 +4,15 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { HtmlTemplate } from "@/components/invoices/templates";
 import type { TemplateProps } from "@/components/invoices/templates/types";
-import { useInvoice } from "@/src/hooks/useInvoices";
 import { Loader2 } from "lucide-react";
 
 export default function PublicInvoicePage() {
   const params = useParams();
-  const token = params.token as string;
-  const [invoiceData, setInvoiceData] = useState<{ invoice: any; templateProps: TemplateProps | null } | null>(null);
+  const token = (params as Record<string, string> | null)?.token ?? null;
+  const [invoiceData, setInvoiceData] = useState<{
+    invoice: unknown;
+    templateProps: TemplateProps | null;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -18,8 +20,8 @@ export default function PublicInvoicePage() {
     async function fetchInvoiceByToken() {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/invoices/token/${token}`);
-        
+        const response = await fetch(`/api/sales/invoices/token/${token}`);
+
         if (!response.ok) {
           if (response.status === 404) {
             setError("Invoice not found or link has expired");
@@ -36,8 +38,8 @@ export default function PublicInvoicePage() {
 
         // Track view
         try {
-          await fetch(`/api/invoices/token/${token}/track`, {
-            method: "POST",
+          await fetch(`/api/sales/invoices/token/${token}/track`, {
+            method: "POST"
           });
         } catch (trackError) {
           // Silently fail tracking - don't block invoice display
@@ -58,17 +60,17 @@ export default function PublicInvoicePage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Error</h1>
+          <h1 className="mb-2 text-2xl font-bold">Error</h1>
           <p className="text-muted-foreground">{error}</p>
         </div>
       </div>
@@ -77,9 +79,9 @@ export default function PublicInvoicePage() {
 
   if (!invoiceData || !invoiceData.templateProps) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Invoice not found</h1>
+          <h1 className="mb-2 text-2xl font-bold">Invoice not found</h1>
           <p className="text-muted-foreground">The invoice could not be loaded.</p>
         </div>
       </div>
@@ -87,11 +89,10 @@ export default function PublicInvoicePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4">
+    <div className="bg-background min-h-screen p-4">
       <div style={{ marginTop: "15px", marginBottom: "15px" }}>
         <HtmlTemplate {...invoiceData.templateProps} />
       </div>
     </div>
   );
 }
-

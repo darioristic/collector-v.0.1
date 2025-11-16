@@ -56,7 +56,7 @@ export function EditorContent({ content }: EditorContentProps) {
                   const marks = inlineContent.marks || [];
 
                   // Build style based on marks
-                  let textStyle = [styles.text];
+                  const textStyle = [styles.text];
                   if (marks.some((m: EditorMark) => m.type === "bold")) {
                     textStyle.push(styles.bold);
                   }

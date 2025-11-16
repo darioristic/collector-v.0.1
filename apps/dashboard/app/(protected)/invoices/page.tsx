@@ -2,14 +2,17 @@
 
 import { Plus } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { CreateInvoiceDialog } from "@/components/invoices/create-invoice-dialog";
 import { InvoiceDetail } from "@/components/invoices/invoice-detail";
 import { InvoiceList } from "@/components/invoices/invoice-list";
 import { Button } from "@/components/ui/button";
 import { TablePageHeader } from "@/components/ui/page-header";
 import { useDeleteInvoice } from "@/src/hooks/useInvoices";
+import type { Invoice } from "@crm/types";
 
 export default function InvoicesPage() {
+    const router = useRouter();
     const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 	const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -68,8 +71,8 @@ export default function InvoicesPage() {
                         setIsDrawerOpen(false);
                         setSelectedInvoiceId(null);
                     }}
-                    onEdit={() => {
-                        // TODO: Open edit dialog
+                    onEdit={(invoice: Invoice) => {
+                        router.push(`/invoices/editor/${invoice.id}`);
                     }}
                     onDelete={handleDeleteInvoice}
                 />

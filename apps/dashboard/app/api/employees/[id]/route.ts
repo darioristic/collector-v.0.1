@@ -16,11 +16,11 @@ const withNoStore = (response: NextResponse) => {
 };
 
 type EmployeeRouteContext = {
-    params: { id: string };
+    params: Promise<{ id: string }>;
 };
 
-const extractParams = (context: EmployeeRouteContext) => {
-    return context.params;
+const extractParams = async (context: EmployeeRouteContext) => {
+    return await context.params;
 };
 
 export async function GET(_: NextRequest, context: EmployeeRouteContext) {

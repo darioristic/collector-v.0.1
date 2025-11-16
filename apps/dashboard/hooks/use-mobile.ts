@@ -18,7 +18,7 @@ export function useIsMobile() {
 		return () => mql.removeEventListener("change", onChange);
 	}, []);
 
-	return !!isMobile;
+	return isMobile;
 }
 
 export function useIsTablet() {
@@ -36,5 +36,5 @@ export function useIsTablet() {
 		return () => mql.removeEventListener("change", onChange);
 	}, []);
 
-	return !!isTablet;
+	return isTablet;
 }

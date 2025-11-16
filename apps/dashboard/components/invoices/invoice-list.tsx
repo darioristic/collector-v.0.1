@@ -66,8 +66,8 @@ export function InvoiceList({
 		offset: page * limit,
 	});
 
-	const invoices = invoicesResponse?.data || [];
-	const total = invoicesResponse?.total || 0;
+	const invoices: any[] = (invoicesResponse as any)?.data || [];
+	const total = (invoicesResponse as any)?.total || 0;
 	const totalPages = Math.ceil(total / limit);
 	const hasActiveFilters = useMemo(
 		() => search.trim().length > 0 || Boolean(statusFilter),

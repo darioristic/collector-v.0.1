@@ -93,110 +93,117 @@
       "tag": "0013_fix_company_users_unique_index",
       "breakpoints": false
     },
-  {
-    "idx": 13,
-    "version": "0014",
-    "when": 1762902300000,
-    "tag": "0014_add_company_to_team_members",
-    "breakpoints": false
-  },
-  {
-    "idx": 14,
-    "version": "7",
-    "when": 1763044811100,
-    "tag": "0014_past_shadowcat",
-    "breakpoints": true
-  },
-  {
-    "idx": 15,
-    "version": "0015",
-    "when": 1763132000000,
-    "tag": "0015_add_missing_composite_indexes",
-    "breakpoints": false
-  },
-  {
-    "idx": 16,
-    "version": "0016",
-    "when": 1763132100000,
-    "tag": "0016_hr_performance_reviews_recruitment",
-    "breakpoints": false
-  },
-  {
-    "idx": 17,
-    "version": "0017",
-    "when": 1763132200000,
-    "tag": "0017_add_project_teams_and_time_entries",
-    "breakpoints": false
-  },
-  {
-    "idx": 18,
-    "version": "0018",
-    "when": 1763132300000,
-    "tag": "0018_create_sales_tables",
-    "breakpoints": false
-  },
-  {
-    "idx": 19,
-    "version": "0019",
-    "when": 1763132400000,
-    "tag": "0019_create_products_tables",
-    "breakpoints": false
-  },
-  {
-    "idx": 20,
-    "version": "0020",
-    "when": 1763132500000,
-    "tag": "0020_create_account_addresses",
-    "breakpoints": false
-  },
-  {
-    "idx": 21,
-    "version": "0021",
-    "when": 1763132600000,
-    "tag": "0021_create_sales_deals",
-    "breakpoints": false
-  },
-  {
-    "idx": 22,
-    "version": "0022",
-    "when": 1763132700000,
-    "tag": "0022_add_invoice_number",
-    "breakpoints": false
-  },
-  {
-    "idx": 23,
-    "version": "0023",
-    "when": 1763132800000,
-    "tag": "0023_alter_invoice_items_align_schema",
-    "breakpoints": false
-  },
-  {
-    "idx": 24,
-    "version": "0024",
-    "when": 1763132900000,
-    "tag": "0024_create_hr_tables",
-    "breakpoints": false
-  },
-  {
-    "idx": 25,
-    "version": "0025",
-    "when": 1763133000000,
-    "tag": "0025_create_settings_tables",
-    "breakpoints": false
-  },
-  {
-    "idx": 26,
-    "version": "0026",
-    "when": 1763133100000,
-    "tag": "0026_add_invoice_number",
-    "breakpoints": false
-  },
-  {
-    "idx": 27,
-    "version": "0027",
-    "when": 1763133200000,
-    "tag": "0027_create_account_executives_and_milestones",
-    "breakpoints": false
-  }
-]
+    {
+      "idx": 13,
+      "version": "0014",
+      "when": 1762902300000,
+      "tag": "0014_add_company_to_team_members",
+      "breakpoints": false
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1763044811100,
+      "tag": "0014_past_shadowcat",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "0015",
+      "when": 1763132000000,
+      "tag": "0015_add_missing_composite_indexes",
+      "breakpoints": false
+    },
+    {
+      "idx": 16,
+      "version": "0016",
+      "when": 1763132100000,
+      "tag": "0016_hr_performance_reviews_recruitment",
+      "breakpoints": false
+    },
+    {
+      "idx": 17,
+      "version": "0017",
+      "when": 1763132200000,
+      "tag": "0017_add_project_teams_and_time_entries",
+      "breakpoints": false
+    },
+    {
+      "idx": 18,
+      "version": "0018",
+      "when": 1763132300000,
+      "tag": "0018_create_sales_tables",
+      "breakpoints": false
+    },
+    {
+      "idx": 19,
+      "version": "0019",
+      "when": 1763132400000,
+      "tag": "0019_create_products_tables",
+      "breakpoints": false
+    },
+    {
+      "idx": 20,
+      "version": "0020",
+      "when": 1763132500000,
+      "tag": "0020_create_account_addresses",
+      "breakpoints": false
+    },
+    {
+      "idx": 21,
+      "version": "0021",
+      "when": 1763132600000,
+      "tag": "0021_create_sales_deals",
+      "breakpoints": false
+    },
+    {
+      "idx": 22,
+      "version": "0022",
+      "when": 1763132700000,
+      "tag": "0022_add_invoice_number",
+      "breakpoints": false
+    },
+    {
+      "idx": 23,
+      "version": "0023",
+      "when": 1763132800000,
+      "tag": "0023_alter_invoice_items_align_schema",
+      "breakpoints": false
+    },
+    {
+      "idx": 24,
+      "version": "0024",
+      "when": 1763132900000,
+      "tag": "0024_create_hr_tables",
+      "breakpoints": false
+    },
+    {
+      "idx": 25,
+      "version": "0025",
+      "when": 1763133000000,
+      "tag": "0025_create_settings_tables",
+      "breakpoints": false
+    },
+    {
+      "idx": 26,
+      "version": "0026",
+      "when": 1763133100000,
+      "tag": "0026_add_invoice_number",
+      "breakpoints": false
+    },
+    {
+      "idx": 27,
+      "version": "0027",
+      "when": 1763133200000,
+      "tag": "0027_create_account_executives_and_milestones",
+      "breakpoints": false
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1763247265374,
+      "tag": "0028_chubby_rafael_vega",
+      "breakpoints": true
+    }
+  ]
 }

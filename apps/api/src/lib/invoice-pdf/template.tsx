@@ -11,7 +11,6 @@ import {
   Text,
   StyleSheet,
   Image,
-  Font,
 } from "@react-pdf/renderer";
 import type { InvoicePDFProps } from "./types";
 import { EditorContent } from "./editor-content";
@@ -79,7 +78,7 @@ export function InvoiceTemplate({
   payment_details,
   note_details,
   currency,
-  customer_name,
+  customer_name: _customer_name,
   amountBeforeDiscount = 0,
   discountTotal = 0,
   subtotal = 0,

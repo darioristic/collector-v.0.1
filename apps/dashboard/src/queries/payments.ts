@@ -37,9 +37,9 @@ export async function fetchPayments(
 	if (filters?.limit) params.append("limit", filters.limit.toString());
 	if (filters?.offset) params.append("offset", filters.offset.toString());
 
-	const endpoint = params.toString()
-		? `sales/payments?${params.toString()}`
-		: "sales/payments";
+    const endpoint = params.toString()
+        ? `sales/payments?${params.toString()}`
+        : "sales/payments";
 
 	const response = await ensureResponse(fetch(getApiUrl(endpoint)));
 	const payload = (await response.json()) as PaymentsListResponse;
@@ -47,31 +47,31 @@ export async function fetchPayments(
 }
 
 export async function fetchPayment(id: string): Promise<Payment> {
-	const response = await ensureResponse(
-		fetch(getApiUrl(`sales/payments/${id}`)),
-	);
-	const payload = (await response.json()) as { data: Payment };
-	return payload.data;
+    const response = await ensureResponse(
+        fetch(getApiUrl(`sales/payments/${id}`)),
+    );
+    const payload = (await response.json()) as { data: Payment };
+    return payload.data;
 }
 
 export async function createPayment(
-	input: PaymentCreateInput,
+    input: PaymentCreateInput,
 ): Promise<Payment> {
-	const response = await ensureResponse(
-		fetch(getApiUrl("sales/payments"), {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(input),
-		}),
-	);
+    const response = await ensureResponse(
+        fetch(getApiUrl("sales/payments"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(input),
+        }),
+    );
 	const payload = (await response.json()) as { data: Payment };
 	return payload.data;
 }
 
 export async function deletePayment(id: string): Promise<void> {
-	await ensureResponse(
-		fetch(getApiUrl(`sales/payments/${id}`), {
-			method: "DELETE",
-		}),
-	);
+    await ensureResponse(
+        fetch(getApiUrl(`sales/payments/${id}`), {
+            method: "DELETE",
+        }),
+    );
 }

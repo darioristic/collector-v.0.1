@@ -1,9 +1,8 @@
 import { Link, Text, View } from "@react-pdf/renderer";
-import type { TextStyle } from "@react-pdf/renderer";
 
 import type { EditorDoc } from "@/types/editor";
 
-export function formatEditorContent(doc?: EditorDoc): JSX.Element | null {
+export function formatEditorContent(doc?: EditorDoc): React.ReactNode | null {
 	if (!doc || !doc.content) {
 		return null;
 	}
@@ -19,7 +18,7 @@ export function formatEditorContent(doc?: EditorDoc): JSX.Element | null {
 						>
 							{node.content?.map((inlineContent, inlineIndex) => {
 								if (inlineContent.type === "text") {
-									const style: TextStyle = { fontSize: 9 };
+                                    const style: any = { fontSize: 9 };
 									let href: string | undefined;
 
 									if (inlineContent.marks) {
@@ -85,4 +84,5 @@ export function formatEditorContent(doc?: EditorDoc): JSX.Element | null {
 		</>
 	);
 }
+import React from "react";
 

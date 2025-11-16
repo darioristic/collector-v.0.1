@@ -49,8 +49,17 @@ class ResendProvider implements EmailProvider {
  * SMTP email provider (via nodemailer)
  */
 class SMTPProvider implements EmailProvider {
-  private transporter: any;
+  private transporter: unknown;
   private fromEmail: string;
+  private config: {
+    host: string;
+    port: number;
+    secure: boolean;
+    auth: {
+      user: string;
+      pass: string;
+    };
+  };
 
   constructor(config: {
     host: string;
@@ -62,22 +71,29 @@ class SMTPProvider implements EmailProvider {
     };
     fromEmail: string;
   }) {
-    // Dynamic import to avoid requiring nodemailer at build time
-    const nodemailer = require("nodemailer");
-    this.transporter = nodemailer.createTransport({
+    this.config = {
       host: config.host,
       port: config.port,
       secure: config.secure,
       auth: config.auth,
-    });
+    };
     this.fromEmail = config.fromEmail;
+  }
+
+  private async getTransporter(): Promise<{ sendMail: (opts: { from: string; to: string; subject: string; html: string; replyTo?: string }) => Promise<unknown> }> {
+    if (!this.transporter) {
+      const nodemailer = await import("nodemailer");
+      this.transporter = nodemailer.createTransport(this.config);
+    }
+    return this.transporter as { sendMail: (opts: { from: string; to: string; subject: string; html: string; replyTo?: string }) => Promise<unknown> };
   }
 
   async send(options: EmailOptions): Promise<void> {
     const recipients = Array.isArray(options.to) ? options.to : [options.to];
+    const transporter = await this.getTransporter();
 
     for (const recipient of recipients) {
-      await this.transporter.sendMail({
+      await transporter.sendMail({
         from: options.from || this.fromEmail,
         to: recipient,
         subject: options.subject,
@@ -119,7 +135,7 @@ export class EmailService {
     const fromEmail = process.env.EMAIL_FROM || "noreply@collectorlabs.test";
 
     switch (emailProvider) {
-      case "resend":
+      case "resend": {
         const resendApiKey = process.env.RESEND_API_KEY;
         if (!resendApiKey) {
           console.warn("RESEND_API_KEY not set, falling back to console provider");
@@ -128,8 +144,9 @@ export class EmailService {
           this.provider = new ResendProvider(resendApiKey, fromEmail);
         }
         break;
+      }
 
-      case "smtp":
+      case "smtp": {
         const smtpConfig = {
           host: process.env.SMTP_HOST || "localhost",
           port: Number.parseInt(process.env.SMTP_PORT || "587", 10),
@@ -142,11 +159,13 @@ export class EmailService {
         };
         this.provider = new SMTPProvider(smtpConfig);
         break;
+      }
 
       case "console":
-      default:
+      default: {
         this.provider = new ConsoleProvider();
         break;
+      }
     }
   }
 

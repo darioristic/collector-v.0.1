@@ -269,13 +269,13 @@ export default function EmployeeFormDialog({
 									<FormItem>
 										<FormLabel>Role</FormLabel>
 										<FormControl>
-											<Select
-												value={field.value || ""}
-												onValueChange={field.onChange}
-											>
-												<SelectTrigger>
-													<SelectValue placeholder="Select role" />
-												</SelectTrigger>
+										<Select
+											value={field.value || ""}
+											onValueChange={field.onChange}
+										>
+											<SelectTrigger data-testid="role-select">
+												<SelectValue placeholder="Select role" />
+											</SelectTrigger>
 												<SelectContent>
 													<SelectItem value="Product Designer">
 														Product Designer

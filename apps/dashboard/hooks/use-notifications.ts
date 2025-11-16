@@ -35,13 +35,15 @@ export function useNotifications(
 
 	const limit = options?.limit ?? 25;
 
-	const disconnectSocket = useCallback(() => {
-		if (socketRef.current) {
-			socketRef.current.removeAllListeners();
-			socketRef.current.disconnect();
-			socketRef.current = null;
-		}
-	}, []);
+    const disconnectSocket = useCallback(() => {
+        const s = socketRef.current;
+        if (!s) return;
+        s.removeAllListeners();
+        if (s.connected) {
+            s.disconnect();
+        }
+        socketRef.current = null;
+    }, []);
 
 	useEffect(() => {
 		return () => {
@@ -52,82 +54,81 @@ export function useNotifications(
 		};
 	}, [disconnectSocket]);
 
-	const fetchNotifications = useCallback(
-	async (signal?: AbortSignal) => {
-		if (!userId) {
-			setNotifications([]);
-			setUnreadCount(0);
-			return;
-		}
+    const fetchNotifications = useCallback(
+    async (signal?: AbortSignal) => {
+        if (!userId) {
+            setNotifications([]);
+            setUnreadCount(0);
+            return;
+        }
 
-		setIsLoading(true);
+        setIsLoading(true);
 
-		try {
-			const response = await fetch(`/api/notifications?limit=${limit}`, {
-				method: "GET",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				cache: "no-store",
-				signal,
-				credentials: "include",
-			});
+        try {
+            const maxAttempts = 3;
+            for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                const response = await fetch(`/api/notifications?limit=${limit}`, {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    cache: "no-store",
+                    signal,
+                    credentials: "include",
+                });
 
-			if (response.status === 401) {
-				setNotifications([]);
-				setUnreadCount(0);
-				return;
-			}
+                if (response.status === 401) {
+                    setNotifications([]);
+                    setUnreadCount(0);
+                    return;
+                }
 
-			// Handle service unavailable (503) gracefully
-			if (response.status === 503) {
-				console.warn(
-					"[notifications] Service unavailable (503), notifications will not be loaded. Make sure notification service is running on port 4002.",
-				);
-				setNotifications([]);
-				setUnreadCount(0);
-				return;
-			}
+                if (response.status === 503) {
+                    console.warn(
+                        "[notifications] Service unavailable (503). Using existing notifications if available.",
+                    );
+                    return;
+                }
 
-			if (!response.ok) {
-				throw new Error(
-					`Preuzimanje notifikacija nije uspelo (${response.status}).`,
-				);
-			}
+                if (!response.ok) {
+                    if (attempt < maxAttempts) {
+                        const delay = Math.min(1000 * 2 ** attempt, 8000);
+                        await new Promise((r) => setTimeout(r, delay));
+                        continue;
+                    }
+                    throw new Error(`Preuzimanje notifikacija nije uspelo (${response.status}).`);
+                }
 
-			const payload = notificationListResponseSchema.parse(
-				await response.json(),
-			);
+                const payload = notificationListResponseSchema.parse(
+                    await response.json(),
+                );
 
-			setNotifications(payload.data);
-			setUnreadCount(payload.data.filter((item) => !item.read).length);
-			} catch (error) {
-				if ((error as Error).name === "AbortError") {
-					return;
-				}
-
-				// Network errors (service unavailable) should be handled gracefully
-				const errorMessage = error instanceof Error ? error.message : String(error);
-				if (
-					errorMessage.includes("Failed to fetch") ||
-					errorMessage.includes("NetworkError") ||
-					errorMessage.includes("503")
-				) {
-					console.warn(
-						"[notifications] Service unavailable, notifications will not be loaded. Make sure notification service is running on port 4002.",
-					);
-					// Set empty state but don't throw - app should work without notifications
-					setNotifications([]);
-					setUnreadCount(0);
-				} else {
-					console.error("[notifications] Fetch failed", error);
-				}
-			} finally {
-				setIsLoading(false);
-			}
-		},
-		[limit, userId],
-	);
+                setNotifications(payload.data);
+                setUnreadCount(payload.data.filter((item) => !item.read).length);
+                break;
+            }
+        } catch (error) {
+            if ((error as Error).name === "AbortError") {
+                return;
+            }
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            if (
+                errorMessage.includes("Failed to fetch") ||
+                errorMessage.includes("NetworkError") ||
+                errorMessage.includes("503")
+            ) {
+                console.warn(
+                    "[notifications] Service unavailable. Using existing notifications if available.",
+                );
+            } else {
+                console.error("[notifications] Fetch failed", error);
+            }
+        } finally {
+            setIsLoading(false);
+        }
+        },
+        [limit, userId],
+    );
 
 	useEffect(() => {
 		if (!userId) {

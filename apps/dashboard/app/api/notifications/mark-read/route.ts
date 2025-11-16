@@ -43,7 +43,7 @@ export async function PATCH(request: NextRequest) {
 				"x-user-id": auth.user.id,
 				"x-user-email": auth.user.email || "",
 				"x-user-name": auth.user.name || "",
-				"x-user-role": auth.user.role || "",
+				"x-user-role": auth.user.company?.role || "",
 				"x-company-id": auth.user.company?.id || "",
 			},
 			body: JSON.stringify({ ids: parsed.data.ids }),

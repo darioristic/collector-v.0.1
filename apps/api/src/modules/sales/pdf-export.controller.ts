@@ -1,7 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { InvoicesService } from "./invoices.service";
 import { QuotesService } from "./quotes.service";
-import { pdfService, type InvoicePDFData, type QuotePDFData } from "../../lib/pdf.service";
+import { pdfService, type QuotePDFData } from "../../lib/pdf.service";
 import { renderInvoiceToStream } from "../../lib/invoice-pdf/renderer";
 import type { InvoicePDFProps } from "../../lib/invoice-pdf/types";
 

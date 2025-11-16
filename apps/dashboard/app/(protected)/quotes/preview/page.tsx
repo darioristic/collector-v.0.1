@@ -33,10 +33,12 @@ export default function QuotePreviewPage() {
       if (raw) {
         setDraft(JSON.parse(raw) as QuoteDraft);
       }
-    } catch {}
+    } catch (err) {
+      console.warn("[QuotePreview] Failed to parse draft", err);
+    }
   }, []);
 
-  const items = draft?.items ?? [];
+  const items = useMemo(() => draft?.items ?? [], [draft?.items]);
   const currency = draft?.currency ?? "EUR";
 
   const totals = useMemo(() => {

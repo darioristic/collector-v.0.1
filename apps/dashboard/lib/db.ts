@@ -50,7 +50,7 @@ const createPgMemDatabase = (): {
     const memoryDb = newDb({ autoCreateForeignKeyIndices: true });
     memoryDb.public.registerFunction({
         name: "gen_random_uuid",
-        returns: "text",
+        returns: "text" as any,
         implementation: () => randomUUID(),
         impure: true,
     });

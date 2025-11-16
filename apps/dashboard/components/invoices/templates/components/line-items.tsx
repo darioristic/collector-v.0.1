@@ -1,4 +1,4 @@
-import { formatCurrency, formatNumber } from "@/lib/utils";
+import { formatNumber } from "@/lib/utils";
 import type { LineItem } from "../types";
 
 type Props = {
@@ -13,7 +13,7 @@ type Props = {
 
 export function LineItems({
   lineItems,
-  currency,
+  currency: _currency,
   descriptionLabel,
   quantityLabel,
   priceLabel,

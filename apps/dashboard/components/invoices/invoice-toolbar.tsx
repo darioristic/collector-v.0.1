@@ -36,7 +36,7 @@ export function InvoiceToolbar({
       return;
     }
     // Default download behavior
-    window.open(`/api/invoices/${invoiceId}/download`, "_blank");
+    window.open(`/api/sales/invoices/${invoiceId}/download`, "_blank");
   };
 
   return (
@@ -87,4 +87,3 @@ export function InvoiceToolbar({
     </div>
   );
 }
-

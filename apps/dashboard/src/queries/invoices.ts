@@ -15,7 +15,7 @@ type InvoiceListFilters = {
 	offset?: number;
 };
 
-type InvoicesListResponse = {
+export type InvoicesListResponse = {
 	data: Invoice[];
 	total: number;
 	limit: number;
@@ -94,9 +94,9 @@ export async function updateInvoice(
 }
 
 export async function deleteInvoice(id: string): Promise<void> {
-	await ensureResponse(
-		fetch(getApiUrl(`sales/invoices/${id}`), {
-			method: "DELETE",
-		}),
-	);
+    await ensureResponse(
+        fetch(getApiUrl(`sales/invoices/${id}`), {
+            method: "DELETE",
+        }),
+    );
 }

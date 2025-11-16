@@ -78,16 +78,14 @@ function formatNumber(amount: number): string {
 
 export function LineItems({
   lineItems,
-  currency,
+  currency: _currency,
   descriptionLabel,
   quantityLabel,
   priceLabel,
   totalLabel,
   includeVAT = false,
 }: LineItemsProps) {
-  const gridCols = includeVAT
-    ? ["2fr", "8%", "8%", "10%", "8%", "8%", "12%"]
-    : ["2fr", "10%", "10%", "12%", "12%"];
+  // columns are defined via styles
 
   return (
     <View style={styles.table}>
