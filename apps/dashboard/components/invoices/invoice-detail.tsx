@@ -47,6 +47,9 @@ export function InvoiceDetail({
   const [editNotesJson, setEditNotesJson] = React.useState<unknown>(undefined);
   const [editLineNames, setEditLineNames] = React.useState<string[]>([]);
   const { mutateAsync: updateInvoice } = useUpdateInvoice();
+  // Autosave: track pending edits and last saved snapshots
+  const [pendingItems, setPendingItems] = React.useState<Record<number, string>>({});
+  const [lastSavedItems, setLastSavedItems] = React.useState<string[]>([]);
 
   React.useEffect(() => {
     if (invoice) {
@@ -303,6 +306,70 @@ export function InvoiceDetail({
     }
   };
 
+  // Initialize lastSavedItems snapshot when invoice loads/changes
+  React.useEffect(() => {
+    if (!invoice) return;
+    const snapshot = (invoice.items || []).map((it) => it.description || "");
+    setLastSavedItems(snapshot);
+    if (editLineNames.length === 0 && snapshot.length > 0) {
+      setEditLineNames(snapshot);
+    }
+  }, [invoice]);
+
+  // Debounced autosave for description changes
+  React.useEffect(() => {
+    if (!invoice) return;
+    const timer = setTimeout(async () => {
+      const changes: Array<{ index: number; value: string }> = [];
+      const maxLen = Math.max(lastSavedItems.length, editLineNames.length);
+      for (let i = 0; i < maxLen; i++) {
+        const current = editLineNames[i] ?? "";
+        const last = lastSavedItems[i] ?? "";
+        if ((pendingItems[i] !== undefined && pendingItems[i] !== last) || current !== last) {
+          changes.push({ index: i, value: current });
+        }
+      }
+      if (changes.length === 0) return;
+      try {
+        const existing = invoice.items || [];
+        const maxItems = Math.max(existing.length, editLineNames.length);
+        const fullItems = [];
+        for (let i = 0; i < maxItems; i++) {
+          const base = existing[i];
+          if (base) {
+            fullItems.push({
+              id: (base as unknown as { id?: string }).id,
+              description: editLineNames[i] ?? base.description ?? "",
+              unitPrice: base.unitPrice,
+              quantity: base.quantity,
+              vatRate: base.vatRate ?? undefined,
+              unit: base.unit ?? undefined,
+              discountRate: base.discountRate ?? undefined
+            });
+          } else {
+            fullItems.push({
+              description: editLineNames[i] ?? "",
+              unitPrice: 0,
+              quantity: 1
+            });
+          }
+        }
+        await updateInvoice({
+          id: invoice.id,
+          input: { items: fullItems } as unknown as any
+        });
+        setLastSavedItems(editLineNames.slice());
+        setPendingItems({});
+      } catch (e) {
+        toast({
+          variant: "destructive",
+          title: "Greška pri automatskom čuvanju",
+          description: e instanceof Error ? e.message : "Nepoznata greška"
+        });
+      }
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [invoice, editLineNames, pendingItems, lastSavedItems, updateInvoice, toast]);
   return (
     <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose?.()}>
       <SheetContent
@@ -449,6 +516,7 @@ export function InvoiceDetail({
                     setEditLineNames((prev) => {
                       const next = [...prev];
                       next[idx] = text;
+                      setPendingItems((p) => ({ ...p, [idx]: text }));
                       return next;
                     }),
                   onAddLineItem: () => setEditLineNames((prev) => [...prev, ""])

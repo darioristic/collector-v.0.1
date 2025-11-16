@@ -6,9 +6,10 @@ import { CreateInvoiceDialog } from "@/components/invoices/create-invoice-dialog
 type InvoiceCreateSheetProps = {
   open?: boolean;
   onClose?: () => void;
+  context?: "invoice" | "offer";
 };
 
-export function InvoiceCreateSheet({ open = true, onClose }: InvoiceCreateSheetProps) {
+export function InvoiceCreateSheet({ open = true, onClose, context = "invoice" }: InvoiceCreateSheetProps) {
   const [isOpen, setIsOpen] = React.useState<boolean>(open);
 
   const handleOpenChange = (next: boolean) => {
@@ -17,7 +18,6 @@ export function InvoiceCreateSheet({ open = true, onClose }: InvoiceCreateSheetP
   };
 
   return (
-    <CreateInvoiceDialog open={isOpen} onOpenChange={handleOpenChange} />
+    <CreateInvoiceDialog open={isOpen} onOpenChange={handleOpenChange} context={context} />
   );
 }
-

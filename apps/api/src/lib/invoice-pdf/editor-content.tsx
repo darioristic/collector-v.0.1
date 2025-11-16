@@ -4,7 +4,12 @@
 
 import React from "react";
 import { View, Text, StyleSheet, Link } from "@react-pdf/renderer";
-import type { EditorDoc, EditorNode, EditorInlineContent, EditorMark } from "./types";
+import type {
+  EditorDoc,
+  EditorNode,
+  EditorInlineContent,
+  EditorMark,
+} from "./types";
 
 const styles = StyleSheet.create({
   paragraph: {
@@ -50,50 +55,69 @@ export function EditorContent({ content }: EditorContentProps) {
         if (node.type === "paragraph") {
           return (
             <View key={`paragraph-${nodeIndex}`} style={styles.paragraph}>
-              {node.content?.map((inlineContent: EditorInlineContent, inlineIndex: number) => {
-                if (inlineContent.type === "text") {
-                  const text = inlineContent.text || "";
-                  const marks = inlineContent.marks || [];
+              {node.content?.map(
+                (inlineContent: EditorInlineContent, inlineIndex: number) => {
+                  if (inlineContent.type === "text") {
+                    const text = inlineContent.text || "";
+                    const marks = inlineContent.marks || [];
 
-                  const textStyleObj: Record<string, unknown> = {
-                    ...(styles.text as object),
-                    ...(marks.some((m: EditorMark) => m.type === "bold") ? (styles.bold as object) : {}),
-                    ...(marks.some((m: EditorMark) => m.type === "italic") ? (styles.italic as object) : {}),
-                  };
+                    const textStyleObj: Record<string, unknown> = {
+                      ...(styles.text as object),
+                      ...(marks.some((m: EditorMark) => m.type === "bold")
+                        ? (styles.bold as object)
+                        : {}),
+                      ...(marks.some((m: EditorMark) => m.type === "italic")
+                        ? (styles.italic as object)
+                        : {}),
+                    };
 
-                  // Check if it's a link
-                  const linkMark = marks.find((m: EditorMark) => m.type === "link");
-                  const href = linkMark?.attrs?.href as string | undefined;
+                    // Check if it's a link
+                    const linkMark = marks.find(
+                      (m: EditorMark) => m.type === "link"
+                    );
+                    const href = linkMark?.attrs?.href as string | undefined;
 
-                  // Check if text looks like an email
-                  const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text);
+                    // Check if text looks like an email
+                    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text);
 
-                  if (href || isEmail) {
-                    const linkHref = href || (isEmail ? `mailto:${text}` : text);
+                    if (href || isEmail) {
+                      const linkHref =
+                        href || (isEmail ? `mailto:${text}` : text);
+                      return (
+                        <PDFLink
+                          key={`link-${nodeIndex}-${inlineIndex}`}
+                          src={linkHref}
+                          style={{
+                            ...(textStyleObj as object),
+                            ...(styles.link as object),
+                          }}
+                        >
+                          {text}
+                        </PDFLink>
+                      );
+                    }
+
                     return (
-                      <Link
-                        key={`link-${nodeIndex}-${inlineIndex}`}
-                        src={linkHref}
-                        style={{ ...(textStyleObj as object), ...(styles.link as object) } as any}
+                      <PDFText
+                        key={`text-${nodeIndex}-${inlineIndex}`}
+                        style={textStyleObj}
                       >
                         {text}
-                      </Link>
+                      </PDFText>
                     );
                   }
 
-                  return (
-                    <Text key={`text-${nodeIndex}-${inlineIndex}`} style={textStyleObj as any}>
-                      {text}
-                    </Text>
-                  );
-                }
+                  if (inlineContent.type === "hardBreak") {
+                    return (
+                      <Text key={`break-${nodeIndex}-${inlineIndex}`}>
+                        {"\n"}
+                      </Text>
+                    );
+                  }
 
-                if (inlineContent.type === "hardBreak") {
-                  return <Text key={`break-${nodeIndex}-${inlineIndex}`}>{"\n"}</Text>;
+                  return null;
                 }
-
-                return null;
-              })}
+              )}
             </View>
           );
         }
@@ -103,3 +127,12 @@ export function EditorContent({ content }: EditorContentProps) {
     </View>
   );
 }
+  const PDFText = Text as unknown as React.ComponentType<{
+    style?: Record<string, unknown>;
+    children?: React.ReactNode;
+  }>;
+  const PDFLink = Link as unknown as React.ComponentType<{
+    style?: Record<string, unknown>;
+    src?: string;
+    children?: React.ReactNode;
+  }>;

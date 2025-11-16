@@ -99,7 +99,7 @@ export function InvoiceToolbar({
   return (
     <div
       ref={containerRef}
-      className="pointer-events-none fixed bottom-5 z-50 flex -translate-x-1/2 justify-center"
+      className="pointer-events-none fixed bottom-[20px] z-[9999] flex -translate-x-1/2 justify-center"
       style={{ left: "50%" }}>
       <div className="pointer-events-auto flex items-center justify-center gap-0.5">
         <TooltipProvider delayDuration={0}>

@@ -64,7 +64,11 @@ export default function QuotesPage() {
 			/>
 
       {isCreateDialogOpen && (
-        <InvoiceCreateSheet open={isCreateDialogOpen} onClose={() => setIsCreateDialogOpen(false)} />
+        <InvoiceCreateSheet
+          open={isCreateDialogOpen}
+          onClose={() => setIsCreateDialogOpen(false)}
+          context="offer"
+        />
       )}
     </div>
   );

@@ -57,8 +57,12 @@ export function EditorContent({ content }: EditorContentProps) {
 
                   const textStyle: Record<string, unknown> = {
                     ...(styles.text as object),
-                    ...(marks.some((m: EditorMark) => m.type === "bold") ? (styles.bold as object) : {}),
-                    ...(marks.some((m: EditorMark) => m.type === "italic") ? (styles.italic as object) : {})
+                    ...(marks.some((m: EditorMark) => m.type === "bold")
+                      ? (styles.bold as object)
+                      : {}),
+                    ...(marks.some((m: EditorMark) => m.type === "italic")
+                      ? (styles.italic as object)
+                      : {})
                   };
 
                   // Check if it's a link
@@ -75,20 +79,19 @@ export function EditorContent({ content }: EditorContentProps) {
                       ...(styles.link as object)
                     };
                     return (
-                      <Link
+                      <PDFLink
                         key={`link-${nodeIndex}-${inlineIndex}`}
                         src={linkHref}
-                        style={linkStyle as any}
-                      >
+                        style={linkStyle}>
                         {text}
-                      </Link>
+                      </PDFLink>
                     );
                   }
 
                   return (
-                    <Text key={`text-${nodeIndex}-${inlineIndex}`} style={textStyle as any}>
+                    <PDFText key={`text-${nodeIndex}-${inlineIndex}`} style={textStyle}>
                       {text}
-                    </Text>
+                    </PDFText>
                   );
                 }
 
@@ -107,3 +110,12 @@ export function EditorContent({ content }: EditorContentProps) {
     </View>
   );
 }
+const PDFText = Text as unknown as React.ComponentType<{
+  style?: Record<string, unknown>;
+  children?: React.ReactNode;
+}>;
+const PDFLink = Link as unknown as React.ComponentType<{
+  style?: Record<string, unknown>;
+  src?: string;
+  children?: React.ReactNode;
+}>;

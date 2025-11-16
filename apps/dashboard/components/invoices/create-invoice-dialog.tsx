@@ -655,9 +655,10 @@ type CreateInvoiceDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  context?: "invoice" | "offer";
 };
 
-export function CreateInvoiceDialog({ open, onOpenChange, onSuccess }: CreateInvoiceDialogProps) {
+export function CreateInvoiceDialog({ open, onOpenChange, onSuccess, context = "invoice" }: CreateInvoiceDialogProps) {
   const { toast } = useToast();
   const createInvoiceMutation = useCreateInvoice();
 
@@ -1080,8 +1081,12 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSuccess }: CreateInv
           className="w-full overflow-y-auto p-0 md:w-[calc(50vw)] md:max-w-[900px] [&>button]:hidden"
           style={{ top: 15, right: 15, bottom: 15 }}>
           <VisuallyHidden>
-            <SheetTitle>Create New Invoice</SheetTitle>
-            <SheetDescription>Fill in the details below to create a new invoice.</SheetDescription>
+            <SheetTitle>{context === "offer" ? "Create New Offer" : "Create New Invoice"}</SheetTitle>
+            <SheetDescription>
+              {context === "offer"
+                ? "Fill in the details below to create a new offer."
+                : "Fill in the details below to create a new invoice."}
+            </SheetDescription>
           </VisuallyHidden>
 
           <div className="flex h-full flex-col">
@@ -1145,7 +1150,7 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSuccess }: CreateInv
                                 <button
                                   type="button"
                                   className="text-muted-foreground hover:text-foreground text-sm">
-                                  Issued on {formatDate(new Date(issuedAt))}
+                                  {context === "offer" ? "Offered on" : "Issued on"} {formatDate(new Date(issuedAt))}
                                 </button>
                               </PopoverTrigger>
                               <PopoverContent className="w-auto p-0" align="start">
@@ -1165,7 +1170,7 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSuccess }: CreateInv
                             <span className="text-muted-foreground text-sm">•</span>
                             {issuedAt && (
                               <span className="text-muted-foreground text-sm">
-                                Due on{" "}
+                                {context === "offer" ? "Valid until" : "Due on"}{" "}
                                 {formatDate(
                                   (() => {
                                     const issuedDate = new Date(issuedAt);
@@ -1866,10 +1871,10 @@ export function CreateInvoiceDialog({ open, onOpenChange, onSuccess }: CreateInv
                 {createInvoiceMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
+                    {context === "offer" ? "Creating offer..." : "Creating..."}
                   </>
                 ) : (
-                  "CREATE"
+                  context === "offer" ? "CREATE OFFER" : "CREATE"
                 )}
               </Button>
             </div>
