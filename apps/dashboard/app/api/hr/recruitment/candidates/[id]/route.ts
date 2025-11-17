@@ -4,10 +4,10 @@ const API_BASE_URL = process.env.COLLECTOR_API_URL || "http://localhost:4000";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
+    const { id } = params;
     const url = `${API_BASE_URL}/api/hr/recruitment/candidates/${id}`;
     
     const response = await fetch(url, {
@@ -43,10 +43,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
+    const { id } = params;
     const body = await request.json();
     const url = `${API_BASE_URL}/api/hr/recruitment/candidates/${id}`;
     
@@ -83,10 +83,10 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
+    const { id } = params;
     const url = `${API_BASE_URL}/api/hr/recruitment/candidates/${id}`;
     
     const response = await fetch(url, {
@@ -118,4 +118,3 @@ export async function DELETE(
     );
   }
 }
-

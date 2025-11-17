@@ -69,15 +69,22 @@ export interface TemplateProps {
 	total?: number;
 	// Inline edit support without changing layout
 	editable?: boolean;
+	interactive?: boolean;
 	editors?: {
-		from?: { value: string; onChange: (value: string) => void };
-		customer?: { value: string; onChange: (value: string) => void };
-		payment?: { value: string; onChange: (value: string) => void };
+		from?: { value: unknown; onChange: (value: unknown) => void };
+		customer?: { value: unknown; onChange: (value: unknown) => void };
+		payment?: { value: unknown; onChange: (value: unknown) => void };
 		notes?: { value: unknown; onChange: (value: unknown) => void };
 		onLineItemDescriptionChange?: (index: number, text: string) => void;
+		onLineItemQuantityChange?: (index: number, quantity: number) => void;
+		onLineItemPriceChange?: (index: number, price: number) => void;
+		onLineItemUnitChange?: (index: number, unit: string) => void;
+		onLineItemVatChange?: (index: number, vat: number) => void;
+		onLineItemDiscountChange?: (index: number, discountRate: number) => void;
 		onAddLineItem?: () => void;
 		activeAutocompleteIndex?: number;
 		onAutocompleteCommit?: (index: number, value: string) => void;
 		onDeleteLineItem?: (index: number) => void;
+		onMoveLineItem?: (fromIndex: number, toIndex: number) => void;
 	};
 }

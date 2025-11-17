@@ -14,25 +14,31 @@ export function generateAvatarFallback(string: string) {
 }
 
 export function generateMeta({
-	title,
-	description,
-	canonical,
+  title,
+  description,
+  canonical,
 }: {
-	title: string;
-	description: string;
-	canonical: string;
+  title: string;
+  description: string;
+  canonical: string;
 }): Metadata {
-	return {
-		title: title.includes(" - Collector Dashboard") ? title : `${title} - Collector Dashboard`,
-		description: description,
-		metadataBase: new URL(`https://shadcnuikit.com`),
-		alternates: {
-			canonical,
-		},
-		openGraph: {
-			images: [`/images/seo.jpg`],
-		},
-	};
+  return {
+    title: title.includes(" - Collector Dashboard") ? title : `${title} - Collector Dashboard`,
+    description: description,
+    metadataBase: new URL(`https://shadcnuikit.com`),
+    alternates: {
+      canonical,
+    },
+    openGraph: {
+      images: [`/images/seo.jpg`],
+    },
+  };
+}
+
+export const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export function isUuid(id: string | null | undefined): boolean {
+  if (!id) return false;
+  return UUID_REGEX.test(id.trim());
 }
 
 // a function to get the first letter of the first and last name of names
@@ -59,8 +65,8 @@ export function formatNumber(
  * Format a number as currency with proper formatting
  */
 export function formatCurrency(
-	amount: number,
-	currency: string = "USD",
+    amount: number,
+    currency: string = "USD",
 ): string {
 	const formatted = new Intl.NumberFormat("en-US", {
 		style: "currency",
@@ -92,4 +98,13 @@ export function formatDate(date: string | Date | null | undefined): string {
 	const year = dateObj.getFullYear();
 	
 	return `${day}.${month}.${year}`;
+}
+
+/**
+ * Parse a numeric input string (supports comma as decimal separator)
+ */
+export function parseNumber(input: string, fallback: number = 0): number {
+  const normalized = String(input ?? "").replace(",", ".");
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : fallback;
 }

@@ -3,12 +3,12 @@ import { type NextRequest, NextResponse } from "next/server";
 const API_BASE_URL = process.env.COLLECTOR_API_URL || "http://localhost:4000";
 
 export async function GET(
-	request: NextRequest,
-	{ params }: { params: Promise<{ id: string }> },
+    request: NextRequest,
+    { params }: { params: { id: string } },
 ) {
-	try {
-		const { id } = await params;
-		const url = `${API_BASE_URL}/api/hr/performance-reviews/${id}`;
+    try {
+        const { id } = params;
+        const url = `${API_BASE_URL}/api/hr/performance-reviews/${id}`;
 
 		const response = await fetch(url, {
 			method: "GET",
@@ -42,12 +42,12 @@ export async function GET(
 }
 
 export async function PUT(
-	request: NextRequest,
-	{ params }: { params: Promise<{ id: string }> },
+    request: NextRequest,
+    { params }: { params: { id: string } },
 ) {
-	try {
-		const { id } = await params;
-		const body = await request.json();
+    try {
+        const { id } = params;
+        const body = await request.json();
 		const url = `${API_BASE_URL}/api/hr/performance-reviews/${id}`;
 
 		const response = await fetch(url, {
@@ -82,12 +82,12 @@ export async function PUT(
 }
 
 export async function DELETE(
-	request: NextRequest,
-	{ params }: { params: Promise<{ id: string }> },
+    request: NextRequest,
+    { params }: { params: { id: string } },
 ) {
-	try {
-		const { id } = await params;
-		const url = `${API_BASE_URL}/api/hr/performance-reviews/${id}`;
+    try {
+        const { id } = params;
+        const url = `${API_BASE_URL}/api/hr/performance-reviews/${id}`;
 
 		const response = await fetch(url, {
 			method: "DELETE",

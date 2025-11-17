@@ -67,6 +67,7 @@ export function DescriptionAutocompleteInline({
   const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
   const [menuWidth, setMenuWidth] = React.useState<number | undefined>(undefined);
   const abortRef = React.useRef<AbortController | null>(null);
+  const [isComposing, setIsComposing] = React.useState(false);
 
   React.useEffect(() => {
     setQuery(value || "");
@@ -133,10 +134,12 @@ export function DescriptionAutocompleteInline({
             // do not auto-open while typing to avoid flicker; user can press Ctrl+Space to open
             setSelectedIdx(-1);
             if (textareaRef.current) {
-              setMenuWidth(textareaRef.current.offsetWidth);
+              const w = textareaRef.current.offsetWidth;
+              setMenuWidth((prev) => (typeof prev === "number" && Math.abs(prev - w) < 1 ? prev : w));
             }
           }}
           onKeyDown={(e) => {
+            if (isComposing) return;
             // Default: allow typing/newlines; only intercept when navigating/confirming a selection
             if (e.ctrlKey && e.code === "Space") {
               // explicit open
@@ -194,7 +197,9 @@ export function DescriptionAutocompleteInline({
           onBlur={() => {
             setTimeout(() => setIsOpen(false), 200);
           }}
-          rows={2}
+          onCompositionStart={() => setIsComposing(true)}
+          onCompositionEnd={() => setIsComposing(false)}
+          rows={3}
           className={cn(
             "focus:border-muted-foreground/20 max-h-64 w-full resize-none overflow-y-auto rounded-md border border-transparent bg-transparent py-0.5 pr-2 font-mono text-[11px] leading-4 wrap-break-word whitespace-pre-wrap outline-none focus:ring-0",
             showIcon ? "pl-7" : "pl-1.5"

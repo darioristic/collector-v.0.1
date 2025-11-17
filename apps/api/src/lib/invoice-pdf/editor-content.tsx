@@ -14,16 +14,18 @@ import type {
 const styles = StyleSheet.create({
   paragraph: {
     marginBottom: 4,
-    fontFamily: "Courier",
+    fontFamily: "Geist",
     fontSize: 11,
     lineHeight: 1.4,
+    fontWeight: 400,
   },
   text: {
-    fontFamily: "Courier",
+    fontFamily: "Geist",
     fontSize: 11,
+    fontWeight: 400,
   },
   bold: {
-    fontWeight: "bold",
+    fontWeight: 700,
   },
   italic: {
     fontStyle: "italic",

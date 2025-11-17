@@ -23,17 +23,16 @@ const unauthorized = () =>
 
 export async function PUT(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: { id: string } },
 ) {
   try {
-    const cookieStore = await cookies();
+    const cookieStore = cookies();
     const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
     if (!sessionToken) {
       return unauthorized();
     }
-    const resolvedParams = await params;
-    const conversationId = resolvedParams?.id;
+    const conversationId = params?.id;
     if (!conversationId) {
       return withNoStore(
         NextResponse.json(

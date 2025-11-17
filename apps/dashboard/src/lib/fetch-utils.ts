@@ -59,32 +59,37 @@ export async function ensureResponse(
 	if (!response.ok) {
 		let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
 
-		try {
-			const contentType = response.headers.get("content-type");
-			if (contentType?.includes("application/json")) {
-				const errorData = await response.json();
-				console.error("[ensureResponse] Error response:", JSON.stringify(errorData, null, 2));
-				if (errorData.error) {
-					errorMessage = errorData.error;
-				} else if (errorData.message) {
-					errorMessage = errorData.message;
-				} else if (errorData.details) {
-					errorMessage = `${errorMessage}: ${JSON.stringify(errorData.details)}`;
-				} else if (typeof errorData === "string") {
-					errorMessage = errorData;
-				}
-			} else {
-				// Try to read as text if not JSON
-				const text = await response.text();
-				if (text) {
-					errorMessage = text;
-					console.error("[ensureResponse] Error response text:", text);
-				}
-			}
-		} catch (parseError) {
-			// If we can't parse the error, use the default message
-			console.error("[ensureResponse] Failed to parse error response:", parseError);
-		}
+    try {
+        const contentType = response.headers.get("content-type");
+        const shouldLog = response.status >= 500;
+        if (contentType?.includes("application/json")) {
+            const errorData = await response.json();
+            if (shouldLog) {
+                console.error("[ensureResponse] Error response:", JSON.stringify(errorData, null, 2));
+            }
+            if (errorData.error) {
+                errorMessage = errorData.error;
+            } else if (errorData.message) {
+                errorMessage = errorData.message;
+            } else if (errorData.details) {
+                errorMessage = `${errorMessage}: ${JSON.stringify(errorData.details)}`;
+            } else if (typeof errorData === "string") {
+                errorMessage = errorData;
+            }
+        } else {
+            // Try to read as text if not JSON
+            const text = await response.text();
+            if (text) {
+                errorMessage = text;
+                if (shouldLog) {
+                    console.error("[ensureResponse] Error response text:", text);
+                }
+            }
+        }
+    } catch (parseError) {
+        // If we can't parse the error, use the default message
+        console.error("[ensureResponse] Failed to parse error response:", parseError);
+    }
 
 		// Create error with status code for better error handling
 		const error = new Error(errorMessage);

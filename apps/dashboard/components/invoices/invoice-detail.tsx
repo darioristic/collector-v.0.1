@@ -46,6 +46,11 @@ export function InvoiceDetail({
   const [editNotes, setEditNotes] = React.useState<string>("");
   const [editNotesJson, setEditNotesJson] = React.useState<unknown>(undefined);
   const [editLineNames, setEditLineNames] = React.useState<string[]>([]);
+  const [editLineQty, setEditLineQty] = React.useState<number[]>([]);
+  const [editLinePrice, setEditLinePrice] = React.useState<number[]>([]);
+  const [editLineUnit, setEditLineUnit] = React.useState<string[]>([]);
+  const [editLineVat, setEditLineVat] = React.useState<number[]>([]);
+  const [editLineDiscount, setEditLineDiscount] = React.useState<number[]>([]);
   const { mutateAsync: updateInvoice } = useUpdateInvoice();
   // Autosave: track pending edits and last saved snapshots
   const [pendingItems, setPendingItems] = React.useState<Record<number, string>>({});
@@ -154,7 +159,27 @@ export function InvoiceDetail({
     setEditPayment(`Bank: — | Account number: — | IBAN: —`);
     setEditNotes(typeof invoice.notes === "string" ? (invoice.notes as string) : "");
     setEditLineNames((invoice.items || []).map((it) => it.description || ""));
+    setEditLineQty((invoice.items || []).map((it) => it.quantity));
+    setEditLinePrice((invoice.items || []).map((it) => it.unitPrice));
+    setEditLineUnit((invoice.items || []).map((it) => it.unit || ""));
+    setEditLineVat((invoice.items || []).map((it) => it.vatRate || 0));
+    setEditLineDiscount((invoice.items || []).map((it) => it.discountRate || 0));
   }, [invoice]);
+
+  React.useEffect(() => {
+    if (!isEditing || !invoice) return;
+    if (!editFrom) {
+      setEditFrom(`Your Company\ninfo@yourcompany.com\n+381 60 000 0000\nAddress line\nVAT ID: —`);
+    }
+    if (!editCustomer) {
+      setEditCustomer(
+        `${invoice.customerName}\n${invoice.customerEmail || ""}\n${invoice.billingAddress || ""}\nVAT ID: —`
+      );
+    }
+    if (!editPayment) {
+      setEditPayment(`Bank: — | Account number: — | IBAN: —`);
+    }
+  }, [isEditing, invoice]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -237,6 +262,14 @@ export function InvoiceDetail({
   const handleSaveInline = async () => {
     if (!invoice) return;
     try {
+      const container = document.getElementById(contentId);
+      if (container) {
+        const inputs = container.querySelectorAll("input, textarea");
+        for (const el of inputs) {
+          (el as HTMLElement).blur();
+        }
+      }
+      await new Promise((r) => setTimeout(r, 50));
       const customerLines = editCustomer.split("\n");
       const parsedCustomerName = customerLines[0]?.trim() || invoice.customerName;
       const parsedCustomerEmail =
@@ -251,32 +284,25 @@ export function InvoiceDetail({
         // We'll set notes as object below to preserve formatting
         notes: undefined,
         items: (() => {
-          const existing = invoice.items || [];
-          const maxLen = Math.max(existing.length, editLineNames.length);
-          const items = [];
-          for (let i = 0; i < maxLen; i++) {
-            const base = existing[i];
-            if (base) {
-              const itemId = (base as unknown as { id?: string }).id;
-              items.push({
-                id: itemId,
-                description: editLineNames[i] ?? base.description ?? "",
-                unitPrice: base.unitPrice,
-                quantity: base.quantity,
-                vatRate: base.vatRate ?? undefined,
-                unit: base.unit ?? undefined,
-                discountRate: base.discountRate ?? undefined
-              });
-            } else {
-              // New row
-              items.push({
-                description: editLineNames[i] ?? "",
-                unitPrice: 0,
-                quantity: 1
-              });
-            }
+          const count = Math.max(
+            editLineNames.length,
+            editLineQty.length,
+            editLinePrice.length,
+            editLineUnit.length,
+            editLineVat.length,
+            editLineDiscount.length
+          );
+          const items = [] as Array<import("@crm/types").InvoiceItemCreateInput>;
+          for (let i = 0; i < count; i++) {
+            items.push({
+              description: editLineNames[i] ?? "",
+              unitPrice: editLinePrice[i] ?? 0,
+              quantity: editLineQty[i] ?? 1,
+              vatRate: editLineVat[i] ?? undefined,
+              unit: editLineUnit[i] ? editLineUnit[i] : undefined,
+              discountRate: editLineDiscount[i] ?? undefined
+            } as import("@crm/types").InvoiceItemCreateInput);
           }
-          // Remove completely empty descriptions to avoid backend validation errors
           return items.filter((it) => (it.description || "").trim().length > 0);
         })()
       };
@@ -314,9 +340,79 @@ export function InvoiceDetail({
     setLastSavedItems(snapshot);
   }, [invoice]);
 
-  // Debounced autosave for description changes
+  // Memoized callback for line item description changes
+  const handleLineItemDescriptionChange = React.useCallback((idx: number, text: string) => {
+    setEditLineNames((prev) => {
+      const next = [...prev];
+      next[idx] = text;
+      return next;
+    });
+  }, []);
+
+  // Memoized line items array to prevent unnecessary re-renders
+  const memoizedLineItems = React.useMemo(() => {
+    if (!templateProps) return [];
+    const base = templateProps.line_items;
+    const editCount = Math.max(
+      editLineNames.length,
+      editLineQty.length,
+      editLinePrice.length,
+      editLineUnit.length,
+      editLineVat.length,
+      editLineDiscount.length
+    );
+    const count = isEditing ? editCount : Math.max(editCount, base.length);
+    const out = [] as Array<LineItem>;
+    for (let i = 0; i < count; i++) {
+      const li = base[i];
+      if (isEditing) {
+        // In edit mode, derive rows strictly from edit state length
+        out.push({
+          id: li?.id,
+          name: editLineNames[i] ?? li?.name ?? "",
+          price: editLinePrice[i] ?? li?.price ?? 0,
+          quantity: editLineQty[i] ?? li?.quantity ?? 1,
+          unit: editLineUnit[i] ?? li?.unit ?? undefined,
+          vat: editLineVat[i] ?? li?.vat ?? undefined,
+          discountRate: editLineDiscount[i] ?? li?.discountRate ?? undefined
+        });
+      } else if (li) {
+        out.push({
+          ...li,
+          name: editLineNames[i] ?? li.name,
+          quantity: editLineQty[i] ?? li.quantity,
+          price: editLinePrice[i] ?? li.price,
+          unit: editLineUnit[i] ?? li.unit,
+          vat: editLineVat[i] ?? li.vat,
+          discountRate: editLineDiscount[i] ?? li.discountRate
+        });
+      } else {
+        out.push({
+          id: undefined,
+          name: editLineNames[i] ?? "",
+          price: editLinePrice[i] ?? 0,
+          quantity: editLineQty[i] ?? 1,
+          unit: editLineUnit[i] ?? undefined,
+          vat: editLineVat[i] ?? undefined,
+          discountRate: editLineDiscount[i] ?? undefined
+        });
+      }
+    }
+    return out;
+  }, [
+    templateProps,
+    isEditing,
+    editLineNames,
+    editLineQty,
+    editLinePrice,
+    editLineUnit,
+    editLineVat,
+    editLineDiscount
+  ]);
+
+  // Debounced autosave for description changes (skip while actively editing to prevent UI jitter)
   React.useEffect(() => {
-    if (!invoice) return;
+    if (!invoice || isEditing) return;
     const timer = setTimeout(async () => {
       const changes: Array<{ index: number; value: string }> = [];
       const maxLen = Math.max(lastSavedItems.length, editLineNames.length);
@@ -367,7 +463,7 @@ export function InvoiceDetail({
       }
     }, 1200);
     return () => clearTimeout(timer);
-  }, [invoice, editLineNames, pendingItems, lastSavedItems, updateInvoice, toast]);
+  }, [invoice, isEditing, editLineNames, pendingItems, lastSavedItems, updateInvoice, toast]);
   if (loadingView) return loadingView;
   if (notFoundView) return notFoundView;
   return (
@@ -381,72 +477,71 @@ export function InvoiceDetail({
           <SheetDescription>Pregled računa</SheetDescription>
         </VisuallyHidden>
 
-        <div className="absolute top-4 right-4 z-10">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <MoreVertical className="h-4 w-4" />
-                <span className="sr-only">More options</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {!isEditing ? (
-                <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </DropdownMenuItem>
-              ) : (
+        {isEditing && (
+          <div className="absolute top-4 right-4 z-10">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreVertical className="h-4 w-4" />
+                  <span className="sr-only">More options</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={handleSaveInline}>
                   <Pencil className="mr-2 h-4 w-4" />
                   Save
                 </DropdownMenuItem>
-              )}
-              {invoice && onDelete && (
-                <DropdownMenuItem onClick={() => onDelete(invoice.id)} className="text-destructive">
-                  Delete
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem
-                onClick={async () => {
-                  try {
-                    setIsSending(true);
-                    const response = await fetch(`/api/sales/invoices/${invoiceId}/send`, {
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json"
-                      },
-                      body: JSON.stringify({
-                        email: invoice?.customerEmail ?? undefined
-                      })
-                    });
+                {invoice && onDelete && (
+                  <DropdownMenuItem
+                    onClick={() => onDelete(invoice.id)}
+                    className="text-destructive">
+                    Delete
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  onClick={async () => {
+                    try {
+                      setIsSending(true);
+                      const response = await fetch(`/api/sales/invoices/${invoiceId}/send`, {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                          email: invoice?.customerEmail ?? undefined
+                        })
+                      });
 
-                    if (!response.ok) {
-                      const error = await response.json().catch(() => ({ error: "Unknown error" }));
-                      throw new Error(error.error || "Failed to send invoice");
+                      if (!response.ok) {
+                        const error = await response
+                          .json()
+                          .catch(() => ({ error: "Unknown error" }));
+                        throw new Error(error.error || "Failed to send invoice");
+                      }
+
+                      await response.json();
+                      toast({
+                        title: "Invoice sent",
+                        description: `Invoice link has been sent to ${invoice?.customerEmail || "customer"}`
+                      });
+                    } catch (error) {
+                      toast({
+                        variant: "destructive",
+                        title: "Failed to send invoice",
+                        description: error instanceof Error ? error.message : "Unknown error"
+                      });
+                    } finally {
+                      setIsSending(false);
                     }
-
-                    await response.json();
-                    toast({
-                      title: "Invoice sent",
-                      description: `Invoice link has been sent to ${invoice?.customerEmail || "customer"}`
-                    });
-                  } catch (error) {
-                    toast({
-                      variant: "destructive",
-                      title: "Failed to send invoice",
-                      description: error instanceof Error ? error.message : "Unknown error"
-                    });
-                  } finally {
-                    setIsSending(false);
-                  }
-                }}
-                disabled={isSending || !invoice?.customerEmail}>
-                <Mail className="mr-2 h-4 w-4" />
-                {isSending ? "Sending..." : "Send Invoice"}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+                  }}
+                  disabled={isSending || !invoice?.customerEmail}>
+                  <Mail className="mr-2 h-4 w-4" />
+                  {isSending ? "Sending..." : "Send Invoice"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
 
         {isEditing ? (
           <div
@@ -457,40 +552,19 @@ export function InvoiceDetail({
               position: "relative"
             }}
             id={contentId}
-            className="pb-[90px]">
+            className="pb-0">
             {templateProps ? (
               <HtmlTemplate
                 {...templateProps}
-                line_items={(() => {
-                  const base = templateProps.line_items;
-                  const count = Math.max(base.length, editLineNames.length);
-                  const out = [];
-                  for (let i = 0; i < count; i++) {
-                    const li = base[i];
-                    if (li) {
-                      out.push({
-                        ...li,
-                        name: editLineNames[i] ?? li.name
-                      });
-                    } else {
-                      out.push({
-                        id: undefined,
-                        name: editLineNames[i] ?? "",
-                        price: 0,
-                        quantity: 1
-                      });
-                    }
-                  }
-                  return out;
-                })()}
+                line_items={memoizedLineItems}
                 editable
                 editors={{
-                  from: { value: editFrom, onChange: (v: string) => setEditFrom(v ?? "") },
+                  from: { value: editFrom, onChange: (v: unknown) => setEditFrom(typeof v === "string" ? v : "") },
                   customer: {
                     value: editCustomer,
-                    onChange: (v: string) => setEditCustomer(v ?? "")
+                    onChange: (v: unknown) => setEditCustomer(typeof v === "string" ? v : "")
                   },
-                  payment: { value: editPayment, onChange: (v: string) => setEditPayment(v ?? "") },
+                  payment: { value: editPayment, onChange: (v: unknown) => setEditPayment(typeof v === "string" ? v : "") },
                   notes: {
                     value: editNotesJson ?? editNotes,
                     onChange: (v: unknown) => {
@@ -513,19 +587,54 @@ export function InvoiceDetail({
                       }
                     }
                   },
-                  onLineItemDescriptionChange: (idx: number, text: string) =>
-                    setEditLineNames((prev) => {
+                  onLineItemDescriptionChange: handleLineItemDescriptionChange,
+                  onLineItemQuantityChange: (idx: number, qty: number) => {
+                    setEditLineQty((prev) => {
                       const next = [...prev];
-                      next[idx] = text;
-                      setPendingItems((p) => ({ ...p, [idx]: text }));
+                      next[idx] = qty;
                       return next;
-                    }),
-                  onAddLineItem: () =>
+                    });
+                  },
+                  onLineItemPriceChange: (idx: number, price: number) => {
+                    setEditLinePrice((prev) => {
+                      const next = [...prev];
+                      next[idx] = price;
+                      return next;
+                    });
+                  },
+                  onLineItemUnitChange: (idx: number, unit: string) => {
+                    setEditLineUnit((prev) => {
+                      const next = [...prev];
+                      next[idx] = unit;
+                      return next;
+                    });
+                  },
+                  onLineItemVatChange: (idx: number, vat: number) => {
+                    setEditLineVat((prev) => {
+                      const next = [...prev];
+                      next[idx] = vat;
+                      return next;
+                    });
+                  },
+                  onLineItemDiscountChange: (idx: number, dr: number) => {
+                    setEditLineDiscount((prev) => {
+                      const next = [...prev];
+                      next[idx] = dr;
+                      return next;
+                    });
+                  },
+                  onAddLineItem: () => {
                     setEditLineNames((prev) => {
                       const next = [...prev, ""];
                       setActiveAutocompleteIndex(next.length - 1);
                       return next;
-                    }),
+                    });
+                    setEditLineQty((prev) => [...prev, 1]);
+                    setEditLinePrice((prev) => [...prev, 0]);
+                    setEditLineUnit((prev) => [...prev, ""]);
+                    setEditLineVat((prev) => [...prev, 0]);
+                    setEditLineDiscount((prev) => [...prev, 0]);
+                  },
                   activeAutocompleteIndex,
                   onAutocompleteCommit: (idx: number) => {
                     // Switch row to plain textarea on next render
@@ -537,7 +646,7 @@ export function InvoiceDetail({
                     setEditLineNames((prev) => {
                       const next = prev.slice(0, idx).concat(prev.slice(idx + 1));
                       // mark subsequent items as pending (their indices shift)
-                      setPendingItems((p) => {
+                      setPendingItems(() => {
                         const updated: Record<number, string> = {};
                         next.forEach((val, i) => {
                           updated[i] = val;
@@ -546,6 +655,25 @@ export function InvoiceDetail({
                       });
                       return next;
                     });
+                    setEditLineQty((prev) => prev.slice(0, idx).concat(prev.slice(idx + 1)));
+                    setEditLinePrice((prev) => prev.slice(0, idx).concat(prev.slice(idx + 1)));
+                    setEditLineUnit((prev) => prev.slice(0, idx).concat(prev.slice(idx + 1)));
+                    setEditLineVat((prev) => prev.slice(0, idx).concat(prev.slice(idx + 1)));
+                    setEditLineDiscount((prev) => prev.slice(0, idx).concat(prev.slice(idx + 1)));
+                  },
+                  onMoveLineItem: (fromIndex: number, toIndex: number) => {
+                    const move = <T,>(arr: T[]) => {
+                      const next = [...arr];
+                      const [m] = next.splice(fromIndex, 1);
+                      next.splice(toIndex, 0, m);
+                      return next;
+                    };
+                    setEditLineNames((prev) => move(prev));
+                    setEditLineQty((prev) => move(prev));
+                    setEditLinePrice((prev) => move(prev));
+                    setEditLineUnit((prev) => move(prev));
+                    setEditLineVat((prev) => move(prev));
+                    setEditLineDiscount((prev) => move(prev));
                   }
                 }}
               />
@@ -553,7 +681,7 @@ export function InvoiceDetail({
             <InvoiceToolbar
               invoiceId={invoiceId}
               onCopyLink={() => {
-                const url = window.location.href;
+                const url = `/invoices/${invoiceId}/preview`;
                 navigator.clipboard.writeText(url);
               }}
               onEdit={handleSaveInline}
@@ -570,21 +698,19 @@ export function InvoiceDetail({
               position: "relative"
             }}
             id={contentId}
-            className="pb-[90px]">
+            className="pb-0">
             {templateProps ? <HtmlTemplate {...templateProps} /> : null}
 
-            {templateProps && (
-              <InvoiceToolbar
-                invoiceId={invoiceId}
-                onCopyLink={() => {
-                  const url = window.location.href;
-                  navigator.clipboard.writeText(url);
-                }}
-                onEdit={() => setIsEditing(true)}
-                anchorId={contentId}
-                isEditing={false}
-              />
-            )}
+            <InvoiceToolbar
+              invoiceId={invoiceId}
+              onCopyLink={() => {
+                const url = `/invoices/${invoiceId}/preview`;
+                navigator.clipboard.writeText(url);
+              }}
+              onEdit={() => setIsEditing(true)}
+              anchorId={contentId}
+              isEditing={false}
+            />
           </div>
         )}
       </SheetContent>

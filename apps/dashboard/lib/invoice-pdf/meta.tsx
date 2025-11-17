@@ -19,20 +19,16 @@ const styles = StyleSheet.create({
 		fontSize: 14,
 		fontWeight: "bold",
 		marginBottom: 8,
-		fontFamily: "Courier",
 	},
 	dateRow: {
 		marginBottom: 4,
-		fontFamily: "Courier",
 		fontSize: 11,
 	},
 	label: {
 		color: "#878787",
-		fontFamily: "Courier",
 	},
 	value: {
-		fontWeight: "medium",
-		fontFamily: "Courier",
+		fontWeight: "normal",
 	},
 });
 
@@ -74,4 +70,3 @@ export function Meta({ template: _template, invoiceNumber, issueDate, dueDate }:
 		</View>
 	);
 }
-

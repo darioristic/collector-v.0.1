@@ -16,25 +16,23 @@ type ExportQuotePDFParams = FastifyRequest<{
 // Helper function to create editor content from text
 import type { EditorDoc } from "../../lib/invoice-pdf/types";
 function createEditorContent(text: string | null | undefined): EditorDoc | undefined {
-	if (!text) {
-		return { type: "doc", content: [] };
-	}
-	return {
-		type: "doc",
-		content: [
-			{
-				type: "paragraph",
-				content: [
-					{ type: "text", text: text },
-				],
-			},
-		],
-	};
+  if (!text) {
+    return { type: "doc", content: [] };
+  }
+  return {
+    type: "doc",
+    content: [
+      {
+        type: "paragraph",
+        content: [{ type: "text", text: text }],
+      },
+    ],
+  };
 }
 
 export const exportInvoicePDFHandler = async (
-	request: ExportInvoicePDFParams,
-	reply: FastifyReply
+  request: ExportInvoicePDFParams,
+  reply: FastifyReply
 ) => {
 	const service = new InvoicesService(request.db, request.cache);
 	const invoice = await service.getById(request.params.id);
@@ -70,73 +68,78 @@ export const exportInvoicePDFHandler = async (
 	}));
 
 	// Create editor content for various fields
-	const fromDetails = createEditorContent(
-		`Your Company\ninfo@yourcompany.com\n+381 60 000 0000\nAddress line\nVAT ID: —`
-	);
+    const fromDetails = createEditorContent(
+        `Your Company\ninfo@yourcompany.com\n+381 60 000 0000\nAddress line\nVAT ID: —`
+    );
 
-	const customerDetails = createEditorContent(
-		`${invoice.customerName}\n${invoice.customerEmail || ""}\n${invoice.billingAddress || ""}\nVAT ID: —`
-	);
+    const customerDetails = createEditorContent(
+        `${invoice.customerName}\n${invoice.customerEmail || ""}\n${invoice.billingAddress || ""}\nVAT ID: —`
+    );
 
-	const paymentDetails = createEditorContent("Bank: — | Account number: — | IBAN: —");
+    const paymentDetails = createEditorContent("Bank: — | Account number: — | IBAN: —");
 
-	// Handle notes - can be JSON (Tiptap format) or string (backward compatibility)
-	const noteDetails = invoice.notes
-		? (typeof invoice.notes === "object"
-			? (invoice.notes as unknown as EditorDoc)
-			: createEditorContent(String(invoice.notes)))
-		: undefined;
+    const noteDetails = typeof invoice.notes === "string" ? createEditorContent(invoice.notes) : undefined;
 
-	// Transform invoice data to PDF props format
-	const pdfProps: InvoicePDFProps = {
-		invoice_number: invoice.invoiceNumber,
-		issue_date: invoice.issuedAt,
-		due_date: invoice.dueDate ?? null,
-		template: defaultTemplate,
-		line_items: lineItems,
-		customer_details: customerDetails,
-		from_details: fromDetails,
-		payment_details: paymentDetails,
-		note_details: noteDetails,
-		currency: invoice.currency,
-		customer_name: invoice.customerName,
-		amountBeforeDiscount: Number(invoice.amountBeforeDiscount),
-		discountTotal: Number(invoice.discountTotal),
-		subtotal: Number(invoice.subtotal),
-		totalVat: Number(invoice.totalVat),
-		total: Number(invoice.total),
-	};
+  try {
+    const props: InvoicePDFProps = {
+      invoice_number: invoice.invoiceNumber,
+      issue_date: invoice.issuedAt,
+      due_date: invoice.dueDate ?? invoice.issuedAt,
+      template: {
+        logo_url: undefined,
+        from_label: "From",
+        customer_label: "Bill To",
+        description_label: "Description",
+        quantity_label: "Quantity",
+        price_label: "Price",
+        total_label: "Total",
+        vat_label: "VAT",
+        payment_label: "Payment Details",
+        note_label: "Note",
+        include_vat: true,
+        include_tax: false,
+      },
+      line_items: (invoice.items || []).map((item) => ({
+        name: item.description || "Product / Service",
+        quantity: Number(item.quantity),
+        price: Number(item.unitPrice),
+        vat: Number(item.vatRate ?? 0),
+        unit: item.unit ?? undefined,
+        discountRate: Number(item.discountRate ?? 0),
+      })),
+      customer_details: customerDetails,
+      from_details: fromDetails,
+      payment_details: paymentDetails,
+      note_details: noteDetails,
+      currency: invoice.currency,
+      customer_name: invoice.customerName,
+      amountBeforeDiscount: Number(invoice.amountBeforeDiscount),
+      discountTotal: Number(invoice.discountTotal),
+      subtotal: Number(invoice.subtotal),
+      totalVat: Number(invoice.totalVat),
+      total: Number(invoice.total),
+    };
 
-	try {
-		const pdfStream = await renderInvoiceToStream(pdfProps);
+    const pdfStream = await renderInvoiceToStream(props);
 
-		reply.header("Content-Type", "application/pdf");
-		reply.header(
-			"Content-Disposition",
-			`attachment; filename="invoice-${invoice.invoiceNumber}.pdf"`
-		);
+    reply.header("Content-Type", "application/pdf");
+    const preview = (request.query as Record<string, unknown> | undefined)?.preview === "true";
+    if (!preview) {
+      reply.header(
+        "Content-Disposition",
+        `attachment; filename="invoice-${invoice.invoiceNumber}.pdf"`
+      );
+    }
 
-		// Convert ReadableStream to Node.js Readable stream
-		const reader = pdfStream.getReader();
-		const nodeStream = new (await import("stream")).Readable({
-			async read() {
-				const { done, value } = await reader.read();
-				if (done) {
-					this.push(null);
-				} else {
-					this.push(Buffer.from(value));
-				}
-			},
-		});
-
-		return reply.send(nodeStream);
-	} catch (error) {
-		console.error("PDF generation error:", error);
-		return reply.status(500).send({
-			error: "PDF generation failed",
-			message: error instanceof Error ? error.message : "Unknown error"
-		});
-	}
+    return reply.send(pdfStream);
+  } catch (error) {
+    // Fallback error response
+    console.error("PDF generation error:", error);
+    return reply.status(500).send({
+      error: "PDF generation failed",
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
 };
 
 export const exportQuotePDFHandler = async (

@@ -1,5 +1,4 @@
 "use client";
-
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { TemplateProps } from "./types";
 import { EditorContent } from "./components/editor-content";
@@ -28,18 +27,21 @@ export function HtmlTemplate({
   totalVat = 0,
   total = 0,
   editable = false,
+  interactive = true,
   editors,
 }: TemplateProps) {
   // Helpers to convert between plain text (with \n) and Tiptap JSON doc
-  const stringToDoc = (text: string) => {
-    const lines = (text ?? "").split("\n");
+  const stringToDoc = (input: unknown) => {
+    if (input && typeof input === "object") return input as object;
+    const text = typeof input === "string" ? input : "";
+    const lines = text.split("\n");
     return {
       type: "doc",
       content: lines.map((line) => ({
         type: "paragraph",
         content: line ? [{ type: "text", text: line }] : [],
       })),
-    };
+    } as object;
   };
   const contentToString = (content: unknown): string => {
     // Expecting Tiptap JSON: doc -> paragraphs -> text nodes (ignore marks)
@@ -68,7 +70,7 @@ export function HtmlTemplate({
 
   return (
     <ScrollArea
-      className="bg-background w-full md:w-auto h-full"
+      className="bg-transparent w-full md:w-auto h-full print-wrapper"
       style={{
         width: "100%",
         maxWidth: width,
@@ -80,6 +82,8 @@ export function HtmlTemplate({
         <style>{`
           @media print {
             .break-after-page { page-break-after: always; }
+            .print-wrapper { height: auto !important; overflow: visible !important; }
+            .print-wrapper > div { height: auto !important; }
           }
         `}</style>
         {pages.map((items, pageIndex) => {
@@ -89,7 +93,7 @@ export function HtmlTemplate({
             <PageContainer key={`page-${pageIndex}`} isLast={isLast}>
               {isFirst && (
                 <>
-        <div className="mt-8">
+        <div className="mt-0">
           <Meta
             template={template}
             invoiceNumber={invoice_number}
@@ -107,13 +111,17 @@ export function HtmlTemplate({
                         <MinimalTiptapEditor
                 className="mt-0"
                           value={stringToDoc(editors.from.value)}
-                          onChange={(val) => editors.from && editors.from.onChange(contentToString(val))}
-                          editorContentClassName="min-h-24 font-mono text-[11px] leading-4 whitespace-pre-wrap"
+                          onChange={(val) => {
+                            editors.from && editors.from.onChange(contentToString(val));
+                            setDirty(true);
+                          }}
+                          output="json"
+                          editorContentClassName="min-h-24 font-mono text-[11px] leading-4 whitespace-pre-wrap break-words"
                 hideToolbar
                 unstyled
               />
             ) : (
-            <EditorContent content={from_details} />
+              <EditorContent content={from_details} />
             )}
           </div>
           <div className="mt-4 md:mt-0">
@@ -124,13 +132,17 @@ export function HtmlTemplate({
                         <MinimalTiptapEditor
                 className="mt-0"
                           value={stringToDoc(editors.customer.value)}
-                          onChange={(val) => editors.customer && editors.customer.onChange(contentToString(val))}
-                          editorContentClassName="min-h-24 font-mono text-[11px] leading-4 whitespace-pre-wrap"
+                          onChange={(val) => {
+                            editors.customer && editors.customer.onChange(contentToString(val));
+                            setDirty(true);
+                          }}
+                          output="json"
+                          editorContentClassName="min-h-24 font-mono text-[11px] leading-4 whitespace-pre-wrap break-words"
                 hideToolbar
                 unstyled
               />
             ) : (
-            <EditorContent content={customer_details} />
+              <EditorContent content={customer_details} />
             )}
           </div>
         </div>
@@ -146,12 +158,19 @@ export function HtmlTemplate({
             priceLabel={template.price_label}
             totalLabel={template.total_label}
             includeVAT={template.include_vat}
-                  editable={editable && Boolean(editors?.onLineItemDescriptionChange)}
+                  editable={editable}
+                  interactive={interactive}
                   onChangeDescription={editors?.onLineItemDescriptionChange}
+                  onChangeQuantity={editors?.onLineItemQuantityChange}
+                  onChangePrice={editors?.onLineItemPriceChange}
+                  onChangeUnit={editors?.onLineItemUnitChange}
+                  onChangeVat={editors?.onLineItemVatChange}
+                  onChangeDiscount={editors?.onLineItemDiscountChange}
                   onAddLineItem={isLast ? editors?.onAddLineItem : undefined}
                   activeAutocompleteIndex={editors?.activeAutocompleteIndex}
                   onAutocompleteCommit={editors?.onAutocompleteCommit}
                   onDeleteLineItem={editors?.onDeleteLineItem}
+                  onMoveLineItem={editors?.onMoveLineItem}
           />
         </div>
 
@@ -201,14 +220,15 @@ export function HtmlTemplate({
             )}
             </div>
 
-          <div className="pt-6 border-t border-border mt-auto">
+          <div className="pt-6 mt-auto">
             <div className="text-[11px] text-[#878787] font-mono">
-                        {editable && editors?.payment ? (
-                          <MinimalTiptapEditor
+              {editable && editors?.payment ? (
+                <MinimalTiptapEditor
                   className="mt-0"
-                            value={stringToDoc(editors.payment.value)}
-                            onChange={(val) => editors.payment && editors.payment.onChange(contentToString(val))}
-                            editorContentClassName="min-h-24 font-mono text-[11px] leading-4 whitespace-pre-wrap"
+                  value={stringToDoc(editors.payment.value)}
+                  onChange={(val) => editors.payment && editors.payment.onChange(contentToString(val))}
+                  output="json"
+                  editorContentClassName="min-h-24 font-mono text-[11px] leading-4 whitespace-pre-wrap break-words"
                   hideToolbar
                   unstyled
                 />

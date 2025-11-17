@@ -21,16 +21,19 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderBottomWidth: 0.5,
     borderBottomColor: "#e5e5e5",
-    fontFamily: "Courier",
+    fontFamily: "Geist",
     fontSize: 11,
+    fontWeight: 400,
   },
   label: {
     color: "#878787",
-    fontFamily: "Courier",
+    fontFamily: "Geist",
+    fontWeight: 500,
   },
   value: {
-    fontFamily: "Courier",
+    fontFamily: "Geist",
     fontVariantNumeric: "tabular-nums",
+    fontWeight: 400,
   },
   totalRow: {
     marginTop: 16,
@@ -40,18 +43,19 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: 14,
-    fontWeight: "bold",
-    fontFamily: "Courier",
+    fontWeight: 700,
+    fontFamily: "Geist",
   },
   totalValue: {
     fontSize: 20,
-    fontWeight: "bold",
-    fontFamily: "Courier",
+    fontWeight: 700,
+    fontFamily: "Geist",
     fontVariantNumeric: "tabular-nums",
   },
   discountValue: {
     color: "#dc2626",
-    fontFamily: "Courier",
+    fontFamily: "Geist",
+    fontWeight: 400,
   },
 });
 
@@ -176,4 +180,3 @@ export function Summary({
     </View>
   );
 }
-

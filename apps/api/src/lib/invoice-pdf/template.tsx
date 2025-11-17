@@ -22,7 +22,7 @@ import { Summary } from "./summary";
 const styles = StyleSheet.create({
   page: {
     padding: 40,
-    fontFamily: "Helvetica",
+    fontFamily: "Geist",
     fontSize: 11,
   },
   container: {
@@ -52,12 +52,14 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: "#878787",
     marginBottom: 4,
-    fontFamily: "Courier",
+    fontFamily: "Geist",
+    fontWeight: 500,
   },
   text: {
     fontSize: 11,
-    fontFamily: "Courier",
+    fontFamily: "Geist",
     lineHeight: 1.4,
+    fontWeight: 400,
   },
   footer: {
     marginTop: "auto",
@@ -167,4 +169,3 @@ export function InvoiceTemplate({
     </Document>
   );
 }
-

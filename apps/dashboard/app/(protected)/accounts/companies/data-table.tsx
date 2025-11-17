@@ -1,13 +1,8 @@
 "use client";
 
-import type { Account } from "@crm/types";
+import type { Account, AccountAddress, AccountExecutive, AccountMilestone } from "@crm/types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import type {
-  ColumnDef,
-  HeaderContext,
-  SortingState,
-  VisibilityState
-} from "@tanstack/react-table";
+import type { SortingState, VisibilityState } from "@tanstack/react-table";
 import {
   flexRender,
   getCoreRowModel,
@@ -16,20 +11,7 @@ import {
   getSortedRowModel,
   useReactTable
 } from "@tanstack/react-table";
-import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  Building2,
-  CalendarClock,
-  Eye,
-  Loader2,
-  Mail,
-  Pencil,
-  Phone,
-  Trash2,
-  Receipt as ReceiptIcon
-} from "lucide-react";
+import { Loader2 } from "lucide-react";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -44,10 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-// import { Card } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Accordion,
   AccordionContent,
@@ -76,7 +55,6 @@ import {
   FormMessage
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-// import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -97,6 +75,21 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { ensureResponse, getApiUrl } from "@/src/lib/fetch-utils";
 import CompanyDrawer from "@/components/company/company-drawer";
+import {
+  formatTag,
+  shouldHideCompany,
+  enhanceCompanyRow,
+  enhanceCompanyRows,
+  type EnhancedCompanyRow
+} from "./utils/company-helpers";
+import { useDebounce } from "./hooks/use-debounce";
+import {
+  useCompanyDialog,
+  getFormValuesFromCompany,
+  getDefaultFormValues
+} from "./hooks/use-company-dialog";
+import { MemoizedTableRow } from "./components/memoized-table-row";
+import { createColumns } from "./components/columns";
 
 export type CompanyRow = Account & {
   primaryContactName?: string | null;
@@ -126,8 +119,6 @@ export type CompanyRow = Account & {
   }>;
 };
 
-const dateFormatter = new Intl.DateTimeFormat("en-US", { dateStyle: "medium" });
-
 const ACCOUNT_TAG_OPTIONS = ["customer", "partner", "vendor"] as const;
 
 const formSchema = z.object({
@@ -149,61 +140,7 @@ const formSchema = z.object({
 
 type CompanyFormValues = z.infer<typeof formSchema>;
 
-const DEFAULT_FORM_VALUES: CompanyFormValues = {
-  name: "",
-  email: "",
-  billingEmail: "",
-  phone: "",
-  website: "",
-  contactPerson: "",
-  type: ACCOUNT_TAG_OPTIONS[0],
-  taxId: "",
-  country: "RS"
-};
-
-const BLOCKED_COUNTRIES = new Set(["netherlands", "nl"]);
-
-const normalizeCountry = (country?: string | null) => country?.trim().toLowerCase() ?? "";
-
-const shouldHideCompany = (country?: string | null) =>
-  BLOCKED_COUNTRIES.has(normalizeCountry(country));
-
-const formatTag = (value: CompanyRow["type"]): string => {
-  if (!value) {
-    return "";
-  }
-
-  return value.charAt(0).toUpperCase() + value.slice(1);
-};
-
-const getCompanyRegistrationNumber = (company: CompanyRow): string => {
-  const taxIdNumericPart = company.taxId?.replace(/\D/g, "") ?? "";
-
-  if (taxIdNumericPart.length > 0) {
-    const suffix = taxIdNumericPart.slice(-4);
-    return `REG-${suffix.padStart(4, "0")}`;
-  }
-
-  const idSuffix = (company.id.split("-").pop() ?? company.id).replace(/\D/g, "");
-  const fallback = idSuffix.slice(-4);
-  return `REG-${fallback.padStart(4, "0")}`;
-};
-
-const companySearch = (company: CompanyRow) =>
-  [
-    company.name,
-    company.email ?? "",
-    company.phone ?? "",
-    company.taxId,
-    getCompanyRegistrationNumber(company),
-    company.primaryContactName ?? "",
-    company.primaryContactEmail ?? "",
-    company.primaryContactPhone ?? "",
-    company.country,
-    company.type
-  ]
-    .join(" ")
-    .toLowerCase();
+// Helper funkcije su izdvojene u utils/company-helpers.ts
 
 const QUICK_FILTERS = [
   { id: "all", label: "All records", query: "" },
@@ -211,18 +148,6 @@ const QUICK_FILTERS = [
   { id: "partner", label: "Partners", query: "partner" },
   { id: "vendor", label: "Vendors", query: "vendor" }
 ] as const;
-
-const SortIcon = ({ direction }: { direction: false | "asc" | "desc" }) => {
-  if (direction === "asc") {
-    return <ArrowUp className="ml-2 h-3.5 w-3.5" />;
-  }
-
-  if (direction === "desc") {
-    return <ArrowDown className="ml-2 h-3.5 w-3.5" />;
-  }
-
-  return <ArrowUpDown className="ml-2 h-3.5 w-3.5 opacity-60" />;
-};
 
 interface CompaniesDataTableProps {
   data: CompanyRow[];
@@ -237,15 +162,22 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
   ({ data, showCreateActionInToolbar = true }, ref) => {
     const { toast } = useToast();
     const formId = React.useId();
-    const [rows, setRows] = React.useState<CompanyRow[]>(data);
+    // Memoize enhanced rows to avoid unnecessary recalculations
+    const enhancedData = React.useMemo(() => enhanceCompanyRows(data), [data]);
+    const [rows, setRows] = React.useState<EnhancedCompanyRow[]>(enhancedData);
+
+    React.useEffect(() => {
+      setRows(enhancedData);
+    }, [enhancedData]);
     const [sorting, setSorting] = React.useState<SortingState>([]);
     const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
     const [rowSelection, setRowSelection] = React.useState({});
     const [globalFilter, setGlobalFilter] = React.useState("");
+    const debouncedFilter = useDebounce(globalFilter, 300);
     const [activeQuickFilter, setActiveQuickFilter] = React.useState<string>("all");
-    const [activeCompany, setActiveCompany] = React.useState<CompanyRow | null>(null);
+    const [activeCompany, setActiveCompany] = React.useState<EnhancedCompanyRow | null>(null);
     const [companyDetails, setCompanyDetails] = React.useState<{
-      addresses: CompanyAddress[];
+      addresses: AccountAddress[];
       contacts: Array<{
         id: string;
         name: string;
@@ -253,46 +185,56 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
         phone?: string | null;
         title?: string | null;
       }>;
-      executives: CompanyExecutive[];
-      milestones: CompanyMilestone[];
+      executives: AccountExecutive[];
+      milestones: AccountMilestone[];
     } | null>(null);
     const [isLoadingDetails, setIsLoadingDetails] = React.useState(false);
-    const [editingCompany, setEditingCompany] = React.useState<CompanyRow | null>(null);
-    const [dialogMode, setDialogMode] = React.useState<"create" | "edit">("create");
-    const [isDialogOpen, setIsDialogOpen] = React.useState(false);
-    const [isSubmitting, setIsSubmitting] = React.useState(false);
-    const [companyToDelete, setCompanyToDelete] = React.useState<CompanyRow | null>(null);
+    const dialog = useCompanyDialog();
+    const [companyToDelete, setCompanyToDelete] = React.useState<EnhancedCompanyRow | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
     const [isDeleting, setIsDeleting] = React.useState(false);
-
-    React.useEffect(() => {
-      setRows(data);
-    }, [data]);
+    const abortControllerRef = React.useRef<AbortController | null>(null);
 
     const form = useForm<CompanyFormValues>({
       resolver: zodResolver(formSchema),
-      defaultValues: DEFAULT_FORM_VALUES
+      defaultValues: getDefaultFormValues()
     });
 
     const activeCompanyId = activeCompany?.id;
+
+    // Memoize rows lookup map for O(1) access instead of O(n) find
+    const rowsMap = React.useMemo(() => {
+      const map = new Map<string, EnhancedCompanyRow>();
+      for (const row of rows) {
+        map.set(row.id, row);
+      }
+      return map;
+    }, [rows]);
 
     React.useEffect(() => {
       if (!activeCompanyId) {
         return;
       }
 
-      const updated = rows.find((row) => row.id === activeCompanyId);
-
+      const updated = rowsMap.get(activeCompanyId);
       if (updated) {
         setActiveCompany(updated);
       }
-    }, [rows, activeCompanyId]);
+    }, [rowsMap, activeCompanyId]);
 
     const openSidebar = React.useCallback(
-      (company: CompanyRow) => {
+      (company: EnhancedCompanyRow) => {
+        // Abort previous request if it exists
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
+
         setActiveCompany(company);
         setCompanyDetails(null);
         setIsLoadingDetails(true);
+
+        const abortController = new AbortController();
+        abortControllerRef.current = abortController;
 
         // Load company details
         ensureResponse(
@@ -300,14 +242,15 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
             cache: "no-store",
             headers: {
               Accept: "application/json"
-            }
+            },
+            signal: abortController.signal
           })
         )
           .then((response) => response.json())
           .then(
             (data: {
               account: Account;
-              addresses: CompanyAddress[];
+              addresses: AccountAddress[];
               contacts: Array<{
                 id: string;
                 name: string;
@@ -316,33 +259,45 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
                 phone?: string | null;
                 title?: string | null;
               }>;
-              executives: CompanyExecutive[];
-              milestones: CompanyMilestone[];
+              executives: AccountExecutive[];
+              milestones: AccountMilestone[];
             }) => {
-              setCompanyDetails({
-                addresses: data.addresses,
-                contacts: data.contacts.map((c) => ({
-                  id: c.id,
-                  name: c.fullName ?? c.name,
-                  email: c.email,
-                  phone: c.phone,
-                  title: c.title
-                })),
-                executives: data.executives,
-                milestones: data.milestones
-              });
+              if (!abortController.signal.aborted) {
+                setCompanyDetails({
+                  addresses: data.addresses,
+                  contacts: data.contacts.map((c) => ({
+                    id: c.id,
+                    name: c.fullName ?? c.name,
+                    email: c.email,
+                    phone: c.phone,
+                    title: c.title
+                  })),
+                  executives: data.executives,
+                  milestones: data.milestones
+                });
+              }
             }
           )
           .catch((error) => {
-            toast({
-              variant: "destructive",
-              title: "Failed to load details",
-              description:
-                error instanceof Error ? error.message : "Unable to load company details."
-            });
+            if (error instanceof Error && error.name === "AbortError") {
+              return;
+            }
+            if (!abortController.signal.aborted) {
+              toast({
+                variant: "destructive",
+                title: "Failed to load details",
+                description:
+                  error instanceof Error ? error.message : "Unable to load company details."
+              });
+            }
           })
           .finally(() => {
-            setIsLoadingDetails(false);
+            if (!abortController.signal.aborted) {
+              setIsLoadingDetails(false);
+            }
+            if (abortControllerRef.current === abortController) {
+              abortControllerRef.current = null;
+            }
           });
       },
       [toast]
@@ -360,14 +315,12 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
       const nameParam = searchParams.get("name");
 
       // If create=true and name is provided, open create dialog with pre-filled name
-      if (createParam === "true" && nameParam && !isDialogOpen) {
-        setDialogMode("create");
-        setEditingCompany(null);
+      if (createParam === "true" && nameParam && !dialog.isOpen) {
+        dialog.openCreateDialog();
         form.reset({
-          ...DEFAULT_FORM_VALUES,
+          ...getDefaultFormValues(),
           name: nameParam
         });
-        setIsDialogOpen(true);
         // Clean up URL parameters
         const newUrl = new URL(window.location.href);
         newUrl.searchParams.delete("create");
@@ -390,66 +343,69 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
           window.history.replaceState({}, "", newUrl.toString());
         }
       }
-    }, [rows, activeCompany, openSidebar, isDialogOpen, form]);
+    }, [rows, activeCompany, openSidebar, dialog.isOpen, dialog.openCreateDialog, form]);
 
     const closeSidebar = React.useCallback(() => {
+      // Abort any pending requests
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
       setActiveCompany(null);
       setCompanyDetails(null);
     }, []);
 
+    // Cleanup on unmount
+    React.useEffect(() => {
+      return () => {
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
+      };
+    }, []);
+
     const handleView = React.useCallback(
-      (company: CompanyRow) => {
-        const latest = rows.find((row) => row.id === company.id) ?? company;
+      (company: EnhancedCompanyRow) => {
+        const latest = rowsMap.get(company.id) ?? company;
         openSidebar(latest);
       },
-      [openSidebar, rows]
+      [openSidebar, rowsMap]
     );
 
     const handleEdit = React.useCallback(
-      (company: CompanyRow) => {
-        setEditingCompany(company);
-        setDialogMode("edit");
-        form.reset({
-          name: company.name ?? "",
-          email: company.email ?? "",
-          billingEmail: "",
-          phone: company.phone ?? "",
-          website: company.website ?? "",
-          contactPerson: "",
-          type: company.type ?? ACCOUNT_TAG_OPTIONS[0],
-          taxId: company.taxId ?? "",
-          country: company.country ?? ""
-        });
-        setIsDialogOpen(true);
+      (company: EnhancedCompanyRow) => {
+        dialog.openEditDialog(company);
+        form.reset(getFormValuesFromCompany(company));
       },
-      [form]
+      [dialog, form]
     );
 
-    const handleDelete = React.useCallback((company: CompanyRow) => {
+    const handleDelete = React.useCallback((company: EnhancedCompanyRow) => {
       setCompanyToDelete(company);
       setIsDeleteDialogOpen(true);
     }, []);
 
     const openCreateDialog = React.useCallback(() => {
-      setDialogMode("create");
-      setEditingCompany(null);
-      form.reset({ ...DEFAULT_FORM_VALUES });
-      setIsDialogOpen(true);
-    }, [form]);
+      dialog.openCreateDialog();
+      form.reset(getDefaultFormValues());
+    }, [dialog, form]);
 
     const toCompanyRow = React.useCallback(
-      (account: Account, fallback?: CompanyRow | null): CompanyRow => ({
-        ...account,
-        primaryContactName: fallback?.primaryContactName ?? null,
-        primaryContactEmail: fallback?.primaryContactEmail ?? null,
-        primaryContactPhone: fallback?.primaryContactPhone ?? null,
-        contacts: fallback?.contacts ?? []
-      }),
+      (account: Account, fallback?: EnhancedCompanyRow | null): EnhancedCompanyRow => {
+        const baseRow: CompanyRow = {
+          ...account,
+          primaryContactName: fallback?.primaryContactName ?? null,
+          primaryContactEmail: fallback?.primaryContactEmail ?? null,
+          primaryContactPhone: fallback?.primaryContactPhone ?? null,
+          contacts: fallback?.contacts ?? []
+        };
+        return enhanceCompanyRow(baseRow);
+      },
       []
     );
 
     const handleDialogSubmit = form.handleSubmit(async (values) => {
-      if (dialogMode === "edit" && !editingCompany) {
+      if (dialog.mode === "edit" && !dialog.editingCompany) {
         toast({
           variant: "destructive",
           title: "Unable to save",
@@ -468,16 +424,16 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
         country: values.country.trim().toUpperCase().slice(0, 2)
       };
 
-      setIsSubmitting(true);
+      dialog.setIsSubmitting(true);
       try {
         const endpoint =
-          dialogMode === "create"
+          dialog.mode === "create"
             ? getApiUrl("accounts")
-            : getApiUrl(`accounts/${editingCompany?.id ?? ""}`);
+            : getApiUrl(`accounts/${dialog.editingCompany?.id ?? ""}`);
 
         const response = await ensureResponse(
           fetch(endpoint, {
-            method: dialogMode === "create" ? "POST" : "PUT",
+            method: dialog.mode === "create" ? "POST" : "PUT",
             headers: {
               Accept: "application/json",
               "Content-Type": "application/json"
@@ -498,7 +454,7 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
             title: "Company saved",
             description: `${result.name} is hidden because Netherlands-based accounts are filtered out.`
           });
-        } else if (dialogMode === "create") {
+        } else if (dialog.mode === "create") {
           const formatted = toCompanyRow(result, null);
           setRows((previous) => [formatted, ...previous]);
           toast({
@@ -520,10 +476,8 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
           });
         }
 
-        setIsDialogOpen(false);
-        setEditingCompany(null);
-        setDialogMode("create");
-        form.reset({ ...DEFAULT_FORM_VALUES });
+        dialog.closeDialog();
+        form.reset(getDefaultFormValues());
       } catch (error) {
         // Extract error message from response if available
         let errorMessage = "Unable to save company.";
@@ -573,12 +527,12 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
         // Don't close dialog on error - user should be able to fix and retry
         // Keep dialog open so user can see validation errors or fix issues
         // Only reset form if it's a server error (500) or conflict after showing error
-        if (statusCode === 500 || (isConflict && dialogMode === "create")) {
+        if (statusCode === 500 || (isConflict && dialog.mode === "create")) {
           // For server errors or conflicts on create, keep dialog open but don't reset
           // User can modify the form and try again
         }
       } finally {
-        setIsSubmitting(false);
+        dialog.setIsSubmitting(false);
       }
     });
 
@@ -620,181 +574,10 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
       }
     }, [activeCompany?.id, closeSidebar, companyToDelete, toast]);
 
-    const columns = React.useMemo<ColumnDef<CompanyRow>[]>(() => {
-      const renderSortableHeader = (
-        column: HeaderContext<CompanyRow, unknown>["column"],
-        label: string
-      ) => (
-        <Button
-          variant="ghost"
-          className="flex w-full items-center justify-between px-2 text-left font-semibold"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-          {label}
-          <SortIcon direction={column.getIsSorted()} />
-        </Button>
-      );
-
-      return [
-        {
-          id: "select",
-          header: ({ table }) => (
-            <Checkbox
-              checked={
-                table.getIsAllPageRowsSelected() ||
-                (table.getIsSomePageRowsSelected() && "indeterminate")
-              }
-              onCheckedChange={(value) => table.toggleAllPageRowsSelected(Boolean(value))}
-              aria-label="Select all companies"
-            />
-          ),
-          cell: ({ row }) => (
-            <Checkbox
-              checked={row.getIsSelected()}
-              onCheckedChange={(value) => row.toggleSelected(Boolean(value))}
-              aria-label={`Select company ${row.original.name}`}
-            />
-          ),
-          enableSorting: false,
-          enableHiding: false
-        },
-        {
-          accessorKey: "name",
-          header: ({ column }) => renderSortableHeader(column, "Company"),
-          cell: ({ row }) => {
-            const company = row.original;
-
-            return (
-              <div className="flex items-start gap-3">
-                <div className="bg-muted hidden h-10 w-10 shrink-0 items-center justify-center rounded-full sm:flex">
-                  <Building2 className="text-muted-foreground h-5 w-5" />
-                </div>
-                <div className="min-w-0 space-y-2">
-                  <div className="space-y-1">
-                    <span className="text-foreground block text-sm leading-tight font-semibold sm:text-sm">
-                      {company.name}
-                    </span>
-                    {company.primaryContactName && (
-                      <span className="text-muted-foreground block truncate text-xs sm:text-sm">
-                        {company.primaryContactName}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          }
-        },
-        {
-          accessorKey: "email",
-          header: ({ column }) => renderSortableHeader(column, "Email"),
-          cell: ({ row }) => {
-            const email = row.original.email;
-            return email ? (
-              <div className="flex items-center gap-2">
-                <Mail className="text-muted-foreground h-4 w-4" />
-                <a href={`mailto:${email}`} className="text-primary font-medium hover:underline">
-                  {email}
-                </a>
-              </div>
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            );
-          }
-        },
-        {
-          accessorKey: "phone",
-          header: ({ column }) => renderSortableHeader(column, "Phone"),
-          cell: ({ row }) => {
-            const phone = row.original.phone;
-            return phone ? (
-              <div className="flex items-center gap-2">
-                <Phone className="text-muted-foreground h-4 w-4" />
-                <a href={`tel:${phone}`} className="hover:underline">
-                  {phone}
-                </a>
-              </div>
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            );
-          }
-        },
-        {
-          id: "companyId",
-          accessorFn: (row) => getCompanyRegistrationNumber(row as CompanyRow),
-          header: ({ column }) => renderSortableHeader(column, "Company ID"),
-          cell: ({ row }) => (
-            <div className="flex items-center gap-2">
-              <ReceiptIcon className="text-muted-foreground h-4 w-4" />
-              <span className="font-medium">{getCompanyRegistrationNumber(row.original)}</span>
-            </div>
-          )
-        },
-        {
-          accessorKey: "taxId",
-          header: ({ column }) => renderSortableHeader(column, "Tax ID"),
-          cell: ({ row }) => (
-            <div className="flex items-center gap-2">
-              <ReceiptIcon className="text-muted-foreground h-4 w-4" />
-              <span className="font-medium">{row.original.taxId}</span>
-            </div>
-          )
-        },
-        {
-          accessorKey: "createdAt",
-          header: ({ column }) => renderSortableHeader(column, "Created"),
-          cell: ({ row }) => (
-            <div className="flex items-center gap-2">
-              <CalendarClock className="text-muted-foreground h-4 w-4" />
-              <span>{dateFormatter.format(new Date(row.original.createdAt))}</span>
-            </div>
-          )
-        },
-        {
-          accessorKey: "type",
-          header: ({ column }) => renderSortableHeader(column, "Tag"),
-          cell: ({ row }) => (
-            <Badge variant="outline" className="capitalize">
-              {formatTag(row.original.type)}
-            </Badge>
-          )
-        },
-        {
-          id: "actions",
-          header: () => <span className="sr-only">Actions</span>,
-          cell: ({ row }) => {
-            const company = row.original;
-
-            return (
-              <div className="flex items-center justify-end gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleView(company)}
-                  aria-label="View">
-                  <Eye className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleEdit(company)}
-                  aria-label="Edit">
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleDelete(company)}
-                  aria-label="Delete">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            );
-          },
-          enableSorting: false,
-          enableHiding: false
-        }
-      ];
-    }, [handleDelete, handleEdit, handleView]);
+    const columns = React.useMemo(
+      () => createColumns(handleView, handleEdit, handleDelete),
+      [handleDelete, handleEdit, handleView]
+    );
 
     const table = useReactTable({
       data: rows,
@@ -803,7 +586,7 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
         sorting,
         columnVisibility,
         rowSelection,
-        globalFilter
+        globalFilter: debouncedFilter
       },
       onSortingChange: setSorting,
       onColumnVisibilityChange: setColumnVisibility,
@@ -814,7 +597,7 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
           return true;
         }
 
-        return companySearch(row.original).includes(String(filterValue).toLowerCase());
+        return row.original.searchableText.includes(String(filterValue).toLowerCase());
       },
       getCoreRowModel: getCoreRowModel(),
       getSortedRowModel: getSortedRowModel(),
@@ -842,16 +625,18 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
 
     const paginationItems = React.useMemo(() => {
       if (pageCount <= 0) {
-        return [] as Array<number | "ellipsis">;
+        return [] as Array<{ type: "page" | "ellipsis"; value: number; key: string }>;
       }
 
       if (pageCount <= 7) {
-        return Array.from({ length: pageCount }, (_value, index) => index) as Array<
-          number | "ellipsis"
-        >;
+        return Array.from({ length: pageCount }, (_value, index) => ({
+          type: "page" as const,
+          value: index,
+          key: `page-${index}`
+        }));
       }
 
-      const items: Array<number | "ellipsis"> = [];
+      const items: Array<{ type: "page" | "ellipsis"; value: number; key: string }> = [];
       const firstPage = 0;
       const lastPage = pageCount - 1;
       const siblingCount = 1;
@@ -859,24 +644,24 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
       const start = Math.max(firstPage + 1, current - siblingCount);
       const end = Math.min(lastPage - 1, current + siblingCount);
 
-      items.push(firstPage);
+      items.push({ type: "page", value: firstPage, key: `page-${firstPage}` });
 
       if (start > firstPage + 1) {
-        items.push("ellipsis");
+        items.push({ type: "ellipsis", value: -1, key: "ellipsis-start" });
       }
 
       for (let index = start; index <= end; index += 1) {
         if (index > firstPage && index < lastPage) {
-          items.push(index);
+          items.push({ type: "page", value: index, key: `page-${index}` });
         }
       }
 
       if (end < lastPage - 1) {
-        items.push("ellipsis");
+        items.push({ type: "ellipsis", value: -1, key: "ellipsis-end" });
       }
 
       if (lastPage !== firstPage) {
-        items.push(lastPage);
+        items.push({ type: "page", value: lastPage, key: `page-${lastPage}` });
       }
 
       return items;
@@ -891,19 +676,20 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
           ? "Showing 0-0 of 0 companies"
           : `Showing ${numberFormatter.format(pageStart)}-${numberFormatter.format(pageEnd)} of ${numberFormatter.format(filteredRowCount)} companies`;
 
-    const handleQuickFilter = (filterId: string, query: string) => {
+    const handleQuickFilter = React.useCallback((filterId: string, query: string) => {
       setActiveQuickFilter(filterId);
       setGlobalFilter(query);
-    };
+    }, []);
 
-    const hasToolbarFilters = globalFilter.trim().length > 0 || activeQuickFilter !== "all";
+    const hasToolbarFilters = React.useMemo(
+      () => globalFilter.trim().length > 0 || activeQuickFilter !== "all",
+      [globalFilter, activeQuickFilter]
+    );
 
-    const handleResetToolbar = () => {
+    const handleResetToolbar = React.useCallback(() => {
       setGlobalFilter("");
       setActiveQuickFilter("all");
-    };
-
-    let ellipsisCounter = 0;
+    }, []);
 
     React.useImperativeHandle(
       ref,
@@ -991,30 +777,11 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
               </TableHeader>
               <TableBody>
                 {table.getRowModel().rows.length ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      data-state={row.getIsSelected() && "selected"}
-                      className="hover:bg-muted/50 cursor-pointer transition-colors"
-                      onClick={(e) => {
-                        // Don't open if clicking on action buttons or checkbox
-                        const target = e.target as HTMLElement;
-                        if (
-                          target.closest("button") ||
-                          target.closest("input[type='checkbox']") ||
-                          target.closest("a")
-                        ) {
-                          return;
-                        }
-                        handleView(row.original);
-                      }}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className="align-middle">
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
+                  table
+                    .getRowModel()
+                    .rows.map((row) => (
+                      <MemoizedTableRow key={row.id} row={row} onRowClick={handleView} />
+                    ))
                 ) : (
                   <TableRow>
                     <TableCell colSpan={visibleColumnCount} className="p-6">
@@ -1067,19 +834,19 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
                   Previous
                 </Button>
                 <div className="flex items-center gap-1">
-                  {paginationItems.map((item, index) =>
-                    item === "ellipsis" ? (
-                      <span key={`ellipsis-${index}-${ellipsisCounter++}`} className="px-2">
+                  {paginationItems.map((item) =>
+                    item.type === "ellipsis" ? (
+                      <span key={item.key} className="px-2">
                         …
                       </span>
                     ) : (
                       <Button
-                        key={item}
+                        key={item.key}
                         size="sm"
-                        variant={pagination.pageIndex === item ? "default" : "ghost"}
+                        variant={pagination.pageIndex === item.value ? "default" : "ghost"}
                         className="h-8 w-8"
-                        onClick={() => table.setPageIndex(item)}>
-                        {item + 1}
+                        onClick={() => table.setPageIndex(item.value)}>
+                        {item.value + 1}
                       </Button>
                     )
                   )}
@@ -1116,10 +883,9 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
                   numberOfEmployees: activeCompany.numberOfEmployees ?? null,
                   annualRevenueRange: activeCompany.annualRevenueRange ?? null,
                   createdAt: activeCompany.createdAt,
-                  updatedAt: activeCompany.updatedAt ?? null,
+                  updatedAt: activeCompany.updatedAt,
                   socialMediaLinks: activeCompany.socialMediaLinks ?? null,
-                  registrationNumber:
-                    activeCompany.registrationNumber ?? getCompanyRegistrationNumber(activeCompany),
+                  registrationNumber: activeCompany.registrationNumber,
                   dateOfIncorporation: activeCompany.dateOfIncorporation ?? null,
                   legalStatus: activeCompany.legalStatus ?? null,
                   companyType: activeCompany.companyType ?? null
@@ -1139,19 +905,18 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
         />
 
         <Sheet
-          open={isDialogOpen}
+          open={dialog.isOpen}
           onOpenChange={(open) => {
-            setIsDialogOpen(open);
+            dialog.setIsOpen(open);
             if (!open) {
-              setEditingCompany(null);
-              setDialogMode("create");
-              form.reset({ ...DEFAULT_FORM_VALUES });
+              dialog.closeDialog();
+              form.reset(getDefaultFormValues());
             }
           }}>
           <SheetContent className="flex h-full flex-col gap-0 p-0 sm:max-w-lg">
             <SheetHeader className="px-6 pt-6 pb-4">
               <SheetTitle className="text-lg font-semibold">
-                {dialogMode === "create" ? "Create Customer" : "Edit Customer"}
+                {dialog.mode === "create" ? "Create Customer" : "Edit Customer"}
               </SheetTitle>
             </SheetHeader>
 
@@ -1362,27 +1127,25 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
               <Button
                 type="button"
                 variant="outline"
-                disabled={isSubmitting}
+                disabled={dialog.isSubmitting}
                 onClick={() => {
-                  setIsDialogOpen(false);
-                  setEditingCompany(null);
-                  setDialogMode("create");
-                  form.reset({ ...DEFAULT_FORM_VALUES });
+                  dialog.closeDialog();
+                  form.reset(getDefaultFormValues());
                 }}
                 className="h-9 w-full sm:w-auto">
                 Cancel
               </Button>
               <Button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={dialog.isSubmitting}
                 form={formId}
                 className="h-9 w-full sm:w-auto">
-                {isSubmitting ? (
+                {dialog.isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Saving…
                   </>
-                ) : dialogMode === "create" ? (
+                ) : dialog.mode === "create" ? (
                   "Create"
                 ) : (
                   "Save changes"
@@ -1432,33 +1195,3 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
 CompaniesDataTable.displayName = "CompaniesDataTable";
 
 export default CompaniesDataTable;
-type CompanyAddress = {
-  id: string;
-  accountId: string;
-  label: string;
-  street?: string | null;
-  city?: string | null;
-  state?: string | null;
-  postalCode?: string | null;
-  country?: string | null;
-  latitude?: string | null;
-  longitude?: string | null;
-  createdAt: string;
-};
-type CompanyExecutive = {
-  id: string;
-  accountId: string;
-  name: string;
-  title?: string | null;
-  email?: string | null;
-  phone?: string | null;
-  createdAt: string;
-};
-type CompanyMilestone = {
-  id: string;
-  accountId: string;
-  title: string;
-  description?: string | null;
-  date: string;
-  createdAt: string;
-};

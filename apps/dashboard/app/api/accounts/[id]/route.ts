@@ -3,14 +3,13 @@ import { type NextRequest, NextResponse } from "next/server";
 const API_BASE_URL = process.env.COLLECTOR_API_URL || "http://localhost:4000";
 
 export async function GET(
-	request: NextRequest,
-	{ params }: { params: Promise<{ id: string }> },
+    request: NextRequest,
+    { params }: { params: { id: string } },
 ) {
-	let accountId: string | undefined;
-	try {
-		const resolvedParams = await params;
-		accountId = resolvedParams.id;
-		const url = `${API_BASE_URL}/api/accounts/${accountId}`;
+    let accountId: string | undefined;
+    try {
+        accountId = params.id;
+        const url = `${API_BASE_URL}/api/accounts/${accountId}`;
 
 		// Prosleđujemo cookies i headers iz originalnog zahteva
 		const headers: HeadersInit = {
@@ -67,4 +66,3 @@ export async function GET(
 		);
 	}
 }
-

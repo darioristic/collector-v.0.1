@@ -2,9 +2,9 @@
  * Render Tiptap JSON content to react-pdf components
  */
 
-import React from "react";
-import { View, Text, StyleSheet, Link } from "@react-pdf/renderer";
-import type { EditorDoc, EditorNode, EditorInlineContent, EditorMark } from "./types";
+import type React from "react";
+import { View, Text, StyleSheet } from "@react-pdf/renderer";
+import type { EditorDoc, EditorInlineContent, EditorNode } from "./types";
 
 const styles = StyleSheet.create({
   paragraph: {
@@ -44,59 +44,49 @@ export function EditorContent({ content }: EditorContentProps) {
     return null;
   }
 
+  // Generate unique keys for nodes
+  const generateNodeKey = (node: EditorNode, index: number): string => {
+    const contentHash = node.content
+      ? node.content
+          .map((c) => c.text || c.type)
+          .join("")
+          .slice(0, 10)
+      : "";
+    return `${node.type}-${index}-${contentHash}`;
+  };
+
+  const generateInlineKey = (
+    inlineContent: EditorInlineContent,
+    nodeIndex: number,
+    inlineIndex: number
+  ): string => {
+    const textHash = inlineContent.text ? inlineContent.text.slice(0, 10) : "";
+    return `${inlineContent.type}-${nodeIndex}-${inlineIndex}-${textHash}`;
+  };
+
   return (
     <View>
       {doc.content.map((node: EditorNode, nodeIndex: number) => {
         if (node.type === "paragraph") {
           return (
-            <View key={`paragraph-${nodeIndex}`} style={styles.paragraph}>
+            <View key={generateNodeKey(node, nodeIndex)} style={styles.paragraph}>
               {node.content?.map((inlineContent: EditorInlineContent, inlineIndex: number) => {
                 if (inlineContent.type === "text") {
                   const text = inlineContent.text || "";
-                  const marks = inlineContent.marks || [];
-
                   const textStyle: Record<string, unknown> = {
-                    ...(styles.text as object),
-                    ...(marks.some((m: EditorMark) => m.type === "bold")
-                      ? (styles.bold as object)
-                      : {}),
-                    ...(marks.some((m: EditorMark) => m.type === "italic")
-                      ? (styles.italic as object)
-                      : {})
+                    ...(styles.text as object)
                   };
-
-                  // Check if it's a link
-                  const linkMark = marks.find((m: EditorMark) => m.type === "link");
-                  const href = linkMark?.attrs?.href as string | undefined;
-
-                  // Check if text looks like an email
-                  const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text);
-
-                  if (href || isEmail) {
-                    const linkHref = href || (isEmail ? `mailto:${text}` : text);
-                    const linkStyle: Record<string, unknown> = {
-                      ...(textStyle as object),
-                      ...(styles.link as object)
-                    };
-                    return (
-                      <PDFLink
-                        key={`link-${nodeIndex}-${inlineIndex}`}
-                        src={linkHref}
-                        style={linkStyle}>
-                        {text}
-                      </PDFLink>
-                    );
-                  }
-
                   return (
-                    <PDFText key={`text-${nodeIndex}-${inlineIndex}`} style={textStyle}>
+                    <PDFText key={generateInlineKey(inlineContent, nodeIndex, inlineIndex)} style={textStyle}>
                       {text}
                     </PDFText>
                   );
                 }
 
                 if (inlineContent.type === "hardBreak") {
-                  return <Text key={`break-${nodeIndex}-${inlineIndex}`}>{"\n"}</Text>;
+                  return (
+                    <Text key={generateInlineKey(inlineContent, nodeIndex, inlineIndex)}>{"\n"}</Text>
+                  );
                 }
 
                 return null;
@@ -110,12 +100,8 @@ export function EditorContent({ content }: EditorContentProps) {
     </View>
   );
 }
+
 const PDFText = Text as unknown as React.ComponentType<{
   style?: Record<string, unknown>;
-  children?: React.ReactNode;
-}>;
-const PDFLink = Link as unknown as React.ComponentType<{
-  style?: Record<string, unknown>;
-  src?: string;
   children?: React.ReactNode;
 }>;

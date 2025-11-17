@@ -17,22 +17,24 @@ const styles = StyleSheet.create({
   },
   invoiceNumber: {
     fontSize: 14,
-    fontWeight: "bold",
+    fontWeight: 700,
     marginBottom: 8,
-    fontFamily: "Courier",
+    fontFamily: "Geist",
   },
   dateRow: {
     marginBottom: 4,
-    fontFamily: "Courier",
+    fontFamily: "Geist",
     fontSize: 11,
+    fontWeight: 400,
   },
   label: {
     color: "#878787",
-    fontFamily: "Courier",
+    fontFamily: "Geist",
+    fontWeight: 500,
   },
   value: {
-    fontWeight: "medium",
-    fontFamily: "Courier",
+    fontWeight: 500,
+    fontFamily: "Geist",
   },
 });
 
@@ -76,4 +78,3 @@ export function Meta({ template: _template, invoiceNumber, issueDate, dueDate }:
     </View>
   );
 }
-

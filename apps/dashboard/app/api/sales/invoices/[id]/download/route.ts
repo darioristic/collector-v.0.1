@@ -1,4 +1,5 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { isUuid } from "@/lib/utils";
 
 const API_URL = process.env.API_URL || "http://localhost:4000";
 
@@ -7,6 +8,13 @@ export async function GET(
 	{ params }: { params: Promise<{ id: string }> },
 ) {
 	const { id } = await params;
+
+	if (!isUuid(id)) {
+		return NextResponse.json(
+			{ error: 'params/id must match format "uuid"' },
+			{ status: 400 },
+		);
+	}
 	const upstream = await fetch(`${API_URL}/api/sales/invoices/${id}/pdf`, {
 		method: "GET",
 	});
@@ -35,5 +43,3 @@ export async function GET(
 		headers,
 	});
 }
-
-

@@ -4,7 +4,8 @@ import type {
 	InvoiceStatus,
 	InvoiceUpdateInput,
 } from "@crm/types";
-import { ensureResponse } from "@/src/lib/fetch-utils";
+import { ensureResponse, getApiUrl } from "@/src/lib/fetch-utils";
+import { isUuid } from "@/lib/utils";
 
 type InvoiceListFilters = {
 	customerId?: string;
@@ -57,7 +58,15 @@ export async function fetchInvoices(
 }
 
 export async function fetchInvoice(id: string): Promise<Invoice> {
-	const response = await ensureResponse(fetch(`/api/sales/invoices/${id}`, { cache: "no-store" }));
+	const normalizedId = id.trim();
+	if (!isUuid(normalizedId)) {
+		throw new Error(`Nevalidan ID računa: očekuje se UUID (dobijeno: "${id}")`);
+	}
+	const url =
+		typeof window === "undefined"
+			? getApiUrl(`sales/invoices/${normalizedId}`)
+			: `/api/sales/invoices/${normalizedId}`;
+	const response = await ensureResponse(fetch(url, { cache: "no-store" }));
 	const payload = (await response.json()) as { data: Invoice };
 	return payload.data;
 }
@@ -92,9 +101,9 @@ export async function updateInvoice(
 }
 
 export async function deleteInvoice(id: string): Promise<void> {
-    await ensureResponse(
+	await ensureResponse(
 		fetch(`/api/sales/invoices/${id}`, {
-            method: "DELETE",
-        }),
-    );
+			method: "DELETE",
+		}),
+	);
 }

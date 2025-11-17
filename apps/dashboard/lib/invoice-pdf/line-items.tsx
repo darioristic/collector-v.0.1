@@ -21,7 +21,6 @@ const styles = StyleSheet.create({
 	headerCell: {
 		fontSize: 9,
 		color: "#878787",
-		fontFamily: "Courier",
 	},
 	row: {
 		flexDirection: "row",
@@ -31,7 +30,6 @@ const styles = StyleSheet.create({
 	},
 	cell: {
 		fontSize: 11,
-		fontFamily: "Courier",
 	},
 	cellRight: {
 		textAlign: "right",
@@ -39,24 +37,24 @@ const styles = StyleSheet.create({
 	description: {
 		flex: 2,
 	},
-	quantity: {
-		width: "8%",
-	},
-	unit: {
-		width: "8%",
-	},
-	price: {
-		width: "10%",
-	},
-	discPercent: {
-		width: "8%",
-	},
-	vatPercent: {
-		width: "8%",
-	},
-	total: {
-		width: "12%",
-	},
+  quantity: {
+    width: 56,
+  },
+  unit: {
+    width: 60,
+  },
+  price: {
+    width: 80,
+  },
+  discPercent: {
+    width: 60,
+  },
+  vatPercent: {
+    width: 60,
+  },
+  total: {
+    width: 100,
+  },
 });
 
 interface LineItemsProps {
@@ -137,4 +135,3 @@ export function LineItems({
 		</View>
 	);
 }
-

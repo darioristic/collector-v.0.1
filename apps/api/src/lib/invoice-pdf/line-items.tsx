@@ -21,7 +21,8 @@ const styles = StyleSheet.create({
   headerCell: {
     fontSize: 9,
     color: "#878787",
-    fontFamily: "Courier",
+    fontFamily: "Geist",
+    fontWeight: 500,
   },
   row: {
     flexDirection: "row",
@@ -31,7 +32,8 @@ const styles = StyleSheet.create({
   },
   cell: {
     fontSize: 11,
-    fontFamily: "Courier",
+    fontFamily: "Geist",
+    fontWeight: 400,
   },
   cellRight: {
     textAlign: "right",
@@ -139,4 +141,3 @@ export function LineItems({
     </View>
   );
 }
-

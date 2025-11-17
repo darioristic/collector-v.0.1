@@ -5,6 +5,8 @@
  */
 
 import type { Readable } from "stream";
+import path from "path";
+import { fileURLToPath } from "url";
 
 export interface PDFOptions {
 	title?: string;
@@ -15,23 +17,45 @@ export interface PDFOptions {
 }
 
 export interface InvoicePDFData {
-	invoiceNumber: string;
-	invoiceDate: string;
-	dueDate: string;
-	companyName?: string;
-	companyAddress?: string;
-	billingAddress?: string;
-	items: Array<{
-		description: string;
-		quantity: number;
-		unitPrice: number;
-		total: number;
-	}>;
-	subtotal: number;
-	tax: number;
-	total: number;
-	currency: string;
-	notes?: string;
+    invoiceNumber: string;
+    invoiceDate: string;
+    dueDate: string;
+    companyName?: string;
+    companyAddress?: string;
+    billingAddress?: string;
+    items: Array<{
+        description: string;
+        quantity: number;
+        unitPrice: number;
+        total: number;
+    }>;
+    amountBeforeDiscount?: number;
+    discountTotal?: number;
+    subtotal: number;
+    totalVat?: number;
+    tax?: number;
+    total: number;
+    currency: string;
+    template?: {
+        from_label: string;
+        customer_label: string;
+        description_label: string;
+        quantity_label: string;
+        price_label: string;
+        total_label: string;
+        vat_label: string;
+        tax_label?: string;
+        payment_label: string;
+        note_label: string;
+        include_vat?: boolean;
+        include_tax?: boolean;
+        tax_rate?: number;
+        logo_url?: string;
+    };
+    fromDetails?: string;
+    customerDetails?: string;
+    paymentDetails?: string;
+    notes?: string;
 }
 
 export interface QuotePDFData {
@@ -98,7 +122,6 @@ export class PDFService {
 	async generateInvoicePDF(data: InvoicePDFData, options: PDFOptions = {}): Promise<Readable> {
 		try {
 			// Dynamic import to avoid requiring pdfkit at build time
-			// @ts-expect-error - pdfkit may not be installed, handled at runtime
 			const PDFDocument = (await import("pdfkit")).default;
 			const doc = new PDFDocument({
 				margin: options.margin ?? 50,
@@ -111,41 +134,63 @@ export class PDFService {
 
 			const fontSize = options.fontSize ?? 12;
 
+			try {
+				const currentDir = path.dirname(fileURLToPath(new URL(import.meta.url)));
+				const fontBase = path.resolve(
+					currentDir,
+					"../../dashboard/public/geist-font-1.5.1/fonts/GeistMono/ttf"
+				);
+				doc.registerFont("GeistMonoRegular", path.join(fontBase, "GeistMono-Regular.ttf"));
+				doc.registerFont("GeistMonoBold", path.join(fontBase, "GeistMono-Bold.ttf"));
+				doc.font("GeistMonoRegular");
+			} catch {
+				void 0;
+			}
+
 			// Header
 			doc.fontSize(20).text("INVOICE", { align: "center" });
 			doc.moveDown();
 
-			// Invoice details
 			doc.fontSize(fontSize);
-			doc.text(`Invoice Number: ${data.invoiceNumber}`);
-			doc.text(`Invoice Date: ${this.formatDate(data.invoiceDate)}`);
-			doc.text(`Due Date: ${this.formatDate(data.dueDate)}`);
+			const labelColor = "#878787";
+			const leftX = 50;
+			const rightX = 330;
+			const colWidth = 220;
+			doc.fillColor(labelColor).text("Invoice No:", leftX, doc.y, { continued: true, width: colWidth });
+			doc.fillColor("black").text(` ${data.invoiceNumber}`);
+			doc.fillColor(labelColor).text("Issue Date:", leftX, doc.y, { continued: true, width: colWidth });
+			doc.fillColor("black").text(` ${this.formatDate(data.invoiceDate)}`);
+			if (data.dueDate) {
+				doc.fillColor(labelColor).text("Due Date:", leftX, doc.y, { continued: true, width: colWidth });
+				doc.fillColor("black").text(` ${this.formatDate(data.dueDate)}`);
+			}
 			doc.moveDown();
 
-			// Company and billing info
-			if (data.companyName) {
-				doc.text(`Bill To: ${data.companyName}`);
-				if (data.billingAddress) {
-					doc.text(data.billingAddress, { indent: 20 });
-				}
-				doc.moveDown();
-			}
+			doc.fontSize(fontSize);
+			doc.fillColor(labelColor).text(`${data.template?.from_label ?? "From"}`, leftX, doc.y);
+			doc.fillColor("black").text(data.fromDetails ?? "—", leftX, doc.y, { width: colWidth });
 
-			// Items table
+			doc.fillColor(labelColor).text(`${data.template?.customer_label ?? "Bill To"}`, rightX, doc.y);
+			doc.fillColor("black").text(
+				data.customerDetails ?? (data.companyName ? `${data.companyName}\n${data.billingAddress ?? ""}` : "—"),
+				rightX,
+				doc.y,
+				{ width: colWidth }
+			);
+			doc.moveDown();
+
 			doc.fontSize(fontSize + 2).text("Items", { underline: true });
 			doc.moveDown(0.5);
 			doc.fontSize(fontSize);
 
-			// Table header
 			const tableTop = doc.y;
-			doc.text("Description", 50, tableTop);
-			doc.text("Qty", 300, tableTop);
-			doc.text("Unit Price", 350, tableTop);
-			doc.text("Total", 450, tableTop, { align: "right" });
+			doc.text(data.template?.description_label ?? "Description", 50, tableTop);
+			doc.text(data.template?.quantity_label ?? "Qty", 300, tableTop);
+			doc.text(data.template?.price_label ?? "Unit Price", 350, tableTop);
+			doc.text(data.template?.total_label ?? "Total", 450, tableTop, { align: "right" });
 			doc.moveTo(50, doc.y + 5).lineTo(550, doc.y + 5).stroke();
 			doc.moveDown();
 
-			// Items
 			for (const item of data.items) {
 				doc.text(item.description, 50);
 				doc.text(item.quantity.toString(), 300);
@@ -158,25 +203,35 @@ export class PDFService {
 			doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
 			doc.moveDown();
 
-			// Totals
-			doc.text(`Subtotal: ${this.formatCurrency(data.subtotal, data.currency)}`, 400, undefined, {
-				align: "right"
-			});
-			doc.text(`Tax: ${this.formatCurrency(data.tax, data.currency)}`, 400, undefined, { align: "right" });
-			doc.moveDown();
-			doc.fontSize(fontSize + 2);
-			doc.text(`Total: ${this.formatCurrency(data.total, data.currency)}`, 400, undefined, {
-				align: "right",
-				bold: true
-			});
+			const rightBlockX = 300;
+			const labelW = 150;
+			const valueW = 100;
+			doc.fontSize(fontSize);
+			doc.fillColor(labelColor).text("Amount before discount:", rightBlockX, doc.y, { width: labelW });
+			doc.fillColor("black").text(this.formatCurrency(data.amountBeforeDiscount ?? 0, data.currency), rightBlockX + labelW, doc.y, { width: valueW, align: "right" });
+			doc.fillColor(labelColor).text("Discount:", rightBlockX, doc.y, { width: labelW });
+			doc.fillColor("black").text(`${data.discountTotal && data.discountTotal > 0 ? "-" : ""}${this.formatCurrency(data.discountTotal ?? 0, data.currency)}`, rightBlockX + labelW, doc.y, { width: valueW, align: "right" });
+			doc.fillColor(labelColor).text("Subtotal:", rightBlockX, doc.y, { width: labelW });
+			doc.fillColor("black").text(this.formatCurrency(data.subtotal, data.currency), rightBlockX + labelW, doc.y, { width: valueW, align: "right" });
+            if (data.template?.include_vat && (data.totalVat ?? 0) > 0) {
+                doc.fillColor(labelColor).text(`${data.template.vat_label}:`, rightBlockX, doc.y, { width: labelW });
+                doc.fillColor("black").text(this.formatCurrency(data.totalVat ?? 0, data.currency), rightBlockX + labelW, doc.y, { width: valueW, align: "right" });
+            }
+            if (data.template?.include_tax && (data.tax ?? 0) > 0 && data.template?.tax_label) {
+                doc.fillColor(labelColor).text(`${data.template.tax_label}:`, rightBlockX, doc.y, { width: labelW });
+                doc.fillColor("black").text(this.formatCurrency(data.tax ?? 0, data.currency), rightBlockX + labelW, doc.y, { width: valueW, align: "right" });
+            }
+			doc.moveDown(0.5);
+			doc.moveTo(rightBlockX, doc.y).lineTo(550, doc.y).stroke();
+			doc.fillColor("black").fontSize(fontSize + 2).text(`${data.template?.total_label ?? "Total"}: ${this.formatCurrency(data.total, data.currency)}`, rightBlockX, undefined, { align: "right" });
 
-			// Notes
-			if (data.notes) {
-				doc.moveDown(2);
-				doc.fontSize(fontSize);
-				doc.text("Notes:", { underline: true });
-				doc.text(data.notes, { indent: 20 });
-			}
+			doc.moveDown(2);
+			doc.fontSize(fontSize);
+			doc.fillColor(labelColor).text(`${data.template?.note_label ?? "Note"}`);
+			doc.fillColor("black").text(data.notes ?? "—");
+			doc.moveDown();
+			doc.fillColor(labelColor).text(`${data.template?.payment_label ?? "Payment Details"}`);
+			doc.fillColor("black").text(data.paymentDetails ?? "—");
 
 			doc.end();
 			return doc as unknown as Readable;
@@ -196,7 +251,6 @@ export class PDFService {
 	 */
 	async generateQuotePDF(data: QuotePDFData, options: PDFOptions = {}): Promise<Readable> {
 		try {
-			// @ts-expect-error - pdfkit may not be installed, handled at runtime
 			const PDFDocument = (await import("pdfkit")).default;
 			const doc = new PDFDocument({
 				margin: options.margin ?? 50,
@@ -262,8 +316,7 @@ export class PDFService {
 			doc.moveDown();
 			doc.fontSize(fontSize + 2);
 			doc.text(`Total: ${this.formatCurrency(data.total, data.currency)}`, 400, undefined, {
-				align: "right",
-				bold: true
+				align: "right"
 			});
 
 			if (data.notes) {
@@ -291,7 +344,6 @@ export class PDFService {
 		options: PDFOptions = {}
 	): Promise<Readable> {
 		try {
-			// @ts-expect-error - pdfkit may not be installed, handled at runtime
 			const PDFDocument = (await import("pdfkit")).default;
 			const doc = new PDFDocument({
 				margin: options.margin ?? 50,
@@ -398,12 +450,23 @@ export class PDFService {
 	}
 
 	private formatCurrency(value: number, currency = "USD"): string {
-		return new Intl.NumberFormat("en-US", {
-			style: "currency",
-			currency
-		}).format(value);
+		try {
+			const formatted = new Intl.NumberFormat("en-US", {
+				style: "currency",
+				currency,
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 2,
+			}).format(value);
+			return formatted
+				.replace(/\s+/g, " ")
+				.replace(/([A-Z]{3})(\d)/, "$1 $2")
+				.replace(/([€$£¥])(\d)/, "$1 $2")
+				.trim();
+		} catch {
+			const fixed = Number.isFinite(value) ? value.toFixed(2) : "0.00";
+			return `${fixed} ${currency}`;
+		}
 	}
 }
 
 export const pdfService = new PDFService();
-

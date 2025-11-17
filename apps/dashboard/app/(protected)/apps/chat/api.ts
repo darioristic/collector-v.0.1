@@ -78,10 +78,14 @@ let __conversationsAuthRetry = false;
 export const fetchConversations = async (): Promise<ChatConversation[]> => {
 	try {
 		const apiUrl = getChatApiUrl("/conversations");
+		const requestUrl =
+			typeof window !== "undefined"
+				? new URL(apiUrl, window.location.origin).toString()
+				: apiUrl;
 		let response: Response;
 
 		try {
-			response = await fetch(apiUrl, {
+			response = await fetch(requestUrl, {
 				method: "GET",
 				headers: {
 					"Content-Type": "application/json",
@@ -120,7 +124,7 @@ export const fetchConversations = async (): Promise<ChatConversation[]> => {
 		const status = response.status;
 		const statusText = response.statusText;
 		const contentType = response.headers.get("content-type");
-		const responseUrl = response.url || apiUrl;
+		const responseUrl = response.url || requestUrl;
 
 		let responseText = "";
 		try {
@@ -532,10 +536,14 @@ export const createConversation = async (
     targetUserId: string,
 ): Promise<ChatConversation> => {
 	const apiUrl = getChatApiUrl("/conversations");
+	const requestUrl =
+		typeof window !== "undefined"
+			? new URL(apiUrl, window.location.origin).toString()
+			: apiUrl;
 	let response: Response;
 
 	try {
-		response = await fetch(apiUrl, {
+		response = await fetch(requestUrl, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -574,7 +582,7 @@ export const createConversation = async (
 	const status = response.status;
 	const statusText = response.statusText;
 	const contentType = response.headers.get("content-type");
-	const responseUrl = response.url || apiUrl;
+	const responseUrl = response.url || requestUrl;
 
 	let responseText = "";
 	try {
@@ -765,10 +773,14 @@ export const createConversationByEmail = async (
     targetEmail: string,
 ): Promise<ChatConversation> => {
     const apiUrl = getChatApiUrl("/conversations");
+    const requestUrl =
+        typeof window !== "undefined"
+            ? new URL(apiUrl, window.location.origin).toString()
+            : apiUrl;
     let response: Response;
 
     try {
-        response = await fetch(apiUrl, {
+        response = await fetch(requestUrl, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

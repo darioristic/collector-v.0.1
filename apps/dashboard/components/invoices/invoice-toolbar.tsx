@@ -1,8 +1,7 @@
 "use client";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Download, Copy, Pencil, Check } from "lucide-react";
+import { Download, Copy, Pencil, Check, Eye } from "lucide-react";
 
 type Props = {
   invoiceId: string;
@@ -23,6 +22,7 @@ export function InvoiceToolbar({
 }: Props) {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const anchorIdRef = React.useRef<string | undefined>(anchorId);
+  const [pulse, setPulse] = React.useState(false);
 
   React.useEffect(() => {
     anchorIdRef.current = anchorId;
@@ -34,50 +34,67 @@ export function InvoiceToolbar({
     const currentAnchorId = anchorIdRef.current;
     const anchor = currentAnchorId ? document.getElementById(currentAnchorId) : null;
     const rect = anchor?.getBoundingClientRect();
+    const prevLeft = Number(el.style.left.replace("px", "")) || NaN;
     if (rect) {
-      // Center relative to invoice preview container, not entire viewport
-      el.style.left = `${rect.left + rect.width / 2 + window.scrollX}px`;
+      const nextLeft = rect.left + rect.width / 2;
+      if (!Number.isFinite(prevLeft) || Math.abs(prevLeft - nextLeft) > 0.5) {
+        el.style.left = `${nextLeft}px`;
+      }
     } else {
-      // Fallback to viewport center
-      el.style.left = `${window.innerWidth / 2}px`;
+      const nextLeft = window.innerWidth / 2;
+      if (!Number.isFinite(prevLeft) || Math.abs(prevLeft - nextLeft) > 0.5) {
+        el.style.left = `${nextLeft}px`;
+      }
     }
   }, []);
 
   React.useEffect(() => {
-    recenter();
-    const onResize = () => recenter();
-    const onScroll = () => recenter();
+    let rafId: number | null = null;
+    const schedule = () => {
+      if (rafId !== null) return;
+      rafId = window.requestAnimationFrame(() => {
+        rafId = null;
+        recenter();
+      });
+    };
+    schedule();
+    const onResize = () => schedule();
+    const onScroll = () => schedule();
     window.addEventListener("resize", onResize);
     window.addEventListener("scroll", onScroll, { passive: true });
-    // Observe anchor resize
+    // Observe anchor resize when not editing
     const currentAnchorId = anchorIdRef.current;
     const anchor = currentAnchorId ? document.getElementById(currentAnchorId) : null;
-    const ro = anchor ? new ResizeObserver(() => recenter()) : null;
+    const ro = anchor ? new ResizeObserver(() => schedule()) : null;
     if (anchor && ro) ro.observe(anchor);
-    // Observe scrollable parent (e.g., ScrollArea viewport)
-    const findScrollableParent = (node: HTMLElement | null): HTMLElement | null => {
-      let current: HTMLElement | null = node;
-      while (current && current !== document.body) {
-        const style = window.getComputedStyle(current);
-        const overflowY = style.overflowY;
-        if (overflowY === "auto" || overflowY === "scroll") return current;
-        current = current.parentElement;
-      }
-      return null;
-    };
-    const scrollParent = findScrollableParent(anchor as HTMLElement | null);
-    if (scrollParent) {
-      scrollParent.addEventListener("scroll", onScroll, { passive: true });
-    }
+    const imgs = anchor ? Array.from(anchor.querySelectorAll<HTMLImageElement>("img")) : [];
+    imgs.forEach((img) => img.addEventListener("load", onResize));
+    // Retry recenter a few times to cover hydration/data-load delays
+    const t1 = setTimeout(schedule, 100);
+    const t2 = setTimeout(schedule, 300);
+    const t3 = setTimeout(schedule, 800);
     return () => {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("scroll", onScroll);
-      if (scrollParent) {
-        scrollParent.removeEventListener("scroll", onScroll);
-      }
       if (ro && anchor) ro.unobserve(anchor);
+      imgs.forEach((img) => img.removeEventListener("load", onResize));
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
     };
-  }, [recenter]);
+  }, [recenter, isEditing]);
+
+  React.useEffect(() => {
+    if (!isEditing) {
+      recenter();
+      const t = setTimeout(recenter, 120);
+      return () => clearTimeout(t);
+    }
+  }, [anchorId, isEditing, recenter]);
   const handleCopyLink = () => {
     if (onCopyLink) {
       onCopyLink();
@@ -96,68 +113,68 @@ export function InvoiceToolbar({
     window.open(`/api/sales/invoices/${invoiceId}/download`, "_blank");
   };
 
+  const handleEditClick = () => {
+    if (isEditing) {
+      setPulse(true);
+      setTimeout(() => setPulse(false), 600);
+    }
+    if (onEdit) onEdit();
+  };
+
+  const handlePreview = () => {
+    window.open(`/invoices/${invoiceId}/preview`, "_blank");
+  };
+
   return (
     <div
       ref={containerRef}
-      className="pointer-events-none fixed bottom-[20px] z-[9999] flex -translate-x-1/2 justify-center"
+      className="pointer-events-none fixed bottom-[20px] z-[9999] flex -translate-x-1/2 justify-center transition-[left,transform,opacity] duration-300 ease-out"
       style={{ left: "50%" }}>
-      <div className="pointer-events-auto flex items-center justify-center gap-0.5">
-        <TooltipProvider delayDuration={0}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7 rounded-full hover:bg-transparent focus-visible:ring-0"
-                onClick={handleDownload}>
-                <Download className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent
-              sideOffset={15}
-              className="rounded-sm px-2 py-1 text-[10px] font-medium">
-              <p>Download</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+      <div className={`pointer-events-auto flex items-center justify-center gap-1 bg-transparent rounded-full px-2 py-2 h-9 transition-all duration-300 ${pulse ? "" : ""}`}
+      >
+        <div className="relative group">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7 rounded-full hover:bg-transparent focus-visible:ring-0"
+            onClick={handleDownload}>
+            <Download className="size-4" />
+          </Button>
+          <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-medium opacity-0 group-hover:opacity-100">Download</span>
+        </div>
 
-        <TooltipProvider delayDuration={0}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`size-7 rounded-full hover:bg-transparent focus-visible:ring-0 ${isEditing ? "text-red-600 hover:text-red-700" : ""}`}
-                onClick={onEdit}>
-                {isEditing ? <Check className="size-4" /> : <Pencil className="size-4" />}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent
-              sideOffset={15}
-              className="rounded-sm px-2 py-1 text-[10px] font-medium">
-              <p>{isEditing ? "Save" : "Edit"}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <div className="relative group">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7 rounded-full hover:bg-transparent focus-visible:ring-0"
+            onClick={handlePreview}>
+            <Eye className="size-4" />
+          </Button>
+          <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-medium opacity-0 group-hover:opacity-100">Preview</span>
+        </div>
 
-        <TooltipProvider delayDuration={0}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7 rounded-full hover:bg-transparent focus-visible:ring-0"
-                onClick={handleCopyLink}>
-                <Copy className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent
-              sideOffset={15}
-              className="rounded-sm px-2 py-1 text-[10px] font-medium">
-              <p>Copy link</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <div className="relative group">
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`size-7 rounded-full hover:bg-transparent focus-visible:ring-0 ${isEditing ? "text-red-600 hover:text-red-700" : ""}`}
+            onClick={handleEditClick}>
+            {isEditing ? <Check className="size-4" /> : <Pencil className="size-4" />}
+          </Button>
+          <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-medium opacity-0 group-hover:opacity-100">{isEditing ? "Save" : "Edit"}</span>
+        </div>
+
+        <div className="relative group">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7 rounded-full hover:bg-transparent focus-visible:ring-0"
+            onClick={handleCopyLink}>
+            <Copy className="size-4" />
+          </Button>
+          <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] font-medium opacity-0 group-hover:opacity-100">Copy link</span>
+        </div>
       </div>
     </div>
   );

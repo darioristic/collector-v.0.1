@@ -24,10 +24,10 @@ import { useToast } from "@/hooks/use-toast";
 import type { Deal } from "@/lib/db/schema/deals";
 import {
   createDeal,
-  type DealStageSummary,
   deleteDeal,
   updateDeal,
-  updateDealStage
+  updateDealStage,
+  type DealStageSummary
 } from "./actions";
 import DealModal from "./components/deal-modal";
 import DealsCompactView from "./components/deals-compact-view";
@@ -201,7 +201,7 @@ export default function DealsPageClient({ initialDeals, owners, error }: DealsPa
           });
       });
     },
-    [addDeal, handleCloseModal, setSaving, startTransition, toast]
+    [handleCloseModal, setSaving, startTransition, toast]
   );
 
   const handleUpdateDeal = React.useCallback(
@@ -239,7 +239,7 @@ export default function DealsPageClient({ initialDeals, owners, error }: DealsPa
           });
       });
     },
-    [activeDeal, handleCloseModal, updateDealInStore, setSaving, startTransition, toast]
+    [activeDeal, handleCloseModal, setSaving, startTransition, toast]
   );
 
   const handleDeleteDeal = React.useCallback(
@@ -263,7 +263,7 @@ export default function DealsPageClient({ initialDeals, owners, error }: DealsPa
           });
       });
     },
-    [removeDeal, startTransition, toast]
+    [startTransition, toast]
   );
 
   const handleStageChange = React.useCallback(
@@ -296,7 +296,7 @@ export default function DealsPageClient({ initialDeals, owners, error }: DealsPa
           });
       });
     },
-    [deals, moveDeal, updateDealInStore, startTransition, toast]
+    [deals, moveDeal, startTransition, toast]
   );
 
   const currentView = viewOptions.find((option) => option.value === view) ?? viewOptions[0];

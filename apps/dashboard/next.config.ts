@@ -123,10 +123,13 @@ const nextConfig: NextConfig = {
 	// Enable standalone output for Docker builds
 	// This creates a self-contained build with all dependencies
 	output: process.env.DOCKER_BUILD === "true" ? "standalone" : undefined,
-	// Transpile packages from workspace for monorepo support
-	transpilePackages: process.env.DOCKER_BUILD === "true" 
-		? ["@crm/ui", "@crm/types"]
-		: [],
+    // Transpile selected packages for Turbopack/HMR stability
+    // Ensure TanStack Query and core are transpiled to avoid module factory HMR issues
+    transpilePackages: [
+        ...(process.env.DOCKER_BUILD === "true" ? ["@crm/ui", "@crm/types"] : []),
+        "@tanstack/react-query",
+        "@tanstack/query-core",
+    ],
 };
 
 export default nextConfig;

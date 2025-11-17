@@ -10,7 +10,12 @@ const unusedImportsPlugin = unusedImports.default ?? unusedImports;
 
 export default [
   {
-    ignores: ["**/dist/**", "**/node_modules/**", "**/.next/**"]
+    ignores: [
+      "**/dist/**",
+      "**/node_modules/**",
+      "**/.next/**",
+      "packages/templates/midday-feature-invoice/**"
+    ]
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -39,4 +44,3 @@ export default [
     }
   }
 ];
-

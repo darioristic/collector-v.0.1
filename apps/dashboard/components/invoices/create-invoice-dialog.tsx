@@ -289,6 +289,7 @@ function DescriptionAutocomplete({
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [isComposing, setIsComposing] = useState(false);
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["products", "description", query, index],
@@ -403,6 +404,7 @@ function DescriptionAutocomplete({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (isComposing) return;
     if (!isOpen) {
       // Allow Enter to create new line in textarea when suggestions are closed
       return;
@@ -442,14 +444,11 @@ function DescriptionAutocomplete({
             }, 200);
           }}
           onKeyDown={handleKeyDown}
+          onCompositionStart={() => setIsComposing(true)}
+          onCompositionEnd={() => setIsComposing(false)}
           placeholder="Item description"
           rows={2}
-          className="border-border/60 bg-background resize-none rounded-md border py-1.5 pr-3 pl-9 font-mono text-sm leading-4 whitespace-pre-wrap"
-          onInput={(e) => {
-            const t = e.currentTarget;
-            t.style.height = "auto";
-            t.style.height = `${t.scrollHeight}px`;
-          }}
+          className="border-border/60 bg-background max-h-64 resize-none overflow-y-auto rounded-md border py-1.5 pr-3 pl-9 font-mono text-sm leading-4 whitespace-pre-wrap"
           autoComplete="off"
         />
       </div>

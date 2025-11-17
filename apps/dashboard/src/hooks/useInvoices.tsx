@@ -4,6 +4,7 @@ import type { InvoiceCreateInput, InvoiceStatus, InvoiceUpdateInput } from "@crm
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useToast } from "@/hooks/use-toast";
+import { isUuid } from "@/lib/utils";
 import {
   createInvoice,
   deleteInvoice,
@@ -50,10 +51,11 @@ export function useInvoicesByOrder(orderId: number) {
 
 export function useInvoice(id: string, options: { enabled?: boolean } = {}) {
   const _unusedToast = useToast();
+  const normalizedId = id?.trim() ?? "";
   return useQuery<Awaited<ReturnType<typeof fetchInvoice>>>({
     queryKey: invoiceKeys.detail(id),
     queryFn: () => fetchInvoice(id),
-    enabled: options.enabled ?? Boolean(id),
+    enabled: options.enabled ?? isUuid(normalizedId),
     retry: 2,
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
     staleTime: 1000 * 30

@@ -7,9 +7,8 @@ export function EditorContent({ content }: { content?: JSON | EditorDoc }) {
   }
 
   return (
-    <div className="font-mono leading-4">
+    <div className="font-mono leading-4 whitespace-pre-wrap break-words break-all">
       {formatEditorContent(content as EditorDoc)}
     </div>
   );
 }
-

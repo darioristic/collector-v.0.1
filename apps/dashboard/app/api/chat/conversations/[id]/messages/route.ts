@@ -23,18 +23,17 @@ const unauthorized = () =>
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: Promise<{ id: string }> },
+    { params }: { params: { id: string } },
 ) {
-	try {
-		const cookieStore = await cookies();
-		const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+    try {
+        const cookieStore = cookies();
+        const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
 		if (!sessionToken) {
 			return unauthorized();
 		}
 
-		const resolvedParams = await params;
-        const conversationId = resolvedParams?.id;
+        const conversationId = params?.id;
         if (!conversationId) {
             return withNoStore(
                 NextResponse.json(
@@ -179,18 +178,17 @@ export async function GET(
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: Promise<{ id: string }> },
+    { params }: { params: { id: string } },
 ) {
-	try {
-		const cookieStore = await cookies();
-		const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+    try {
+        const cookieStore = cookies();
+        const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
 		if (!sessionToken) {
 			return unauthorized();
 		}
 
-		const resolvedParams = await params;
-        const conversationId = resolvedParams?.id;
+        const conversationId = params?.id;
         if (!conversationId) {
             return withNoStore(
                 NextResponse.json(

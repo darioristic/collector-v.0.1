@@ -152,4 +152,50 @@ export class ImapIntegrationService {
   status() {
     return this.#status;
   }
+
+  async listMessages(options: { folder?: string; limit?: number; unreadOnly?: boolean }): Promise<Array<{ id: string; name: string; email: string; subject: string; text: string; date: string; read: boolean; labels: string[]; avatar?: string }>> {
+    if (!this.#client) await this.connect();
+    const settings = await this.getSettings();
+    const folder = options.folder || (settings?.folders?.[0] ?? "INBOX");
+    const limit = options.limit ?? 50;
+    const unreadOnly = options.unreadOnly ?? false;
+    await this.#client!.mailboxOpen(folder);
+    const lock = await this.#client!.getMailboxLock(folder);
+    try {
+      const messages: Array<{ id: string; name: string; email: string; subject: string; text: string; date: string; read: boolean; labels: string[]; avatar?: string }> = [];
+      let count = 0;
+      const criteria = unreadOnly ? { seen: false } : {};
+      for await (const msg of this.#client!.fetch(criteria, { envelope: true, bodyStructure: true, uid: true, flags: true, source: true })) {
+        const from = Array.isArray(msg.envelope?.from) ? msg.envelope!.from[0] : undefined;
+        const name = (from?.name || from?.address || "") as string;
+        const email = (from?.address || "") as string;
+        const subject = (msg.envelope?.subject || "") as string;
+        const date = (msg.envelope?.date ? new Date(msg.envelope.date).toISOString() : new Date().toISOString());
+        const read = Array.isArray(msg.flags) ? msg.flags.includes("\\Seen") : Array.from(msg.flags ?? []).includes("\\Seen");
+        let text = "";
+        const source = (msg as unknown as { source?: Buffer | Uint8Array | string }).source;
+        if (source) {
+          const raw = Buffer.isBuffer(source) ? source.toString("utf8") : Buffer.from(source as Uint8Array).toString("utf8");
+          const splitIndex = raw.indexOf("\r\n\r\n");
+          text = splitIndex >= 0 ? raw.slice(splitIndex + 4) : raw;
+        }
+        messages.push({ id: String((msg as { uid?: number }).uid ?? Math.random()), name, email, subject, text, date, read, labels: [] });
+        count++;
+        if (count >= limit) break;
+      }
+      return messages;
+    } finally {
+      lock.release();
+    }
+  }
+
+  async getMessage(uid: number): Promise<{ id: string; text: string }> {
+    if (!this.#client) await this.connect();
+    const message = await this.#client!.fetchOne(uid, { source: true, uid: true });
+    const source = (message as unknown as { source?: Buffer | Uint8Array | string }).source;
+    const raw = source ? (Buffer.isBuffer(source) ? source.toString("utf8") : Buffer.from(source as Uint8Array).toString("utf8")) : "";
+    const splitIndex = raw.indexOf("\r\n\r\n");
+    const text = splitIndex >= 0 ? raw.slice(splitIndex + 4) : raw;
+    return { id: String(uid), text };
+  }
 }

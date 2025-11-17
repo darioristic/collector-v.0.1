@@ -46,6 +46,30 @@ type Props = {
 export function InvoiceEditor({ invoice, onCancel, onSaved }: Props) {
   const { toast } = useToast();
   const { mutateAsync: updateInvoice, isPending } = useUpdateInvoice();
+  const itemRefs = React.useRef<Record<number, HTMLTextAreaElement | null>>({});
+  const stringToDoc = React.useCallback((text: string) => ({
+    type: "doc",
+    content: (text ?? "").split("\n").map((line) => ({
+      type: "paragraph",
+      content: line ? [{ type: "text", text: line }] : []
+    }))
+  }), []);
+  const contentToString = React.useCallback((content: unknown): string => {
+    try {
+      const doc = content as { content?: Array<{ content?: Array<{ text?: string }> }> };
+      if (!doc?.content) return "";
+      return doc.content
+        .map((p) => (p?.content ? p.content.map((n) => n.text ?? "").join("") : ""))
+        .join("\n");
+    } catch {
+      return typeof content === "string" ? content : "";
+    }
+  }, []);
+  const [notesJson, setNotesJson] = React.useState<object | null>(() =>
+    invoice?.notes && typeof invoice.notes === "object"
+      ? (invoice.notes as unknown as object)
+      : stringToDoc(String(invoice?.notes ?? ""))
+  );
 
   const [state, setState] = React.useState<EditorState>(() => ({
     invoiceNumber: invoice.invoiceNumber,
@@ -147,7 +171,18 @@ export function InvoiceEditor({ invoice, onCancel, onSaved }: Props) {
     } as InvoiceUpdateInput;
 
     try {
-      const updated = await updateInvoice({ id: invoice.id, input: payload });
+      const updated = await updateInvoice({
+        id: invoice.id,
+        input: {
+          ...payload,
+          notes:
+            notesJson && typeof notesJson === "object"
+              ? (notesJson as object)
+              : state.notes
+                ? stringToDoc(state.notes)
+                : undefined
+        }
+      });
       onSaved?.(updated);
     } catch {
       // toast handled in hook
@@ -207,11 +242,11 @@ export function InvoiceEditor({ invoice, onCancel, onSaved }: Props) {
           <Label>Billing address</Label>
           <MinimalTiptapEditor
             className="mt-2"
-            value={state.billingAddress ?? ""}
-            onChange={(v) => {
-              const next = typeof v === "string" ? v : "";
-              setState((s) => ({ ...s, billingAddress: next as string }));
-            }}
+            value={stringToDoc(state.billingAddress ?? "")}
+            onChange={(val) =>
+              setState((s) => ({ ...s, billingAddress: contentToString(val) }))
+            }
+            output="json"
             editorContentClassName="min-h-24 font-mono text-[11px] leading-4"
             hideToolbar
             unstyled
@@ -222,10 +257,11 @@ export function InvoiceEditor({ invoice, onCancel, onSaved }: Props) {
             <Label>From details</Label>
             <MinimalTiptapEditor
               className="mt-2"
-              value={state.fromDetails ?? ""}
+              value={stringToDoc(state.fromDetails ?? "")}
               onChange={(val) =>
-                setState((s) => ({ ...s, fromDetails: typeof val === "string" ? val : "" }))
+                setState((s) => ({ ...s, fromDetails: contentToString(val) }))
               }
+              output="json"
               editorContentClassName="min-h-24 font-mono text-[11px] leading-4"
               hideToolbar
               unstyled
@@ -235,10 +271,11 @@ export function InvoiceEditor({ invoice, onCancel, onSaved }: Props) {
             <Label>Payment details</Label>
             <MinimalTiptapEditor
               className="mt-2"
-              value={state.paymentDetails ?? ""}
+              value={stringToDoc(state.paymentDetails ?? "")}
               onChange={(val) =>
-                setState((s) => ({ ...s, paymentDetails: typeof val === "string" ? val : "" }))
+                setState((s) => ({ ...s, paymentDetails: contentToString(val) }))
               }
+              output="json"
               editorContentClassName="min-h-24 font-mono text-[11px] leading-4"
               hideToolbar
               unstyled
@@ -259,20 +296,33 @@ export function InvoiceEditor({ invoice, onCancel, onSaved }: Props) {
             <div className="space-y-3">
               {state.lineItems.map((li, idx) => (
                 <div
-                  key={li.id ?? `idx-${idx}-${li.description}`}
+                  key={li.id ?? `idx-${idx}`}
                   className="grid grid-cols-12 items-center gap-2">
                   <div className="col-span-6">
                     <textarea
                       placeholder="Description"
-                      className="w-full resize-none rounded-md border bg-transparent px-2 py-1 font-mono text-[11px] leading-4 whitespace-pre-wrap outline-none focus:ring-0"
-                      rows={2}
-                      onInput={(e) => {
-                        const t = e.currentTarget;
-                        t.style.height = "auto";
-                        t.style.height = `${t.scrollHeight}px`;
-                      }}
+                      className="w-full max-h-64 resize-none overflow-y-auto rounded-md border bg-transparent px-2 py-1 font-mono text-[11px] leading-4 whitespace-pre-wrap outline-none focus:ring-0"
+                      rows={3}
                       value={li.description}
-                      onChange={(e) => updateLineItem(idx, { description: e.target.value })}
+                      onChange={(e) => {
+                        const start = e.currentTarget.selectionStart ?? e.currentTarget.value.length;
+                        const end = e.currentTarget.selectionEnd ?? e.currentTarget.value.length;
+                        updateLineItem(idx, { description: e.target.value });
+                        requestAnimationFrame(() => {
+                          const el = itemRefs.current[idx];
+                          if (el) {
+                            el.focus();
+                            try {
+                              el.setSelectionRange(start, end);
+                            } catch (_e) {
+                              void 0;
+                            }
+                          }
+                        });
+                      }}
+                      ref={(el) => {
+                        itemRefs.current[idx] = el;
+                      }}
                     />
                   </div>
                   <div className="col-span-2">
@@ -311,8 +361,9 @@ export function InvoiceEditor({ invoice, onCancel, onSaved }: Props) {
         <Label>Notes</Label>
         <MinimalTiptapEditor
           className="mt-2"
-          value={state.notes ?? ""}
-          onChange={(val) => setState((s) => ({ ...s, notes: typeof val === "string" ? val : "" }))}
+          value={notesJson ?? stringToDoc(state.notes ?? "")}
+          onChange={(val) => setNotesJson(val as object)}
+          output="json"
           editorContentClassName="min-h-24 font-mono text-[11px] leading-4"
           hideToolbar
           unstyled

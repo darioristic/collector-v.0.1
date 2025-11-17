@@ -21,7 +21,7 @@ export function formatEditorContent(doc?: EditorDoc): React.JSX.Element | null {
               }
               
               if (line) {
-                let style = "text-[11px]";
+                let style = "text-[11px] break-words break-all";
                 let href: string | undefined;
 
                 if (marks) {
@@ -94,4 +94,3 @@ export function formatEditorContent(doc?: EditorDoc): React.JSX.Element | null {
     </>
   );
 }
-

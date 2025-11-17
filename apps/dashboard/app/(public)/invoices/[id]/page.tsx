@@ -8,7 +8,7 @@ import { Loader2 } from "lucide-react";
 
 export default function PublicInvoicePage() {
   const params = useParams();
-  const token = (params as Record<string, string> | null)?.token ?? null;
+  const token = (params as Record<string, string> | null)?.id ?? null;
   const [invoiceData, setInvoiceData] = useState<{
     invoice: unknown;
     templateProps: TemplateProps | null;
@@ -20,7 +20,7 @@ export default function PublicInvoicePage() {
     async function fetchInvoiceByToken() {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/sales/invoices/token/${token}`);
+        const response = await fetch(`/api/invoices/token/${token}`);
 
         if (!response.ok) {
           if (response.status === 404) {
@@ -38,7 +38,7 @@ export default function PublicInvoicePage() {
 
         // Track view
         try {
-          await fetch(`/api/sales/invoices/token/${token}/track`, {
+          await fetch(`/api/invoices/token/${token}/track`, {
             method: "POST"
           });
         } catch (trackError) {

@@ -12,25 +12,21 @@ const styles = StyleSheet.create({
 		marginBottom: 20,
 		alignItems: "flex-end",
 	},
-	summaryBox: {
-		width: "50%",
-	},
+  summaryBox: {
+    width: 300,
+  },
 	row: {
 		flexDirection: "row",
 		justifyContent: "space-between",
 		paddingVertical: 6,
 		borderBottomWidth: 0.5,
 		borderBottomColor: "#e5e5e5",
-		fontFamily: "Courier",
 		fontSize: 11,
 	},
 	label: {
 		color: "#878787",
-		fontFamily: "Courier",
 	},
 	value: {
-		fontFamily: "Courier",
-		fontVariantNumeric: "tabular-nums",
 	},
 	totalRow: {
 		marginTop: 16,
@@ -41,17 +37,13 @@ const styles = StyleSheet.create({
 	totalLabel: {
 		fontSize: 14,
 		fontWeight: "bold",
-		fontFamily: "Courier",
 	},
 	totalValue: {
 		fontSize: 20,
 		fontWeight: "bold",
-		fontFamily: "Courier",
-		fontVariantNumeric: "tabular-nums",
 	},
 	discountValue: {
 		color: "#dc2626",
-		fontFamily: "Courier",
 	},
 });
 
@@ -72,14 +64,18 @@ interface SummaryProps {
 }
 
 function formatCurrency(amount: number, currency: string): string {
-	const formatted = new Intl.NumberFormat("en-US", {
-		style: "currency",
-		currency: currency,
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2,
-	}).format(amount);
-	// Remove spaces between currency and number
-	return formatted.replace(/\s+/g, " ").trim();
+    try {
+        const formatted = new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: currency,
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        }).format(amount);
+        return formatted.replace(/\s+/g, " ").trim();
+    } catch {
+        const fixed = amount.toFixed(2);
+        return `${fixed} ${currency}`;
+    }
 }
 
 // Calculate average VAT rate
@@ -176,4 +172,3 @@ export function Summary({
 		</View>
 	);
 }
-

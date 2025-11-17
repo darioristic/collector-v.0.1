@@ -60,13 +60,13 @@ const serializeTeamMember = (
 	});
 
 type Params = {
-	params: Promise<{
-		id: string;
-	}>;
+    params: {
+        id: string;
+    };
 };
 
-const extractParams = async ({ params }: Params) => {
-	return await params;
+const extractParams = ({ params }: Params) => {
+    return params;
 };
 
 export async function PATCH(request: NextRequest, context: Params) {
@@ -123,7 +123,7 @@ export async function PATCH(request: NextRequest, context: Params) {
 		);
 	}
 
-	const { id: memberId } = await extractParams(context);
+    const { id: memberId } = extractParams(context);
 
 	const current = await db
 		.select()
@@ -244,7 +244,7 @@ export async function DELETE(_request: NextRequest, context: Params) {
 	}
 
 	const db = await getDb();
-	const { id: memberId } = await extractParams(context);
+    const { id: memberId } = extractParams(context);
 
 	try {
 		const [deleted] = await db

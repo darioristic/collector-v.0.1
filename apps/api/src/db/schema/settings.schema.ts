@@ -19,7 +19,8 @@ export const integrationProvider = pgEnum("integration_provider", [
   "salesforce",
   "slack",
   "google",
-  "imap"
+  "imap",
+  "smtp"
 ]);
 export const integrationStatus = pgEnum("integration_status", ["connected", "disconnected", "error"]);
 export const teamMemberStatus = pgEnum("team_member_status", ["online", "offline", "idle", "invited"]);
@@ -150,4 +151,3 @@ export const permissionsRelations = relations(permissions, ({ one }) => ({
     references: [roles.id]
   })
 }));
-

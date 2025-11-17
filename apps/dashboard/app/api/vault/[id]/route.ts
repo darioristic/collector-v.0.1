@@ -32,13 +32,13 @@ const buildUploadsPath = (url: string) => {
 };
 
 type VaultRouteContext = {
-	params: Promise<{
-		id: string;
-	}>;
+    params: {
+        id: string;
+    };
 };
 
-const extractParams = async ({ params }: VaultRouteContext) => {
-	return await params;
+const extractParams = ({ params }: VaultRouteContext) => {
+    return params;
 };
 
 export async function PUT(request: NextRequest, context: VaultRouteContext) {
@@ -70,7 +70,7 @@ export async function PUT(request: NextRequest, context: VaultRouteContext) {
 		);
 	}
 
-	const { id: resourceId } = await extractParams(context);
+    const { id: resourceId } = extractParams(context);
 
 	const folder = await db
 		.select({
@@ -248,11 +248,11 @@ export async function PUT(request: NextRequest, context: VaultRouteContext) {
 }
 
 export async function DELETE(
-	_request: NextRequest,
-	context: VaultRouteContext,
+    _request: NextRequest,
+    context: VaultRouteContext,
 ) {
 	const db = await ensureTeamChatSchemaReady();
-	const { id: resourceId } = await extractParams(context);
+    const { id: resourceId } = extractParams(context);
 
 	const folder = await db
 		.select({

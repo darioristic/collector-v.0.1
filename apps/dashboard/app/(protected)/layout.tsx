@@ -4,6 +4,7 @@ import type React from "react";
 import { SiteHeader } from "@/components/layout/header";
 import { AppSidebar } from "@/components/layout/sidebar/app-sidebar";
 import { AuthProvider } from "@/components/providers/auth-provider";
+import { QueryProvider } from "@/components/providers/query-provider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getCurrentAuth } from "@/lib/auth";
 import { NovuProvider } from "@/lib/novu/novu-provider";
@@ -28,28 +29,30 @@ export default async function AuthLayout({
 		cookieStore.get("sidebar_state") === undefined;
 
 	return (
-		<AuthProvider initialAuth={auth}>
-			<NovuProvider>
-				<SidebarProvider
-					defaultOpen={defaultOpen}
-					style={
-						{
-							"--sidebar-width": "calc(var(--spacing) * 64)",
-							"--header-height": "calc(var(--spacing) * 14)",
-						} as React.CSSProperties
-					}
-				>
-					<AppSidebar variant="inset" />
-					<SidebarInset>
-						<SiteHeader />
-						<div className="flex flex-1 flex-col">
-							<div className="@container/main p-4 xl:group-data-[theme-content-layout=centered]/layout:container xl:group-data-[theme-content-layout=centered]/layout:mx-auto" suppressHydrationWarning>
-								{children}
+		<QueryProvider>
+			<AuthProvider initialAuth={auth}>
+				<NovuProvider>
+					<SidebarProvider
+						defaultOpen={defaultOpen}
+						style={
+							{
+								"--sidebar-width": "calc(var(--spacing) * 64)",
+								"--header-height": "calc(var(--spacing) * 14)",
+							} as React.CSSProperties
+						}
+					>
+						<AppSidebar variant="inset" />
+						<SidebarInset>
+							<SiteHeader />
+							<div className="flex flex-1 flex-col">
+								<div className="@container/main p-4 xl:group-data-[theme-content-layout=centered]/layout:container xl:group-data-[theme-content-layout=centered]/layout:mx-auto" suppressHydrationWarning>
+									{children}
+								</div>
 							</div>
-						</div>
-					</SidebarInset>
-				</SidebarProvider>
-			</NovuProvider>
-		</AuthProvider>
+						</SidebarInset>
+					</SidebarProvider>
+				</NovuProvider>
+			</AuthProvider>
+		</QueryProvider>
 	);
 }

@@ -9,33 +9,33 @@ type Props = {
   dueDate?: string | null;
 };
 
-export function Meta({ template, invoiceNumber, issueDate, dueDate }: Props) {
+export function Meta({ template: _template, invoiceNumber, issueDate, dueDate }: Props) {
   return (
     <div className="flex items-start justify-between gap-4">
-      <div className="text-sm font-mono">
-        <div className="mb-2 text-[1.2em]">
+      <div className="font-mono text-sm">
+        <div className="mb-2 text-[14px] font-bold">
           <span className="text-muted-foreground">Invoice NO: </span>
-          <span className="font-medium">{invoiceNumber}</span>
+          <span className="text-foreground font-normal">{invoiceNumber}</span>
         </div>
-        <div className="mb-2">
+        <div className="mb-2 text-[11px]">
           <span className="text-muted-foreground">Issue date: </span>
-          <span className="font-medium">
+          <span className="text-foreground font-normal">
             {format(new Date(issueDate), "dd/MM/yyyy")}
           </span>
         </div>
         {dueDate && (
-          <div>
+          <div className="text-[11px]">
             <span className="text-muted-foreground">Due date: </span>
-            <span className="font-medium">
+            <span className="text-foreground font-normal">
               {format(new Date(dueDate), "dd/MM/yyyy")}
             </span>
           </div>
         )}
       </div>
-      {template.logo_url && (
+      {_template.logo_url && (
         <div className="flex-shrink-0">
           <Image
-            src={template.logo_url}
+            src={_template.logo_url}
             alt="Company Logo"
             width={120}
             height={48}
@@ -46,4 +46,3 @@ export function Meta({ template, invoiceNumber, issueDate, dueDate }: Props) {
     </div>
   );
 }
-
