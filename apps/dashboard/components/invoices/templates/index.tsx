@@ -1,11 +1,14 @@
 "use client";
+import * as React from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { TemplateProps } from "./types";
 import { EditorContent } from "./components/editor-content";
 import { LineItems } from "./components/line-items";
 import { Meta } from "./components/meta";
 import { Summary } from "./components/summary";
+import { MetaCore, LineItemsCore, SummaryCore } from "@crm/ui/invoice";
 import MinimalTiptapEditor from "@/components/ui/custom/minimal-tiptap/minimal-tiptap";
+import { paginateItems, paginateByHeights, paginateByHeightsWithExtras, paginateFixed } from "./pager";
 
 export function HtmlTemplate({
   invoice_number,
@@ -28,6 +31,11 @@ export function HtmlTemplate({
   total = 0,
   editable = false,
   interactive = true,
+  items_per_page,
+  pagination_mode = "measured",
+  scroll_snap = true,
+  lazy = true,
+  preview_mode = false,
   editors,
 }: TemplateProps) {
   // Helpers to convert between plain text (with \n) and Tiptap JSON doc
@@ -55,58 +63,182 @@ export function HtmlTemplate({
       return typeof content === "string" ? content : "";
     }
   };
-  // Approximate pagination to A4-like sections by limiting number of line items per page.
-  // This improves layout (prevents toolbar overlap) and prepares for PDF rendering later.
-  const itemsPerPage = template.include_vat ? 14 : 18;
-  const pages: Array<typeof line_items> = [];
-  for (let i = 0; i < line_items.length; i += itemsPerPage) {
-    pages.push(line_items.slice(i, i + itemsPerPage));
-  }
-  const _isMultiPage = pages.length > 1;
+  const cfg = React.useMemo(() => (
+    { pageHeightMm: 297, headerHeightMm: 40, footerHeightMm: 20, minLastPageRows: 3 } as const
+  ), []);
+  const [measuredPages, setMeasuredPages] = React.useState<number[][] | null>(null);
+  const [pages, setPages] = React.useState<Array<typeof line_items>>([]);
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [_dirty, setDirty] = React.useState(false);
+  const pagesRefs = React.useRef<Array<HTMLDivElement | null>>([]);
+  React.useEffect(() => {
+    const wrapper = document.querySelector<HTMLElement>(".print-wrapper");
+    if (!wrapper) return;
+    const onScroll = () => {
+      const tops = pagesRefs.current.map((el) => {
+        if (!el) return Infinity;
+        const rect = el.getBoundingClientRect();
+        const parentRect = wrapper.getBoundingClientRect();
+        return Math.abs(rect.top - parentRect.top);
+      });
+      let idx = 0;
+      let min = Infinity;
+      for (let i = 0; i < tops.length; i++) {
+        if (tops[i] < min) {
+          min = tops[i];
+          idx = i;
+        }
+      }
+      setCurrentPage(idx + 1);
+    };
+    wrapper.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => wrapper.removeEventListener("scroll", onScroll);
+  }, [pages.length]);
 
-  const PageContainer = ({ children, isLast }: { children: React.ReactNode; isLast?: boolean }) => (
-    <div className={isLast ? "" : "break-after-page"}>{children}</div>
+  React.useEffect(() => {
+    let idx = paginateItems(
+      line_items.map((li) => ({ name: li.name, quantity: li.quantity, price: li.price })),
+      cfg
+    );
+    if (pagination_mode === "fixed" && items_per_page && items_per_page > 0) {
+      idx = paginateFixed(line_items.length, items_per_page);
+    }
+    setMeasuredPages((p) => p ?? null);
+    setPages(idx.map((idxs) => idxs.map((i) => line_items[i])));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [line_items.length, pagination_mode, items_per_page]);
+
+  const measureRef = React.useRef<HTMLDivElement | null>(null);
+  React.useLayoutEffect(() => {
+    if (pagination_mode !== "measured") return;
+    const el = measureRef.current;
+    if (!el) return;
+    const rows = Array.from(el.querySelectorAll<HTMLElement>(".li-row"));
+    if (!rows.length) return;
+    const heights = rows.map((r) => r.offsetHeight);
+    const headerEl = el.querySelector<HTMLElement>(".measure-header");
+    const footerEl = el.querySelector<HTMLElement>(".measure-footer");
+    const extraTopPx = headerEl ? headerEl.offsetHeight : 0;
+    const extraBottomPx = footerEl ? footerEl.offsetHeight : 0;
+    const idxPages = paginateByHeightsWithExtras(heights, cfg, extraTopPx, extraBottomPx);
+    setMeasuredPages(idxPages);
+    setPages(idxPages.map((idxs) => idxs.map((i) => line_items[i])));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [line_items, pagination_mode]);
+
+  const PageContainer = ({ children, isLast, pageIndex }: { children: React.ReactNode; isLast?: boolean; pageIndex?: number }) => (
+    <div
+      className={`${isLast ? "" : "break-after-page"} ${scroll_snap ? "snap-start" : ""} ${preview_mode ? "preview-page" : ""}`}
+      style={preview_mode ? {
+        width: "210mm",
+        minHeight: "297mm",
+        background: "white",
+        marginBottom: isLast ? 0 : "24px",
+        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1), 0 8px 32px rgba(0, 0, 0, 0.15)",
+        borderRadius: "4px",
+        position: "relative",
+        overflow: "hidden",
+      } : undefined}
+    >
+      {children}
+    </div>
   );
 
   return (
     <ScrollArea
-      className="bg-transparent w-full md:w-auto h-full print-wrapper"
+      className={`bg-transparent w-full md:w-auto h-full print-wrapper ${scroll_snap ? "snap-y snap-mandatory" : ""} ${preview_mode ? "preview-wrapper" : ""}`}
       style={{
         width: "100%",
-        maxWidth: width,
+        maxWidth: preview_mode ? undefined : width,
         height: "100%",
+        scrollSnapType: scroll_snap ? "y mandatory" : undefined,
       }}
     >
-      <div className="p-4 sm:p-6 md:p-8 h-full flex flex-col">
+      {/* hidden measurement container */}
+      <div
+        ref={measureRef}
+        style={{ position: "absolute", left: -10000, top: 0, visibility: "hidden", width: "210mm" }}
+        className={preview_mode ? "preview-page" : ""}
+      >
+        <div className="p-[20px]">
+          <div className="measure-header mt-0">
+            <Meta template={template} invoiceNumber={invoice_number} issueDate={issue_date} dueDate={due_date} />
+            <div className="grid grid-cols-2 gap-8">
+              <div>
+                <p className="text-[11px] text-[#878787] font-medium mb-2">{template.from_label}</p>
+                <div className="text-[11px] leading-relaxed">
+                  <EditorContent content={from_details} />
+                </div>
+              </div>
+              <div>
+                <p className="text-[11px] text-[#878787] font-medium mb-2">To</p>
+                <div className="text-[11px] leading-relaxed">
+                  <EditorContent content={customer_details} />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4">
+            <LineItems lineItems={line_items} currency={currency} descriptionLabel={template.description_label} quantityLabel={template.quantity_label} priceLabel={template.price_label} totalLabel={template.total_label} includeVAT={template.include_vat} editable={false} interactive={false} />
+          </div>
+          <div className="measure-footer mt-6 md:mt-8">
+            <div className="flex justify-end mb-6 md:mb-8">
+              <div className="w-full max-w-md">
+                <SummaryCore includeVAT={template.include_vat} includeTax={template.include_tax} taxRate={template.tax_rate || 0} currency={currency} vatLabel={template.vat_label} taxLabel={template.tax_label} totalLabel={template.total_label} amountBeforeDiscount={amountBeforeDiscount} discountTotal={discountTotal} subtotal={subtotal} totalVat={totalVat} total={total} />
+              </div>
+            </div>
+            <div className="flex flex-col space-y-6 md:space-y-8">
+              {note_details ? (
+                <div>
+                  <p className="text-[11px] text-[#878787] font-mono mb-2 block">{template.note_label}</p>
+                  <EditorContent content={note_details} />
+                </div>
+              ) : null}
+              <div className="pt-6">
+                <div className="text-[11px] text-[#878787] font-mono">
+                  <EditorContent content={payment_details} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className={preview_mode ? "flex flex-col items-center" : "p-4 sm:p-6 md:p-8 h-full flex flex-col"}>
         {/* Print helpers */}
         <style>{`
+          @page {
+            size: A4;
+            margin: 20mm;
+          }
           @media print {
             .break-after-page { page-break-after: always; }
             .print-wrapper { height: auto !important; overflow: visible !important; }
             .print-wrapper > div { height: auto !important; }
+            .print-wrapper { width: 210mm !important; max-width: 210mm !important; }
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           }
         `}</style>
         {pages.map((items, pageIndex) => {
           const isFirst = pageIndex === 0;
           const isLast = pageIndex === pages.length - 1;
           return (
-            <PageContainer key={`page-${pageIndex}`} isLast={isLast}>
+            <div key={`page-${pageIndex}`} ref={(el) => (pagesRefs.current[pageIndex] = el)}>
+            <PageContainer isLast={isLast} pageIndex={pageIndex}>
+              {(!lazy || Math.abs(pageIndex + 1 - currentPage) <= 1) && (
+                <div className="p-[20px]">
               {isFirst && (
                 <>
-        <div className="mt-0">
-          <Meta
-            template={template}
-            invoiceNumber={invoice_number}
-            issueDate={issue_date}
-            dueDate={due_date}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mt-8">
+              <div className="mt-0">
+                <Meta template={template} invoiceNumber={invoice_number} issueDate={issue_date} dueDate={due_date} />
+              </div>
+        <div className="grid grid-cols-2 gap-8">
           <div>
-            <p className="text-[11px] text-[#878787] font-mono mb-2 block">
+            <p className="text-[11px] text-[#878787] font-medium mb-2">
               {template.from_label}
             </p>
+            <div className="text-[11px] leading-relaxed">
                       {editable && editors?.from ? (
                         <MinimalTiptapEditor
                 className="mt-0"
@@ -123,11 +255,13 @@ export function HtmlTemplate({
             ) : (
               <EditorContent content={from_details} />
             )}
+            </div>
           </div>
-          <div className="mt-4 md:mt-0">
-            <p className="text-[11px] text-[#878787] font-mono mb-2 block">
-              {template.customer_label}
+          <div>
+            <p className="text-[11px] text-[#878787] font-medium mb-2">
+              To
             </p>
+            <div className="text-[11px] leading-relaxed">
                       {editable && editors?.customer ? (
                         <MinimalTiptapEditor
                 className="mt-0"
@@ -144,40 +278,46 @@ export function HtmlTemplate({
             ) : (
               <EditorContent content={customer_details} />
             )}
+            </div>
           </div>
         </div>
                 </>
               )}
 
         <div className="mt-4">
-          <LineItems
-                  lineItems={items}
-            currency={currency}
-            descriptionLabel={template.description_label}
-            quantityLabel={template.quantity_label}
-            priceLabel={template.price_label}
-            totalLabel={template.total_label}
-            includeVAT={template.include_vat}
-                  editable={editable}
-                  interactive={interactive}
-                  onChangeDescription={editors?.onLineItemDescriptionChange}
-                  onChangeQuantity={editors?.onLineItemQuantityChange}
-                  onChangePrice={editors?.onLineItemPriceChange}
-                  onChangeUnit={editors?.onLineItemUnitChange}
-                  onChangeVat={editors?.onLineItemVatChange}
-                  onChangeDiscount={editors?.onLineItemDiscountChange}
-                  onAddLineItem={isLast ? editors?.onAddLineItem : undefined}
-                  activeAutocompleteIndex={editors?.activeAutocompleteIndex}
-                  onAutocompleteCommit={editors?.onAutocompleteCommit}
-                  onDeleteLineItem={editors?.onDeleteLineItem}
-                  onMoveLineItem={editors?.onMoveLineItem}
-          />
+          {editable || interactive ? (
+            <LineItems
+              lineItems={items}
+              currency={currency}
+              descriptionLabel={template.description_label}
+              quantityLabel={template.quantity_label}
+              priceLabel={template.price_label}
+              totalLabel={template.total_label}
+              includeVAT={template.include_vat}
+              editable={editable}
+              interactive={interactive}
+              onChangeDescription={editors?.onLineItemDescriptionChange}
+              onChangeQuantity={editors?.onLineItemQuantityChange}
+              onChangePrice={editors?.onLineItemPriceChange}
+              onChangeUnit={editors?.onLineItemUnitChange}
+              onChangeVat={editors?.onLineItemVatChange}
+              onChangeDiscount={editors?.onLineItemDiscountChange}
+              onAddLineItem={isLast ? editors?.onAddLineItem : undefined}
+              activeAutocompleteIndex={editors?.activeAutocompleteIndex}
+              onAutocompleteCommit={editors?.onAutocompleteCommit}
+              onDeleteLineItem={editors?.onDeleteLineItem}
+              onMoveLineItem={editors?.onMoveLineItem}
+            />
+          ) : (
+            <LineItemsCore items={items} currency={currency} descriptionLabel={template.description_label} priceLabel={template.price_label} totalLabel={template.total_label} includeVAT={template.include_vat} />
+          )}
         </div>
 
               {isLast && (
                 <>
         <div className="mt-6 md:mt-8 flex justify-end mb-6 md:mb-8">
           <div className="w-full max-w-md">
+            {editable || interactive ? (
             <Summary
               includeVAT={template.include_vat}
               includeTax={template.include_tax}
@@ -193,6 +333,9 @@ export function HtmlTemplate({
               totalVat={totalVat}
               total={total}
             />
+            ) : (
+              <SummaryCore includeVAT={template.include_vat} includeTax={template.include_tax} taxRate={template.tax_rate || 0} currency={currency} vatLabel={template.vat_label} taxLabel={template.tax_label} totalLabel={template.total_label} amountBeforeDiscount={amountBeforeDiscount} discountTotal={discountTotal} subtotal={subtotal} totalVat={totalVat} total={total} />
+            )}
           </div>
         </div>
 
@@ -240,9 +383,22 @@ export function HtmlTemplate({
         </div>
                 </>
               )}
+              <div className="mt-6 flex items-center justify-between text-[10px] text-[#878787]">
+                <span className="tabular-nums">{new Date().toLocaleDateString()}</span>
+                <span className="tabular-nums">{`Page ${pageIndex + 1} / ${pages.length}`}</span>
+              </div>
+              </div>
+              )}
             </PageContainer>
+            </div>
           );
         })}
+        {/* sticky indicator of current page when scroll snapping */}
+        {scroll_snap && (
+          <div className="fixed bottom-4 right-4 px-3 py-1 rounded bg-white/80 shadow text-[11px] tabular-nums">
+            {`Page ${currentPage} / ${pages.length}`}
+          </div>
+        )}
       </div>
     </ScrollArea>
   );

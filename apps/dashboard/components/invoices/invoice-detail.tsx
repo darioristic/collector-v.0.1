@@ -557,6 +557,9 @@ export function InvoiceDetail({
               <HtmlTemplate
                 {...templateProps}
                 line_items={memoizedLineItems}
+                pagination_mode="measured"
+                scroll_snap={false}
+                lazy={false}
                 editable
                 editors={{
                   from: { value: editFrom, onChange: (v: unknown) => setEditFrom(typeof v === "string" ? v : "") },
@@ -699,7 +702,14 @@ export function InvoiceDetail({
             }}
             id={contentId}
             className="pb-0">
-            {templateProps ? <HtmlTemplate {...templateProps} /> : null}
+            {templateProps ? (
+              <HtmlTemplate
+                {...templateProps}
+                pagination_mode="measured"
+                scroll_snap={false}
+                lazy={false}
+              />
+            ) : null}
 
             <InvoiceToolbar
               invoiceId={invoiceId}
