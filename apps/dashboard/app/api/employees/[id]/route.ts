@@ -16,16 +16,11 @@ const withNoStore = (response: NextResponse) => {
 };
 
 type EmployeeRouteContext = {
-	params: { id: string } | Promise<{ id: string }>;
-};
-
-const extractParams = async (context: EmployeeRouteContext) => {
-	const p = context.params;
-	return p instanceof Promise ? await p : p;
+    params: { id: string };
 };
 
 export async function GET(_: NextRequest, context: EmployeeRouteContext) {
-	const { id: rawId } = await extractParams(context);
+    const { id: rawId } = context.params;
 	const parsedId = employeeIdSchema.safeParse({ id: rawId });
 
 	if (!parsedId.success) {
@@ -64,7 +59,7 @@ export async function GET(_: NextRequest, context: EmployeeRouteContext) {
 }
 
 export async function PUT(request: NextRequest, context: EmployeeRouteContext) {
-	const { id: rawId } = await extractParams(context);
+    const { id: rawId } = context.params;
 	const parsedId = employeeIdSchema.safeParse({ id: rawId });
 
 	if (!parsedId.success) {
