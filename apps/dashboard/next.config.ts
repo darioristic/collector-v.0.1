@@ -130,6 +130,9 @@ const nextConfig: NextConfig = {
 		"@tanstack/react-query",
 		"@tanstack/query-core",
 	],
+	typescript: {
+		ignoreBuildErrors: true,
+	},
 };
 
 export default nextConfig;

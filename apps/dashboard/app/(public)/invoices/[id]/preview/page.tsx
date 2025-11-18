@@ -1,6 +1,6 @@
 import type { Invoice } from "@crm/types";
 import { eq } from "drizzle-orm";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { HtmlTemplate } from "@/components/invoices/templates";
 import { getCurrentAuth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
@@ -74,10 +74,12 @@ export default async function InvoiceHtmlPreviewPage({
 		}
 	};
 
+	let invoice: Invoice;
 	let companyRecord: typeof companyTable.$inferSelect | null = null;
+	
 	try {
 		const auth = await getCurrentAuth();
-		const [invoice, record] = await (async () => {
+		const [inv, record] = await (async () => {
 			const inv = await invoicePromise;
 			if (auth?.user) {
 				const db = await getDb();
@@ -90,16 +92,32 @@ export default async function InvoiceHtmlPreviewPage({
 			}
 			return [inv, null] as const;
 		})();
-		// reassign invoice for below usage
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		const _invoice: Invoice = invoice;
+		invoice = inv;
 		companyRecord = record;
-	} catch {
-		// if auth fails, still await invoice to ensure it is resolved
-		const _invoice = await invoicePromise;
-		companyRecord = null;
+	} catch (error) {
+		// if auth fails, still try to await invoice
+		try {
+			invoice = await invoicePromise;
+			companyRecord = null;
+		} catch (invoiceError) {
+			// Check if it's a 404 error (invoice not found)
+			if (
+				invoiceError instanceof Error &&
+				"status" in invoiceError &&
+				(invoiceError as Error & { status?: number }).status === 404
+			) {
+				notFound();
+			}
+			// If invoice fetch fails, throw the error to be handled by error boundary
+			throw new Error(
+				error instanceof Error
+					? error.message
+					: invoiceError instanceof Error
+						? invoiceError.message
+						: "Failed to load invoice",
+			);
+		}
 	}
-	const invoice = await invoicePromise;
 
 	const template = {
 		logo_url: companyRecord?.logoUrl ?? "/logo.png",
