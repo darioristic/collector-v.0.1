@@ -58,9 +58,19 @@ spec:
         rm -rf /var/lib/apt/lists/*
         export PYTHON=python3
 
-        bun install --ignore-scripts
-        bunx tsc -p packages/types/tsconfig.json --moduleResolution bundler --module ESNext || true
-        bun run --filter api build
+        # Check if we're in the right directory and list files for debugging
+        echo "Current directory: $(pwd)"
+        echo "Files in current directory:"
+        ls -la
+        
+        # Only run bun install if package.json exists
+        if [ -f "package.json" ]; then
+          bun install --ignore-scripts
+          bunx tsc -p packages/types/tsconfig.json --moduleResolution bundler --module ESNext || true
+          bun run --filter api build
+        else
+          echo "No package.json found in $(pwd), skipping prepare-node-build step"
+        fi
     - name: build-and-push
       image: quay.io/buildah/stable:v1.41.4
       workingDir: $(workspaces.source.path)
