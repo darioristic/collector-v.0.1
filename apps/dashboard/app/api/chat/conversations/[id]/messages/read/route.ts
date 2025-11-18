@@ -24,8 +24,8 @@ const unauthorized = () =>
 	);
 
 export async function PUT(
-	_request: NextRequest,
-	{ params }: { params: { id: string } },
+    _request: NextRequest,
+    context: { params: { id: string } },
 ) {
 	try {
 		const cookieStore = cookies();
@@ -34,7 +34,7 @@ export async function PUT(
 		if (!sessionToken) {
 			return unauthorized();
 		}
-		const conversationId = params?.id;
+        const conversationId = context.params?.id;
 		if (!conversationId) {
 			return withNoStore(
 				NextResponse.json(

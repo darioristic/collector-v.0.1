@@ -24,8 +24,8 @@ const unauthorized = () =>
 	);
 
 export async function GET(
-	request: NextRequest,
-	{ params }: { params: { id: string } },
+    request: NextRequest,
+    context: { params: { id: string } },
 ) {
 	try {
 		const cookieStore = cookies();
@@ -35,7 +35,7 @@ export async function GET(
 			return unauthorized();
 		}
 
-		const conversationId = params?.id;
+        const conversationId = context.params?.id;
 		if (!conversationId) {
 			return withNoStore(
 				NextResponse.json(
@@ -183,8 +183,8 @@ export async function GET(
 }
 
 export async function POST(
-	request: NextRequest,
-	{ params }: { params: { id: string } },
+    request: NextRequest,
+    context: { params: { id: string } },
 ) {
 	try {
 		const cookieStore = cookies();
@@ -194,7 +194,7 @@ export async function POST(
 			return unauthorized();
 		}
 
-		const conversationId = params?.id;
+        const conversationId = context.params?.id;
 		if (!conversationId) {
 			return withNoStore(
 				NextResponse.json(
