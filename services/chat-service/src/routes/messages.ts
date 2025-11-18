@@ -326,7 +326,7 @@ const messagesRoutes: FastifyPluginAsync = async (fastify) => {
 				// Safeguard: backfill read_at for any pre-read messages missing timestamp (throttled)
 				try {
 					const throttleKey = `chat:readfix:${conversationId}`;
-					const lastRun = cache ? await cache.get<number>(throttleKey) : null;
+					const lastRun = cache ? await cache.get(throttleKey) : null;
 					const nowTs = Date.now();
 					if (!lastRun || nowTs - lastRun > 60_000) {
 						await db.execute(sql`
