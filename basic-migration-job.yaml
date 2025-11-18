@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: basic-migration
+  namespace: crm-platform-prod
+spec:
+  template:
+    spec:
+      containers:
+      - name: migration
+        image: image-registry.openshift-image-registry.svc:5000/crm-platform-prod/api:latest
+        command: ["sh", "-c", "node --loader ./esm-loader.mjs -e \"const { migrate } = require('./dist/db/migrate.js'); migrate()\""]
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: collector-api-secrets
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: collector-api-secrets
+              key: REDIS_URL
+        - name: NOVU_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: collector-api-secrets
+              key: NOVU_API_KEY
+        - name: NODE_ENV
+          value: "production"
+      restartPolicy: Never
+  backoffLimit: 4

@@ -1,0 +1,34 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: crm-monorepo-monorepo-fix-v2
+spec:
+  pipelineRef:
+    name: crm-monorepo-pipeline
+  serviceAccountName: pipeline-priv
+  params:
+    - name: git-repo-url
+      value: https://github.com/darioristic/collector-v.0.1.git
+    - name: git-revision
+      value: main
+    - name: registry
+      value: image-registry.openshift-image-registry.svc:5000/crm-platform-prod
+    - name: namespace
+      value: crm-platform-prod
+    - name: image-tag
+      value: monorepo-fix-v2
+    - name: database-secret-name
+      value: collector-api-secrets
+    - name: database-secret-key
+      value: DATABASE_URL
+  workspaces:
+    - name: shared-workspace
+      volumeClaimTemplate:
+        metadata:
+          name: crm-monorepo-workspace
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 5Gi

@@ -1,0 +1,28 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: crm-monorepo-test-tsconfig-
+  namespace: crm-platform-prod
+spec:
+  pipelineRef:
+    name: crm-monorepo-pipeline
+  params:
+    - name: git-url
+      value: "https://github.com/dariosupremo/crm-platform-monorepo"
+    - name: git-revision
+      value: "main"
+    - name: git-repo-url
+      value: "https://github.com/dariosupremo/crm-platform-monorepo"
+    - name: registry
+      value: "image-registry.openshift-image-registry.svc:5000"
+    - name: namespace
+      value: "crm-platform-prod"
+  workspaces:
+    - name: shared-workspace
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 5Gi

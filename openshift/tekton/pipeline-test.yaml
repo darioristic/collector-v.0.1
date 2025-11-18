@@ -1,0 +1,48 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: crm-monorepo-pipeline-test
+spec:
+  description: >
+    Test pipeline for the CRM monorepo using simple test repository structure.
+    This tests the build process with minimal dependencies.
+  params:
+    - name: registry
+      type: string
+      description: OpenShift internal registry host (e.g. image-registry.openshift-image-registry.svc:5000)
+    - name: namespace
+      type: string
+      description: OpenShift project/namespace used for images and deployments
+    - name: image-tag
+      type: string
+      description: Image tag applied to both API and dashboard images
+      default: $(context.pipelineRun.uid)
+  workspaces:
+    - name: shared-workspace
+  tasks:
+    - name: checkout-code
+      taskRef:
+        name: git-checkout-simple-test
+      workspaces:
+        - name: output
+          workspace: shared-workspace
+
+    - name: build-api
+      runAfter:
+        - checkout-code
+      taskRef:
+        name: build-api
+      params:
+        - name: registry
+          value: $(params.registry)
+        - name: namespace
+          value: $(params.namespace)
+        - name: image-tag
+          value: $(params.image-tag)
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+  results:
+    - name: api-image
+      value: $(tasks.build-api.results.image-url)

@@ -1,0 +1,115 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: git-checkout-configmap
+spec:
+  description: >
+    Create repository structure from ConfigMap for testing the build process.
+    This task copies essential files from a ConfigMap and creates minimal app structures.
+  workspaces:
+    - name: output
+      description: Workspace u koji se kreira repozitorijum
+  steps:
+    - name: create-repo-from-configmap
+      image: alpine:3.20
+      workingDir: $(workspaces.output.path)
+      script: |
+        #!/bin/sh
+        set -euo pipefail
+        
+        DEST_PATH="$(workspaces.output.path)"
+        
+        echo "Creating repository structure from ConfigMap in ${DEST_PATH}"
+        
+        # Clean destination workspace
+        rm -rf "${DEST_PATH}"/*
+        
+        # Copy files from ConfigMap (mounted as volume)
+        if [ -f "/configmap/package.json" ]; then
+          cp /configmap/package.json "${DEST_PATH}/"
+          echo "✓ Copied package.json from ConfigMap"
+        else
+          echo "✗ package.json not found in ConfigMap"
+        fi
+        
+        if [ -f "/configmap/tsconfig.base.json" ]; then
+          cp /configmap/tsconfig.base.json "${DEST_PATH}/"
+          echo "✓ Copied tsconfig.base.json from ConfigMap"
+        else
+          echo "✗ tsconfig.base.json not found in ConfigMap"
+        fi
+        
+        # Create basic directory structure
+        mkdir -p "${DEST_PATH}/apps/api" "${DEST_PATH}/apps/dashboard" "${DEST_PATH}/packages"
+        
+        # Create minimal API package.json
+        cat > "${DEST_PATH}/apps/api/package.json" << 'APIEOF'
+{
+  "name": "api",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "echo 'Building API...' && mkdir -p dist && echo 'API build complete'",
+    "dev": "echo 'Starting API dev server...'",
+    "start": "echo 'Starting API server...'"
+  },
+  "dependencies": {
+    "fastify": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
+APIEOF
+        echo "✓ Created minimal API package.json"
+
+        # Create minimal Dashboard package.json
+        cat > "${DEST_PATH}/apps/dashboard/package.json" << 'DASHEOF'
+{
+  "name": "dashboard",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "echo 'Building Dashboard...' && mkdir -p dist && echo 'Dashboard build complete'",
+    "dev": "echo 'Starting Dashboard dev server...'",
+    "start": "echo 'Starting Dashboard...'"
+  },
+  "dependencies": {
+    "next": "^14.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "typescript": "^5.0.0"
+  }
+}
+DASHEOF
+        echo "✓ Created minimal Dashboard package.json"
+        
+        echo "Repository structure created successfully"
+        echo "Files in destination:"
+        ls -la "${DEST_PATH}"
+        echo "API directory:"
+        ls -la "${DEST_PATH}/apps/api"
+        echo "Dashboard directory:"
+        ls -la "${DEST_PATH}/apps/dashboard"
+        
+        # Check if we have the expected structure
+        if [ -f "${DEST_PATH}/package.json" ] && [ -d "${DEST_PATH}/apps/api" ]; then
+          echo "✓ Found monorepo structure with apps/api"
+        else
+          echo "✗ Missing expected monorepo structure"
+          echo "Files in destination:"
+          ls -la "${DEST_PATH}"
+          exit 1
+        fi
+      volumeMounts:
+        - name: configmap-volume
+          mountPath: /configmap
+  volumes:
+    - name: configmap-volume
+      configMap:
+        name: local-repo-config

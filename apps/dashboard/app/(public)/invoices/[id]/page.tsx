@@ -1,10 +1,10 @@
 "use client";
 
+import { HtmlTemplate } from "@crm/invoice/templates/html";
+import type { TemplateProps } from "@crm/invoice/templates/types";
 import { Loader2 } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { HtmlTemplate } from "@/components/invoices/templates";
-import type { TemplateProps } from "@/components/invoices/templates/types";
 
 export default function PublicInvoicePage() {
 	const params = useParams();

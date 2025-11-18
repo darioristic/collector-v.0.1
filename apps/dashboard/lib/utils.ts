@@ -102,6 +102,28 @@ export function formatDate(date: string | Date | null | undefined): string {
 }
 
 /**
+ * Get due date status based on current date
+ */
+export function getDueDateStatus(dueDate: string | Date | null | undefined): "overdue" | "upcoming" | "today" | null {
+	if (!dueDate) return null;
+
+	const dateObj = typeof dueDate === "string" ? new Date(dueDate) : dueDate;
+	if (isNaN(dateObj.getTime())) return null;
+
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
+	const due = new Date(dateObj);
+	due.setHours(0, 0, 0, 0);
+
+	const diffTime = due.getTime() - today.getTime();
+	const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+	if (diffDays < 0) return "overdue";
+	if (diffDays === 0) return "today";
+	return "upcoming";
+}
+
+/**
  * Parse a numeric input string (supports comma as decimal separator)
  */
 export function parseNumber(input: string, fallback: number = 0): number {

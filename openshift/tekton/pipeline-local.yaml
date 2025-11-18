@@ -1,0 +1,242 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: crm-monorepo-pipeline-local
+spec:
+  description: >
+    CI/CD pipeline for the CRM monorepo using local repository. Builds the Fastify API and Next.js dashboard
+    with Node 20 + pnpm, pushes images to the OpenShift internal registry, and rolls out
+    the updated DeploymentConfigs.
+  params:
+    - name: git-repo-url
+      type: string
+      description: Git repository containing the monorepo (for reference only)
+    - name: git-revision
+      type: string
+      description: Git revision (branch, tag, or commit) to build (for reference only)
+      default: main
+    - name: registry
+      type: string
+      description: OpenShift internal registry host (e.g. image-registry.openshift-image-registry.svc:5000)
+    - name: namespace
+      type: string
+      description: OpenShift project/namespace used for images and deployments
+    - name: image-tag
+      type: string
+      description: Image tag applied to both API and dashboard images
+      default: $(context.pipelineRun.uid)
+    - name: database-secret-name
+      type: string
+      description: Kubernetes Secret koji sadrži DATABASE_URL vrednost za migracije
+      default: collector-api-secrets
+    - name: database-secret-key
+      type: string
+      description: Ključ unutar tajne koji sadrži DATABASE_URL
+      default: DATABASE_URL
+  workspaces:
+    - name: shared-workspace
+    - name: source-workspace
+  tasks:
+    - name: checkout-code
+      taskRef:
+        name: git-checkout-local
+      workspaces:
+        - name: output
+          workspace: shared-workspace
+        - name: source
+          workspace: source-workspace
+
+    - name: build-api
+      runAfter:
+        - checkout-code
+      taskRef:
+        name: build-api
+      params:
+        - name: registry
+          value: $(params.registry)
+        - name: namespace
+          value: $(params.namespace)
+        - name: image-tag
+          value: $(params.image-tag)
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    - name: build-dashboard
+      runAfter:
+        - build-api
+      taskRef:
+        name: build-dashboard
+      params:
+        - name: registry
+          value: $(params.registry)
+        - name: namespace
+          value: $(params.namespace)
+        - name: image-tag
+          value: $(params.image-tag)
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    - name: push-images
+      runAfter:
+        - build-dashboard
+      taskSpec:
+        params:
+          - name: api-image
+            type: string
+          - name: dashboard-image
+            type: string
+        steps:
+          - name: summary
+            image: alpine:3.20
+            script: |
+              #!/bin/sh
+              echo "Images pushed to the registry:"
+              echo "  API       : $(params.api-image)"
+              echo "  Dashboard : $(params.dashboard-image)"
+      params:
+        - name: api-image
+          value: $(tasks.build-api.results.image-url)
+        - name: dashboard-image
+          value: $(tasks.build-dashboard.results.image-url)
+
+    - name: build-chat-service
+      runAfter:
+        - build-dashboard
+      taskRef:
+        name: build-chat-service
+      params:
+        - name: registry
+          value: $(params.registry)
+        - name: namespace
+          value: $(params.namespace)
+        - name: image-tag
+          value: $(params.image-tag)
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    - name: build-notification-service
+      runAfter:
+        - build-chat-service
+      taskRef:
+        name: build-notification-service
+      params:
+        - name: registry
+          value: $(params.registry)
+        - name: namespace
+          value: $(params.namespace)
+        - name: image-tag
+          value: $(params.image-tag)
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    - name: run-migrations
+      runAfter:
+        - push-images
+      taskRef:
+        name: run-migrations
+      params:
+        - name: database-secret-name
+          value: $(params.database-secret-name)
+        - name: database-secret-key
+          value: $(params.database-secret-key)
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    - name: deploy-api
+      runAfter:
+        - run-migrations
+      taskRef:
+        name: deploy-api
+      params:
+        - name: namespace
+          value: $(params.namespace)
+        - name: image-url
+          value: $(tasks.build-api.results.image-url)
+
+    - name: post-deploy-health
+      runAfter:
+        - deploy-api
+      taskRef:
+        name: post-deploy-health
+      params:
+        - name: service-url
+          value: http://api:4000/api/health
+
+    - name: deploy-dashboard
+      runAfter:
+        - post-deploy-health
+      taskRef:
+        name: deploy-dashboard
+      params:
+        - name: namespace
+          value: $(params.namespace)
+        - name: image-url
+          value: $(tasks.build-dashboard.results.image-url)
+
+    - name: post-deploy-health-dashboard
+      runAfter:
+        - deploy-dashboard
+      taskRef:
+        name: post-deploy-health
+      params:
+        - name: service-url
+          value: http://dashboard:3000/api/health
+
+    - name: deploy-chat-service
+      runAfter:
+        - post-deploy-health-dashboard
+      taskRef:
+        name: deploy-api
+      params:
+        - name: namespace
+          value: $(params.namespace)
+        - name: image-url
+          value: $(tasks.build-chat-service.results.image-url)
+        - name: app-name
+          value: chat-service
+
+    - name: post-deploy-health-chat
+      runAfter:
+        - deploy-chat-service
+      taskRef:
+        name: post-deploy-health
+      params:
+        - name: service-url
+          value: http://chat-service:4001/health
+
+    - name: deploy-notification-service
+      runAfter:
+        - post-deploy-health-chat
+      taskRef:
+        name: deploy-api
+      params:
+        - name: namespace
+          value: $(params.namespace)
+        - name: image-url
+          value: $(tasks.build-notification-service.results.image-url)
+        - name: app-name
+          value: notification-service
+
+    - name: post-deploy-health-notification
+      runAfter:
+        - deploy-notification-service
+      taskRef:
+        name: post-deploy-health
+      params:
+        - name: service-url
+          value: http://notification-service:4002/health
+
+  results:
+    - name: api-image
+      value: $(tasks.build-api.results.image-url)
+    - name: dashboard-image
+      value: $(tasks.build-dashboard.results.image-url)
+    - name: chat-service-image
+      value: $(tasks.build-chat-service.results.image-url)
+    - name: notification-service-image
+      value: $(tasks.build-notification-service.results.image-url)

@@ -1,7 +1,7 @@
+import { HtmlTemplate } from "@crm/invoice/templates/html";
 import type { Invoice } from "@crm/types";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
-import { HtmlTemplate } from "@/components/invoices/templates";
 import { getCurrentAuth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { company as companyTable } from "@/lib/db/schema/core";
@@ -9,15 +9,15 @@ import { isUuid } from "@/lib/utils";
 import { fetchInvoice } from "@/src/queries/invoices";
 
 export default async function InvoiceHtmlPreviewPage({
-    params,
+	params,
 }: {
-    params: { id: string };
+	params: { id: string };
 }) {
-    const { id } = params;
+	const { id } = params;
 	if (!isUuid(id)) {
 		redirect(`/invoices/${id}`);
 	}
-	
+
 	// Create invoice promise after UUID validation
 	const invoicePromise = fetchInvoice(id);
 
@@ -127,47 +127,48 @@ export default async function InvoiceHtmlPreviewPage({
 		discountRate: item.discountRate ? Number(item.discountRate) : undefined,
 	}));
 
-	const fromDetails: import("@/components/invoices/templates/types").EditorDoc = {
-		type: "doc",
-		content: [
-			{
-				type: "paragraph",
-				content: [
-					{ type: "text", text: companyRecord?.name ?? "Your Company" },
-				],
-			},
-			{
-				type: "paragraph",
-				content: [
-					{
-						type: "text",
-						text: companyRecord?.email ?? "info@yourcompany.com",
-					},
-				],
-			},
-			{
-				type: "paragraph",
-				content: [
-					{ type: "text", text: companyRecord?.phone ?? "+381 60 000 0000" },
-				],
-			},
-			{
-				type: "paragraph",
-				content: [
-					{
-						type: "text",
-						text: companyRecord?.streetAddress ?? "Address line",
-					},
-				],
-			},
-			{
-				type: "paragraph",
-				content: [
-					{ type: "text", text: `VAT ID: ${companyRecord?.taxId ?? "—"}` },
-				],
-			},
-		],
-	};
+	const fromDetails: import("@/components/invoices/templates/types").EditorDoc =
+		{
+			type: "doc",
+			content: [
+				{
+					type: "paragraph",
+					content: [
+						{ type: "text", text: companyRecord?.name ?? "Your Company" },
+					],
+				},
+				{
+					type: "paragraph",
+					content: [
+						{
+							type: "text",
+							text: companyRecord?.email ?? "info@yourcompany.com",
+						},
+					],
+				},
+				{
+					type: "paragraph",
+					content: [
+						{ type: "text", text: companyRecord?.phone ?? "+381 60 000 0000" },
+					],
+				},
+				{
+					type: "paragraph",
+					content: [
+						{
+							type: "text",
+							text: companyRecord?.streetAddress ?? "Address line",
+						},
+					],
+				},
+				{
+					type: "paragraph",
+					content: [
+						{ type: "text", text: `VAT ID: ${companyRecord?.taxId ?? "—"}` },
+					],
+				},
+			],
+		};
 
 	const customerDetails = {
 		type: "doc",

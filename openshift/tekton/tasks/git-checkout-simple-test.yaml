@@ -1,0 +1,74 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: git-checkout-simple-test
+spec:
+  description: >
+    Create a simple test repository structure for testing the build process.
+  workspaces:
+    - name: output
+      description: Workspace u koji se kreira repozitorijum
+  steps:
+    - name: create-test-repo
+      image: alpine:3.20
+      workingDir: $(workspaces.output.path)
+      script: |
+        #!/bin/sh
+        set -euo pipefail
+
+        DEST_PATH="$(workspaces.output.path)"
+
+        echo "Creating test repository structure in ${DEST_PATH}"
+
+        # Clean destination workspace
+        rm -rf "${DEST_PATH}"/*
+
+        # Create basic directory structure
+        mkdir -p "${DEST_PATH}/apps/api/src/db/migrations" "${DEST_PATH}/apps/api/dist" "${DEST_PATH}/apps/dashboard" "${DEST_PATH}/services/chat-service" "${DEST_PATH}/services/notification-service" "${DEST_PATH}/packages"
+        
+        # Create root package.json
+        echo '{"name":"crm-platform-monorepo","private":true,"workspaces":["apps/*","packages/*"],"scripts":{"build":"echo Build complete","dev":"echo Dev server"},"devDependencies":{"@types/node":"^20.0.0","typescript":"^5.0.0"}}' > "${DEST_PATH}/package.json"
+        
+        # Create tsconfig.base.json
+        echo '{"compilerOptions":{"target":"ES2020","module":"ESNext","strict":true,"baseUrl":".","paths":{"@/*":["./src/*"]}},"include":["src/**/*"],"exclude":["node_modules","dist"]}' > "${DEST_PATH}/tsconfig.base.json"
+        
+        # Create API package.json
+        echo '{"name":"api","version":"1.0.0","type":"module","scripts":{"build":"mkdir -p dist && echo API build complete","dev":"echo API dev","start":"echo API start"},"dependencies":{"fastify":"^4.0.0"},"devDependencies":{"@types/node":"^20.0.0","typescript":"^5.0.0"}}' > "${DEST_PATH}/apps/api/package.json"
+        
+        # Create Dashboard package.json
+        echo '{"name":"dashboard","version":"1.0.0","type":"module","scripts":{"build":"mkdir -p dist && echo Dashboard build complete","build:webpack":"mkdir -p dist && echo Dashboard webpack build complete","dev":"echo Dashboard dev","start":"echo Dashboard start"},"dependencies":{"next":"^14.0.0","react":"^18.0.0","react-dom":"^18.0.0"},"devDependencies":{"@types/node":"^20.0.0","@types/react":"^18.0.0","typescript":"^5.0.0"}}' > "${DEST_PATH}/apps/dashboard/package.json"
+        
+        # Create Dashboard tsconfig.json
+        echo '{"compilerOptions":{"target":"ES2020","lib":["dom","dom.iterable","esnext"],"allowJs":true,"skipLibCheck":true,"strict":true,"forceConsistentCasingInFileNames":true,"noEmit":true,"esModuleInterop":true,"module":"esnext","moduleResolution":"bundler","resolveJsonModule":true,"isolatedModules":true,"jsx":"preserve","incremental":true,"plugins":[{"name":"next"}],"paths":{"@/*":["./src/*"]}},"include":["next-env.d.ts","**/*.ts","**/*.tsx",".next/types/**/*.ts"],"exclude":["node_modules"]}' > "${DEST_PATH}/apps/dashboard/tsconfig.json"
+        
+        # Create Chat Service package.json
+        echo '{"name":"chat-service","version":"1.0.0","type":"module","scripts":{"build":"mkdir -p dist && echo Chat Service build complete","dev":"echo Chat Service dev","start":"echo Chat Service start"},"dependencies":{"fastify":"^4.0.0","socket.io":"^4.0.0"},"devDependencies":{"@types/node":"^20.0.0","typescript":"^5.0.0"}}' > "${DEST_PATH}/services/chat-service/package.json"
+        
+        # Create Notification Service package.json
+        echo '{"name":"notification-service","version":"1.0.0","type":"module","scripts":{"build":"mkdir -p dist && echo Notification Service build complete","dev":"echo Notification Service dev","start":"echo Notification Service start"},"dependencies":{"fastify":"^4.0.0","nodemailer":"^6.0.0"},"devDependencies":{"@types/node":"^20.0.0","@types/nodemailer":"^6.0.0","typescript":"^5.0.0"}}' > "${DEST_PATH}/services/notification-service/package.json"
+        
+        # Create bun.lock files (empty files to satisfy COPY commands)
+        touch "${DEST_PATH}/services/chat-service/bun.lock"
+        touch "${DEST_PATH}/services/notification-service/bun.lock"
+        
+        # Create minimal server.js file
+        echo 'console.log("API server started");' > "${DEST_PATH}/apps/api/dist/server.js"
+        
+        # Create minimal esm-loader.mjs file
+        echo 'export async function resolve(specifier, context, defaultResolve) { return defaultResolve(specifier, context, defaultResolve); }' > "${DEST_PATH}/apps/api/esm-loader.mjs"
+
+        echo "Test repository structure created successfully"
+        echo "Files in destination:"
+        ls -la "${DEST_PATH}"
+        echo "API directory:"
+        ls -la "${DEST_PATH}/apps/api"
+        echo "Dashboard directory:"
+        ls -la "${DEST_PATH}/apps/dashboard"
+
+        # Check if we have the expected structure
+        if [ -f "${DEST_PATH}/package.json" ] && [ -d "${DEST_PATH}/apps/api" ]; then
+          echo "✓ Found monorepo structure with apps/api"
+        else
+          echo "✗ Missing expected monorepo structure"
+          exit 1
+        fi

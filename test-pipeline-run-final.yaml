@@ -1,0 +1,22 @@
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  generateName: crm-monorepo-test-final-
+  namespace: crm-platform-prod
+spec:
+  pipelineRef:
+    name: crm-monorepo-pipeline-test
+  params:
+    - name: registry
+      value: "image-registry.openshift-image-registry.svc:5000"
+    - name: namespace
+      value: "crm-platform-prod"
+  workspaces:
+    - name: shared-workspace
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 5Gi

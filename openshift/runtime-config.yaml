@@ -4,7 +4,7 @@ metadata:
   name: collector-api-secrets
 type: Opaque
 stringData:
-  DATABASE_URL: postgresql://collector:collector@collector-postgres:5432/collector_dashboard
+  DATABASE_URL: postgresql://collector:change-me@collector-postgres:5432/collector_dashboard
   REDIS_URL: redis://collector-redis:6379
   CRM_API_KEY: replace-with-crm-api-key
   ANALYTICS_API_KEY: replace-with-analytics-api-key
@@ -20,7 +20,7 @@ metadata:
   name: collector-chat-service-secrets
 type: Opaque
 stringData:
-  DATABASE_URL: postgresql://collector:collector@collector-postgres:5432/collector_dashboard
+  DATABASE_URL: postgresql://collector:change-me@collector-postgres:5432/collector_dashboard
   REDIS_URL: redis://collector-redis:6379
   JWT_SECRET: replace-with-jwt-secret
   ALLOWED_ORIGINS: "*"
@@ -31,7 +31,7 @@ metadata:
   name: collector-notification-service-secrets
 type: Opaque
 stringData:
-  DATABASE_URL: postgresql://collector:collector@collector-postgres:5432/collector_dashboard
+  DATABASE_URL: postgresql://collector:change-me@collector-postgres:5432/collector_dashboard
   REDIS_URL: redis://collector-redis:6379
   JWT_SECRET: replace-with-jwt-secret
   ALLOWED_ORIGINS: "*"

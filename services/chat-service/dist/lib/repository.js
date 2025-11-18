@@ -633,7 +633,15 @@ export const markMessagesAsRead = async ({ conversationId, userId, }) => {
         readAt: now,
         updatedAt: now,
     })
-        .where(and(eq(chatMessages.conversationId, conversationId), ne(chatMessages.senderId, userId), eq(chatMessages.status, "sent")));
+        .where(and(eq(chatMessages.conversationId, conversationId), ne(chatMessages.senderId, userId), isNull(chatMessages.readAt)));
+};
+export const invalidateConversationCaches = async ({ companyId, userId1, userId2, cache, }) => {
+    const cacheService = cache || globalCache;
+    if (!cacheService)
+        return;
+    const a = userId1 < userId2 ? userId1 : userId2;
+    const b = userId1 < userId2 ? userId2 : userId1;
+    await cacheService.delete(`${CACHE_PREFIX}conversation:${companyId}:${a}:${b}`, `${CACHE_PREFIX}conversations:${companyId}:${userId1}`, `${CACHE_PREFIX}conversations:${companyId}:${userId2}`);
 };
 export const getConversationById = async ({ conversationId, userId, }) => {
     // Resolve teamchat user id for access checks

@@ -1,6 +1,6 @@
 import { isUuid } from "../lib/validation.js";
 import { authMiddleware } from "../lib/auth.js";
-import { createMessage, getConversationById, getConversationMessages, } from "../lib/repository.js";
+import { createMessage, getConversationById, getConversationMessages, invalidateConversationCaches, } from "../lib/repository.js";
 const messagesRoutes = async (fastify) => {
     fastify.addHook("preValidation", async (request, reply) => {
         const params = request.params;
@@ -83,7 +83,7 @@ const messagesRoutes = async (fastify) => {
             const { db } = await import("../db/index.js");
             const { sql } = await import("drizzle-orm");
             const teamchatIdResult = await db.execute(sql `
-                SELECT id FROM teamchat_users WHERE email = ${request.user.email} LIMIT 1
+                SELECT id FROM teamchat_users WHERE email = ${request.user.email} AND company_id = ${request.user.companyId} LIMIT 1
             `);
             let teamchatSenderId = teamchatIdResult.rows[0]?.id || null;
             if (!teamchatSenderId) {
@@ -156,25 +156,34 @@ const messagesRoutes = async (fastify) => {
                     userId: request.user.userId,
                 });
                 if (conversation) {
-                    const otherUserId = conversation.userId1 === request.user.userId
-                        ? conversation.userId2
-                        : conversation.userId1;
+                    const myTeamchatId = teamchatSenderId;
+                    const otherTeamchatId = conversation.userId1 === myTeamchatId ? conversation.userId2 : conversation.userId1;
+                    // Resolve other user's users.id by email mapping
+                    const otherUserResult = await db.execute(sql `
+                        SELECT u.id as "userId"
+                        FROM users u
+                        INNER JOIN teamchat_users t ON t.email = u.email
+                        WHERE t.id = ${otherTeamchatId}
+                        LIMIT 1
+                    `);
+                    const otherUserId = otherUserResult.rows[0]?.userId || null;
                     // Check if other user is online
-                    const otherUserSockets = await io
-                        .in(`user:${otherUserId}`)
-                        .fetchSockets();
-                    const isOtherUserOnline = otherUserSockets.length > 0;
+                    let isOtherUserOnline = false;
+                    if (otherUserId) {
+                        const otherUserSockets = await io.in(`user:${otherUserId}`).fetchSockets();
+                        isOtherUserOnline = otherUserSockets.length > 0;
+                    }
                     // If other user is not online, send notification
                     if (!isOtherUserOnline && redis) {
                         // Get other user's status from database
                         const { db } = await import("../db/index.js");
                         const { sql } = await import("drizzle-orm");
                         const statusResult = await db.execute(sql `
-							SELECT status
-							FROM teamchat_users
-							WHERE id = ${otherUserId}
-							LIMIT 1
-						`);
+                            SELECT status
+                            FROM teamchat_users
+                            WHERE id = ${otherTeamchatId}
+                            LIMIT 1
+                        `);
                         const userStatus = statusResult.rows[0]
                             ?.status || "offline";
                         // Publish to Redis for notification service
@@ -224,7 +233,7 @@ const messagesRoutes = async (fastify) => {
             // Mark all messages in conversation as read for current user
             // Resolve teamchat user id for current user (chat_messages.sender_id stores teamchat_users.id)
             const teamchatIdResult = await db.execute(sql `
-					SELECT id FROM teamchat_users WHERE email = ${request.user.email} LIMIT 1
+					SELECT id FROM teamchat_users WHERE email = ${request.user.email} AND company_id = ${request.user.companyId} LIMIT 1
 				`);
             const teamchatUserId = teamchatIdResult.rows[0]?.id || request.user.userId;
             await db.execute(sql `
@@ -234,8 +243,37 @@ const messagesRoutes = async (fastify) => {
 						updated_at = NOW()
 					WHERE conversation_id = ${conversationId}
 						AND sender_id != ${teamchatUserId}
-						AND status != 'read'
+						AND read_at IS NULL
 				`);
+            // Invalidate caches for both users in the conversation
+            const cache = fastify.cache;
+            await invalidateConversationCaches({
+                companyId: conversation.companyId,
+                userId1: conversation.userId1,
+                userId2: conversation.userId2,
+                cache,
+            });
+            // Safeguard: backfill read_at for any pre-read messages missing timestamp (throttled)
+            try {
+                const throttleKey = `chat:readfix:${conversationId}`;
+                const lastRun = cache ? await cache.get(throttleKey) : null;
+                const nowTs = Date.now();
+                if (!lastRun || nowTs - lastRun > 60_000) {
+                    await db.execute(sql `
+							UPDATE chat_messages
+							SET read_at = NOW()
+							WHERE conversation_id = ${conversationId}
+								AND status = 'read'
+								AND read_at IS NULL
+						`);
+                    if (cache) {
+                        await cache.set(throttleKey, nowTs, { ttl: 60 });
+                    }
+                }
+            }
+            catch (err) {
+                request.log.warn({ err, conversationId }, "Safeguard read_at backfill failed (non-fatal)");
+            }
             // Emit socket event for conversation update
             const io = fastify.io;
             if (io) {

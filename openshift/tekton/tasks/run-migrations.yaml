@@ -34,12 +34,22 @@ spec:
               name: $(params.database-secret-name)
               key: $(params.database-secret-key)
       script: |
-        #!/bin/sh
+        #!/bin/bash
         set -eu
 
         apt-get update
-        apt-get install -y --no-install-recommends ca-certificates
+        apt-get install -y --no-install-recommends ca-certificates postgresql-client
         rm -rf /var/lib/apt/lists/*
+
+        echo "Checking database readiness: $DATABASE_URL"
+        for i in $(seq 1 60); do
+          if pg_isready -d "$DATABASE_URL" >/dev/null 2>&1; then
+            echo "Database is ready"
+            break
+          fi
+          echo "Waiting for PostgreSQL to be ready ($i/60)..."
+          sleep 2
+        done
 
         bun install --ignore-scripts || bun install --no-verify
         bun run --filter api db:migrate

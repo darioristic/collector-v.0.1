@@ -1,0 +1,39 @@
+{
+  "name": "@crm/invoice",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.tsx",
+    "./templates/html": "./src/templates/html/index.tsx",
+    "./templates/pdf": "./src/templates/pdf/index.tsx",
+    "./templates/og": "./src/templates/og/index.tsx",
+    "./templates/types": "./src/templates/types.ts",
+    "./editor": "./src/editor/index.tsx",
+    "./utils/logo": "./src/utils/logo.ts",
+    "./token": "./src/token/index.ts",
+    "./calculate": "./src/utils/calculate.ts",
+    "./format-to-html": "./src/utils/format.ts",
+    "./default": "./src/utils/default.ts"
+  },
+  "scripts": {
+    "lint": "eslint . --max-warnings 0",
+    "check-types": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0 || ^19.0.0-rc",
+    "react-dom": "^18.0.0 || ^19.0.0 || ^19.0.0-rc"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.61",
+    "@types/react-dom": "^18.2.19",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@react-pdf/renderer": "^4.1.11",
+    "@tiptap/react": "^2.27.1",
+    "@types/qrcode": "^1.5.6",
+    "date-fns": "^4.1.0",
+    "jose": "^6.1.2",
+    "qrcode": "^1.5.4"
+  }
+}

@@ -126,7 +126,8 @@ const nextConfig: NextConfig = {
 	// Transpile selected packages for Turbopack/HMR stability
 	// Ensure TanStack Query and core are transpiled to avoid module factory HMR issues
 	transpilePackages: [
-		...(process.env.DOCKER_BUILD === "true" ? ["@crm/ui", "@crm/types"] : []),
+		...(process.env.DOCKER_BUILD === "true" ? ["@crm/ui", "@crm/types", "@crm/invoice"] : []),
+		"@crm/invoice",
 		"@tanstack/react-query",
 		"@tanstack/query-core",
 	],

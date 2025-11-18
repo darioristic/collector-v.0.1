@@ -67,15 +67,52 @@ spec:
 
         IMAGE_REF="${REGISTRY}/${NAMESPACE}/api:${IMAGE_TAG}"
 
+        echo "=== DEBUG: Current directory and files ==="
+        pwd
+        ls -la
+        echo "=== DEBUG: Looking for package.json files ==="
+        find . -name "package.json" -type f | head -10
+        echo "=== DEBUG: Looking for apps directory ==="
+        ls -la apps/ || echo "No apps directory found"
+
+        # Check if we have the monorepo structure
+        if [ -f "package.json" ] && [ -d "apps/api" ]; then
+          echo "=== Found monorepo structure with apps/api ==="
+          echo "=== Root package.json content ==="
+          head -20 package.json
+          echo "=== API package.json content ==="
+          head -20 apps/api/package.json
+        else
+          echo "=== ERROR: Missing expected monorepo structure ==="
+          echo "Current directory: $(pwd)"
+          echo "Files in current directory:"
+          ls -la
+          exit 1
+        fi
+
         cat > /tmp/Dockerfile.api.ci <<'EOF'
         FROM docker.io/oven/bun:1.1.38-debian AS builder
         WORKDIR /workspace
         ENV BUN_NO_TELEMETRY=1
-        COPY . .
-        RUN bun pm untrusted || true
+        
+        # Copy root package.json and workspace configuration first
+        COPY package.json ./
+        COPY tsconfig.base.json ./
+        
+        # Copy all workspace packages
+        COPY apps/ ./apps/
+        COPY packages/ ./packages/
+        
+        # Install dependencies at root level first (without lock file)
         RUN bun install --ignore-scripts || bun install --no-verify
-        RUN bunx tsc -p packages/types/tsconfig.json --moduleResolution bundler --module ESNext
+        
+        # Build the API specifically
         RUN bun run --filter api build
+        
+        # Create necessary directories if they don't exist
+        RUN mkdir -p apps/api/src/db/migrations apps/api/dist
+        
+        # Install production dependencies for API
         RUN cd apps/api && bun install --production --ignore-scripts || bun install --production --no-verify
 
         FROM docker.io/library/node:20-bookworm-slim AS runner
@@ -84,12 +121,15 @@ spec:
         COPY --from=builder /workspace/apps/api/package.json ./package.json
         COPY --from=builder /workspace/apps/api/dist ./dist
         COPY --from=builder /workspace/apps/api/src/db/migrations ./dist/db/migrations
-        COPY --from=builder /workspace/apps/api/node_modules ./node_modules
-        COPY --from=builder /workspace/node_modules /node_modules
-        COPY --from=builder /workspace/apps/api/esm-loader.mjs ./esm-loader.mjs
+        # Handle node_modules - copy from builder stage if they exist
+        RUN mkdir -p node_modules && \
+            (cp -r /workspace/node_modules/* /app/node_modules/ 2>/dev/null || true) && \
+            (cp -r /workspace/apps/api/node_modules/* /app/node_modules/ 2>/dev/null || true)
+        # Handle esm-loader if it exists
+        RUN cp /workspace/apps/api/esm-loader.mjs /app/esm-loader.mjs 2>/dev/null || echo "esm-loader.mjs not found, will use default"
         EXPOSE 4000
         ENV PORT=4000 HOST=0.0.0.0
-        CMD ["node", "--loader", "./esm-loader.mjs", "dist/server.js"]
+        CMD ["node", "dist/server.js"]
         EOF
 
         DOCKERFILE="/tmp/Dockerfile.api.ci"

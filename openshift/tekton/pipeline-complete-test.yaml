@@ -1,0 +1,102 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: crm-monorepo-pipeline-complete-test
+spec:
+  description: >
+    Complete test pipeline for the CRM monorepo including all services.
+    Tests the build process with all fixes applied.
+  params:
+    - name: registry
+      type: string
+      description: OpenShift internal registry host (e.g. image-registry.openshift-image-registry.svc:5000)
+    - name: namespace
+      type: string
+      description: OpenShift project/namespace used for images and deployments
+    - name: image-tag
+      type: string
+      description: Image tag applied to all images
+      default: $(context.pipelineRun.uid)
+  workspaces:
+    - name: shared-workspace
+  tasks:
+    - name: checkout-code
+      taskRef:
+        name: git-checkout-simple-test
+      workspaces:
+        - name: output
+          workspace: shared-workspace
+
+    - name: build-api
+      runAfter:
+        - checkout-code
+      taskRef:
+        name: build-api
+      params:
+        - name: registry
+          value: $(params.registry)
+        - name: namespace
+          value: $(params.namespace)
+        - name: image-tag
+          value: $(params.image-tag)
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    - name: build-dashboard
+      runAfter:
+        - checkout-code
+      taskRef:
+        name: build-dashboard
+      params:
+        - name: registry
+          value: $(params.registry)
+        - name: namespace
+          value: $(params.namespace)
+        - name: image-tag
+          value: $(params.image-tag)
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    - name: build-chat-service
+      runAfter:
+        - checkout-code
+      taskRef:
+        name: build-chat-service
+      params:
+        - name: registry
+          value: $(params.registry)
+        - name: namespace
+          value: $(params.namespace)
+        - name: image-tag
+          value: $(params.image-tag)
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    - name: build-notification-service
+      runAfter:
+        - checkout-code
+      taskRef:
+        name: build-notification-service
+      params:
+        - name: registry
+          value: $(params.registry)
+        - name: namespace
+          value: $(params.namespace)
+        - name: image-tag
+          value: $(params.image-tag)
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+  results:
+    - name: api-image
+      value: $(tasks.build-api.results.image-url)
+    - name: dashboard-image
+      value: $(tasks.build-dashboard.results.image-url)
+    - name: chat-service-image
+      value: $(tasks.build-chat-service.results.image-url)
+    - name: notification-service-image
+      value: $(tasks.build-notification-service.results.image-url)

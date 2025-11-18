@@ -1,0 +1,138 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: git-checkout-simple
+spec:
+  description: >
+    Create a minimal repository structure for testing the build process.
+    This task creates the essential files needed for the build.
+  workspaces:
+    - name: output
+      description: Workspace u koji se kreira repozitorijum
+  steps:
+    - name: create-minimal-repo
+      image: alpine:3.20
+      workingDir: $(workspaces.output.path)
+      script: |
+        #!/bin/sh
+        set -euo pipefail
+        
+        DEST_PATH="$(workspaces.output.path)"
+        
+        echo "Creating minimal repository structure in ${DEST_PATH}"
+        
+        # Clean destination workspace
+        rm -rf "${DEST_PATH}"/*
+        
+        # Create basic directory structure
+        mkdir -p apps/api apps/dashboard packages
+        
+        # Create a basic package.json for the monorepo
+        cat > package.json <<'EOF'
+{
+  "name": "crm-platform-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "bun run --filter '*' build",
+    "dev": "bun run --filter '*' dev",
+    "test": "bun run --filter '*' test"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
+EOF
+
+        # Create tsconfig.base.json
+        cat > tsconfig.base.json <<'EOF'
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "allowJs": true,
+    "checkJs": false,
+    "jsx": "react-jsx",
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "incremental": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*", "tests/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
+EOF
+
+        # Create minimal API package.json
+        cat > apps/api/package.json <<'EOF'
+{
+  "name": "api",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "echo 'Building API...' && mkdir -p dist && echo 'API build complete'",
+    "dev": "echo 'Starting API dev server...'",
+    "start": "echo 'Starting API server...'"
+  },
+  "dependencies": {
+    "fastify": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
+EOF
+
+        # Create minimal Dashboard package.json
+        cat > apps/dashboard/package.json <<'EOF'
+{
+  "name": "dashboard",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "echo 'Building Dashboard...' && mkdir -p dist && echo 'Dashboard build complete'",
+    "dev": "echo 'Starting Dashboard dev server...'",
+    "start": "echo 'Starting Dashboard...'"
+  },
+  "dependencies": {
+    "next": "^14.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "typescript": "^5.0.0"
+  }
+}
+EOF
+
+        echo "Minimal repository structure created"
+        echo "Files in destination:"
+        ls -la "${DEST_PATH}"
+        echo "API directory:"
+        ls -la "${DEST_PATH}/apps/api"
+        echo "Dashboard directory:"
+        ls -la "${DEST_PATH}/apps/dashboard"

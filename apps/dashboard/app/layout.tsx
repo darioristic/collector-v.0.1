@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 
 import "./globals.css";
 
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { ActiveThemeProvider } from "@/components/active-theme";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -40,30 +41,32 @@ export default function RootLayout({
 				className={cn("bg-background group/layout font-sans", fontVariables)}
 				{...bodyAttributes}
 			>
-				<QueryProvider>
-					<ThemeProvider
-						attribute="class"
-						defaultTheme="light"
-						enableSystem
-						disableTransitionOnChange
-					>
-						<ActiveThemeProvider initialTheme={themeSettings}>
-							{children}
-							<div suppressHydrationWarning>
-								<Toaster position="top-center" richColors />
-							</div>
-							<NextTopLoader
-								color="var(--primary)"
-								showSpinner={false}
-								height={2}
-								shadow-sm="none"
-							/>
-							{process.env.NODE_ENV === "production" ? (
-								<GoogleAnalyticsInit />
-							) : null}
-						</ActiveThemeProvider>
-					</ThemeProvider>
-				</QueryProvider>
+				<NuqsAdapter>
+					<QueryProvider>
+						<ThemeProvider
+							attribute="class"
+							defaultTheme="light"
+							enableSystem
+							disableTransitionOnChange
+						>
+							<ActiveThemeProvider initialTheme={themeSettings}>
+								{children}
+								<div suppressHydrationWarning>
+									<Toaster position="top-center" richColors />
+								</div>
+								<NextTopLoader
+									color="var(--primary)"
+									showSpinner={false}
+									height={2}
+									shadow-sm="none"
+								/>
+								{process.env.NODE_ENV === "production" ? (
+									<GoogleAnalyticsInit />
+								) : null}
+							</ActiveThemeProvider>
+						</ThemeProvider>
+					</QueryProvider>
+				</NuqsAdapter>
 			</body>
 		</html>
 	);

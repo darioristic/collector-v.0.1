@@ -1,10 +1,11 @@
 {
-  "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@crm/ui/*": ["packages/ui/*"],
-      "@crm/types/*": ["packages/types/*"]
-    }
-  }
+	"compilerOptions": {
+		"baseUrl": ".",
+		"paths": {
+			"@crm/ui/*": ["packages/ui/*"],
+			"@crm/types/*": ["packages/types/*"],
+			"@crm/invoice": ["packages/invoice/src/index.tsx"],
+			"@crm/invoice/*": ["packages/invoice/src/*"]
+		}
+	}
 }
-
