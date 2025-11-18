@@ -3,12 +3,12 @@ import { type NextRequest, NextResponse } from "next/server";
 const API_BASE_URL = process.env.COLLECTOR_API_URL || "http://localhost:4000";
 
 export async function GET(
-	request: NextRequest,
-	{ params }: { params: { id: string } },
+    request: NextRequest,
+    context: any,
 ) {
 	let accountId: string | undefined;
 	try {
-		accountId = params.id;
+        accountId = context?.params?.id as string;
 		const url = `${API_BASE_URL}/api/accounts/${accountId}`;
 
 		// Prosleđujemo cookies i headers iz originalnog zahteva
