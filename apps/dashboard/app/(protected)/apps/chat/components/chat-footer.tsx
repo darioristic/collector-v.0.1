@@ -7,8 +7,14 @@ import {
 	SendIcon,
 	SmileIcon,
 } from "lucide-react";
-import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
-import { sendMessage, type ChatMessage } from "@/app/(protected)/apps/chat/api";
+import {
+	type FormEvent,
+	type KeyboardEvent,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
+import { type ChatMessage, sendMessage } from "@/app/(protected)/apps/chat/api";
 import useChatStore from "@/app/(protected)/apps/chat/useChatStore";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
@@ -25,8 +31,8 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useToast } from "@/hooks/use-toast";
 import { useChatSocket } from "@/hooks/use-chat-socket";
+import { useToast } from "@/hooks/use-toast";
 
 export function ChatFooter() {
 	const [message, setMessage] = useState("");
@@ -185,7 +191,11 @@ export function ChatFooter() {
 
 	// Stop typing when message is sent
 	useEffect(() => {
-		if (isSending && lastTypingEmitRef.current && selectedChat?.conversationId) {
+		if (
+			isSending &&
+			lastTypingEmitRef.current &&
+			selectedChat?.conversationId
+		) {
 			emitTyping(selectedChat.conversationId, false);
 			lastTypingEmitRef.current = false;
 		}

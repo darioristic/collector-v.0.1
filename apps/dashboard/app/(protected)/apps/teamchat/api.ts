@@ -49,11 +49,14 @@ export type CreateDirectMessageInput = z.infer<
 >;
 
 export const bootstrapTeamChat = async (): Promise<BootstrapResponse> => {
-	const response = await fetch(`${getChatServiceUrl()}/api/teamchat/bootstrap`, {
-		method: "GET",
-		headers: getAuthHeaders(),
-		cache: "no-store",
-	});
+	const response = await fetch(
+		`${getChatServiceUrl()}/api/teamchat/bootstrap`,
+		{
+			method: "GET",
+			headers: getAuthHeaders(),
+			cache: "no-store",
+		},
+	);
 
 	if (!response.ok) {
 		const error = (await response.json().catch(() => ({
@@ -159,11 +162,14 @@ export const sendMessage = async (
 export const fetchDirectMessageTargets = async (): Promise<
 	ChannelMemberSummary[]
 > => {
-	const response = await fetch(`${getChatServiceUrl()}/api/teamchat/direct-messages`, {
-		method: "GET",
-		headers: getAuthHeaders(),
-		cache: "no-store",
-	});
+	const response = await fetch(
+		`${getChatServiceUrl()}/api/teamchat/direct-messages`,
+		{
+			method: "GET",
+			headers: getAuthHeaders(),
+			cache: "no-store",
+		},
+	);
 
 	if (!response.ok) {
 		const error = (await response.json().catch(() => ({
@@ -177,7 +183,7 @@ export const fetchDirectMessageTargets = async (): Promise<
 };
 
 export const uploadAttachment = async (
-  file: File,
+	file: File,
 ): Promise<{ url: string; name: string; size: number }> => {
 	const formData = new FormData();
 	formData.append("file", file);
@@ -206,21 +212,21 @@ export const uploadAttachment = async (
 		throw new Error(error.error || "Failed to upload file.");
 	}
 
-  const data = (await response.json()) as unknown;
-  return uploadAttachmentResponseSchema.parse(data);
+	const data = (await response.json()) as unknown;
+	return uploadAttachmentResponseSchema.parse(data);
 };
 
 export const fetchChatHealth = async (): Promise<boolean> => {
-  const response = await fetch(`${getChatServiceUrl()}/health`, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    return false;
-  }
-  const payload = (await response.json().catch(() => ({}))) as {
-    status?: string;
-  };
-  return payload.status === "ok";
+	const response = await fetch(`${getChatServiceUrl()}/health`, {
+		method: "GET",
+		headers: { "Content-Type": "application/json" },
+		cache: "no-store",
+	});
+	if (!response.ok) {
+		return false;
+	}
+	const payload = (await response.json().catch(() => ({}))) as {
+		status?: string;
+	};
+	return payload.status === "ok";
 };

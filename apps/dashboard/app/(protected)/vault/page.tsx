@@ -1,8 +1,10 @@
 import dynamic from "next/dynamic";
 import { generateMeta } from "@/lib/utils";
 
-const FileManagerRoot = dynamic(
-	() => import("./file-manager/components/file-manager-root").then((mod) => ({ default: mod.FileManagerRoot })),
+const FileManagerRoot = dynamic(() =>
+	import("./file-manager/components/file-manager-root").then((mod) => ({
+		default: mod.FileManagerRoot,
+	})),
 );
 
 export async function generateMetadata() {

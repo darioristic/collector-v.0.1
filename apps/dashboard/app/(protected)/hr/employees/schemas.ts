@@ -145,13 +145,13 @@ const rawEmployeeFormSchema = z.object({
 });
 
 export const employeeFormUiSchema = rawEmployeeFormSchema.transform((data) => {
-    const {
-        projectAssigned: _projectAssigned,
-        workHour: _workHour,
-        description: _description,
-        sendChangeToEmail: _sendChangeToEmail,
-        ...rest
-    } = data;
+	const {
+		projectAssigned: _projectAssigned,
+		workHour: _workHour,
+		description: _description,
+		sendChangeToEmail: _sendChangeToEmail,
+		...rest
+	} = data;
 	return employeeFormSchema.parse({
 		...rest,
 		endDate: rest.endDate ?? null,

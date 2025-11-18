@@ -1,24 +1,30 @@
 "use client";
 
-import { Building2, CalendarClock, Eye, FileText, FolderOpen, Globe, Loader2, Mail, MapPin, Phone } from "lucide-react";
+import {
+	Building2,
+	CalendarClock,
+	Eye,
+	FileText,
+	FolderOpen,
+	Globe,
+	Loader2,
+	Mail,
+	MapPin,
+	Phone,
+} from "lucide-react";
 import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import {
 	Sheet,
 	SheetContent,
 	SheetDescription,
-	SheetTitle
+	SheetTitle,
 } from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export type CompanyDrawerCompany = {
@@ -94,7 +100,7 @@ export default function CompanyDrawer({
 	company,
 	details,
 	isLoadingDetails = false,
-	onClose
+	onClose,
 }: CompanyDrawerProps) {
 	return (
 		<Sheet
@@ -105,7 +111,10 @@ export default function CompanyDrawer({
 				}
 			}}
 		>
-			<SheetContent side="right" className="flex h-full w-full flex-col overflow-hidden border-l p-0 sm:max-w-xl">
+			<SheetContent
+				side="right"
+				className="flex h-full w-full flex-col overflow-hidden border-l p-0 sm:max-w-xl"
+			>
 				{company ? (
 					<div className="flex h-full flex-col">
 						<div className="border-b px-6 py-5">
@@ -114,7 +123,8 @@ export default function CompanyDrawer({
 									Company Details
 								</SheetTitle>
 								<SheetDescription>
-									Review profile, registration and recent activity for {company.name}.
+									Review profile, registration and recent activity for{" "}
+									{company.name}.
 								</SheetDescription>
 							</div>
 						</div>
@@ -125,22 +135,37 @@ export default function CompanyDrawer({
 							</div>
 						) : (
 							<ScrollArea className="h-[calc(100vh-200px)] flex-1">
-								<Tabs defaultValue="overview" className="flex h-full flex-col gap-4 py-4">
+								<Tabs
+									defaultValue="overview"
+									className="flex h-full flex-col gap-4 py-4"
+								>
 									<div className="px-6">
 										<TabsList className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:grid-cols-4">
-											<TabsTrigger value="overview" className="flex items-center gap-2">
+											<TabsTrigger
+												value="overview"
+												className="flex items-center gap-2"
+											>
 												<Eye className="h-4 w-4" />
 												Overview
 											</TabsTrigger>
-											<TabsTrigger value="profile" className="flex items-center gap-2">
+											<TabsTrigger
+												value="profile"
+												className="flex items-center gap-2"
+											>
 												<Building2 className="h-4 w-4" />
 												Profile
 											</TabsTrigger>
-											<TabsTrigger value="activity" className="flex items-center gap-2">
+											<TabsTrigger
+												value="activity"
+												className="flex items-center gap-2"
+											>
 												<CalendarClock className="h-4 w-4" />
 												Activity
 											</TabsTrigger>
-											<TabsTrigger value="files" className="flex items-center gap-2">
+											<TabsTrigger
+												value="files"
+												className="flex items-center gap-2"
+											>
 												<FolderOpen className="h-4 w-4" />
 												Files
 											</TabsTrigger>
@@ -160,7 +185,10 @@ export default function CompanyDrawer({
 																{company.name}
 															</p>
 															{company.type && (
-																<Badge variant="secondary" className="capitalize">
+																<Badge
+																	variant="secondary"
+																	className="capitalize"
+																>
 																	{formatTag(company.type)}
 																</Badge>
 															)}
@@ -171,7 +199,9 @@ export default function CompanyDrawer({
 															)}
 														</div>
 														{company.legalName && (
-															<p className="text-muted-foreground text-sm">{company.legalName}</p>
+															<p className="text-muted-foreground text-sm">
+																{company.legalName}
+															</p>
 														)}
 														{company.description && (
 															<p className="text-muted-foreground text-sm leading-relaxed">
@@ -190,7 +220,12 @@ export default function CompanyDrawer({
 																	Email
 																</dt>
 																<dd className="text-foreground text-sm break-all">
-																	<a className="hover:underline" href={`mailto:${company.email}`}>{company.email}</a>
+																	<a
+																		className="hover:underline"
+																		href={`mailto:${company.email}`}
+																	>
+																		{company.email}
+																	</a>
 																</dd>
 															</div>
 														</div>
@@ -203,7 +238,12 @@ export default function CompanyDrawer({
 																	Phone
 																</dt>
 																<dd className="text-foreground text-sm">
-																	<a className="hover:underline" href={`tel:${company.phone}`}>{company.phone}</a>
+																	<a
+																		className="hover:underline"
+																		href={`tel:${company.phone}`}
+																	>
+																		{company.phone}
+																	</a>
 																</dd>
 															</div>
 														</div>
@@ -218,7 +258,11 @@ export default function CompanyDrawer({
 																<dd className="text-foreground text-sm break-all">
 																	<a
 																		className="text-primary hover:underline"
-																		href={company.website.startsWith("http") ? company.website : `https://${company.website}`}
+																		href={
+																			company.website.startsWith("http")
+																				? company.website
+																				: `https://${company.website}`
+																		}
 																		target="_blank"
 																		rel="noopener noreferrer"
 																	>
@@ -235,7 +279,9 @@ export default function CompanyDrawer({
 																Created
 															</dt>
 															<dd className="text-foreground text-sm">
-																{dateFormatter.format(new Date(company.createdAt))}
+																{dateFormatter.format(
+																	new Date(company.createdAt),
+																)}
 															</dd>
 														</div>
 													</div>
@@ -246,7 +292,11 @@ export default function CompanyDrawer({
 																Updated
 															</dt>
 															<dd className="text-foreground text-sm">
-																{dateFormatter.format(new Date(company.updatedAt ?? company.createdAt))}
+																{dateFormatter.format(
+																	new Date(
+																		company.updatedAt ?? company.createdAt,
+																	),
+																)}
 															</dd>
 														</div>
 													</div>
@@ -255,23 +305,39 @@ export default function CompanyDrawer({
 													<>
 														<Separator />
 														<div className="space-y-3">
-															<Label className="text-muted-foreground text-xs">Addresses</Label>
+															<Label className="text-muted-foreground text-xs">
+																Addresses
+															</Label>
 															{details.addresses.map((address) => (
-																<div key={address.id} className="border-border rounded-lg border p-3">
+																<div
+																	key={address.id}
+																	className="border-border rounded-lg border p-3"
+																>
 																	<div className="flex items-start gap-2">
 																		<MapPin className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
 																		<div className="min-w-0 flex-1 space-y-1">
 																			{address.label && (
-																				<Badge variant="outline" className="text-xs w-fit">{address.label}</Badge>
+																				<Badge
+																					variant="outline"
+																					className="text-xs w-fit"
+																				>
+																					{address.label}
+																				</Badge>
 																			)}
 																			<div className="text-foreground text-sm">
-																				{address.street && <div>{address.street}</div>}
+																				{address.street && (
+																					<div>{address.street}</div>
+																				)}
 																				<div>
 																					{address.city}
-																					{address.state && `, ${address.state}`}
-																					{address.postalCode && ` ${address.postalCode}`}
+																					{address.state &&
+																						`, ${address.state}`}
+																					{address.postalCode &&
+																						` ${address.postalCode}`}
 																				</div>
-																				{address.country && <div>{address.country}</div>}
+																				{address.country && (
+																					<div>{address.country}</div>
+																				)}
 																			</div>
 																		</div>
 																	</div>
@@ -293,53 +359,80 @@ export default function CompanyDrawer({
 											<CardContent className="space-y-4">
 												<div className="grid gap-4 md:grid-cols-2">
 													<div className="space-y-1">
-														<Label className="text-muted-foreground text-xs">Registration Number</Label>
+														<Label className="text-muted-foreground text-xs">
+															Registration Number
+														</Label>
 														<p className="text-foreground text-sm font-medium">
 															{company.registrationNumber ?? "—"}
 														</p>
 													</div>
 													<div className="space-y-1">
-														<Label className="text-muted-foreground text-xs">Tax ID</Label>
-														<p className="text-foreground text-sm font-medium">{company.taxId}</p>
+														<Label className="text-muted-foreground text-xs">
+															Tax ID
+														</Label>
+														<p className="text-foreground text-sm font-medium">
+															{company.taxId}
+														</p>
 													</div>
 													{company.dateOfIncorporation && (
 														<div className="space-y-1">
-															<Label className="text-muted-foreground text-xs">Date of Incorporation</Label>
+															<Label className="text-muted-foreground text-xs">
+																Date of Incorporation
+															</Label>
 															<p className="text-foreground text-sm font-medium">
-																{dateFormatter.format(new Date(company.dateOfIncorporation))}
+																{dateFormatter.format(
+																	new Date(company.dateOfIncorporation),
+																)}
 															</p>
 														</div>
 													)}
 													<div className="space-y-1">
-														<Label className="text-muted-foreground text-xs">Country</Label>
+														<Label className="text-muted-foreground text-xs">
+															Country
+														</Label>
 														<p className="text-foreground text-sm font-medium uppercase">
 															{company.country}
 														</p>
 													</div>
 													{company.legalStatus && (
 														<div className="space-y-1">
-															<Label className="text-muted-foreground text-xs">Legal Status</Label>
-															<p className="text-foreground text-sm font-medium">{company.legalStatus}</p>
+															<Label className="text-muted-foreground text-xs">
+																Legal Status
+															</Label>
+															<p className="text-foreground text-sm font-medium">
+																{company.legalStatus}
+															</p>
 														</div>
 													)}
 													{company.companyType && (
 														<div className="space-y-1">
-															<Label className="text-muted-foreground text-xs">Company Type</Label>
-															<p className="text-foreground text-sm font-medium">{company.companyType}</p>
-														</div>
-													)}
-													{company.numberOfEmployees !== null && company.numberOfEmployees !== undefined && (
-														<div className="space-y-1">
-															<Label className="text-muted-foreground text-xs">Number of Employees</Label>
+															<Label className="text-muted-foreground text-xs">
+																Company Type
+															</Label>
 															<p className="text-foreground text-sm font-medium">
-																{company.numberOfEmployees.toLocaleString()}
+																{company.companyType}
 															</p>
 														</div>
 													)}
+													{company.numberOfEmployees !== null &&
+														company.numberOfEmployees !== undefined && (
+															<div className="space-y-1">
+																<Label className="text-muted-foreground text-xs">
+																	Number of Employees
+																</Label>
+																<p className="text-foreground text-sm font-medium">
+																	{company.numberOfEmployees.toLocaleString()}
+																</p>
+															</div>
+														)}
 													{company.annualRevenueRange && (
 														<div className="space-y-1">
-															<Label className="text-muted-foreground text-xs">Annual Revenue Range</Label>
-															<p className="text-foreground text-sm font-medium">{company.annualRevenueRange}</p>
+															<Label className="text-muted-foreground text-xs">
+																Annual Revenue Range
+															</Label>
+															<p className="text-foreground text-sm font-medium">
+																{company.annualRevenueRange}
+															</p>
 														</div>
 													)}
 												</div>
@@ -357,7 +450,8 @@ export default function CompanyDrawer({
 											</CardHeader>
 											<CardContent className="space-y-4 text-sm">
 												<p className="text-muted-foreground">
-													Use this space to keep additional context about the company and relationship.
+													Use this space to keep additional context about the
+													company and relationship.
 												</p>
 												<Button type="button" variant="secondary" size="sm">
 													Add note
@@ -376,7 +470,8 @@ export default function CompanyDrawer({
 											</CardHeader>
 											<CardContent className="space-y-4 text-sm">
 												<p className="text-muted-foreground">
-													Calls, emails, and tasks will appear here as activity tracking is connected.
+													Calls, emails, and tasks will appear here as activity
+													tracking is connected.
 												</p>
 												<Button type="button" variant="outline" size="sm">
 													Log activity
@@ -395,7 +490,8 @@ export default function CompanyDrawer({
 											</CardHeader>
 											<CardContent className="space-y-4 text-sm">
 												<p className="text-muted-foreground">
-													Store proposals, contracts, and supporting documents for quick access.
+													Store proposals, contracts, and supporting documents
+													for quick access.
 												</p>
 												<Button type="button" variant="outline" size="sm">
 													Upload file

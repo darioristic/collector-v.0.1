@@ -1,7 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import type { Account } from "@crm/types";
+import { useQuery } from "@tanstack/react-query";
 import { ensureResponse } from "@/src/lib/fetch-utils";
 import { useDebounce } from "./useDebounce";
 
@@ -34,4 +34,3 @@ export function useCompanySearch(searchQuery: string) {
 		staleTime: 1000 * 60 * 5, // 5 minutes
 	});
 }
-

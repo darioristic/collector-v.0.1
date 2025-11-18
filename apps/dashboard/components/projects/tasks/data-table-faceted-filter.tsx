@@ -43,26 +43,26 @@ export function DataTableFacetedFilter<TData, TValue>({
 				<Button variant="outline" size="sm" className="h-9 gap-2">
 					{selectedValues?.size > 0 ? (
 						<>
-								{selectedValues.size > 2 ? (
-									<Badge
-										variant="secondary"
-										className="rounded-sm px-1 font-normal"
-									>
-										{selectedValues.size} selected
-									</Badge>
-								) : (
-									options
-										.filter((option) => selectedValues.has(option.value))
-										.map((option) => (
-											<Badge
-												variant="secondary"
-												key={option.value}
-												className="rounded-sm px-1 font-normal"
-											>
-												{option.label}
-											</Badge>
-										))
-								)}
+							{selectedValues.size > 2 ? (
+								<Badge
+									variant="secondary"
+									className="rounded-sm px-1 font-normal"
+								>
+									{selectedValues.size} selected
+								</Badge>
+							) : (
+								options
+									.filter((option) => selectedValues.has(option.value))
+									.map((option) => (
+										<Badge
+											variant="secondary"
+											key={option.value}
+											className="rounded-sm px-1 font-normal"
+										>
+											{option.label}
+										</Badge>
+									))
+							)}
 						</>
 					) : (
 						<span>{title}</span>
@@ -135,4 +135,3 @@ export function DataTableFacetedFilter<TData, TValue>({
 		</Popover>
 	);
 }
-

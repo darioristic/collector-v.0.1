@@ -1,11 +1,7 @@
 "use client";
 
 import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
-import {
-	Card,
-	CardDescription,
-	CardHeader,
-} from "@/components/ui/card";
+import { Card, CardDescription, CardHeader } from "@/components/ui/card";
 
 export function FinanceKPICards() {
 	const kpiData = [
@@ -71,4 +67,3 @@ export function FinanceKPICards() {
 		</div>
 	);
 }
-

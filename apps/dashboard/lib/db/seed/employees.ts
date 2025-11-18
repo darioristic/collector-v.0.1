@@ -20,42 +20,42 @@ type EmployeeSeedData = {
 };
 
 const EMPLOYEES_DATA: EmployeeSeedData[] = [
-  {
-    firstName: "Dario",
-    lastName: "Ristić",
-    email: "dario@collectorlabs.test",
-    phone: "+381 64 111 1111",
-    department: "Management",
-    role: "CEO",
-    employmentType: "Full-time",
-    status: "Active",
-    startDate: new Date("2020-01-10"),
-    salary: 250000,
-  },
-  {
-    firstName: "Miha",
-    lastName: "Petrović",
-    email: "miha@collectorlabs.test",
-    phone: "+381 64 222 2222",
-    department: "Management",
-    role: "CTO",
-    employmentType: "Full-time",
-    status: "Active",
-    startDate: new Date("2021-05-15"),
-    salary: 200000,
-  },
-  {
-    firstName: "Tara",
-    lastName: "Jovanović",
-    email: "tara@collectorlabs.test",
-    phone: "+381 64 333 3333",
-    department: "Operations",
-    role: "Lead Developer",
-    employmentType: "Full-time",
-    status: "Active",
-    startDate: new Date("2022-03-20"),
-    salary: 140000,
-  },
+	{
+		firstName: "Dario",
+		lastName: "Ristić",
+		email: "dario@collectorlabs.test",
+		phone: "+381 64 111 1111",
+		department: "Management",
+		role: "CEO",
+		employmentType: "Full-time",
+		status: "Active",
+		startDate: new Date("2020-01-10"),
+		salary: 250000,
+	},
+	{
+		firstName: "Miha",
+		lastName: "Petrović",
+		email: "miha@collectorlabs.test",
+		phone: "+381 64 222 2222",
+		department: "Management",
+		role: "CTO",
+		employmentType: "Full-time",
+		status: "Active",
+		startDate: new Date("2021-05-15"),
+		salary: 200000,
+	},
+	{
+		firstName: "Tara",
+		lastName: "Jovanović",
+		email: "tara@collectorlabs.test",
+		phone: "+381 64 333 3333",
+		department: "Operations",
+		role: "Lead Developer",
+		employmentType: "Full-time",
+		status: "Active",
+		startDate: new Date("2022-03-20"),
+		salary: 140000,
+	},
 	// Development - Backend (4)
 	{
 		firstName: "Marko",
@@ -383,28 +383,44 @@ const EMPLOYEES_DATA: EmployeeSeedData[] = [
 	},
 ];
 
-const TARGET_COUNT = parseInt(process.env.SEED_DASHBOARD_EMPLOYEE_COUNT || "50", 10);
+const TARGET_COUNT = parseInt(
+	process.env.SEED_DASHBOARD_EMPLOYEE_COUNT || "50",
+	10,
+);
 if (EMPLOYEES_DATA.length < TARGET_COUNT) {
-  const base = EMPLOYEES_DATA.length;
-  for (let i = 0; i < TARGET_COUNT - base; i++) {
-    const idx = base + i + 1;
-    const dept = ["Development","Operations","Sales","HR","Support"][idx % 5];
-    const role = dept === "Development" ? "Developer" : dept === "Operations" ? "Analyst" : dept === "Sales" ? "Sales Rep" : dept === "HR" ? "HR Specialist" : "Support Agent";
-    const status: EmployeeSeedData["status"] = idx % 13 === 0 ? "On Leave" : idx % 17 === 0 ? "Terminated" : "Active";
-    const employmentType: EmployeeSeedData["employmentType"] = idx % 11 === 0 ? "Intern" : idx % 7 === 0 ? "Contractor" : "Full-time";
-    EMPLOYEES_DATA.push({
-      firstName: `Emp${idx}`,
-      lastName: `Test${idx}`,
-      email: `employee${100 + idx}@collectorlabs.test`,
-      phone: `+381 60 ${String(100000 + idx).padStart(6, "0")}`,
-      department: dept,
-      role,
-      employmentType,
-      status,
-      startDate: new Date(2023, (idx % 12), ((idx % 27) + 1)),
-      salary: 100000 + (idx % 50) * 1000,
-    });
-  }
+	const base = EMPLOYEES_DATA.length;
+	for (let i = 0; i < TARGET_COUNT - base; i++) {
+		const idx = base + i + 1;
+		const dept = ["Development", "Operations", "Sales", "HR", "Support"][
+			idx % 5
+		];
+		const role =
+			dept === "Development"
+				? "Developer"
+				: dept === "Operations"
+					? "Analyst"
+					: dept === "Sales"
+						? "Sales Rep"
+						: dept === "HR"
+							? "HR Specialist"
+							: "Support Agent";
+		const status: EmployeeSeedData["status"] =
+			idx % 13 === 0 ? "On Leave" : idx % 17 === 0 ? "Terminated" : "Active";
+		const employmentType: EmployeeSeedData["employmentType"] =
+			idx % 11 === 0 ? "Intern" : idx % 7 === 0 ? "Contractor" : "Full-time";
+		EMPLOYEES_DATA.push({
+			firstName: `Emp${idx}`,
+			lastName: `Test${idx}`,
+			email: `employee${100 + idx}@collectorlabs.test`,
+			phone: `+381 60 ${String(100000 + idx).padStart(6, "0")}`,
+			department: dept,
+			role,
+			employmentType,
+			status,
+			startDate: new Date(2023, idx % 12, (idx % 27) + 1),
+			salary: 100000 + (idx % 50) * 1000,
+		});
+	}
 }
 
 type EmployeesSeedResult = {

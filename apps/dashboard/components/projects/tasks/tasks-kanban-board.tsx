@@ -1,5 +1,6 @@
 "use client";
 
+import { format, parseISO } from "date-fns";
 import { CalendarDays, MoreHorizontal, Trash2 } from "lucide-react";
 import * as React from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -13,7 +14,6 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import * as Kanban from "@/components/ui/kanban";
-import { format, parseISO } from "date-fns";
 import type { ProjectTask, TaskStatus } from "@/src/types/projects";
 
 const STATUS_ORDER: TaskStatus[] = ["todo", "in_progress", "blocked", "done"];
@@ -167,7 +167,7 @@ export function TasksKanbanBoard({
 						if (!over) return `Dragging ${String(active.id)}`;
 						return `Dragging ${String(active.id)} over ${String(over.id)}`;
 					},
-					onDragCancel({active}) {
+					onDragCancel({ active }) {
 						return `Drag for ${String(active.id)} canceled`;
 					},
 				},
@@ -353,4 +353,3 @@ export function TasksKanbanBoard({
 		</Kanban.Root>
 	);
 }
-

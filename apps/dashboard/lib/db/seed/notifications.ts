@@ -85,7 +85,8 @@ const NOTIFICATIONS_DATA: NotificationSeedData[] = [
 	},
 	{
 		title: "Novi deal je kreiran",
-		message: "Deal 'E-commerce Platform Development' je kreiran sa vrednošću od $95,000.",
+		message:
+			"Deal 'E-commerce Platform Development' je kreiran sa vrednošću od $95,000.",
 		type: "success",
 		link: "/crm/deals",
 	},
@@ -162,7 +163,9 @@ export async function seedNotifications(
 	}
 
 	if (options.force) {
-		await db.delete(notifications).where(eq(notifications.companyId, company.id));
+		await db
+			.delete(notifications)
+			.where(eq(notifications.companyId, company.id));
 	}
 
 	// Distribute notifications across users
@@ -185,7 +188,10 @@ export async function seedNotifications(
 
 	// Check existing notifications to avoid duplicates
 	const existingNotifications = await db
-		.select({ title: notifications.title, recipientId: notifications.recipientId })
+		.select({
+			title: notifications.title,
+			recipientId: notifications.recipientId,
+		})
 		.from(notifications)
 		.where(eq(notifications.companyId, company.id));
 

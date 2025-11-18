@@ -62,9 +62,9 @@ const useAutoScroll = (
 				container.addEventListener("scrollend", handleScrollEnd, {
 					once: true,
 				});
-            } catch {
-                // scrollend event not supported in this browser, fallback to requestAnimationFrame
-            }
+			} catch {
+				// scrollend event not supported in this browser, fallback to requestAnimationFrame
+			}
 		},
 		[containerRef],
 	);

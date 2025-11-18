@@ -9,8 +9,8 @@ import {
 	UploadIcon,
 	XIcon,
 } from "lucide-react";
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -251,10 +251,10 @@ export default function AddProductForm() {
 								</CardAction>
 							</CardHeader>
 							<CardContent>
-                                <FormField
-                                    name="file"
-                                    control={form.control}
-                                    render={({ field: _field }) => (
+								<FormField
+									name="file"
+									control={form.control}
+									render={({ field: _field }) => (
 										<div className="flex flex-col gap-2">
 											<div
 												onDragEnter={handleDragEnter}
@@ -292,36 +292,36 @@ export default function AddProductForm() {
 														</div>
 
 														<div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                                                            {files.map((file) => {
-                                                                const src = file.preview ?? "/placeholder.svg";
-                                                                const alt =
-                                                                    file.file && "name" in file.file
-                                                                        ? file.file.name
-                                                                        : "Uploaded image";
-                                                                return (
-                                                                    <div
-                                                                        key={file.id}
-                                                                        className="bg-accent relative aspect-square rounded-md border"
-                                                                    >
-                                                                        <Image
-                                                                            src={src}
-                                                                            alt={alt}
-                                                                            fill
-                                                                            sizes="(max-width: 768px) 50vw, 25vw"
-                                                                            className="rounded-[inherit] object-cover"
-                                                                            unoptimized
-                                                                        />
-                                                                        <Button
-                                                                            type="button"
-                                                                            onClick={() => removeFile(file.id)}
-                                                                            size="icon"
-                                                                            className="border-background focus-visible:border-background absolute -top-2 -right-2 size-6 rounded-full border-2 shadow-none"
-                                                                        >
-                                                                            <XIcon className="size-3.5" />
-                                                                        </Button>
-                                                                    </div>
-                                                                );
-                                                            })}
+															{files.map((file) => {
+																const src = file.preview ?? "/placeholder.svg";
+																const alt =
+																	file.file && "name" in file.file
+																		? file.file.name
+																		: "Uploaded image";
+																return (
+																	<div
+																		key={file.id}
+																		className="bg-accent relative aspect-square rounded-md border"
+																	>
+																		<Image
+																			src={src}
+																			alt={alt}
+																			fill
+																			sizes="(max-width: 768px) 50vw, 25vw"
+																			className="rounded-[inherit] object-cover"
+																			unoptimized
+																		/>
+																		<Button
+																			type="button"
+																			onClick={() => removeFile(file.id)}
+																			size="icon"
+																			className="border-background focus-visible:border-background absolute -top-2 -right-2 size-6 rounded-full border-2 shadow-none"
+																		>
+																			<XIcon className="size-3.5" />
+																		</Button>
+																	</div>
+																);
+															})}
 														</div>
 													</div>
 												) : (

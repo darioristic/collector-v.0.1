@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Pie, PieChart, Cell } from "recharts";
+import { Cell, Pie, PieChart } from "recharts";
 import {
 	Card,
 	CardContent,
@@ -37,11 +37,12 @@ export function SalesByProductChart() {
 				<CardDescription>Product sales distribution</CardDescription>
 			</CardHeader>
 			<CardContent>
-				<ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[300px]">
+				<ChartContainer
+					config={chartConfig}
+					className="mx-auto aspect-square max-h-[300px]"
+				>
 					<PieChart>
-						<ChartTooltip
-							content={<ChartTooltipContent hideLabel />}
-						/>
+						<ChartTooltip content={<ChartTooltipContent hideLabel />} />
 						<Pie
 							data={data}
 							dataKey="value"
@@ -63,4 +64,3 @@ export function SalesByProductChart() {
 		</Card>
 	);
 }
-

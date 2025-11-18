@@ -3,80 +3,93 @@ import { Link, Text, View } from "@react-pdf/renderer";
 import type { EditorDoc } from "@/types/editor";
 
 export function formatEditorContent(doc?: EditorDoc): React.ReactNode | null {
-  if (!doc || !doc.content) {
-    return null;
-  }
+	if (!doc || !doc.content) {
+		return null;
+	}
 
-  return (
-    <>
-      {doc.content.map((node, nodeIndex) => {
-        if (node.type === "paragraph") {
-          return (
-            <View key={`paragraph-${nodeIndex.toString()}`} style={{ marginBottom: 5 }}>
-              {node.content?.map((inlineContent, inlineIndex) => {
-                if (inlineContent.type === "text") {
-                  type TextStyle = NonNullable<React.ComponentProps<typeof Text>["style"]>;
-                  type LinkStyle = NonNullable<React.ComponentProps<typeof Link>["style"]>;
-                  const style: TextStyle = { fontSize: 9 };
-                  let href: string | undefined;
+	return (
+		<>
+			{doc.content.map((node, nodeIndex) => {
+				if (node.type === "paragraph") {
+					return (
+						<View
+							key={`paragraph-${nodeIndex.toString()}`}
+							style={{ marginBottom: 5 }}
+						>
+							{node.content?.map((inlineContent, inlineIndex) => {
+								if (inlineContent.type === "text") {
+									type TextStyle = NonNullable<
+										React.ComponentProps<typeof Text>["style"]
+									>;
+									type LinkStyle = NonNullable<
+										React.ComponentProps<typeof Link>["style"]
+									>;
+									const style: TextStyle = { fontSize: 9 };
+									let href: string | undefined;
 
-                  if (inlineContent.marks) {
-                    for (const mark of inlineContent.marks) {
-                      if (mark.type === "bold") {
-                        style.fontWeight = 500;
-                      } else if (mark.type === "italic") {
-                        style.fontStyle = "italic";
-                      } else if (mark.type === "link") {
-                        href = mark.attrs?.href;
-                        style.textDecoration = "underline";
-                      }
-                    }
-                  }
+									if (inlineContent.marks) {
+										for (const mark of inlineContent.marks) {
+											if (mark.type === "bold") {
+												style.fontWeight = 500;
+											} else if (mark.type === "italic") {
+												style.fontStyle = "italic";
+											} else if (mark.type === "link") {
+												href = mark.attrs?.href;
+												style.textDecoration = "underline";
+											}
+										}
+									}
 
-                  const content = inlineContent.text || "";
-                  const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(content);
+									const content = inlineContent.text || "";
+									const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(content);
 
-                  if (href || isEmail) {
-                    const linkHref = href || (isEmail ? `mailto:${content}` : content);
-                    return (
-                      <Link
-                        key={`link-${nodeIndex.toString()}-${inlineIndex.toString()}`}
-                        src={linkHref}
-                        style={{
-                          ...style,
-                          color: "black",
-                          textDecoration: "underline"
-                        } as LinkStyle}>
-                        {content}
-                      </Link>
-                    );
-                  }
+									if (href || isEmail) {
+										const linkHref =
+											href || (isEmail ? `mailto:${content}` : content);
+										return (
+											<Link
+												key={`link-${nodeIndex.toString()}-${inlineIndex.toString()}`}
+												src={linkHref}
+												style={
+													{
+														...style,
+														color: "black",
+														textDecoration: "underline",
+													} as LinkStyle
+												}
+											>
+												{content}
+											</Link>
+										);
+									}
 
-                  return (
-                    <Text
-                      key={`text-${nodeIndex.toString()}-${inlineIndex.toString()}`}
-                      style={style}>
-                      {content}
-                    </Text>
-                  );
-                }
-                if (inlineContent.type === "hardBreak") {
-                  return (
-                    <View
-                      key={`break-${nodeIndex.toString()}-${inlineIndex.toString()}`}
-                      style={{ marginBottom: 5 }}
-                    />
-                  );
-                }
-                return null;
-              })}
-            </View>
-          );
-        }
+									return (
+										<Text
+											key={`text-${nodeIndex.toString()}-${inlineIndex.toString()}`}
+											style={style}
+										>
+											{content}
+										</Text>
+									);
+								}
+								if (inlineContent.type === "hardBreak") {
+									return (
+										<View
+											key={`break-${nodeIndex.toString()}-${inlineIndex.toString()}`}
+											style={{ marginBottom: 5 }}
+										/>
+									);
+								}
+								return null;
+							})}
+						</View>
+					);
+				}
 
-        return null;
-      })}
-    </>
-  );
+				return null;
+			})}
+		</>
+	);
 }
-import React from "react";
+
+import type React from "react";

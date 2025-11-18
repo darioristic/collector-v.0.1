@@ -22,10 +22,19 @@ import {
 	todoStatusNamed,
 } from "@/app/(protected)/apps/todo-list-app/enum";
 import { useTodoStore } from "@/app/(protected)/apps/todo-list-app/store";
-import type { TodoStatus, TodoPriority } from "@/app/(protected)/apps/todo-list-app/types";
+import type {
+	TodoPriority,
+	TodoStatus,
+} from "@/app/(protected)/apps/todo-list-app/types";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
 	Select,
@@ -41,12 +50,6 @@ import {
 	SheetHeader,
 	SheetTitle,
 } from "@/components/ui/sheet";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 interface TodoDetailSheetProps {
@@ -76,7 +79,8 @@ const TodoDetailSheet: React.FC<TodoDetailSheetProps> = ({
 	const [newComment, setNewComment] = React.useState("");
 	const [newSubTask, setNewSubTask] = React.useState("");
 	const [isAddingSubTask, setIsAddingSubTask] = React.useState(false);
-	const [isDescriptionExpanded, setIsDescriptionExpanded] = React.useState(false);
+	const [isDescriptionExpanded, setIsDescriptionExpanded] =
+		React.useState(false);
 
 	const todo = todos.find((t) => t.id === todoId);
 	const currentIndex = todoId ? todos.findIndex((t) => t.id === todoId) : -1;
@@ -146,7 +150,10 @@ const TodoDetailSheet: React.FC<TodoDetailSheetProps> = ({
 		}
 	};
 
-	const handleSubTaskPriorityChange = (subTaskId: string, priority: TodoPriority) => {
+	const handleSubTaskPriorityChange = (
+		subTaskId: string,
+		priority: TodoPriority,
+	) => {
 		const subTask = todo.subTasks?.find((st) => st.id === subTaskId);
 		if (subTask) {
 			updateTodo(todo.id, {
@@ -258,7 +265,9 @@ const TodoDetailSheet: React.FC<TodoDetailSheetProps> = ({
 					<div className="space-y-4">
 						{/* Status */}
 						<div className="flex items-center gap-4">
-							<label className="text-sm font-medium min-w-[100px]">Status</label>
+							<label className="text-sm font-medium min-w-[100px]">
+								Status
+							</label>
 							<Select value={todo.status} onValueChange={handleStatusChange}>
 								<SelectTrigger className="w-fit h-auto px-2 py-1">
 									<SelectValue>
@@ -284,7 +293,9 @@ const TodoDetailSheet: React.FC<TodoDetailSheetProps> = ({
 									Created by
 								</label>
 								<div className="flex items-center gap-2">
-									<Avatar className={cn("h-8 w-8", getAvatarColor(todo.createdBy))}>
+									<Avatar
+										className={cn("h-8 w-8", getAvatarColor(todo.createdBy))}
+									>
 										<AvatarFallback className="text-xs">
 											{getInitials(todo.createdBy)}
 										</AvatarFallback>
@@ -316,8 +327,13 @@ const TodoDetailSheet: React.FC<TodoDetailSheetProps> = ({
 
 						{/* Priority */}
 						<div className="flex items-center gap-4">
-							<label className="text-sm font-medium min-w-[100px]">Priority</label>
-							<Select value={todo.priority} onValueChange={handlePriorityChange}>
+							<label className="text-sm font-medium min-w-[100px]">
+								Priority
+							</label>
+							<Select
+								value={todo.priority}
+								onValueChange={handlePriorityChange}
+							>
 								<SelectTrigger className="w-fit">
 									<SelectValue>
 										<div className="flex items-center gap-2">
@@ -384,7 +400,9 @@ const TodoDetailSheet: React.FC<TodoDetailSheetProps> = ({
 								</p>
 								{shouldTruncate && (
 									<button
-										onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+										onClick={() =>
+											setIsDescriptionExpanded(!isDescriptionExpanded)
+										}
 										className="text-sm text-blue-600 hover:underline mt-1"
 									>
 										{isDescriptionExpanded ? "Read less" : "Read more"}
@@ -432,7 +450,11 @@ const TodoDetailSheet: React.FC<TodoDetailSheetProps> = ({
 											</Button>
 											<DropdownMenu>
 												<DropdownMenuTrigger asChild>
-													<Button variant="ghost" size="icon" className="h-6 w-6">
+													<Button
+														variant="ghost"
+														size="icon"
+														className="h-6 w-6"
+													>
 														<MoreVertical className="h-3 w-3" />
 													</Button>
 												</DropdownMenuTrigger>
@@ -469,8 +491,8 @@ const TodoDetailSheet: React.FC<TodoDetailSheetProps> = ({
 																(subTask.priority || EnumTodoPriority.Low) ===
 																	"high"
 																	? "bg-red-500"
-																	: (subTask.priority || EnumTodoPriority.Low) ===
-																			"medium"
+																	: (subTask.priority ||
+																				EnumTodoPriority.Low) === "medium"
 																		? "bg-yellow-500"
 																		: "bg-gray-400",
 															)}
@@ -647,10 +669,7 @@ const TodoDetailSheet: React.FC<TodoDetailSheetProps> = ({
 								<div key={comment.id} className="space-y-2">
 									<div className="flex items-start gap-3">
 										<Avatar
-											className={cn(
-												"h-8 w-8",
-												getAvatarColor(comment.author),
-											)}
+											className={cn("h-8 w-8", getAvatarColor(comment.author))}
 										>
 											<AvatarFallback className="text-xs">
 												{getInitials(comment.author)}
@@ -663,12 +682,19 @@ const TodoDetailSheet: React.FC<TodoDetailSheetProps> = ({
 														{comment.author || "Anonymous"}
 													</span>
 													<span className="text-xs text-muted-foreground">
-														{format(new Date(comment.createdAt), "d MMMM yyyy 'at' h:mm a")}
+														{format(
+															new Date(comment.createdAt),
+															"d MMMM yyyy 'at' h:mm a",
+														)}
 													</span>
 												</div>
 												<DropdownMenu>
 													<DropdownMenuTrigger asChild>
-														<Button variant="ghost" size="icon" className="h-6 w-6">
+														<Button
+															variant="ghost"
+															size="icon"
+															className="h-6 w-6"
+														>
 															<MoreVertical className="h-3 w-3" />
 														</Button>
 													</DropdownMenuTrigger>

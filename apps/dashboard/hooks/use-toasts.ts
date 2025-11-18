@@ -1,26 +1,26 @@
 "use client";
 
-import { toast as sonnerToast } from "sonner";
 import type * as React from "react";
+import { toast as sonnerToast } from "sonner";
 
 /**
  * Geist-compatible useToasts hook
- * 
+ *
  * Provides a Geist Design System compatible API for toasts,
  * using Sonner under the hood.
- * 
+ *
  * Usage:
  * ```tsx
  * import { useToasts } from 'geist/components';
- * 
+ *
  * const toasts = useToasts();
- * 
+ *
  * // String format
  * toasts.success('Operation successful');
  * toasts.error('Something went wrong');
  * toasts.warning('Warning message');
  * toasts.info('Information message');
- * 
+ *
  * // Object format for message
  * toasts.message({
  *   text: 'The Evil Rabbit jumped over the fence.',
@@ -35,8 +35,8 @@ type ToastOptions = {
 	description?: ToastMessage;
 };
 
-type MessageOptions = 
-	| ToastMessage 
+type MessageOptions =
+	| ToastMessage
 	| {
 			text: ToastMessage;
 			duration?: number;
@@ -119,7 +119,7 @@ export function useToasts(): UseToastsReturn {
 				description: messageOptions.description,
 			});
 		},
-		promise: <T,>(
+		promise: <T>(
 			promise: Promise<T>,
 			{
 				loading,
@@ -147,4 +147,3 @@ export function useToasts(): UseToastsReturn {
 		},
 	};
 }
-

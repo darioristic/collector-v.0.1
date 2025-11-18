@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import { companies, users } from "../schema/core";
 import {
-	teamchatChannels,
 	teamchatChannelMembers,
+	teamchatChannels,
 	teamchatMessages,
 	teamchatUsers,
 } from "../schema/teamchat";
@@ -16,27 +16,30 @@ type TeamchatSeedResult = {
 };
 
 export async function seedTeamchat(
-    db: DashboardDatabase,
-    _options: { force?: boolean } = {},
+	db: DashboardDatabase,
+	_options: { force?: boolean } = {},
 ): Promise<TeamchatSeedResult> {
-  const messagesTarget = parseInt(process.env.SEED_TEAMCHAT_MESSAGES_COUNT || "25", 10);
-  let [company] = await db
-    .select()
-    .from(companies)
-    .where(eq(companies.slug, 'collector-labs'))
-    .limit(1);
+	const messagesTarget = parseInt(
+		process.env.SEED_TEAMCHAT_MESSAGES_COUNT || "25",
+		10,
+	);
+	let [company] = await db
+		.select()
+		.from(companies)
+		.where(eq(companies.slug, "collector-labs"))
+		.limit(1);
 
-  if (!company) {
-    const [newCompany] = await db
-      .insert(companies)
-      .values({
-        name: "Default Company",
-        slug: "default-company",
-        domain: null,
-      })
-      .returning();
-    company = newCompany;
-  }
+	if (!company) {
+		const [newCompany] = await db
+			.insert(companies)
+			.values({
+				name: "Default Company",
+				slug: "default-company",
+				domain: null,
+			})
+			.returning();
+		company = newCompany;
+	}
 
 	// Get all users
 	const allUsers = await db.select().from(users);
@@ -149,25 +152,29 @@ export async function seedTeamchat(
 			}
 		}
 
-        if (generalChannelId && teamchatUserMap.size > 0) {
-            const userIds = Array.from(teamchatUserMap.values());
-            const toInsert = [] as Array<{ content: string; senderId: string; channelId: string }>
-            for (let i = 0; i < messagesTarget; i++) {
-                const senderId = userIds[i % userIds.length];
-                const content =
-                    i % 5 === 0
-                        ? "Dobrodošli u Collector Dashboard! 👋"
-                        : i % 5 === 1
-                        ? "Hvala! Radujem se saradnji!"
-                        : i % 5 === 2
-                        ? "Ako imate pitanja, slobodno pitajte."
-                        : i % 5 === 3
-                        ? "Kada je sastanak tima?"
-                        : "Sastanak je zakazan za petak u 10:00.";
-                toInsert.push({ content, senderId, channelId: generalChannelId });
-            }
-            await tx.insert(teamchatMessages).values(toInsert);
-        }
+		if (generalChannelId && teamchatUserMap.size > 0) {
+			const userIds = Array.from(teamchatUserMap.values());
+			const toInsert = [] as Array<{
+				content: string;
+				senderId: string;
+				channelId: string;
+			}>;
+			for (let i = 0; i < messagesTarget; i++) {
+				const senderId = userIds[i % userIds.length];
+				const content =
+					i % 5 === 0
+						? "Dobrodošli u Collector Dashboard! 👋"
+						: i % 5 === 1
+							? "Hvala! Radujem se saradnji!"
+							: i % 5 === 2
+								? "Ako imate pitanja, slobodno pitajte."
+								: i % 5 === 3
+									? "Kada je sastanak tima?"
+									: "Sastanak je zakazan za petak u 10:00.";
+				toInsert.push({ content, senderId, channelId: generalChannelId });
+			}
+			await tx.insert(teamchatMessages).values(toInsert);
+		}
 	});
 
 	// Count created records

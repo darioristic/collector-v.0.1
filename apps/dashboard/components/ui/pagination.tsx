@@ -48,11 +48,7 @@ function PaginationLink({
 	...props
 }: PaginationLinkProps) {
 	const normalizedSize =
-		size === "small"
-			? "sm"
-			: size === "large"
-				? "lg"
-				: size ?? "default";
+		size === "small" ? "sm" : size === "large" ? "lg" : (size ?? "default");
 
 	return (
 		<a

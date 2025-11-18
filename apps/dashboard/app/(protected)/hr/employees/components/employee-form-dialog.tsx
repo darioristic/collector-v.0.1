@@ -1,14 +1,15 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { Content } from "@tiptap/react";
 import { Loader2, X } from "lucide-react";
 import * as React from "react";
 import { useForm } from "react-hook-form";
-import type { Content } from "@tiptap/react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { MinimalTiptapEditor } from "@/components/ui/custom/minimal-tiptap/minimal-tiptap";
 import {
 	Dialog,
 	DialogContent,
@@ -24,7 +25,6 @@ import {
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
-import { MinimalTiptapEditor } from "@/components/ui/custom/minimal-tiptap/minimal-tiptap";
 import { Input } from "@/components/ui/input";
 import {
 	Select,
@@ -115,9 +115,10 @@ export default function EmployeeFormDialog({
 		form.reset(getDefaultValues(initialValues));
 	};
 
-	const fullName = mode === "edit" && initialValues
-		? `${initialValues.firstName} ${initialValues.lastName}`.trim()
-		: "";
+	const fullName =
+		mode === "edit" && initialValues
+			? `${initialValues.firstName} ${initialValues.lastName}`.trim()
+			: "";
 	const initials = fullName
 		.split(" ")
 		.map((n) => n[0])
@@ -269,13 +270,13 @@ export default function EmployeeFormDialog({
 									<FormItem>
 										<FormLabel>Role</FormLabel>
 										<FormControl>
-										<Select
-											value={field.value || ""}
-											onValueChange={field.onChange}
-										>
-											<SelectTrigger data-testid="role-select">
-												<SelectValue placeholder="Select role" />
-											</SelectTrigger>
+											<Select
+												value={field.value || ""}
+												onValueChange={field.onChange}
+											>
+												<SelectTrigger data-testid="role-select">
+													<SelectValue placeholder="Select role" />
+												</SelectTrigger>
 												<SelectContent>
 													<SelectItem value="Product Designer">
 														Product Designer
@@ -484,7 +485,9 @@ export default function EmployeeFormDialog({
 												value={field.value || ""}
 												onChange={(content: Content) => {
 													field.onChange(
-														typeof content === "string" ? content : String(content),
+														typeof content === "string"
+															? content
+															: String(content),
 													);
 												}}
 												output="html"

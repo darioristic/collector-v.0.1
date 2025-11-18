@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import type { Account } from "@crm/types";
-import { ensureResponse, getApiUrl } from "@/src/lib/fetch-utils";
-import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 import {
 	Dialog,
 	DialogContent,
@@ -11,7 +9,9 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { NewCompanyForm, type CompanyFormValues } from "./NewCompanyForm";
+import { useToast } from "@/hooks/use-toast";
+import { ensureResponse, getApiUrl } from "@/src/lib/fetch-utils";
+import { type CompanyFormValues, NewCompanyForm } from "./NewCompanyForm";
 
 type CompanyEditModalProps = {
 	open: boolean;
@@ -120,4 +120,3 @@ export function CompanyEditModal({
 		</Dialog>
 	);
 }
-

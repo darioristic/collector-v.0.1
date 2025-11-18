@@ -67,8 +67,8 @@ import { Separator } from "@/components/ui/separator";
 import {
 	Sheet,
 	SheetContent,
-		SheetDescription,
-		SheetTitle,
+	SheetDescription,
+	SheetTitle,
 } from "@/components/ui/sheet";
 import {
 	Table,
@@ -116,29 +116,29 @@ const statusClasses: Record<LeadStatus, string> = {
 	lost: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200",
 };
 
-	const RECENT_LEAD_ACTIVITY = [
-		{
-			title: "Status updated",
-			description: "Lead moved to Contacted after initial outreach.",
-			timestamp: "2 days ago",
-			icon: Sparkles,
-			color: "text-blue-600",
-		},
-		{
-			title: "Call scheduled",
-			description: "Introductory call planned to qualify the opportunity.",
-			timestamp: "5 days ago",
-			icon: PhoneCall,
-			color: "text-emerald-600",
-		},
-		{
-			title: "Notes added",
-			description: "Captured discovery notes from email exchange.",
-			timestamp: "1 week ago",
-			icon: NotebookPen,
-			color: "text-purple-600",
-		},
-	] as const;
+const RECENT_LEAD_ACTIVITY = [
+	{
+		title: "Status updated",
+		description: "Lead moved to Contacted after initial outreach.",
+		timestamp: "2 days ago",
+		icon: Sparkles,
+		color: "text-blue-600",
+	},
+	{
+		title: "Call scheduled",
+		description: "Introductory call planned to qualify the opportunity.",
+		timestamp: "5 days ago",
+		icon: PhoneCall,
+		color: "text-emerald-600",
+	},
+	{
+		title: "Notes added",
+		description: "Captured discovery notes from email exchange.",
+		timestamp: "1 week ago",
+		icon: NotebookPen,
+		color: "text-purple-600",
+	},
+] as const;
 
 const statusFilters = [
 	{ id: "all" as const, label: "All statuses" },
@@ -1018,7 +1018,9 @@ export const LeadsDataTable = React.forwardRef<
 											</Avatar>
 											<div className="flex flex-col gap-2 flex-1">
 												<div className="flex flex-wrap items-center gap-3">
-													<h2 className="text-xl font-semibold">{activeLead.name}</h2>
+													<h2 className="text-xl font-semibold">
+														{activeLead.name}
+													</h2>
 													<Badge
 														className={cn(
 															"rounded-full px-2.5 py-0.5 text-xs",
@@ -1036,7 +1038,10 @@ export const LeadsDataTable = React.forwardRef<
 													</span>
 												</p>
 												<div className="flex flex-wrap items-center gap-2">
-													<Badge variant="outline" className="text-xs font-medium">
+													<Badge
+														variant="outline"
+														className="text-xs font-medium"
+													>
 														{activeLead.source || "Unknown source"}
 													</Badge>
 													<span className="text-muted-foreground text-xs flex items-center gap-1.5">
@@ -1097,14 +1102,21 @@ export const LeadsDataTable = React.forwardRef<
 													<Checkbox
 														checked={nextStepsCompleted.call}
 														onCheckedChange={(checked) =>
-															setNextStepsCompleted((p) => ({ ...p, call: Boolean(checked) }))
+															setNextStepsCompleted((p) => ({
+																...p,
+																call: Boolean(checked),
+															}))
 														}
 														aria-label="Mark call as done"
 													/>
 													<div className="text-muted-foreground flex items-center gap-2">
-														<PhoneCall className="h-4 w-4 text-primary" aria-hidden="true" />
+														<PhoneCall
+															className="h-4 w-4 text-primary"
+															aria-hidden="true"
+														/>
 														<span>
-															Schedule an introductory call and confirm the business needs.
+															Schedule an introductory call and confirm the
+															business needs.
 														</span>
 													</div>
 												</div>
@@ -1128,7 +1140,8 @@ export const LeadsDataTable = React.forwardRef<
 														onClick={() =>
 															toast({
 																title: "Call scheduled",
-																description: "Introductory call scheduled (simulation).",
+																description:
+																	"Introductory call scheduled (simulation).",
 															})
 														}
 													>
@@ -1142,14 +1155,21 @@ export const LeadsDataTable = React.forwardRef<
 													<Checkbox
 														checked={nextStepsCompleted.rep}
 														onCheckedChange={(checked) =>
-															setNextStepsCompleted((p) => ({ ...p, rep: Boolean(checked) }))
+															setNextStepsCompleted((p) => ({
+																...p,
+																rep: Boolean(checked),
+															}))
 														}
 														aria-label="Mark rep handoff as done"
 													/>
 													<div className="text-muted-foreground flex items-center gap-2">
-														<UserRound className="h-4 w-4 text-primary" aria-hidden="true" />
+														<UserRound
+															className="h-4 w-4 text-primary"
+															aria-hidden="true"
+														/>
 														<span>
-															Loop in the assigned sales rep for continued follow-up.
+															Loop in the assigned sales rep for continued
+															follow-up.
 														</span>
 													</div>
 												</div>
@@ -1161,7 +1181,8 @@ export const LeadsDataTable = React.forwardRef<
 														onClick={() =>
 															toast({
 																title: "Rep assigned",
-																description: "Sales rep assignment updated (simulation).",
+																description:
+																	"Sales rep assignment updated (simulation).",
 															})
 														}
 													>
@@ -1173,7 +1194,8 @@ export const LeadsDataTable = React.forwardRef<
 														onClick={() =>
 															toast({
 																title: "Rep notified",
-																description: "Sales rep notified about this lead (simulation).",
+																description:
+																	"Sales rep notified about this lead (simulation).",
 															})
 														}
 													>
@@ -1183,8 +1205,13 @@ export const LeadsDataTable = React.forwardRef<
 											</div>
 
 											<div className="text-muted-foreground flex items-center gap-2">
-												<NotebookPen className="h-4 w-4 text-primary" aria-hidden="true" />
-												<span>Capture key notes after the first conversation.</span>
+												<NotebookPen
+													className="h-4 w-4 text-primary"
+													aria-hidden="true"
+												/>
+												<span>
+													Capture key notes after the first conversation.
+												</span>
 											</div>
 										</div>
 									</section>
@@ -1207,7 +1234,9 @@ export const LeadsDataTable = React.forwardRef<
 														<div className="flex-1 pb-6">
 															<div className="flex items-start justify-between gap-2">
 																<div>
-																	<p className="font-medium leading-tight">{item.title}</p>
+																	<p className="font-medium leading-tight">
+																		{item.title}
+																	</p>
 																	<p className="text-muted-foreground mt-1 text-sm leading-relaxed">
 																		{item.description}
 																	</p>

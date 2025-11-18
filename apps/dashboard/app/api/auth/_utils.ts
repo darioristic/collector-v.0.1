@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
-
-import { getApiUrl } from "@/src/lib/fetch-utils";
 import { SESSION_COOKIE_NAME } from "@/lib/session-constants";
+import { getApiUrl } from "@/src/lib/fetch-utils";
 
 // Re-export for backward compatibility
 export { SESSION_COOKIE_NAME };

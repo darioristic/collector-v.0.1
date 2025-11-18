@@ -9,11 +9,11 @@ import { getCurrentAuth } from "@/lib/auth";
 import { createNotificationSchema } from "@/lib/validations/notifications";
 
 const getNotificationServiceUrl = () => {
-  return (
-    process.env.NOTIFICATION_SERVICE_URL ||
-    process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL ||
-    "http://localhost:4002"
-  );
+	return (
+		process.env.NOTIFICATION_SERVICE_URL ||
+		process.env.NEXT_PUBLIC_NOTIFICATION_SERVICE_URL ||
+		"http://localhost:4002"
+	);
 };
 
 export async function POST(request: NextRequest) {
@@ -41,19 +41,24 @@ export async function POST(request: NextRequest) {
 	const token = request.cookies.get("auth_session")?.value;
 
 	try {
-		const response = await fetch(`${getNotificationServiceUrl()}/api/notifications`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				...(token && {
-					Authorization: `Bearer ${token}`,
-				}),
+		const response = await fetch(
+			`${getNotificationServiceUrl()}/api/notifications`,
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					...(token && {
+						Authorization: `Bearer ${token}`,
+					}),
+				},
+				body: JSON.stringify(parsed.data),
 			},
-			body: JSON.stringify(parsed.data),
-		});
+		);
 
 		if (!response.ok) {
-			const error = await response.json().catch(() => ({ error: "Failed to create notification" }));
+			const error = await response
+				.json()
+				.catch(() => ({ error: "Failed to create notification" }));
 			return withNoStore(
 				NextResponse.json(
 					{
@@ -73,14 +78,14 @@ export async function POST(request: NextRequest) {
 				{ status: 201 },
 			),
 		);
-  } catch {
-    return withNoStore(
-      NextResponse.json(
-        {
-          error: "Servis notifikacija nije dostupan.",
-        },
-        { status: 503 },
-      ),
-    );
-  }
+	} catch {
+		return withNoStore(
+			NextResponse.json(
+				{
+					error: "Servis notifikacija nije dostupan.",
+				},
+				{ status: 503 },
+			),
+		);
+	}
 }

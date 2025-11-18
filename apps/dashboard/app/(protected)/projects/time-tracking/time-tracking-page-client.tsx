@@ -1,20 +1,21 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Loader2, Clock } from "lucide-react";
-import { useState } from "react";
 import { format } from "date-fns";
-
+import { Clock, Loader2, Plus } from "lucide-react";
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { useProjects } from "@/src/hooks/useProjects";
 import { fetchProjectTimeEntries } from "@/src/queries/projects";
 import type { ProjectTimeEntry } from "@/src/types/projects";
 
 export function TimeTrackingPageClient() {
 	const { data: projects } = useProjects();
-	const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+	const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+		null,
+	);
 
 	const { data: timeEntries, isLoading } = useQuery({
 		queryKey: ["project-time-entries", selectedProjectId],
@@ -25,15 +26,19 @@ export function TimeTrackingPageClient() {
 		enabled: !!selectedProjectId,
 	});
 
-	const totalHours = timeEntries?.reduce((sum, entry) => sum + entry.hours, 0) ?? 0;
+	const totalHours =
+		timeEntries?.reduce((sum, entry) => sum + entry.hours, 0) ?? 0;
 
 	return (
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-3xl font-bold tracking-tight">Praćenje vremena</h1>
+					<h1 className="text-3xl font-bold tracking-tight">
+						Praćenje vremena
+					</h1>
 					<p className="text-muted-foreground">
-						Pratite utrošak sati na projektima i analizirajte produktivnost tima.
+						Pratite utrošak sati na projektima i analizirajte produktivnost
+						tima.
 					</p>
 				</div>
 				<Button>
@@ -52,7 +57,9 @@ export function TimeTrackingPageClient() {
 							{projects.map((project) => (
 								<Button
 									key={project.id}
-									variant={selectedProjectId === project.id ? "default" : "outline"}
+									variant={
+										selectedProjectId === project.id ? "default" : "outline"
+									}
 									className="h-auto flex-col items-start p-4"
 									onClick={() => setSelectedProjectId(project.id)}
 								>
@@ -102,11 +109,11 @@ export function TimeTrackingPageClient() {
 													<div className="space-y-1">
 														<div className="flex items-center gap-2">
 															<span className="font-semibold">
-																{entry.userName ?? entry.userEmail ?? "Nepoznat korisnik"}
+																{entry.userName ??
+																	entry.userEmail ??
+																	"Nepoznat korisnik"}
 															</span>
-															<Badge variant="outline">
-																{entry.hours}h
-															</Badge>
+															<Badge variant="outline">{entry.hours}h</Badge>
 														</div>
 														{entry.taskTitle && (
 															<p className="text-muted-foreground text-sm">
@@ -129,7 +136,8 @@ export function TimeTrackingPageClient() {
 								</div>
 							) : (
 								<p className="text-muted-foreground text-center py-8">
-									Ovaj projekat nema unosa vremena. Dodajte novi unos da počnete.
+									Ovaj projekat nema unosa vremena. Dodajte novi unos da
+									počnete.
 								</p>
 							)}
 						</CardContent>
@@ -139,4 +147,3 @@ export function TimeTrackingPageClient() {
 		</div>
 	);
 }
-

@@ -1,5 +1,5 @@
-import { ensureResponse, getApiUrl } from "@/src/lib/fetch-utils";
 import type { ProjectTemplate } from "@/lib/data/projectTemplates";
+import { ensureResponse, getApiUrl } from "@/src/lib/fetch-utils";
 import type {
 	AddTeamMemberPayload,
 	CreateBudgetCategoryPayload,
@@ -55,7 +55,8 @@ export const projectKeys = {
 	timeline: (id: string) => [...projectKeys.detail(id), "timeline"] as const,
 	teams: (id: string) => [...projectKeys.detail(id), "teams"] as const,
 	team: (id: string) => [...projectKeys.detail(id), "team"] as const,
-	timeEntries: (id: string) => [...projectKeys.detail(id), "timeEntries"] as const,
+	timeEntries: (id: string) =>
+		[...projectKeys.detail(id), "timeEntries"] as const,
 	budget: (id: string) => [...projectKeys.detail(id), "budget"] as const,
 };
 
@@ -84,7 +85,7 @@ export async function fetchProject(id: string): Promise<ProjectDetails> {
 	);
 
 	const payload = (await response.json()) as ProjectEnvelope;
-	
+
 	if (!payload || !payload.data) {
 		throw new Error(`Project ${id} not found or invalid response format`);
 	}

@@ -15,7 +15,14 @@ import { Loader2 } from "lucide-react";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import CompanyDrawer from "@/components/company/company-drawer";
 import { TableToolbar } from "@/components/table-toolbar";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from "@/components/ui/accordion";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,12 +34,6 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger
-} from "@/components/ui/accordion";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -74,22 +75,22 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { ensureResponse, getApiUrl } from "@/src/lib/fetch-utils";
-import CompanyDrawer from "@/components/company/company-drawer";
+import { createColumns } from "./components/columns";
+import { MemoizedTableRow } from "./components/memoized-table-row";
 import {
-  formatTag,
-  shouldHideCompany,
+  getDefaultFormValues,
+  getFormValuesFromCompany,
+  useCompanyDialog
+} from "./hooks/use-company-dialog";
+import { useDebounce } from "./hooks/use-debounce";
+import { useURLParams } from "./hooks/use-url-params";
+import {
+  type EnhancedCompanyRow,
   enhanceCompanyRow,
   enhanceCompanyRows,
-  type EnhancedCompanyRow
+  formatTag,
+  shouldHideCompany
 } from "./utils/company-helpers";
-import { useDebounce } from "./hooks/use-debounce";
-import {
-  useCompanyDialog,
-  getFormValuesFromCompany,
-  getDefaultFormValues
-} from "./hooks/use-company-dialog";
-import { MemoizedTableRow } from "./components/memoized-table-row";
-import { createColumns } from "./components/columns";
 
 export type CompanyRow = Account & {
   primaryContactName?: string | null;
@@ -163,12 +164,12 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
     const { toast } = useToast();
     const formId = React.useId();
     // Memoize enhanced rows to avoid unnecessary recalculations
-    const enhancedData = React.useMemo(() => enhanceCompanyRows(data), [data]);
-    const [rows, setRows] = React.useState<EnhancedCompanyRow[]>(enhancedData);
+    const [rows, setRows] = React.useState<EnhancedCompanyRow[]>(() => enhanceCompanyRows(data));
 
+    // Update rows when data changes
     React.useEffect(() => {
-      setRows(enhancedData);
-    }, [enhancedData]);
+      setRows(enhanceCompanyRows(data));
+    }, [data]);
     const [sorting, setSorting] = React.useState<SortingState>([]);
     const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
     const [rowSelection, setRowSelection] = React.useState({});
@@ -190,6 +191,7 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
     } | null>(null);
     const [isLoadingDetails, setIsLoadingDetails] = React.useState(false);
     const dialog = useCompanyDialog();
+    const urlParams = useURLParams();
     const [companyToDelete, setCompanyToDelete] = React.useState<EnhancedCompanyRow | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
     const [isDeleting, setIsDeleting] = React.useState(false);
@@ -263,15 +265,17 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
               milestones: AccountMilestone[];
             }) => {
               if (!abortController.signal.aborted) {
+                // Optimize contact mapping by avoiding unnecessary operations
+                const mappedContacts = data.contacts.map((c) => ({
+                  id: c.id,
+                  name: c.fullName ?? c.name,
+                  email: c.email,
+                  phone: c.phone,
+                  title: c.title
+                }));
                 setCompanyDetails({
                   addresses: data.addresses,
-                  contacts: data.contacts.map((c) => ({
-                    id: c.id,
-                    name: c.fullName ?? c.name,
-                    email: c.email,
-                    phone: c.phone,
-                    title: c.title
-                  })),
+                  contacts: mappedContacts,
                   executives: data.executives,
                   milestones: data.milestones
                 });
@@ -305,14 +309,13 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
 
     // Auto-open company from URL parameter or create dialog
     React.useEffect(() => {
-      if (typeof window === "undefined") {
+      if (!urlParams.params) {
         return;
       }
 
-      const searchParams = new URLSearchParams(window.location.search);
-      const companyName = searchParams.get("company");
-      const createParam = searchParams.get("create");
-      const nameParam = searchParams.get("name");
+      const companyName = urlParams.getParam("company");
+      const createParam = urlParams.getParam("create");
+      const nameParam = urlParams.getParam("name");
 
       // If create=true and name is provided, open create dialog with pre-filled name
       if (createParam === "true" && nameParam && !dialog.isOpen) {
@@ -321,29 +324,45 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
           ...getDefaultFormValues(),
           name: nameParam
         });
-        // Clean up URL parameters
-        const newUrl = new URL(window.location.href);
-        newUrl.searchParams.delete("create");
-        newUrl.searchParams.delete("name");
-        window.history.replaceState({}, "", newUrl.toString());
+        urlParams.removeParams(["create", "name"]);
         return;
       }
 
       // Existing logic for opening company sidebar (only if rows are loaded)
+      // First try to find by ID (if companyName is an ID), otherwise search by name
       if (rows.length > 0 && companyName && !activeCompany) {
-        const company = rows.find((row) =>
-          row.name.toLowerCase().includes(companyName.toLowerCase())
-        );
+        let company: EnhancedCompanyRow | undefined;
+
+        // Try ID lookup first (O(1))
+        company = rowsMap.get(companyName);
+
+        // If not found by ID, search by name (O(n) but only if needed)
+        if (!company) {
+          const searchLower = companyName.toLowerCase();
+          company = rows.find((row) => row.name.toLowerCase().includes(searchLower));
+        }
 
         if (company) {
           openSidebar(company);
-          // Clean up URL parameter
-          const newUrl = new URL(window.location.href);
-          newUrl.searchParams.delete("company");
-          window.history.replaceState({}, "", newUrl.toString());
+          urlParams.removeParam("company");
         }
       }
-    }, [rows, activeCompany, openSidebar, dialog.isOpen, dialog.openCreateDialog, form]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      // urlParams and dialog are stable objects from hooks, their methods are memoized
+      // Including the full objects would cause unnecessary re-renders
+    }, [
+      rows,
+      rowsMap,
+      activeCompany,
+      openSidebar,
+      dialog.isOpen,
+      dialog.openCreateDialog,
+      form,
+      urlParams.params,
+      urlParams.getParam,
+      urlParams.removeParam,
+      urlParams.removeParams
+    ]);
 
     const closeSidebar = React.useCallback(() => {
       // Abort any pending requests
@@ -414,14 +433,22 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
         return;
       }
 
+      // Optimize payload creation by trimming only when needed
+      const trimmedName = values.name.trim();
+      const trimmedEmail = values.email.trim();
+      const trimmedPhone = values.phone?.trim();
+      const trimmedWebsite = values.website?.trim();
+      const trimmedTaxId = values.taxId.trim();
+      const trimmedCountry = values.country.trim().toUpperCase().slice(0, 2);
+
       const payload = {
-        name: values.name.trim(),
-        email: values.email.trim(),
-        phone: values.phone?.trim() ? values.phone.trim() : undefined,
-        website: values.website?.trim() ? values.website.trim() : undefined,
+        name: trimmedName,
+        email: trimmedEmail,
+        phone: trimmedPhone || undefined,
+        website: trimmedWebsite || undefined,
         type: values.type,
-        taxId: values.taxId.trim(),
-        country: values.country.trim().toUpperCase().slice(0, 2)
+        taxId: trimmedTaxId,
+        country: trimmedCountry
       };
 
       dialog.setIsSubmitting(true);
@@ -456,20 +483,32 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
           });
         } else if (dialog.mode === "create") {
           const formatted = toCompanyRow(result, null);
-          setRows((previous) => [formatted, ...previous]);
+          // Use functional update for better performance
+          setRows((previous) => {
+            // Early return if already exists (optimistic update check)
+            if (previous.some((row) => row.id === result.id)) {
+              return previous;
+            }
+            return [formatted, ...previous];
+          });
           toast({
             title: "Company created",
             description: `${result.name} has been added.`
           });
         } else {
-          setRows((previous) =>
-            previous.map((row) => {
-              if (row.id !== result.id) {
-                return row;
-              }
-              return toCompanyRow(result, row);
-            })
-          );
+          // Optimize update by checking if row exists first
+          setRows((previous) => {
+            const existingIndex = previous.findIndex((row) => row.id === result.id);
+            if (existingIndex === -1) {
+              // Row doesn't exist, add it
+              return [toCompanyRow(result, null), ...previous];
+            }
+            // Update existing row
+            const updated = toCompanyRow(result, previous[existingIndex]);
+            const newRows = [...previous];
+            newRows[existingIndex] = updated;
+            return newRows;
+          });
           toast({
             title: "Company updated",
             description: `${result.name} has been updated.`
@@ -552,7 +591,12 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
           })
         );
 
-        setRows((previous) => previous.filter((row) => row.id !== companyToDelete.id));
+        // Use functional update for better performance
+        setRows((previous) => {
+          const filtered = previous.filter((row) => row.id !== companyToDelete.id);
+          // Only update if something actually changed
+          return filtered.length !== previous.length ? filtered : previous;
+        });
         if (activeCompany?.id === companyToDelete.id) {
           closeSidebar();
         }
@@ -579,6 +623,17 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
       [handleDelete, handleEdit, handleView]
     );
 
+    // Memoize global filter function to avoid recreating on each render
+    const globalFilterFn = React.useCallback(
+      (row: { original: EnhancedCompanyRow }, _columnId: string, filterValue: unknown) => {
+        if (!filterValue) {
+          return true;
+        }
+        return row.original.searchableText.includes(String(filterValue).toLowerCase());
+      },
+      []
+    );
+
     const table = useReactTable({
       data: rows,
       columns,
@@ -592,13 +647,7 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
       onColumnVisibilityChange: setColumnVisibility,
       onRowSelectionChange: setRowSelection,
       onGlobalFilterChange: setGlobalFilter,
-      globalFilterFn: (row, _columnId, filterValue) => {
-        if (!filterValue) {
-          return true;
-        }
-
-        return row.original.searchableText.includes(String(filterValue).toLowerCase());
-      },
+      globalFilterFn,
       getCoreRowModel: getCoreRowModel(),
       getSortedRowModel: getSortedRowModel(),
       getFilteredRowModel: getFilteredRowModel(),
@@ -610,6 +659,7 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
       }
     });
 
+    // React Table already optimizes these calls internally
     const filteredRowCount = table.getFilteredRowModel().rows.length;
     const pagination = table.getState().pagination;
     const pageCount = table.getPageCount();
@@ -625,7 +675,11 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
 
     const paginationItems = React.useMemo(() => {
       if (pageCount <= 0) {
-        return [] as Array<{ type: "page" | "ellipsis"; value: number; key: string }>;
+        return [] as Array<{
+          type: "page" | "ellipsis";
+          value: number;
+          key: string;
+        }>;
       }
 
       if (pageCount <= 7) {
@@ -636,7 +690,11 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
         }));
       }
 
-      const items: Array<{ type: "page" | "ellipsis"; value: number; key: string }> = [];
+      const items: Array<{
+        type: "page" | "ellipsis";
+        value: number;
+        key: string;
+      }> = [];
       const firstPage = 0;
       const lastPage = pageCount - 1;
       const siblingCount = 1;
@@ -667,14 +725,18 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
       return items;
     }, [pageCount, pagination.pageIndex]);
 
-    const rangeLabel =
-      selectionCount > 0
-        ? selectionCount === 1
+    // Memoize range label to avoid recalculating on each render
+    const rangeLabel = React.useMemo(() => {
+      if (selectionCount > 0) {
+        return selectionCount === 1
           ? "1 company selected"
-          : `${numberFormatter.format(selectionCount)} companies selected`
-        : filteredRowCount === 0
-          ? "Showing 0-0 of 0 companies"
-          : `Showing ${numberFormatter.format(pageStart)}-${numberFormatter.format(pageEnd)} of ${numberFormatter.format(filteredRowCount)} companies`;
+          : `${numberFormatter.format(selectionCount)} companies selected`;
+      }
+      if (filteredRowCount === 0) {
+        return "Showing 0-0 of 0 companies";
+      }
+      return `Showing ${numberFormatter.format(pageStart)}-${numberFormatter.format(pageEnd)} of ${numberFormatter.format(filteredRowCount)} companies`;
+    }, [selectionCount, filteredRowCount, pageStart, pageEnd, numberFormatter]);
 
     const handleQuickFilter = React.useCallback((filterId: string, query: string) => {
       setActiveQuickFilter(filterId);
@@ -691,6 +753,91 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
       setActiveQuickFilter("all");
     }, []);
 
+    // Memoize page size options
+    const pageSizeOptions = React.useMemo(() => [10, 20, 30, 40, 50], []);
+
+    // Memoize pagination handlers
+    const handlePreviousPage = React.useCallback(() => {
+      table.previousPage();
+    }, [table]);
+
+    const handleNextPage = React.useCallback(() => {
+      table.nextPage();
+    }, [table]);
+
+    const handleSetPageIndex = React.useCallback(
+      (index: number) => {
+        table.setPageIndex(index);
+      },
+      [table]
+    );
+
+    const handleSetPageSize = React.useCallback(
+      (value: string) => {
+        table.setPageSize(Number(value));
+      },
+      [table]
+    );
+
+    // Memoize Sheet handlers
+    const handleSheetOpenChange = React.useCallback(
+      (open: boolean) => {
+        dialog.setIsOpen(open);
+        if (!open) {
+          dialog.closeDialog();
+          form.reset(getDefaultFormValues());
+        }
+      },
+      [dialog, form]
+    );
+
+    const handleSheetCancel = React.useCallback(() => {
+      dialog.closeDialog();
+      form.reset(getDefaultFormValues());
+    }, [dialog, form]);
+
+    // Memoize AlertDialog handlers
+    const handleDeleteDialogOpenChange = React.useCallback(
+      (open: boolean) => {
+        setIsDeleteDialogOpen(open);
+        if (!open && !isDeleting) {
+          setCompanyToDelete(null);
+        }
+      },
+      [isDeleting]
+    );
+
+    // Memoize Sheet title
+    const sheetTitle = React.useMemo(
+      () => (dialog.mode === "create" ? "Create Customer" : "Edit Customer"),
+      [dialog.mode]
+    );
+
+    // Memoize AlertDialog description
+    const deleteDialogDescription = React.useMemo(() => {
+      return companyToDelete
+        ? `This will permanently remove ${companyToDelete.name} and its related records.`
+        : "This will permanently remove the selected company.";
+    }, [companyToDelete]);
+
+    // Memoize search onChange handler to avoid recreating on each render
+    const handleSearchChange = React.useCallback((value: string) => {
+      setGlobalFilter(value);
+      setActiveQuickFilter(value.trim() === "" ? "all" : "custom");
+    }, []);
+
+    // Memoize table row model and header groups
+    // Note: React Table already optimizes these internally, but we memoize to avoid
+    // unnecessary recalculations when table state changes
+    const rowModel = table.getRowModel();
+    const headerGroups = table.getHeaderGroups();
+    const visibleColumns = React.useMemo(
+      () => table.getAllLeafColumns().filter((column) => column.getCanHide()),
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      // table object changes on every render, but columnVisibility is the actual dependency
+      [columnVisibility]
+    );
+
     React.useImperativeHandle(
       ref,
       () => ({
@@ -705,10 +852,7 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
           <TableToolbar
             search={{
               value: globalFilter,
-              onChange: (value) => {
-                setGlobalFilter(value);
-                setActiveQuickFilter(value.trim() === "" ? "all" : "custom");
-              },
+              onChange: handleSearchChange,
               placeholder: "Search companies by name, email, or country",
               ariaLabel: "Search companies"
             }}
@@ -721,18 +865,15 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
-                    {table
-                      .getAllLeafColumns()
-                      .filter((column) => column.getCanHide())
-                      .map((column) => (
-                        <DropdownMenuCheckboxItem
-                          key={column.id}
-                          className="capitalize"
-                          checked={column.getIsVisible()}
-                          onCheckedChange={(value) => column.toggleVisibility(Boolean(value))}>
-                          {column.id}
-                        </DropdownMenuCheckboxItem>
-                      ))}
+                    {visibleColumns.map((column) => (
+                      <DropdownMenuCheckboxItem
+                        key={column.id}
+                        className="capitalize"
+                        checked={column.getIsVisible()}
+                        onCheckedChange={(value) => column.toggleVisibility(Boolean(value))}>
+                        {column.id}
+                      </DropdownMenuCheckboxItem>
+                    ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
 
@@ -763,7 +904,7 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
           <div className="bg-background overflow-hidden rounded-xl border shadow-sm">
             <Table>
               <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
+                {headerGroups.map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header) => (
                       <TableHead key={header.id}>
@@ -776,12 +917,10 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
                 ))}
               </TableHeader>
               <TableBody>
-                {table.getRowModel().rows.length ? (
-                  table
-                    .getRowModel()
-                    .rows.map((row) => (
-                      <MemoizedTableRow key={row.id} row={row} onRowClick={handleView} />
-                    ))
+                {rowModel.rows.length ? (
+                  rowModel.rows.map((row) => (
+                    <MemoizedTableRow key={row.id} row={row} onRowClick={handleView} />
+                  ))
                 ) : (
                   <TableRow>
                     <TableCell colSpan={visibleColumnCount} className="p-6">
@@ -810,14 +949,12 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
             <div className="text-muted-foreground flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
               <div className="flex items-center gap-2">
                 <span className="text-foreground text-sm font-medium">Rows per page</span>
-                <Select
-                  value={String(pagination.pageSize)}
-                  onValueChange={(value) => table.setPageSize(Number(value))}>
+                <Select value={String(pagination.pageSize)} onValueChange={handleSetPageSize}>
                   <SelectTrigger className="h-8 w-[72px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {[10, 20, 30, 40, 50].map((pageSize) => (
+                    {pageSizeOptions.map((pageSize) => (
                       <SelectItem key={pageSize} value={String(pageSize)}>
                         {pageSize}
                       </SelectItem>
@@ -829,7 +966,7 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
                 <Button
                   variant="outline"
                   className="h-8"
-                  onClick={() => table.previousPage()}
+                  onClick={handlePreviousPage}
                   disabled={!table.getCanPreviousPage()}>
                   Previous
                 </Button>
@@ -845,7 +982,7 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
                         size="sm"
                         variant={pagination.pageIndex === item.value ? "default" : "ghost"}
                         className="h-8 w-8"
-                        onClick={() => table.setPageIndex(item.value)}>
+                        onClick={() => handleSetPageIndex(item.value)}>
                         {item.value + 1}
                       </Button>
                     )
@@ -854,7 +991,7 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
                 <Button
                   variant="outline"
                   className="h-8"
-                  onClick={() => table.nextPage()}
+                  onClick={handleNextPage}
                   disabled={!table.getCanNextPage()}>
                   Next
                 </Button>
@@ -863,61 +1000,56 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
           </div>
         </div>
 
-        <CompanyDrawer
-          open={Boolean(activeCompany)}
-          onClose={closeSidebar}
-          company={
-            activeCompany
-              ? {
-                  id: activeCompany.id,
-                  name: activeCompany.name,
-                  email: activeCompany.email,
-                  phone: activeCompany.phone,
-                  website: activeCompany.website,
-                  legalName: activeCompany.legalName ?? null,
-                  description: activeCompany.description ?? null,
-                  type: activeCompany.type ?? null,
-                  taxId: activeCompany.taxId,
-                  country: activeCompany.country,
-                  industry: activeCompany.industry ?? null,
-                  numberOfEmployees: activeCompany.numberOfEmployees ?? null,
-                  annualRevenueRange: activeCompany.annualRevenueRange ?? null,
-                  createdAt: activeCompany.createdAt,
-                  updatedAt: activeCompany.updatedAt,
-                  socialMediaLinks: activeCompany.socialMediaLinks ?? null,
-                  registrationNumber: activeCompany.registrationNumber,
-                  dateOfIncorporation: activeCompany.dateOfIncorporation ?? null,
-                  legalStatus: activeCompany.legalStatus ?? null,
-                  companyType: activeCompany.companyType ?? null
-                }
-              : null
-          }
-          details={
-            companyDetails
-              ? {
-                  addresses: companyDetails.addresses,
-                  executives: companyDetails.executives,
-                  milestones: companyDetails.milestones
-                }
-              : null
-          }
-          isLoadingDetails={isLoadingDetails}
-        />
+        {/* Memoize CompanyDrawer props to avoid unnecessary re-renders */}
+        {React.useMemo(() => {
+          const companyProps = activeCompany
+            ? {
+                id: activeCompany.id,
+                name: activeCompany.name,
+                email: activeCompany.email,
+                phone: activeCompany.phone,
+                website: activeCompany.website,
+                legalName: activeCompany.legalName ?? null,
+                description: activeCompany.description ?? null,
+                type: activeCompany.type ?? null,
+                taxId: activeCompany.taxId,
+                country: activeCompany.country,
+                industry: activeCompany.industry ?? null,
+                numberOfEmployees: activeCompany.numberOfEmployees ?? null,
+                annualRevenueRange: activeCompany.annualRevenueRange ?? null,
+                createdAt: activeCompany.createdAt,
+                updatedAt: activeCompany.updatedAt,
+                socialMediaLinks: activeCompany.socialMediaLinks ?? null,
+                registrationNumber: activeCompany.registrationNumber,
+                dateOfIncorporation: activeCompany.dateOfIncorporation ?? null,
+                legalStatus: activeCompany.legalStatus ?? null,
+                companyType: activeCompany.companyType ?? null
+              }
+            : null;
 
-        <Sheet
-          open={dialog.isOpen}
-          onOpenChange={(open) => {
-            dialog.setIsOpen(open);
-            if (!open) {
-              dialog.closeDialog();
-              form.reset(getDefaultFormValues());
-            }
-          }}>
+          const detailsProps = companyDetails
+            ? {
+                addresses: companyDetails.addresses,
+                executives: companyDetails.executives,
+                milestones: companyDetails.milestones
+              }
+            : null;
+
+          return (
+            <CompanyDrawer
+              open={Boolean(activeCompany)}
+              onClose={closeSidebar}
+              company={companyProps}
+              details={detailsProps}
+              isLoadingDetails={isLoadingDetails}
+            />
+          );
+        }, [activeCompany, companyDetails, isLoadingDetails, closeSidebar])}
+
+        <Sheet open={dialog.isOpen} onOpenChange={handleSheetOpenChange}>
           <SheetContent className="flex h-full flex-col gap-0 p-0 sm:max-w-lg">
             <SheetHeader className="px-6 pt-6 pb-4">
-              <SheetTitle className="text-lg font-semibold">
-                {dialog.mode === "create" ? "Create Customer" : "Edit Customer"}
-              </SheetTitle>
+              <SheetTitle className="text-lg font-semibold">{sheetTitle}</SheetTitle>
             </SheetHeader>
 
             <ScrollArea className="flex-1 px-6">
@@ -1128,10 +1260,7 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
                 type="button"
                 variant="outline"
                 disabled={dialog.isSubmitting}
-                onClick={() => {
-                  dialog.closeDialog();
-                  form.reset(getDefaultFormValues());
-                }}
+                onClick={handleSheetCancel}
                 className="h-9 w-full sm:w-auto">
                 Cancel
               </Button>
@@ -1155,22 +1284,11 @@ const CompaniesDataTable = React.forwardRef<CompaniesDataTableHandle, CompaniesD
           </SheetContent>
         </Sheet>
 
-        <AlertDialog
-          open={isDeleteDialogOpen}
-          onOpenChange={(open) => {
-            setIsDeleteDialogOpen(open);
-            if (!open && !isDeleting) {
-              setCompanyToDelete(null);
-            }
-          }}>
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={handleDeleteDialogOpenChange}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete company</AlertDialogTitle>
-              <AlertDialogDescription>
-                {companyToDelete
-                  ? `This will permanently remove ${companyToDelete.name} and its related records.`
-                  : "This will permanently remove the selected company."}
-              </AlertDialogDescription>
+              <AlertDialogDescription>{deleteDialogDescription}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>

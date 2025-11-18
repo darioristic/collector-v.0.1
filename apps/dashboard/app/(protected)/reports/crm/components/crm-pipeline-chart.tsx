@@ -63,11 +63,7 @@ export function CRMPipelineChart() {
 							textAnchor="end"
 							height={80}
 						/>
-						<YAxis
-							tickLine={false}
-							axisLine={false}
-							tickMargin={8}
-						/>
+						<YAxis tickLine={false} axisLine={false} tickMargin={8} />
 						<ChartTooltip
 							cursor={false}
 							content={<ChartTooltipContent indicator="line" />}
@@ -80,4 +76,3 @@ export function CRMPipelineChart() {
 		</Card>
 	);
 }
-

@@ -1,10 +1,12 @@
-import { type NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { type NextRequest, NextResponse } from "next/server";
 
 import { SESSION_COOKIE_NAME } from "@/lib/session-constants";
 
 const CHAT_SERVICE_URL =
-	process.env.CHAT_SERVICE_URL || process.env.NEXT_PUBLIC_CHAT_SERVICE_URL || "http://localhost:4001";
+	process.env.CHAT_SERVICE_URL ||
+	process.env.NEXT_PUBLIC_CHAT_SERVICE_URL ||
+	"http://localhost:4001";
 
 const withNoStore = (response: NextResponse) => {
 	response.headers.set("Cache-Control", "no-store");
@@ -22,26 +24,26 @@ const unauthorized = () =>
 	);
 
 export async function GET(
-    request: NextRequest,
-    { params }: { params: { id: string } },
+	request: NextRequest,
+	{ params }: { params: { id: string } },
 ) {
-    try {
-        const cookieStore = cookies();
-        const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+	try {
+		const cookieStore = cookies();
+		const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
 		if (!sessionToken) {
 			return unauthorized();
 		}
 
-        const conversationId = params?.id;
-        if (!conversationId) {
-            return withNoStore(
-                NextResponse.json(
-                    { error: "Nedostaje ID konverzacije." },
-                    { status: 400 },
-                ),
-            );
-        }
+		const conversationId = params?.id;
+		if (!conversationId) {
+			return withNoStore(
+				NextResponse.json(
+					{ error: "Nedostaje ID konverzacije." },
+					{ status: 400 },
+				),
+			);
+		}
 		const limitParam = request.nextUrl.searchParams.get("limit");
 		const limit = limitParam ? parseInt(limitParam, 10) : 50;
 
@@ -90,7 +92,8 @@ export async function GET(
 				return withNoStore(
 					NextResponse.json(
 						{
-							error: "Chat servis nije dostupan. Proverite da li je servis pokrenut na portu 4001.",
+							error:
+								"Chat servis nije dostupan. Proverite da li je servis pokrenut na portu 4001.",
 						},
 						{ status: 503 },
 					),
@@ -120,7 +123,9 @@ export async function GET(
 			}
 
 			const errorMessage =
-				errorData.error || errorData.message || "Preuzimanje poruka nije uspelo.";
+				errorData.error ||
+				errorData.message ||
+				"Preuzimanje poruka nije uspelo.";
 
 			console.error("[chat-api] Chat service returned error:", {
 				conversationId,
@@ -145,7 +150,8 @@ export async function GET(
 		} catch (parseError) {
 			console.error("[chat-api] Failed to parse response:", {
 				conversationId,
-				error: parseError instanceof Error ? parseError.message : String(parseError),
+				error:
+					parseError instanceof Error ? parseError.message : String(parseError),
 			});
 			return withNoStore(
 				NextResponse.json(
@@ -177,26 +183,26 @@ export async function GET(
 }
 
 export async function POST(
-    request: NextRequest,
-    { params }: { params: { id: string } },
+	request: NextRequest,
+	{ params }: { params: { id: string } },
 ) {
-    try {
-        const cookieStore = cookies();
-        const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+	try {
+		const cookieStore = cookies();
+		const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
 		if (!sessionToken) {
 			return unauthorized();
 		}
 
-        const conversationId = params?.id;
-        if (!conversationId) {
-            return withNoStore(
-                NextResponse.json(
-                    { error: "Nedostaje ID konverzacije." },
-                    { status: 400 },
-                ),
-            );
-        }
+		const conversationId = params?.id;
+		if (!conversationId) {
+			return withNoStore(
+				NextResponse.json(
+					{ error: "Nedostaje ID konverzacije." },
+					{ status: 400 },
+				),
+			);
+		}
 		const json = await request.json().catch(() => null);
 
 		if (!json || typeof json !== "object") {

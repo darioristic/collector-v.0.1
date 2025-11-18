@@ -1,3 +1,5 @@
+"use client";
+
 import { useQuery } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
 import { fetchConversations } from "@/app/(protected)/apps/chat/api";
@@ -32,4 +34,3 @@ export function useUnreadMessages() {
 		conversations,
 	};
 }
-

@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { io, type ManagerOptions, type Socket, type SocketOptions } from "socket.io-client";
-import { useAuth } from "@/components/providers/auth-provider";
+import {
+	io,
+	type ManagerOptions,
+	type Socket,
+	type SocketOptions,
+} from "socket.io-client";
 import type { ChatMessage } from "@/app/(protected)/apps/chat/api";
+import { useAuth } from "@/components/providers/auth-provider";
 import { SESSION_COOKIE_NAME } from "@/lib/session-constants";
 
 const CHAT_SERVICE_URL =
@@ -22,11 +27,19 @@ export function useChatSocket() {
 		Set<(data: { conversationId: string }) => void>
 	>(new Set());
 	const typingCallbacksRef = useRef<
-		Set<(data: { conversationId: string; userId: string; isTyping: boolean }) => void>
+		Set<
+			(data: {
+				conversationId: string;
+				userId: string;
+				isTyping: boolean;
+			}) => void
+		>
 	>(new Set());
 
 	useEffect(() => {
-		console.log("[chat-socket] 🚀 useEffect triggered", { hasUser: !!user?.id });
+		console.log("[chat-socket] 🚀 useEffect triggered", {
+			hasUser: !!user?.id,
+		});
 
 		if (!user?.id) {
 			console.log("[chat-socket] ⚠️ No user ID, skipping socket initialization");
@@ -48,7 +61,7 @@ export function useChatSocket() {
 			hasToken: !!token,
 			tokenLength: token?.length,
 			tokenPreview: token ? `${token.substring(0, 10)}...` : "none",
-			allCookies: document.cookie.split("; ").map(c => c.split("=")[0]),
+			allCookies: document.cookie.split("; ").map((c) => c.split("=")[0]),
 		});
 
 		// Note: If token is not found in JavaScript (httpOnly cookie),
@@ -57,11 +70,14 @@ export function useChatSocket() {
 		if (!token) {
 			console.log(
 				"[chat-socket] ℹ️ Token not accessible from JavaScript (likely httpOnly cookie). " +
-				"Socket.IO will automatically send it in HTTP headers."
+					"Socket.IO will automatically send it in HTTP headers.",
 			);
 		}
 
-		console.log("[chat-socket] 🔌 Initializing Socket.IO connection to:", CHAT_SERVICE_URL);
+		console.log(
+			"[chat-socket] 🔌 Initializing Socket.IO connection to:",
+			CHAT_SERVICE_URL,
+		);
 
 		// Create socket connection
 		// Note: Socket.IO will automatically send all cookies (including httpOnly)
@@ -84,7 +100,9 @@ export function useChatSocket() {
 
 		const newSocket = io(CHAT_SERVICE_URL, socketOptions);
 
-		console.log("[chat-socket] ✅ Socket.IO client created, waiting for connection...");
+		console.log(
+			"[chat-socket] ✅ Socket.IO client created, waiting for connection...",
+		);
 
 		socketRef.current = newSocket;
 
@@ -96,7 +114,7 @@ export function useChatSocket() {
 				userId: user?.id,
 			});
 			setIsConnected(true);
-			
+
 			// Request initial online users list
 			if (user?.id) {
 				newSocket.emit("users:online:request", { userId: user.id });
@@ -141,7 +159,9 @@ export function useChatSocket() {
 		// Initial online users list when connected
 		newSocket.on(
 			"users:online",
-			(data: { users: Array<{ userId: string; status: "online" | "offline" | "away" }> }) => {
+			(data: {
+				users: Array<{ userId: string; status: "online" | "offline" | "away" }>;
+			}) => {
 				console.log("[chat-socket] Initial online users:", data);
 				const statusMap: Record<string, "online" | "offline" | "away"> = {};
 				data.users.forEach((user) => {
@@ -225,7 +245,6 @@ export function useChatSocket() {
 				socketRef.current = null;
 			}
 		};
-		 
 	}, [user?.id]);
 
 	// Join conversation room
@@ -259,7 +278,10 @@ export function useChatSocket() {
 	// Subscribe to new message events
 	const onNewMessage = useCallback(
 		(
-			callback: (data: { conversationId: string; message: ChatMessage }) => void,
+			callback: (data: {
+				conversationId: string;
+				message: ChatMessage;
+			}) => void,
 		) => {
 			messageCallbacksRef.current.add(callback);
 			// Return unsubscribe function

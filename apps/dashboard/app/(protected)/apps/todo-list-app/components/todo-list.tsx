@@ -1,13 +1,13 @@
 import {
-    closestCenter,
-    DndContext,
-    type DragEndEvent,
-    DragOverlay,
-    type DragStartEvent,
-    KeyboardSensor,
-    PointerSensor,
-    useSensor,
-    useSensors,
+	closestCenter,
+	DndContext,
+	type DragEndEvent,
+	DragOverlay,
+	type DragStartEvent,
+	KeyboardSensor,
+	PointerSensor,
+	useSensor,
+	useSensors,
 } from "@dnd-kit/core";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import {
@@ -182,9 +182,9 @@ export default function TodoList({
 		toast.success("The to-do items have been reordered successfully.");
 	};
 
-    const handleDragCancel = () => {
-        setActiveId(null);
-    };
+	const handleDragCancel = () => {
+		setActiveId(null);
+	};
 
 	const handleUserFilterChange = (user: string, checked: boolean) => {
 		if (!filterUser) {

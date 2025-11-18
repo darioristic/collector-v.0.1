@@ -14,10 +14,10 @@ import {
 } from "@/src/queries/payments";
 
 type UsePaymentsOptions = {
-    invoiceId?: string;
-    status?: PaymentStatus;
-    limit?: number;
-    offset?: number;
+	invoiceId?: string;
+	status?: PaymentStatus;
+	limit?: number;
+	offset?: number;
 };
 
 export function usePayments(options: UsePaymentsOptions = {}) {

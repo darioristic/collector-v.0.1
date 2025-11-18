@@ -1,19 +1,20 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { useState } from "react";
-
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { useProjects } from "@/src/hooks/useProjects";
 import { fetchProjectTeams } from "@/src/queries/projects";
 import type { ProjectTeam } from "@/src/types/projects";
 
 export function TeamsPageClient() {
 	const { data: projects } = useProjects();
-	const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+	const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+		null,
+	);
 
 	const { data: teams, isLoading } = useQuery({
 		queryKey: ["project-teams", selectedProjectId],
@@ -28,9 +29,12 @@ export function TeamsPageClient() {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-3xl font-bold tracking-tight">Timovi projekata</h1>
+					<h1 className="text-3xl font-bold tracking-tight">
+						Timovi projekata
+					</h1>
 					<p className="text-muted-foreground">
-						Upravljajte multifunkcionalnim timovima i njihovim ciljevima na projektima.
+						Upravljajte multifunkcionalnim timovima i njihovim ciljevima na
+						projektima.
 					</p>
 				</div>
 				<Button>
@@ -49,7 +53,9 @@ export function TeamsPageClient() {
 							{projects.map((project) => (
 								<Button
 									key={project.id}
-									variant={selectedProjectId === project.id ? "default" : "outline"}
+									variant={
+										selectedProjectId === project.id ? "default" : "outline"
+									}
 									className="h-auto flex-col items-start p-4"
 									onClick={() => setSelectedProjectId(project.id)}
 								>
@@ -89,11 +95,14 @@ export function TeamsPageClient() {
 										</CardHeader>
 										<CardContent>
 											{team.goal && (
-												<p className="text-muted-foreground text-sm">{team.goal}</p>
+												<p className="text-muted-foreground text-sm">
+													{team.goal}
+												</p>
 											)}
 											<div className="mt-4 flex items-center gap-2">
 												<Badge variant="outline">
-													Kreiran: {new Date(team.createdAt).toLocaleDateString()}
+													Kreiran:{" "}
+													{new Date(team.createdAt).toLocaleDateString()}
 												</Badge>
 											</div>
 										</CardContent>
@@ -111,4 +120,3 @@ export function TeamsPageClient() {
 		</div>
 	);
 }
-

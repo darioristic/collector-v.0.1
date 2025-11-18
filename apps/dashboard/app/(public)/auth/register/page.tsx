@@ -316,9 +316,7 @@ export default function RegisterPage() {
 	return (
 		<Suspense
 			fallback={
-				<div className="flex items-center justify-center py-12">
-					Loading...
-				</div>
+				<div className="flex items-center justify-center py-12">Loading...</div>
 			}
 		>
 			<RegisterPageContent />

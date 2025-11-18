@@ -1,12 +1,7 @@
 "use client";
 
 import type { QuoteItemCreateInput } from "@crm/types";
-import {
-	motion,
-	useMotionValue,
-	useSpring,
-	useTransform,
-} from "motion/react";
+import { motion, useMotionValue, useSpring, useTransform } from "motion/react";
 import { useEffect } from "react";
 import {
 	type Control,
@@ -21,7 +16,9 @@ type QuoteTotalsFormValues = FieldValues & {
 	items: QuoteItemCreateInput[];
 };
 
-type QuoteTotalsProps<TFormValues extends QuoteTotalsFormValues = QuoteTotalsFormValues> = {
+type QuoteTotalsProps<
+	TFormValues extends QuoteTotalsFormValues = QuoteTotalsFormValues,
+> = {
 	control: Control<TFormValues>;
 	currency?: string;
 	className?: string;
@@ -48,11 +45,9 @@ function AnimatedNumber({ value }: { value: number }) {
 	return <motion.span>{display}</motion.span>;
 }
 
-export function QuoteTotals<TFormValues extends QuoteTotalsFormValues = QuoteTotalsFormValues>({
-	control,
-	currency = "EUR",
-	className,
-}: QuoteTotalsProps<TFormValues>) {
+export function QuoteTotals<
+	TFormValues extends QuoteTotalsFormValues = QuoteTotalsFormValues,
+>({ control, currency = "EUR", className }: QuoteTotalsProps<TFormValues>) {
 	const items =
 		(useWatch({
 			control,
@@ -108,4 +103,3 @@ export function QuoteTotals<TFormValues extends QuoteTotalsFormValues = QuoteTot
 		</Card>
 	);
 }
-

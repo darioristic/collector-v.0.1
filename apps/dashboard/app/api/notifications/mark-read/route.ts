@@ -50,7 +50,9 @@ export async function PATCH(request: NextRequest) {
 		});
 
 		if (!response.ok) {
-			const error = await response.json().catch(() => ({ error: "Failed to mark as read" }));
+			const error = await response
+				.json()
+				.catch(() => ({ error: "Failed to mark as read" }));
 			return withNoStore(
 				NextResponse.json(
 					{
@@ -77,4 +79,3 @@ export async function PATCH(request: NextRequest) {
 		);
 	}
 }
-

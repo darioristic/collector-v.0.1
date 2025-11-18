@@ -11,11 +11,6 @@ export async function generateMetadata(): Promise<Metadata> {
 	});
 }
 
-export default function ReportsLayout({
-	children,
-}: {
-	children: ReactNode;
-}) {
+export default function ReportsLayout({ children }: { children: ReactNode }) {
 	return <>{children}</>;
 }
-

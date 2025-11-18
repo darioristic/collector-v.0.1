@@ -1,9 +1,4 @@
 import { Download } from "lucide-react";
-import CalendarDateRangePicker from "@/components/custom-date-range-picker";
-
-import { Button } from "@/components/ui/button";
-import { DashboardPageHeader } from "@/components/ui/page-header";
-import { generateMeta } from "@/lib/utils";
 import KPICards from "@/app/(protected)/finance/components/kpi-cards";
 import MonthlyExpenses from "@/app/(protected)/finance/components/monthly-expenses";
 import CreditCards from "@/app/(protected)/finance/components/my-wallet";
@@ -11,6 +6,10 @@ import Revenue from "@/app/(protected)/finance/components/revenue";
 import SavingGoal from "@/app/(protected)/finance/components/saving-goal";
 import Summary from "@/app/(protected)/finance/components/summary";
 import Transactions from "@/app/(protected)/finance/components/transactions";
+import CalendarDateRangePicker from "@/components/custom-date-range-picker";
+import { Button } from "@/components/ui/button";
+import { DashboardPageHeader } from "@/components/ui/page-header";
+import { generateMeta } from "@/lib/utils";
 
 export async function generateMetadata() {
 	return generateMeta({
@@ -55,4 +54,3 @@ export default function Page() {
 		</div>
 	);
 }
-

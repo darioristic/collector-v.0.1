@@ -1,20 +1,25 @@
 "use client";
 
-import { Calendar, Download, GanttChart, LayoutGrid, LayoutList, Search, X } from "lucide-react";
+import type { Table } from "@tanstack/react-table";
 import {
+	Calendar,
 	CheckCircle,
 	CircleDashed,
 	CircleDot,
 	CircleSlash,
+	Download,
+	GanttChart,
+	LayoutGrid,
+	LayoutList,
+	Search,
+	X,
 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import type { ProjectTask, TaskStatus } from "@/src/types/projects";
+import type { ViewMode } from "../project-header";
 import { DataTableFacetedFilter } from "./data-table-faceted-filter";
 import { DataTableViewOptions } from "./data-table-view-options";
-import type { ViewMode } from "../project-header";
-import type { ProjectTask, TaskStatus } from "@/src/types/projects";
-import type { Table } from "@tanstack/react-table";
 
 const statuses: {
 	value: TaskStatus;
@@ -115,9 +120,7 @@ export function ProjectTasksToolbar({
 			</Button>
 
 			{/* Columns */}
-			{table && (
-				<DataTableViewOptions table={table} />
-			)}
+			{table && <DataTableViewOptions table={table} />}
 
 			{/* View Icons */}
 			<div className="flex items-center gap-1 border rounded-md p-1 bg-background">
@@ -161,4 +164,3 @@ export function ProjectTasksToolbar({
 		</div>
 	);
 }
-

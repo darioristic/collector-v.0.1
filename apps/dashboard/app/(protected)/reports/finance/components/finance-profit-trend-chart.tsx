@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CartesianGrid, XAxis, YAxis, Area, AreaChart } from "recharts";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
 	Card,
 	CardContent,
@@ -86,4 +86,3 @@ export function FinanceProfitTrendChart() {
 		</Card>
 	);
 }
-

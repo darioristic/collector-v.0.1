@@ -56,4 +56,3 @@ export async function seedCompanies(
 		skipped: COMPANIES_DATA.length - companiesToInsert.length,
 	};
 }
-

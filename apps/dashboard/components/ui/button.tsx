@@ -58,11 +58,7 @@ function Button({
 	// Handle "small" and "large" sizes (Geist compatibility)
 	// Map to existing size variants
 	const sizeVariant: ButtonBaseSize =
-		size === "small"
-			? "sm"
-			: size === "large"
-				? "lg"
-				: (size ?? "default");
+		size === "small" ? "sm" : size === "large" ? "lg" : (size ?? "default");
 
 	return (
 		<Comp

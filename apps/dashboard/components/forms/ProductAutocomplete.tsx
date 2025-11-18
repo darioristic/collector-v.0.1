@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Check, ChevronsUpDown, Loader2, Package } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
-import { cn } from "@/lib/utils";
+import { AnimatePresence, motion } from "motion/react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Command,
@@ -19,6 +18,7 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import { ensureResponse } from "@/src/lib/fetch-utils";
 
 type Product = {
@@ -38,14 +38,17 @@ type ProductAutocompleteProps = {
 	currency?: string;
 };
 
-async function searchProducts(query: string, currency?: string): Promise<Product[]> {
-    const trimmed = query.trim();
-    const safeQuery = trimmed.slice(0, 255);
-    const params = new URLSearchParams({
-        search: safeQuery,
-        limit: "20",
-        ...(currency && { currency }),
-    });
+async function searchProducts(
+	query: string,
+	currency?: string,
+): Promise<Product[]> {
+	const trimmed = query.trim();
+	const safeQuery = trimmed.slice(0, 255);
+	const params = new URLSearchParams({
+		search: safeQuery,
+		limit: "20",
+		...(currency && { currency }),
+	});
 
 	const response = await ensureResponse(
 		fetch(`/api/products?${params.toString()}`, {
@@ -56,38 +59,38 @@ async function searchProducts(query: string, currency?: string): Promise<Product
 		}),
 	);
 
-const data = (await response.json()) as { data: unknown; total?: number };
+	const data = (await response.json()) as { data: unknown; total?: number };
 
-type ApiProduct = {
-    id: string;
-    name: string;
-    sku?: string | null;
-    price: number | string | null;
-    currency?: string | null;
-    description?: string | null;
-};
+	type ApiProduct = {
+		id: string;
+		name: string;
+		sku?: string | null;
+		price: number | string | null;
+		currency?: string | null;
+		description?: string | null;
+	};
 
-const rawData = (data as { data?: unknown }).data;
-const rawList: unknown[] = Array.isArray(rawData) ? rawData : [];
+	const rawData = (data as { data?: unknown }).data;
+	const rawList: unknown[] = Array.isArray(rawData) ? rawData : [];
 
-return rawList.map((item) => {
-    const p = item as Partial<ApiProduct>;
-    const priceVal =
-        typeof p.price === "number"
-            ? p.price
-            : p.price
-            ? Number.parseFloat(String(p.price)) || 0
-            : 0;
+	return rawList.map((item) => {
+		const p = item as Partial<ApiProduct>;
+		const priceVal =
+			typeof p.price === "number"
+				? p.price
+				: p.price
+					? Number.parseFloat(String(p.price)) || 0
+					: 0;
 
-    return {
-        id: String(p.id ?? ""),
-        name: String(p.name ?? ""),
-        sku: p.sku ?? "",
-        price: priceVal,
-        currency: p.currency ?? "EUR",
-        description: p.description ?? null,
-    };
-});
+		return {
+			id: String(p.id ?? ""),
+			name: String(p.name ?? ""),
+			sku: p.sku ?? "",
+			price: priceVal,
+			currency: p.currency ?? "EUR",
+			description: p.description ?? null,
+		};
+	});
 }
 
 export function ProductAutocomplete({
@@ -150,7 +153,10 @@ export function ProductAutocomplete({
 						<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 					</Button>
 				</PopoverTrigger>
-				<PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+				<PopoverContent
+					className="w-[var(--radix-popover-trigger-width)] p-0"
+					align="start"
+				>
 					<AnimatePresence>
 						{open && (
 							<motion.div
@@ -170,7 +176,8 @@ export function ProductAutocomplete({
 											<div className="flex items-center justify-center py-6">
 												<Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
 											</div>
-										) : products.length === 0 && searchQuery.trim().length > 0 ? (
+										) : products.length === 0 &&
+											searchQuery.trim().length > 0 ? (
 											<CommandEmpty>No products found.</CommandEmpty>
 										) : (
 											<CommandGroup>
@@ -190,7 +197,9 @@ export function ProductAutocomplete({
 														/>
 														<div className="flex flex-1 flex-col">
 															<div className="flex items-center justify-between">
-																<span className="font-medium">{product.name}</span>
+																<span className="font-medium">
+																	{product.name}
+																</span>
 																<span className="text-muted-foreground text-xs">
 																	{product.currency} {product.price.toFixed(2)}
 																</span>
@@ -231,4 +240,3 @@ export function ProductAutocomplete({
 		</div>
 	);
 }
-

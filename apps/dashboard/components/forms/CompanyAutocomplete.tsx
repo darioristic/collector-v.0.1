@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
-import { Controller, type Control, type FieldPath, type FieldValues } from "react-hook-form";
 import { Check, ChevronsUpDown, Loader2, Plus } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
-import { cn } from "@/lib/utils";
-import { getCompanyInitials } from "@/lib/utils/company";
-import { useCompanySearch } from "@/src/hooks/useCompanySearch";
-import { useAccounts } from "@/src/hooks/useAccounts";
+import { AnimatePresence, motion } from "motion/react";
+import { useCallback, useMemo, useState } from "react";
+import {
+	type Control,
+	Controller,
+	type FieldPath,
+	type FieldValues,
+} from "react-hook-form";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
 	Command,
@@ -22,17 +24,21 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
+import { getCompanyInitials } from "@/lib/utils/company";
+import { useAccounts } from "@/src/hooks/useAccounts";
+import { useCompanySearch } from "@/src/hooks/useCompanySearch";
 import { CompanyCreationModal } from "./CompanyCreationModal";
 
-type CompanyAutocompleteProps<TFieldValues extends FieldValues = FieldValues> = {
-	value?: string;
-	onChange: (companyId: string) => void;
-	control?: Control<TFieldValues>;
-	name?: FieldPath<TFieldValues>;
-	disabled?: boolean;
-	placeholder?: string;
-};
+type CompanyAutocompleteProps<TFieldValues extends FieldValues = FieldValues> =
+	{
+		value?: string;
+		onChange: (companyId: string) => void;
+		control?: Control<TFieldValues>;
+		name?: FieldPath<TFieldValues>;
+		disabled?: boolean;
+		placeholder?: string;
+	};
 
 const MIN_SEARCH_LENGTH = 2;
 const MIN_CREATE_LENGTH = 3;
@@ -40,18 +46,21 @@ const MAX_VISIBLE_ITEMS = 50;
 
 function highlightMatch(text: string, query: string): React.ReactNode {
 	if (!query || !text) return text;
-	
-	const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-	const parts = text.split(new RegExp(`(${escapedQuery})`, 'gi'));
-	
-	return parts.map((part, i) => 
+
+	const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	const parts = text.split(new RegExp(`(${escapedQuery})`, "gi"));
+
+	return parts.map((part, i) =>
 		part.toLowerCase() === query.toLowerCase() ? (
-			<mark key={i} className="bg-primary/20 text-primary font-medium rounded px-0.5">
+			<mark
+				key={i}
+				className="bg-primary/20 text-primary font-medium rounded px-0.5"
+			>
 				{part}
 			</mark>
 		) : (
 			<span key={i}>{part}</span>
-		)
+		),
 	);
 }
 
@@ -60,7 +69,9 @@ function isValidCompanyName(name: string): boolean {
 	return trimmed.length >= MIN_CREATE_LENGTH && trimmed.length <= 255;
 }
 
-export function CompanyAutocomplete<TFieldValues extends FieldValues = FieldValues>({
+export function CompanyAutocomplete<
+	TFieldValues extends FieldValues = FieldValues,
+>({
 	value,
 	onChange,
 	control,
@@ -108,8 +119,10 @@ function CompanyAutocompleteInner({
 	const { data: allAccounts = [] } = useAccounts();
 
 	const selectedCompany = useMemo(() => {
-		return companies.find((c) => c.id === value) ||
-			allAccounts.find((c) => c.id === value);
+		return (
+			companies.find((c) => c.id === value) ||
+			allAccounts.find((c) => c.id === value)
+		);
 	}, [companies, allAccounts, value]);
 
 	const trimmedQuery = searchQuery.trim();
@@ -118,26 +131,26 @@ function CompanyAutocompleteInner({
 		if (!companies.length || !trimmedQuery) {
 			return companies.slice(0, MAX_VISIBLE_ITEMS);
 		}
-		
+
 		const queryLower = trimmedQuery.toLowerCase();
-		
+
 		const sorted = [...companies].sort((a, b) => {
 			const aName = a.name.toLowerCase();
 			const bName = b.name.toLowerCase();
-			
+
 			if (aName === queryLower) return -1;
 			if (bName === queryLower) return 1;
-			
+
 			const aStarts = aName.startsWith(queryLower);
 			const bStarts = bName.startsWith(queryLower);
 			if (aStarts && !bStarts) return -1;
 			if (!aStarts && bStarts) return 1;
-			
+
 			const aContains = aName.includes(queryLower);
 			const bContains = bName.includes(queryLower);
 			if (aContains && !bContains) return -1;
 			if (!aContains && bContains) return 1;
-			
+
 			return aName.length - bName.length;
 		});
 
@@ -163,18 +176,21 @@ function CompanyAutocompleteInner({
 		if (isLoading) return false;
 		if (trimmedQuery.length < MIN_CREATE_LENGTH) return false;
 		if (!isValidCompanyName(trimmedQuery)) return false;
-		
+
 		return !hasExactMatch && !hasPartialMatch;
 	}, [trimmedQuery, hasExactMatch, hasPartialMatch, isLoading]);
 
 	const visibleCompanies = sortedCompanies;
 	const hasMoreResults = companies.length > MAX_VISIBLE_ITEMS;
 
-	const handleSelect = useCallback((companyId: string) => {
-		onChange(companyId);
-		setOpen(false);
-		setSearchQuery("");
-	}, [onChange]);
+	const handleSelect = useCallback(
+		(companyId: string) => {
+			onChange(companyId);
+			setOpen(false);
+			setSearchQuery("");
+		},
+		[onChange],
+	);
 
 	const handleCreateNew = useCallback(() => {
 		if (!isValidCompanyName(trimmedQuery)) return;
@@ -211,13 +227,15 @@ function CompanyAutocompleteInner({
 								<span className="truncate">{selectedCompany.name}</span>
 							</div>
 						) : (
-							<span className="text-muted-foreground truncate">{placeholder}</span>
+							<span className="text-muted-foreground truncate">
+								{placeholder}
+							</span>
 						)}
 						<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
 					</Button>
 				</PopoverTrigger>
-				<PopoverContent 
-					className="w-[var(--radix-popover-trigger-width)] p-0" 
+				<PopoverContent
+					className="w-[var(--radix-popover-trigger-width)] p-0"
 					align="start"
 				>
 					<AnimatePresence>
@@ -241,45 +259,49 @@ function CompanyAutocompleteInner({
 											</div>
 										) : (
 											<>
-												{visibleCompanies.length === 0 && trimmedQuery.length > 0 && trimmedQuery.length < MIN_SEARCH_LENGTH && (
-													<CommandEmpty>
-														<div className="flex flex-col items-center justify-center py-6 text-center">
-															<div className="flex size-10 items-center justify-center rounded-full bg-muted mb-2">
-																<ChevronsUpDown className="h-5 w-5 text-muted-foreground/60" />
+												{visibleCompanies.length === 0 &&
+													trimmedQuery.length > 0 &&
+													trimmedQuery.length < MIN_SEARCH_LENGTH && (
+														<CommandEmpty>
+															<div className="flex flex-col items-center justify-center py-6 text-center">
+																<div className="flex size-10 items-center justify-center rounded-full bg-muted mb-2">
+																	<ChevronsUpDown className="h-5 w-5 text-muted-foreground/60" />
+																</div>
+																<span className="text-sm font-medium text-muted-foreground">
+																	Type at least {MIN_SEARCH_LENGTH} characters
+																</span>
+																<span className="text-xs text-muted-foreground/70 mt-0.5">
+																	to search for companies
+																</span>
 															</div>
-															<span className="text-sm font-medium text-muted-foreground">
-																Type at least {MIN_SEARCH_LENGTH} characters
-															</span>
-															<span className="text-xs text-muted-foreground/70 mt-0.5">
-																to search for companies
-															</span>
-														</div>
-													</CommandEmpty>
-												)}
-												{visibleCompanies.length === 0 && trimmedQuery.length >= MIN_SEARCH_LENGTH && !shouldShowCreate && (
-													<CommandEmpty>
-														<div className="flex flex-col items-center justify-center py-6 text-center">
-															<div className="flex size-10 items-center justify-center rounded-full bg-muted mb-2">
-																<ChevronsUpDown className="h-5 w-5 text-muted-foreground/60" />
+														</CommandEmpty>
+													)}
+												{visibleCompanies.length === 0 &&
+													trimmedQuery.length >= MIN_SEARCH_LENGTH &&
+													!shouldShowCreate && (
+														<CommandEmpty>
+															<div className="flex flex-col items-center justify-center py-6 text-center">
+																<div className="flex size-10 items-center justify-center rounded-full bg-muted mb-2">
+																	<ChevronsUpDown className="h-5 w-5 text-muted-foreground/60" />
+																</div>
+																<span className="text-sm font-medium text-muted-foreground">
+																	No companies found
+																</span>
+																<span className="text-xs text-muted-foreground/70 mt-0.5">
+																	Try a different search term
+																</span>
 															</div>
-															<span className="text-sm font-medium text-muted-foreground">
-																No companies found
-															</span>
-															<span className="text-xs text-muted-foreground/70 mt-0.5">
-																Try a different search term
-															</span>
-														</div>
-													</CommandEmpty>
-												)}
+														</CommandEmpty>
+													)}
 												{visibleCompanies.length > 0 && (
-													<CommandGroup 
+													<CommandGroup
 														heading={
 															<div className="flex items-center justify-between w-full">
-									<span>
-										{hasMoreResults
-											? `Showing first ${MAX_VISIBLE_ITEMS} of ${companies.length} companies`
-											: `${companies.length} ${companies.length === 1 ? "company" : "companies"}`}
-									</span>
+																<span>
+																	{hasMoreResults
+																		? `Showing first ${MAX_VISIBLE_ITEMS} of ${companies.length} companies`
+																		: `${companies.length} ${companies.length === 1 ? "company" : "companies"}`}
+																</span>
 															</div>
 														}
 													>
@@ -323,9 +345,9 @@ function CompanyAutocompleteInner({
 															<div className="h-px bg-border/50 mx-2 my-2" />
 														)}
 														<CommandGroup>
-															<CommandItem 
+															<CommandItem
 																onSelect={handleCreateNew}
-										className="cursor-pointer !bg-gradient-to-r !from-primary/5 !to-primary/10 hover:!from-primary/10 hover:!to-primary/15 !border-t-2 !border-dashed !border-primary/40 !mt-2 !mx-2 !rounded-lg !py-3.5 !px-3"
+																className="cursor-pointer !bg-gradient-to-r !from-primary/5 !to-primary/10 hover:!from-primary/10 hover:!to-primary/15 !border-t-2 !border-dashed !border-primary/40 !mt-2 !mx-2 !rounded-lg !py-3.5 !px-3"
 															>
 																<div className="flex items-start gap-3 w-full">
 																	<div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/20 ring-2 ring-primary/30 mt-0.5">

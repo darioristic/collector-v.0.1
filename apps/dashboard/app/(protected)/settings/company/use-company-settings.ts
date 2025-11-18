@@ -46,4 +46,3 @@ export function useCompanySettings() {
 		isUpdating: updateMutation.isPending,
 	};
 }
-

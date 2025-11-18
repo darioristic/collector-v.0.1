@@ -36,22 +36,12 @@ interface NoteProps
 
 function Note({ className, variant, children, action, ...props }: NoteProps) {
 	return (
-		<div
-			className={cn(noteVariants({ variant }), className)}
-			{...props}
-		>
-			<div className="flex-1 min-w-0">
-				{children}
-			</div>
-			{action && (
-				<div className="flex-shrink-0">
-					{action}
-				</div>
-			)}
+		<div className={cn(noteVariants({ variant }), className)} {...props}>
+			<div className="flex-1 min-w-0">{children}</div>
+			{action && <div className="flex-shrink-0">{action}</div>}
 		</div>
 	);
 }
 
 export { Note, noteVariants };
 export type { NoteProps };
-

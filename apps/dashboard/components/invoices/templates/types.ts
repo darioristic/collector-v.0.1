@@ -70,6 +70,11 @@ export interface TemplateProps {
 	// Inline edit support without changing layout
 	editable?: boolean;
 	interactive?: boolean;
+	items_per_page?: number;
+	pagination_mode?: "fixed" | "measured";
+	scroll_snap?: boolean;
+	lazy?: boolean;
+	preview_mode?: boolean;
 	editors?: {
 		from?: { value: unknown; onChange: (value: unknown) => void };
 		customer?: { value: unknown; onChange: (value: unknown) => void };

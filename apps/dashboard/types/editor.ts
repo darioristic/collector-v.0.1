@@ -24,4 +24,3 @@ export interface EditorDoc {
 	type?: string;
 	[key: string]: unknown;
 }
-

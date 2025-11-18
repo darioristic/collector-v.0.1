@@ -29,7 +29,7 @@ const chatStore: StateCreator<UseChatStore> = (set, get) => ({
 			conversationId: chat?.conversationId,
 			hasOtherUser: !!chat?.otherUser,
 			otherUserId: chat?.otherUser?.id,
-			chat
+			chat,
 		});
 		set(() => ({ selectedChat: chat }));
 		// Verify it was set
@@ -49,9 +49,14 @@ const chatStore: StateCreator<UseChatStore> = (set, get) => ({
 		) {
 			const existingMessages = state.selectedChat.messages || [];
 			// Check if message already exists to avoid duplicates
-			const messageExists = existingMessages.some((msg) => msg.id === message.id);
+			const messageExists = existingMessages.some(
+				(msg) => msg.id === message.id,
+			);
 			if (messageExists) {
-				console.log("[chat-store] Message already exists, skipping:", message.id);
+				console.log(
+					"[chat-store] Message already exists, skipping:",
+					message.id,
+				);
 				return;
 			}
 			set({
@@ -68,7 +73,9 @@ const chatStore: StateCreator<UseChatStore> = (set, get) => ({
 			set({
 				selectedChat: {
 					...state.selectedChat,
-					messages: state.selectedChat.messages.filter((msg) => msg.id !== messageId),
+					messages: state.selectedChat.messages.filter(
+						(msg) => msg.id !== messageId,
+					),
 				},
 			});
 		}
@@ -80,7 +87,7 @@ const chatStore: StateCreator<UseChatStore> = (set, get) => ({
 				selectedChat: {
 					...state.selectedChat,
 					messages: state.selectedChat.messages.map((msg) =>
-						msg.id === messageId ? { ...msg, ...updates } : msg
+						msg.id === messageId ? { ...msg, ...updates } : msg,
 					),
 				},
 			});

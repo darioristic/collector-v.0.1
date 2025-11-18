@@ -12,4 +12,3 @@ export async function generateMetadata() {
 export default function ProjectTeamsPage() {
 	return <TeamsPageClient />;
 }
-

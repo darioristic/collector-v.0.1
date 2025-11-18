@@ -47,7 +47,9 @@ export function FinanceRevenueExpensesChart() {
 		<Card>
 			<CardHeader>
 				<CardTitle>Revenue vs Expenses</CardTitle>
-				<CardDescription>Monthly revenue and expenses comparison</CardDescription>
+				<CardDescription>
+					Monthly revenue and expenses comparison
+				</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<ChartContainer config={chartConfig}>
@@ -84,4 +86,3 @@ export function FinanceRevenueExpensesChart() {
 		</Card>
 	);
 }
-

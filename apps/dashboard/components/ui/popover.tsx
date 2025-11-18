@@ -8,12 +8,7 @@ import { cn } from "@/lib/utils";
 function Popover({
 	...props
 }: React.ComponentProps<typeof PopoverPrimitive.Root>) {
-	return (
-		<PopoverPrimitive.Root
-			data-slot="popover"
-			{...props}
-		/>
-	);
+	return <PopoverPrimitive.Root data-slot="popover" {...props} />;
 }
 
 function PopoverTrigger({

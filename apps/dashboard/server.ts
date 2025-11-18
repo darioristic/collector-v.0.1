@@ -43,7 +43,6 @@ console.log("[server] Handle function type:", typeof handle);
 console.log("[server] Next.js app initialized");
 
 declare global {
-	 
 	var __server_initialized: boolean | undefined;
 }
 
@@ -61,13 +60,16 @@ preparePromise
 		console.log("[server] NEXT.JS APP PREPARED SUCCESSFULLY");
 		console.log("[server] ========================================");
 		console.log("[server] Verifying handle function:", typeof handle);
-		console.log("[server] Handle function exists:", handle !== undefined && handle !== null);
+		console.log(
+			"[server] Handle function exists:",
+			handle !== undefined && handle !== null,
+		);
 
 		if (globalThis.__server_initialized) {
 			console.log("[server] Server already initialized, skipping...");
 			return;
 		}
-		
+
 		if (!handle) {
 			console.error("[server] ERROR: Handle function is not available!");
 			process.exit(1);
@@ -93,7 +95,9 @@ preparePromise
 			// Add timeout to prevent hanging requests
 			const timeout = setTimeout(() => {
 				if (!res.headersSent) {
-					console.error(`[server] Request timeout after 30s: ${req.method} ${req.url}`);
+					console.error(
+						`[server] Request timeout after 30s: ${req.method} ${req.url}`,
+					);
 					res.statusCode = 504;
 					res.setHeader("Content-Type", "text/plain");
 					res.end("Gateway Timeout");
@@ -116,33 +120,37 @@ preparePromise
 					console.log(`[server] Parsed URL pathname: ${parsedUrl.pathname}`);
 					console.log(`[server] Calling Next.js handle()...`);
 				}
-				
+
 				// Add response event listeners for debugging
 				res.on("finish", () => {
 					clearTimeout(timeout);
 					if (dev) {
-						console.log(`[server] Response finished: ${req.method} ${req.url} - Status: ${res.statusCode}`);
+						console.log(
+							`[server] Response finished: ${req.method} ${req.url} - Status: ${res.statusCode}`,
+						);
 					}
 				});
-				
+
 				res.on("close", () => {
 					clearTimeout(timeout);
 					if (dev) {
 						console.log(`[server] Response closed: ${req.method} ${req.url}`);
 					}
 				});
-				
+
 				// Handle the request - Next.js handle() processes the request
 				// In Next.js 16, handle() returns a promise that must be awaited
 				(async () => {
 					try {
 						if (dev) {
-							console.log(`[server] Calling Next.js handle() for ${req.method} ${parsedUrl.pathname}`);
+							console.log(
+								`[server] Calling Next.js handle() for ${req.method} ${parsedUrl.pathname}`,
+							);
 						}
-						
+
 						// Next.js handle() always returns a promise in Next.js 16+
 						const handleResult = handle(req, res, parsedUrl);
-						
+
 						// Wait for the promise to resolve
 						if (handleResult && typeof handleResult.then === "function") {
 							await handleResult;
@@ -162,7 +170,9 @@ preparePromise
 							res.setHeader("Content-Type", "text/plain");
 							res.end("Internal Server Error");
 						} else {
-							console.error("[server] Headers already sent when error occurred");
+							console.error(
+								"[server] Headers already sent when error occurred",
+							);
 						}
 					}
 				})();
@@ -177,7 +187,9 @@ preparePromise
 					res.statusCode = 500;
 					res.end("internal server error");
 				} else {
-					console.error("[server] Headers already sent, cannot send error response");
+					console.error(
+						"[server] Headers already sent, cannot send error response",
+					);
 				}
 			}
 		});

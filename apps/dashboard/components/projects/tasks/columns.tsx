@@ -12,8 +12,8 @@ import {
 } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -164,7 +164,9 @@ export function createColumns(
 							</AvatarFallback>
 						</Avatar>
 						<div className="leading-tight">
-							<div className="font-medium">{assignee.name ?? assignee.email}</div>
+							<div className="font-medium">
+								{assignee.name ?? assignee.email}
+							</div>
 							{assignee.email && assignee.name ? (
 								<div className="text-muted-foreground text-xs">
 									{assignee.email}
@@ -285,4 +287,3 @@ export function createColumns(
 		},
 	];
 }
-

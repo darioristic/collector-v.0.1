@@ -9,30 +9,30 @@ type UsersCompaniesSeedResult = {
 };
 
 export async function seedUsersCompanies(
-    db: DashboardDatabase,
-    options: { force?: boolean } = {},
+	db: DashboardDatabase,
+	options: { force?: boolean } = {},
 ): Promise<UsersCompaniesSeedResult> {
-    let usersInserted = 0;
-    let companiesInserted = 0;
+	let usersInserted = 0;
+	let companiesInserted = 0;
 
-    let [company] = await db
-        .select()
-        .from(companies)
-        .where(eq(companies.slug, 'collector-labs'))
-        .limit(1);
+	let [company] = await db
+		.select()
+		.from(companies)
+		.where(eq(companies.slug, "collector-labs"))
+		.limit(1);
 
-    if (!company) {
-        const [newCompany] = await db
-            .insert(companies)
-            .values({
-                name: "Default Company",
-                slug: "default-company",
-                domain: null,
-            })
-            .returning();
-        company = newCompany;
-        companiesInserted = 1;
-    }
+	if (!company) {
+		const [newCompany] = await db
+			.insert(companies)
+			.values({
+				name: "Default Company",
+				slug: "default-company",
+				domain: null,
+			})
+			.returning();
+		company = newCompany;
+		companiesInserted = 1;
+	}
 
 	// Get employees to create users from
 	const { employees } = await import("../schema/employees");
@@ -86,4 +86,3 @@ export async function seedUsersCompanies(
 		skipped: existingEmployees.length - usersToInsert.length,
 	};
 }
-

@@ -48,7 +48,7 @@ export default function CreateApiKeyDialog() {
 		resolver: zodResolver(formSchema),
 	});
 
-function onSubmit(_values: z.infer<typeof formSchema>) {
+	function onSubmit(_values: z.infer<typeof formSchema>) {
 		toast.success("Success!");
 		setDialogOpen(false);
 	}

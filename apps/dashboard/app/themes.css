@@ -767,39 +767,39 @@ body {
 	--base-100: oklch(0.96 0 0);
 	--base-200: oklch(0.93 0 0);
 	--base-300: oklch(0.87 0 0);
-	--base-400: oklch(0.70 0 0);
-	--base-500: oklch(0.50 0 0);
+	--base-400: oklch(0.7 0 0);
+	--base-500: oklch(0.5 0 0);
 	--base-600: oklch(0.44 0 0);
 	--base-700: oklch(0.37 0 0);
-	--base-800: oklch(0.30 0 0);
+	--base-800: oklch(0.3 0 0);
 	--base-900: oklch(0.15 0 0);
 	--base-950: oklch(0.08 0 0);
 	--base-1000: oklch(0 0 0);
 
 	--primary-50: oklch(0.98 0.05 250);
 	--primary-100: oklch(0.95 0.08 250);
-	--primary-200: oklch(0.90 0.12 250);
-	--primary-300: oklch(0.80 0.16 250);
-	--primary-400: oklch(0.70 0.18 250);
+	--primary-200: oklch(0.9 0.12 250);
+	--primary-300: oklch(0.8 0.16 250);
+	--primary-400: oklch(0.7 0.18 250);
 	--primary-500: oklch(0.62 0.19 250);
-	--primary-600: oklch(0.55 0.20 250);
+	--primary-600: oklch(0.55 0.2 250);
 	--primary-700: oklch(0.48 0.19 250);
-	--primary-800: oklch(0.40 0.17 250);
+	--primary-800: oklch(0.4 0.17 250);
 	--primary-900: oklch(0.33 0.15 250);
 	--primary-950: oklch(0.24 0.12 250);
-	--primary-1000: oklch(0.16 0.10 250);
+	--primary-1000: oklch(0.16 0.1 250);
 
 	--secondary-50: oklch(0.98 0 0);
 	--secondary-100: oklch(0.95 0 0);
 	--secondary-200: oklch(0.93 0 0);
-	--secondary-300: oklch(0.80 0 0);
+	--secondary-300: oklch(0.8 0 0);
 	--secondary-400: oklch(0.65 0 0);
-	--secondary-500: oklch(0.50 0 0);
-	--secondary-600: oklch(0.40 0 0);
-	--secondary-700: oklch(0.30 0 0);
-	--secondary-800: oklch(0.20 0 0);
+	--secondary-500: oklch(0.5 0 0);
+	--secondary-600: oklch(0.4 0 0);
+	--secondary-700: oklch(0.3 0 0);
+	--secondary-800: oklch(0.2 0 0);
 	--secondary-900: oklch(0.15 0 0);
-	--secondary-950: oklch(0.10 0 0);
+	--secondary-950: oklch(0.1 0 0);
 	--secondary-1000: oklch(0.06 0 0);
 
 	/* Geist Light Theme - Using Light Colors */
@@ -810,7 +810,7 @@ body {
 	--popover: var(--geist-background-1);
 	--popover-foreground: var(--geist-text-10);
 	--primary: var(--geist-blue-6);
-	--primary-foreground: #FFFFFF;
+	--primary-foreground: #ffffff;
 	--secondary: var(--geist-background-2);
 	--secondary-foreground: var(--geist-text-10);
 	--muted: var(--geist-gray-2);
@@ -818,7 +818,7 @@ body {
 	--accent: var(--geist-blue-1);
 	--accent-foreground: var(--geist-blue-6);
 	--destructive: var(--geist-red-5);
-	--destructive-foreground: #FFFFFF;
+	--destructive-foreground: #ffffff;
 	--border: var(--geist-border-1);
 	--input: var(--geist-border-1);
 	--ring: var(--geist-blue-6);
@@ -831,7 +831,7 @@ body {
 	--sidebar: var(--geist-background-1);
 	--sidebar-foreground: var(--geist-text-10);
 	--sidebar-primary: var(--geist-blue-6);
-	--sidebar-primary-foreground: #FFFFFF;
+	--sidebar-primary-foreground: #ffffff;
 	--sidebar-accent: var(--geist-background-2);
 	--sidebar-accent-foreground: var(--geist-text-10);
 	--sidebar-border: var(--geist-border-1);
@@ -843,15 +843,15 @@ body {
 
 	/* Geist Color Tokens - Light Theme */
 	/* Background */
-	--geist-background-1: #FFFFFF;
-	--geist-background-2: #F9F9F9;
+	--geist-background-1: #ffffff;
+	--geist-background-2: #f9f9f9;
 
 	/* Gray */
-	--geist-gray-1: #FAFAFA;
-	--geist-gray-2: #F0F0F0;
-	--geist-gray-3: #E5E5E5;
-	--geist-gray-4: #D4D4D4;
-	--geist-gray-5: #A3A3A3;
+	--geist-gray-1: #fafafa;
+	--geist-gray-2: #f0f0f0;
+	--geist-gray-3: #e5e5e5;
+	--geist-gray-4: #d4d4d4;
+	--geist-gray-5: #a3a3a3;
 	--geist-gray-6: #737373;
 	--geist-gray-7: #525252;
 	--geist-gray-8: #404040;
@@ -859,105 +859,105 @@ body {
 	--geist-gray-10: #171717;
 
 	/* Blue */
-	--geist-blue-1: #F5F9FF;
-	--geist-blue-2: #DDEBFF;
-	--geist-blue-3: #A8CCFF;
-	--geist-blue-4: #74ADFF;
-	--geist-blue-5: #3D8AFF;
-	--geist-blue-6: #0070F3;
-	--geist-blue-7: #0059C9;
-	--geist-blue-8: #0041A1;
-	--geist-blue-9: #002E7A;
-	--geist-blue-10: #001C55;
+	--geist-blue-1: #f5f9ff;
+	--geist-blue-2: #ddebff;
+	--geist-blue-3: #a8ccff;
+	--geist-blue-4: #74adff;
+	--geist-blue-5: #3d8aff;
+	--geist-blue-6: #0070f3;
+	--geist-blue-7: #0059c9;
+	--geist-blue-8: #0041a1;
+	--geist-blue-9: #002e7a;
+	--geist-blue-10: #001c55;
 
 	/* Red */
-	--geist-red-1: #FFF5F5;
-	--geist-red-2: #FFE5E5;
-	--geist-red-3: #FFCCCC;
-	--geist-red-4: #FF9999;
-	--geist-red-5: #FF3B3B;
-	--geist-red-6: #FF5555;
-	--geist-red-7: #FF6F6F;
-	--geist-red-8: #FF8989;
-	--geist-red-9: #FFA3A3;
-	--geist-red-10: #FFBDBD;
+	--geist-red-1: #fff5f5;
+	--geist-red-2: #ffe5e5;
+	--geist-red-3: #ffcccc;
+	--geist-red-4: #ff9999;
+	--geist-red-5: #ff3b3b;
+	--geist-red-6: #ff5555;
+	--geist-red-7: #ff6f6f;
+	--geist-red-8: #ff8989;
+	--geist-red-9: #ffa3a3;
+	--geist-red-10: #ffbdbd;
 
 	/* Amber */
-	--geist-amber-1: #FFF8E1;
-	--geist-amber-2: #FFEFCC;
-	--geist-amber-3: #FFE099;
-	--geist-amber-4: #FFD166;
-	--geist-amber-5: #FFB300;
-	--geist-amber-6: #FFC233;
-	--geist-amber-7: #FFD166;
-	--geist-amber-8: #FFE099;
-	--geist-amber-9: #FFEFCC;
-	--geist-amber-10: #FFF8E1;
+	--geist-amber-1: #fff8e1;
+	--geist-amber-2: #ffefcc;
+	--geist-amber-3: #ffe099;
+	--geist-amber-4: #ffd166;
+	--geist-amber-5: #ffb300;
+	--geist-amber-6: #ffc233;
+	--geist-amber-7: #ffd166;
+	--geist-amber-8: #ffe099;
+	--geist-amber-9: #ffefcc;
+	--geist-amber-10: #fff8e1;
 
 	/* Green */
-	--geist-green-1: #F5FFF9;
-	--geist-green-2: #CCF5E0;
-	--geist-green-3: #99EBC1;
-	--geist-green-4: #66E1A2;
-	--geist-green-5: #00B37E;
-	--geist-green-6: #00C991;
-	--geist-green-7: #00DFA4;
-	--geist-green-8: #33E8B7;
-	--geist-green-9: #66F1CA;
-	--geist-green-10: #99FADD;
+	--geist-green-1: #f5fff9;
+	--geist-green-2: #ccf5e0;
+	--geist-green-3: #99ebc1;
+	--geist-green-4: #66e1a2;
+	--geist-green-5: #00b37e;
+	--geist-green-6: #00c991;
+	--geist-green-7: #00dfa4;
+	--geist-green-8: #33e8b7;
+	--geist-green-9: #66f1ca;
+	--geist-green-10: #99fadd;
 
 	/* Teal */
-	--geist-teal-1: #F0F9F9;
-	--geist-teal-2: #CCF5F0;
-	--geist-teal-3: #99EBE1;
-	--geist-teal-4: #66E1D2;
-	--geist-teal-5: #00B3B3;
-	--geist-teal-6: #00C9C9;
-	--geist-teal-7: #00DFDF;
-	--geist-teal-8: #33E8E8;
-	--geist-teal-9: #66F1F1;
-	--geist-teal-10: #99FAFA;
+	--geist-teal-1: #f0f9f9;
+	--geist-teal-2: #ccf5f0;
+	--geist-teal-3: #99ebe1;
+	--geist-teal-4: #66e1d2;
+	--geist-teal-5: #00b3b3;
+	--geist-teal-6: #00c9c9;
+	--geist-teal-7: #00dfdf;
+	--geist-teal-8: #33e8e8;
+	--geist-teal-9: #66f1f1;
+	--geist-teal-10: #99fafa;
 
 	/* Purple */
-	--geist-purple-1: #F9F5FF;
-	--geist-purple-2: #F3E8FF;
-	--geist-purple-3: #E9D5FF;
-	--geist-purple-4: #DDD6FE;
-	--geist-purple-5: #7C3AED;
-	--geist-purple-6: #8B5CF6;
-	--geist-purple-7: #A78BFA;
-	--geist-purple-8: #C4B5FD;
-	--geist-purple-9: #DDD6FE;
-	--geist-purple-10: #EDE9FE;
+	--geist-purple-1: #f9f5ff;
+	--geist-purple-2: #f3e8ff;
+	--geist-purple-3: #e9d5ff;
+	--geist-purple-4: #ddd6fe;
+	--geist-purple-5: #7c3aed;
+	--geist-purple-6: #8b5cf6;
+	--geist-purple-7: #a78bfa;
+	--geist-purple-8: #c4b5fd;
+	--geist-purple-9: #ddd6fe;
+	--geist-purple-10: #ede9fe;
 
 	/* Pink */
-	--geist-pink-1: #FFF0F6;
-	--geist-pink-2: #FFE1F0;
-	--geist-pink-3: #FFC2E0;
-	--geist-pink-4: #FFA3D0;
-	--geist-pink-5: #EC4899;
-	--geist-pink-6: #F472B6;
-	--geist-pink-7: #F79CD4;
-	--geist-pink-8: #FAB6E2;
-	--geist-pink-9: #FDD0F0;
-	--geist-pink-10: #FFE8F7;
+	--geist-pink-1: #fff0f6;
+	--geist-pink-2: #ffe1f0;
+	--geist-pink-3: #ffc2e0;
+	--geist-pink-4: #ffa3d0;
+	--geist-pink-5: #ec4899;
+	--geist-pink-6: #f472b6;
+	--geist-pink-7: #f79cd4;
+	--geist-pink-8: #fab6e2;
+	--geist-pink-9: #fdd0f0;
+	--geist-pink-10: #ffe8f7;
 
 	/* Gray Alpha */
 	--geist-gray-alpha-1: rgba(0, 0, 0, 0.05);
-	--geist-gray-alpha-2: rgba(0, 0, 0, 0.10);
+	--geist-gray-alpha-2: rgba(0, 0, 0, 0.1);
 	--geist-gray-alpha-3: rgba(0, 0, 0, 0.15);
-	--geist-gray-alpha-4: rgba(0, 0, 0, 0.20);
-	--geist-gray-alpha-5: rgba(0, 0, 0, 0.30);
-	--geist-gray-alpha-6: rgba(0, 0, 0, 0.40);
-	--geist-gray-alpha-7: rgba(0, 0, 0, 0.50);
-	--geist-gray-alpha-8: rgba(0, 0, 0, 0.60);
-	--geist-gray-alpha-9: rgba(0, 0, 0, 0.70);
-	--geist-gray-alpha-10: rgba(0, 0, 0, 0.80);
+	--geist-gray-alpha-4: rgba(0, 0, 0, 0.2);
+	--geist-gray-alpha-5: rgba(0, 0, 0, 0.3);
+	--geist-gray-alpha-6: rgba(0, 0, 0, 0.4);
+	--geist-gray-alpha-7: rgba(0, 0, 0, 0.5);
+	--geist-gray-alpha-8: rgba(0, 0, 0, 0.6);
+	--geist-gray-alpha-9: rgba(0, 0, 0, 0.7);
+	--geist-gray-alpha-10: rgba(0, 0, 0, 0.8);
 
 	/* Border */
-	--geist-border-1: #EAEAEA;
-	--geist-border-2: #D4D4D4;
-	--geist-border-3: #A3A3A3;
+	--geist-border-1: #eaeaea;
+	--geist-border-2: #d4d4d4;
+	--geist-border-3: #a3a3a3;
 	--geist-border-4: #737373;
 	--geist-border-5: #525252;
 	--geist-border-6: #404040;
@@ -1128,7 +1128,7 @@ body {
 		--geist-dark-background-1: #000000;
 		--geist-dark-background-2: #111111;
 		--geist-dark-component-default: #111111;
-		--geist-dark-component-hover: #1A1A1A;
+		--geist-dark-component-hover: #1a1a1a;
 		--geist-dark-component-active: #262626;
 		--geist-dark-high-contrast-default: #525252;
 		--geist-dark-high-contrast-hover: #737373;
@@ -1136,26 +1136,26 @@ body {
 		/* ----------------------------------------------------------------------------
 		 * Borders
 		 * ---------------------------------------------------------------------------- */
-		--geist-dark-border-default: #2A2A2A;
+		--geist-dark-border-default: #2a2a2a;
 		--geist-dark-border-hover: #404040;
 		--geist-dark-border-active: #525252;
 
 		/* ----------------------------------------------------------------------------
 		 * Text & Icons
 		 * ---------------------------------------------------------------------------- */
-		--geist-dark-text-primary: #FFFFFF;
+		--geist-dark-text-primary: #ffffff;
 		--geist-dark-text-secondary: #888888;
-		--geist-dark-icon-primary: #FFFFFF;
+		--geist-dark-icon-primary: #ffffff;
 		--geist-dark-icon-secondary: #888888;
 
 		/* ----------------------------------------------------------------------------
 		 * Gray Scale (Dark Theme - Inverted for dark backgrounds)
 		 * ---------------------------------------------------------------------------- */
-		--geist-dark-gray-1: #FAFAFA;
-		--geist-dark-gray-2: #F0F0F0;
-		--geist-dark-gray-3: #E5E5E5;
-		--geist-dark-gray-4: #D4D4D4;
-		--geist-dark-gray-5: #A3A3A3;
+		--geist-dark-gray-1: #fafafa;
+		--geist-dark-gray-2: #f0f0f0;
+		--geist-dark-gray-3: #e5e5e5;
+		--geist-dark-gray-4: #d4d4d4;
+		--geist-dark-gray-5: #a3a3a3;
 		--geist-dark-gray-6: #737373;
 		--geist-dark-gray-7: #525252;
 		--geist-dark-gray-8: #404040;
@@ -1166,143 +1166,143 @@ body {
 		 * Gray Alpha Scale (for transparency on dark backgrounds)
 		 * ---------------------------------------------------------------------------- */
 		--geist-dark-gray-alpha-1: rgba(255, 255, 255, 0.05);
-		--geist-dark-gray-alpha-2: rgba(255, 255, 255, 0.10);
+		--geist-dark-gray-alpha-2: rgba(255, 255, 255, 0.1);
 		--geist-dark-gray-alpha-3: rgba(255, 255, 255, 0.15);
-		--geist-dark-gray-alpha-4: rgba(255, 255, 255, 0.20);
-		--geist-dark-gray-alpha-5: rgba(255, 255, 255, 0.30);
-		--geist-dark-gray-alpha-6: rgba(255, 255, 255, 0.40);
-		--geist-dark-gray-alpha-7: rgba(255, 255, 255, 0.50);
-		--geist-dark-gray-alpha-8: rgba(255, 255, 255, 0.60);
-		--geist-dark-gray-alpha-9: rgba(255, 255, 255, 0.70);
-		--geist-dark-gray-alpha-10: rgba(255, 255, 255, 0.80);
+		--geist-dark-gray-alpha-4: rgba(255, 255, 255, 0.2);
+		--geist-dark-gray-alpha-5: rgba(255, 255, 255, 0.3);
+		--geist-dark-gray-alpha-6: rgba(255, 255, 255, 0.4);
+		--geist-dark-gray-alpha-7: rgba(255, 255, 255, 0.5);
+		--geist-dark-gray-alpha-8: rgba(255, 255, 255, 0.6);
+		--geist-dark-gray-alpha-9: rgba(255, 255, 255, 0.7);
+		--geist-dark-gray-alpha-10: rgba(255, 255, 255, 0.8);
 
 		/* ----------------------------------------------------------------------------
 		 * Blue Scale (Dark Theme)
 		 * ---------------------------------------------------------------------------- */
-		--geist-dark-blue-1: #0A1929;
-		--geist-dark-blue-2: #132F4C;
-		--geist-dark-blue-3: #1E4A6F;
-		--geist-dark-blue-4: #2563EB;
-		--geist-dark-blue-5: #3B82F6;
-		--geist-dark-blue-6: #0070F3;
-		--geist-dark-blue-7: #0059C9;
-		--geist-dark-blue-8: #0041A1;
-		--geist-dark-blue-9: #002E7A;
-		--geist-dark-blue-10: #001C55;
+		--geist-dark-blue-1: #0a1929;
+		--geist-dark-blue-2: #132f4c;
+		--geist-dark-blue-3: #1e4a6f;
+		--geist-dark-blue-4: #2563eb;
+		--geist-dark-blue-5: #3b82f6;
+		--geist-dark-blue-6: #0070f3;
+		--geist-dark-blue-7: #0059c9;
+		--geist-dark-blue-8: #0041a1;
+		--geist-dark-blue-9: #002e7a;
+		--geist-dark-blue-10: #001c55;
 
 		/* ----------------------------------------------------------------------------
 		 * Red Scale (Dark Theme)
 		 * ---------------------------------------------------------------------------- */
-		--geist-dark-red-1: #2A0E0E;
-		--geist-dark-red-2: #4A1515;
-		--geist-dark-red-3: #6B1F1F;
-		--geist-dark-red-4: #8B2828;
-		--geist-dark-red-5: #FF3B3B;
-		--geist-dark-red-6: #FF5555;
-		--geist-dark-red-7: #FF6F6F;
-		--geist-dark-red-8: #FF8989;
-		--geist-dark-red-9: #FFA3A3;
-		--geist-dark-red-10: #FFBDBD;
+		--geist-dark-red-1: #2a0e0e;
+		--geist-dark-red-2: #4a1515;
+		--geist-dark-red-3: #6b1f1f;
+		--geist-dark-red-4: #8b2828;
+		--geist-dark-red-5: #ff3b3b;
+		--geist-dark-red-6: #ff5555;
+		--geist-dark-red-7: #ff6f6f;
+		--geist-dark-red-8: #ff8989;
+		--geist-dark-red-9: #ffa3a3;
+		--geist-dark-red-10: #ffbdbd;
 
 		/* ----------------------------------------------------------------------------
 		 * Amber Scale (Dark Theme)
 		 * ---------------------------------------------------------------------------- */
-		--geist-dark-amber-1: #2A1F0E;
-		--geist-dark-amber-2: #4A3F15;
-		--geist-dark-amber-3: #6B5F1F;
-		--geist-dark-amber-4: #8B7F28;
-		--geist-dark-amber-5: #FFB300;
-		--geist-dark-amber-6: #FFC233;
-		--geist-dark-amber-7: #FFD166;
-		--geist-dark-amber-8: #FFE099;
-		--geist-dark-amber-9: #FFEFCC;
-		--geist-dark-amber-10: #FFF8E1;
+		--geist-dark-amber-1: #2a1f0e;
+		--geist-dark-amber-2: #4a3f15;
+		--geist-dark-amber-3: #6b5f1f;
+		--geist-dark-amber-4: #8b7f28;
+		--geist-dark-amber-5: #ffb300;
+		--geist-dark-amber-6: #ffc233;
+		--geist-dark-amber-7: #ffd166;
+		--geist-dark-amber-8: #ffe099;
+		--geist-dark-amber-9: #ffefcc;
+		--geist-dark-amber-10: #fff8e1;
 
 		/* ----------------------------------------------------------------------------
 		 * Green Scale (Dark Theme)
 		 * ---------------------------------------------------------------------------- */
-		--geist-dark-green-1: #0A1F15;
-		--geist-dark-green-2: #133F2A;
-		--geist-dark-green-3: #1E5F3F;
-		--geist-dark-green-4: #287F54;
-		--geist-dark-green-5: #00B37E;
-		--geist-dark-green-6: #00C991;
-		--geist-dark-green-7: #00DFA4;
-		--geist-dark-green-8: #33E8B7;
-		--geist-dark-green-9: #66F1CA;
-		--geist-dark-green-10: #99FADD;
+		--geist-dark-green-1: #0a1f15;
+		--geist-dark-green-2: #133f2a;
+		--geist-dark-green-3: #1e5f3f;
+		--geist-dark-green-4: #287f54;
+		--geist-dark-green-5: #00b37e;
+		--geist-dark-green-6: #00c991;
+		--geist-dark-green-7: #00dfa4;
+		--geist-dark-green-8: #33e8b7;
+		--geist-dark-green-9: #66f1ca;
+		--geist-dark-green-10: #99fadd;
 
 		/* ----------------------------------------------------------------------------
 		 * Teal Scale (Dark Theme)
 		 * ---------------------------------------------------------------------------- */
-		--geist-dark-teal-1: #0A1F1F;
-		--geist-dark-teal-2: #133F3F;
-		--geist-dark-teal-3: #1E5F5F;
-		--geist-dark-teal-4: #287F7F;
-		--geist-dark-teal-5: #00B3B3;
-		--geist-dark-teal-6: #00C9C9;
-		--geist-dark-teal-7: #00DFDF;
-		--geist-dark-teal-8: #33E8E8;
-		--geist-dark-teal-9: #66F1F1;
-		--geist-dark-teal-10: #99FAFA;
+		--geist-dark-teal-1: #0a1f1f;
+		--geist-dark-teal-2: #133f3f;
+		--geist-dark-teal-3: #1e5f5f;
+		--geist-dark-teal-4: #287f7f;
+		--geist-dark-teal-5: #00b3b3;
+		--geist-dark-teal-6: #00c9c9;
+		--geist-dark-teal-7: #00dfdf;
+		--geist-dark-teal-8: #33e8e8;
+		--geist-dark-teal-9: #66f1f1;
+		--geist-dark-teal-10: #99fafa;
 
 		/* ----------------------------------------------------------------------------
 		 * Purple Scale (Dark Theme)
 		 * ---------------------------------------------------------------------------- */
-		--geist-dark-purple-1: #1F0A2A;
-		--geist-dark-purple-2: #3F133F;
-		--geist-dark-purple-3: #5F1E5F;
-		--geist-dark-purple-4: #7F287F;
-		--geist-dark-purple-5: #9333EA;
-		--geist-dark-purple-6: #A855F7;
-		--geist-dark-purple-7: #BD84F9;
-		--geist-dark-purple-8: #D2B3FB;
-		--geist-dark-purple-9: #E7D2FD;
-		--geist-dark-purple-10: #F3E8FF;
+		--geist-dark-purple-1: #1f0a2a;
+		--geist-dark-purple-2: #3f133f;
+		--geist-dark-purple-3: #5f1e5f;
+		--geist-dark-purple-4: #7f287f;
+		--geist-dark-purple-5: #9333ea;
+		--geist-dark-purple-6: #a855f7;
+		--geist-dark-purple-7: #bd84f9;
+		--geist-dark-purple-8: #d2b3fb;
+		--geist-dark-purple-9: #e7d2fd;
+		--geist-dark-purple-10: #f3e8ff;
 
 		/* ----------------------------------------------------------------------------
 		 * Pink Scale (Dark Theme)
 		 * ---------------------------------------------------------------------------- */
-		--geist-dark-pink-1: #2A0A1F;
-		--geist-dark-pink-2: #4A133F;
-		--geist-dark-pink-3: #6B1E5F;
-		--geist-dark-pink-4: #8B287F;
-		--geist-dark-pink-5: #EC4899;
-		--geist-dark-pink-6: #F472B6;
-		--geist-dark-pink-7: #F79CD4;
-		--geist-dark-pink-8: #FAB6E2;
-		--geist-dark-pink-9: #FDD0F0;
-		--geist-dark-pink-10: #FFE8F7;
+		--geist-dark-pink-1: #2a0a1f;
+		--geist-dark-pink-2: #4a133f;
+		--geist-dark-pink-3: #6b1e5f;
+		--geist-dark-pink-4: #8b287f;
+		--geist-dark-pink-5: #ec4899;
+		--geist-dark-pink-6: #f472b6;
+		--geist-dark-pink-7: #f79cd4;
+		--geist-dark-pink-8: #fab6e2;
+		--geist-dark-pink-9: #fdd0f0;
+		--geist-dark-pink-10: #ffe8f7;
 
 		/* ----------------------------------------------------------------------------
 		 * Semantic Colors (Dark Theme)
 		 * ---------------------------------------------------------------------------- */
-		--geist-dark-primary: #FFFFFF;
-		--geist-dark-primary-hover: #E5E5E5;
-		--geist-dark-primary-active: #CCCCCC;
+		--geist-dark-primary: #ffffff;
+		--geist-dark-primary-hover: #e5e5e5;
+		--geist-dark-primary-active: #cccccc;
 		--geist-dark-primary-foreground: #000000;
 		--geist-dark-secondary: #262626;
 		--geist-dark-secondary-hover: #404040;
 		--geist-dark-secondary-active: #525252;
-		--geist-dark-secondary-foreground: #FFFFFF;
-		--geist-dark-destructive: #FF3B3B;
-		--geist-dark-destructive-hover: #FF5555;
-		--geist-dark-destructive-active: #FF6F6F;
-		--geist-dark-destructive-foreground: #FFFFFF;
-		--geist-dark-accent: #0070F3;
-		--geist-dark-accent-hover: #0059C9;
-		--geist-dark-accent-active: #0041A1;
-		--geist-dark-accent-foreground: #FFFFFF;
+		--geist-dark-secondary-foreground: #ffffff;
+		--geist-dark-destructive: #ff3b3b;
+		--geist-dark-destructive-hover: #ff5555;
+		--geist-dark-destructive-active: #ff6f6f;
+		--geist-dark-destructive-foreground: #ffffff;
+		--geist-dark-accent: #0070f3;
+		--geist-dark-accent-hover: #0059c9;
+		--geist-dark-accent-active: #0041a1;
+		--geist-dark-accent-foreground: #ffffff;
 		--geist-dark-muted: #262626;
 		--geist-dark-muted-foreground: #888888;
-		--geist-dark-success: #00B37E;
-		--geist-dark-success-foreground: #FFFFFF;
-		--geist-dark-warning: #FFB300;
+		--geist-dark-success: #00b37e;
+		--geist-dark-success-foreground: #ffffff;
+		--geist-dark-warning: #ffb300;
 		--geist-dark-warning-foreground: #000000;
-		--geist-dark-error: #FF3B3B;
-		--geist-dark-error-foreground: #FFFFFF;
-		--geist-dark-info: #0070F3;
-		--geist-dark-info-foreground: #FFFFFF;
+		--geist-dark-error: #ff3b3b;
+		--geist-dark-error-foreground: #ffffff;
+		--geist-dark-info: #0070f3;
+		--geist-dark-info-foreground: #ffffff;
 
 		/* ----------------------------------------------------------------------------
 		 * Theme Integration - Map to existing theme variables

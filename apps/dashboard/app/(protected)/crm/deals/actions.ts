@@ -1,14 +1,16 @@
 "use server";
 
 import { and, count, desc, eq, ilike, or } from "drizzle-orm";
+
 // Lazy import DB to avoid Vitest mock hoisting issues
 async function getDbConn() {
-  const { getDb } = await import("@/lib/db");
-  return getDb();
+	const { getDb } = await import("@/lib/db");
+	return getDb();
 }
-import { type Deal, deals } from "@/lib/db/schema/deals";
-import { getApiUrl, ensureResponse } from "@/src/lib/fetch-utils";
+
 import type { OrderCreateInput } from "@crm/types";
+import { type Deal, deals } from "@/lib/db/schema/deals";
+import { ensureResponse, getApiUrl } from "@/src/lib/fetch-utils";
 
 import { DEAL_STAGES, type DealStage } from "./constants";
 import {
@@ -31,14 +33,14 @@ export type DealInput = DealFormValues;
 export type DealFilters = DealFiltersValues;
 
 const revalidateDeals = async () => {
-  const { revalidatePath } = await import("next/cache");
-  revalidatePath("/crm/deals");
+	const { revalidatePath } = await import("next/cache");
+	revalidatePath("/crm/deals");
 };
 
 // Avoid evaluating DB at module load to play well with test mocks
 
 export async function fetchDeals(params?: DealFilters) {
-    const db = await getDbConn();
+	const db = await getDbConn();
 	const filters = dealFiltersSchema.parse(params);
 
 	const conditions = [];
@@ -79,7 +81,7 @@ export async function fetchDeals(params?: DealFilters) {
 }
 
 export async function fetchDealMetadata() {
-    const db = await getDbConn();
+	const db = await getDbConn();
 	const ownersPromise = db
 		.select({ owner: deals.owner })
 		.from(deals)
@@ -123,7 +125,7 @@ export async function fetchDealMetadata() {
 }
 
 export async function createDeal(input: DealFormValues) {
-    const db = await getDbConn();
+	const db = await getDbConn();
 	const data = dealFormSchema.parse(input);
 
 	const [deal] = await db
@@ -139,13 +141,13 @@ export async function createDeal(input: DealFormValues) {
 		})
 		.returning();
 
-  await revalidateDeals();
+	await revalidateDeals();
 
 	return deal;
 }
 
 export async function updateDeal(id: string, input: Record<string, unknown>) {
-    const db = await getDbConn();
+	const db = await getDbConn();
 	if (!id) {
 		throw new Error("Deal id is required.");
 	}
@@ -169,24 +171,24 @@ export async function updateDeal(id: string, input: Record<string, unknown>) {
 		.where(eq(deals.id, id))
 		.returning();
 
-  await revalidateDeals();
+	await revalidateDeals();
 
 	return deal;
 }
 
 export async function deleteDeal(id: string) {
-    const db = await getDbConn();
+	const db = await getDbConn();
 	if (!id) {
 		throw new Error("Deal id is required.");
 	}
 
 	await db.delete(deals).where(eq(deals.id, id));
 
-  await revalidateDeals();
+	await revalidateDeals();
 }
 
 export async function updateDealStage(args: Record<string, unknown>) {
-    const db = await getDbConn();
+	const db = await getDbConn();
 	const payload = stageUpdateSchema.parse(args);
 
 	// Get current deal to check if stage is changing to "Closed Won"
@@ -221,7 +223,10 @@ export async function updateDealStage(args: Record<string, unknown>) {
 			await createOrderFromDeal(deal);
 		} catch (error) {
 			// Log error but don't fail the deal update
-			console.error("Failed to automatically create order for closed won deal:", error);
+			console.error(
+				"Failed to automatically create order for closed won deal:",
+				error,
+			);
 		}
 	}
 
@@ -231,7 +236,7 @@ export async function updateDealStage(args: Record<string, unknown>) {
 export async function bulkUpdateDealStages(
 	updates: Array<Record<string, unknown>>,
 ) {
-    const db = await getDbConn();
+	const db = await getDbConn();
 	if (updates.length === 0) {
 		return [];
 	}
@@ -255,7 +260,7 @@ export async function bulkUpdateDealStages(
 				.set({ stage: item.stage, updatedAt: new Date() })
 				.where(eq(deals.id, item.id))
 				.returning();
-			
+
 			if (deal) {
 				updated.push(deal);
 
@@ -265,7 +270,10 @@ export async function bulkUpdateDealStages(
 						await createOrderFromDeal(deal);
 					} catch (error) {
 						// Log error but don't fail the deal update
-						console.error(`Failed to automatically create order for deal ${deal.id}:`, error);
+						console.error(
+							`Failed to automatically create order for deal ${deal.id}:`,
+							error,
+						);
 					}
 				}
 			}
@@ -293,11 +301,12 @@ async function createOrderFromDeal(deal: Deal): Promise<void> {
 		if (accountsResponse.ok) {
 			const accountsData = await accountsResponse.json();
 			const account = Array.isArray(accountsData.data)
-				? accountsData.data.find((acc: { name: string }) => 
-						acc.name.toLowerCase() === deal.company.toLowerCase()
+				? accountsData.data.find(
+						(acc: { name: string }) =>
+							acc.name.toLowerCase() === deal.company.toLowerCase(),
 					)
 				: null;
-			
+
 			if (account) {
 				companyId = account.id;
 			}
@@ -308,7 +317,7 @@ async function createOrderFromDeal(deal: Deal): Promise<void> {
 
 	// Calculate totals from deal value (tax = 20%)
 	const subtotal = deal.value;
-	    const _tax = subtotal * 0.2;
+	const _tax = subtotal * 0.2;
 
 	// Generate order number
 	const orderNumber = `ORD-${Date.now()}-${deal.id.slice(0, 8).toUpperCase()}`;

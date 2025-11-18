@@ -1,7 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import type { AccountContact } from "@crm/types";
+import { useQuery } from "@tanstack/react-query";
 import { ensureResponse } from "@/src/lib/fetch-utils";
 
 async function fetchContacts(): Promise<AccountContact[]> {
@@ -24,4 +24,3 @@ export function useContacts() {
 		staleTime: 1000 * 60 * 5, // 5 minutes
 	});
 }
-

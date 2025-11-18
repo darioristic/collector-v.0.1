@@ -10,54 +10,61 @@ import "./globals.css";
 import { ActiveThemeProvider } from "@/components/active-theme";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { Toaster } from "@/components/ui/sonner";
-import { DEFAULT_THEME } from "@/lib/themes";
 import type { ThemeType } from "@/lib/themes";
+import { DEFAULT_THEME } from "@/lib/themes";
 
 export default function RootLayout({
-  children
+	children,
 }: Readonly<{
-  children: React.ReactNode;
+	children: React.ReactNode;
 }>) {
-  // Use default theme settings - cookies will be read on client side
-  // This prevents blocking server-side rendering
-  const themeSettings: ThemeType = {
-    ...DEFAULT_THEME
-  };
+	// Use default theme settings - cookies will be read on client side
+	// This prevents blocking server-side rendering
+	const themeSettings: ThemeType = {
+		...DEFAULT_THEME,
+	};
 
-  const bodyAttributes = Object.fromEntries(
-    Object.entries(themeSettings)
-      .filter(([_, value]) => value)
-      .map(([key, value]) => [`data-theme-${key.replace(/([A-Z])/g, "-$1").toLowerCase()}`, value])
-  );
+	const bodyAttributes = Object.fromEntries(
+		Object.entries(themeSettings)
+			.filter(([_, value]) => value)
+			.map(([key, value]) => [
+				`data-theme-${key.replace(/([A-Z])/g, "-$1").toLowerCase()}`,
+				value,
+			]),
+	);
 
-  return (
-    <html lang="en" suppressHydrationWarning>
-      <body
-        suppressHydrationWarning
-        className={cn("bg-background group/layout font-sans", fontVariables)}
-        {...bodyAttributes}>
-        <QueryProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="light"
-            enableSystem
-            disableTransitionOnChange>
-            <ActiveThemeProvider initialTheme={themeSettings}>
-              {children}
-              <div suppressHydrationWarning>
-                <Toaster position="top-center" richColors />
-              </div>
-              <NextTopLoader
-                color="var(--primary)"
-                showSpinner={false}
-                height={2}
-                shadow-sm="none"
-              />
-              {process.env.NODE_ENV === "production" ? <GoogleAnalyticsInit /> : null}
-            </ActiveThemeProvider>
-          </ThemeProvider>
-        </QueryProvider>
-      </body>
-    </html>
-  );
+	return (
+		<html lang="en" suppressHydrationWarning>
+			<body
+				suppressHydrationWarning
+				className={cn("bg-background group/layout font-sans", fontVariables)}
+				{...bodyAttributes}
+			>
+				<QueryProvider>
+					<ThemeProvider
+						attribute="class"
+						defaultTheme="light"
+						enableSystem
+						disableTransitionOnChange
+					>
+						<ActiveThemeProvider initialTheme={themeSettings}>
+							{children}
+							<div suppressHydrationWarning>
+								<Toaster position="top-center" richColors />
+							</div>
+							<NextTopLoader
+								color="var(--primary)"
+								showSpinner={false}
+								height={2}
+								shadow-sm="none"
+							/>
+							{process.env.NODE_ENV === "production" ? (
+								<GoogleAnalyticsInit />
+							) : null}
+						</ActiveThemeProvider>
+					</ThemeProvider>
+				</QueryProvider>
+			</body>
+		</html>
+	);
 }

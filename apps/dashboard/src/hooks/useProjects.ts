@@ -1,12 +1,9 @@
 "use client";
 
-import {
-	useMutation,
-	useQuery,
-	useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useToast } from "@/hooks/use-toast";
+import type { ProjectTemplate } from "@/lib/data/projectTemplates";
 import {
 	addTeamMember,
 	createBudgetCategory,
@@ -32,7 +29,6 @@ import {
 	updateProjectTask,
 	updateTimelineEvent,
 } from "@/src/queries/projects";
-import type { ProjectTemplate } from "@/lib/data/projectTemplates";
 import type {
 	AddTeamMemberPayload,
 	CreateBudgetCategoryPayload,
@@ -59,8 +55,8 @@ export function useProjects(options?: { enabled?: boolean }) {
 }
 
 export function useProjectDetails(
-    projectId: string,
-    options?: { enabled?: boolean },
+	projectId: string,
+	options?: { enabled?: boolean },
 ) {
 	return useQuery<ProjectDetails>({
 		queryKey: projectKeys.detail(projectId),
@@ -73,12 +69,13 @@ export function useProjectDetails(
 					projectId,
 					error: error instanceof Error ? error.message : String(error),
 					stack: error instanceof Error ? error.stack : undefined,
-					errorType: error instanceof Error ? error.constructor.name : typeof error,
+					errorType:
+						error instanceof Error ? error.constructor.name : typeof error,
 				});
 				throw error;
 			}
 		},
-        enabled: options?.enabled ?? Boolean(projectId),
+		enabled: options?.enabled ?? Boolean(projectId),
 		retry: (failureCount, error) => {
 			// Don't retry on 404 (not found) errors
 			if (error instanceof Error) {

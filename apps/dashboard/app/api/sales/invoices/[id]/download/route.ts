@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { isUuid } from "@/lib/utils";
 
 const API_URL = process.env.API_URL || "http://localhost:4000";

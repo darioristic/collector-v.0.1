@@ -159,4 +159,3 @@ export type CompanyFormInput = {
 	brandColor?: string;
 	description?: string;
 };
-

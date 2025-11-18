@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 
-import { projectTemplates, type ProjectTemplate } from "@/lib/data/projectTemplates";
+import {
+	type ProjectTemplate,
+	projectTemplates,
+} from "@/lib/data/projectTemplates";
 
 import { TemplateCard } from "./components/template-card";
 import { TemplateModal } from "./components/template-modal";
 
 export function TemplatesPageClient() {
-	const [selectedTemplate, setSelectedTemplate] = useState<ProjectTemplate | null>(
-		null,
-	);
+	const [selectedTemplate, setSelectedTemplate] =
+		useState<ProjectTemplate | null>(null);
 	const [isModalOpen, setIsModalOpen] = useState(false);
 
 	const handleUseTemplate = (template: ProjectTemplate) => {
@@ -27,7 +29,9 @@ export function TemplatesPageClient() {
 		<div className="space-y-6">
 			<div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
 				<div className="space-y-1">
-					<h1 className="text-2xl font-bold tracking-tight">Project Templates</h1>
+					<h1 className="text-2xl font-bold tracking-tight">
+						Project Templates
+					</h1>
 					<p className="text-muted-foreground text-sm">
 						Choose from predefined project templates to quickly create new
 						projects with pre-configured phases and tasks.
@@ -55,4 +59,3 @@ export function TemplatesPageClient() {
 		</div>
 	);
 }
-

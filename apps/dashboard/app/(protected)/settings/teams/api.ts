@@ -397,17 +397,23 @@ export const fetchTeamMembers = async (
 						: "Could not process response text";
 			}
 
-			// Log error details - always log, but format differently for dev/prod
-			try {
-				// First, log basic info directly to ensure it's always visible
-				console.error("[fetchTeamMembers] API error - Basic info:", {
-					status: String(status || "unknown"),
-					statusText: String(statusText || "unknown"),
-					url: String(url || "unknown"),
-					contentType: String(contentType || "unknown"),
-					errorMessage: String(errorMessage || "Unknown error"),
-					hasErrorData: Boolean(hasErrorData),
-				});
+				// Log error details - always log, but format differently for dev/prod
+				try {
+					const basicInfo = {
+						status: String(status || "unknown"),
+						statusText: String(statusText || "unknown"),
+						url: String(url || "unknown"),
+						contentType: String(contentType || "unknown"),
+						errorMessage: String(errorMessage || "Unknown error"),
+						hasErrorData: Boolean(hasErrorData),
+					};
+					let basicInfoStr = "";
+					try {
+						basicInfoStr = JSON.stringify(basicInfo);
+					} catch {
+						basicInfoStr = `status=${basicInfo.status} statusText=${basicInfo.statusText} url=${basicInfo.url} contentType=${basicInfo.contentType} errorMessage=${basicInfo.errorMessage} hasErrorData=${basicInfo.hasErrorData}`;
+					}
+					console.error("[fetchTeamMembers] API error - Basic info:", basicInfoStr);
 
 				if (isDevelopment) {
 					// In development, try to log full details

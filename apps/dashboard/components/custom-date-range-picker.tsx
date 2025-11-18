@@ -54,12 +54,14 @@ export default function CalendarDateRangePicker({
 }: React.HTMLAttributes<HTMLDivElement>) {
 	const isMobile = useIsMobile();
 	const [mounted, setMounted] = React.useState(false);
-	
+
 	// Initialize with undefined to avoid hydration mismatch
 	// Set actual date range after component mounts on client
 	const [date, setDate] = React.useState<DateRange | undefined>(undefined);
 	const [open, setOpen] = React.useState(false);
-	const [currentMonth, setCurrentMonth] = React.useState<Date | undefined>(undefined);
+	const [currentMonth, setCurrentMonth] = React.useState<Date | undefined>(
+		undefined,
+	);
 
 	// Initialize date range after mount to avoid hydration mismatch
 	React.useEffect(() => {

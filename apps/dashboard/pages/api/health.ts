@@ -1,12 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 
 export default async function handler(
-    _req: NextApiRequest,
-    res: NextApiResponse,
+	_req: NextApiRequest,
+	res: NextApiResponse,
 ) {
-    const apiBase =
-        process.env.COLLECTOR_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-    const url = `${apiBase.replace(/\/$/, "")}/api/health`;
+	const apiBase =
+		process.env.COLLECTOR_API_URL ||
+		process.env.NEXT_PUBLIC_API_URL ||
+		"http://localhost:4000";
+	const url = `${apiBase.replace(/\/$/, "")}/api/health`;
 
 	try {
 		const response = await fetch(url, {

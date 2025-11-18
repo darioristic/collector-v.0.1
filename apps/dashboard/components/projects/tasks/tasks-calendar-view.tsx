@@ -1,7 +1,5 @@
 "use client";
 
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
-import { useMemo, useState } from "react";
 import {
 	addMonths,
 	format,
@@ -11,9 +9,11 @@ import {
 	startOfMonth,
 	subMonths,
 } from "date-fns";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ProjectTask } from "@/src/types/projects";
 
@@ -80,13 +80,20 @@ export function TasksCalendarView({
 		// Empty cells for days before month starts
 		for (let i = 0; i < firstDayOfWeek; i++) {
 			days.push(
-				<div key={`empty-${i}`} className="min-h-[100px] border border-border/50" />,
+				<div
+					key={`empty-${i}`}
+					className="min-h-[100px] border border-border/50"
+				/>,
 			);
 		}
 
 		// Days of the month
 		for (let day = 1; day <= daysInMonth; day++) {
-			const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+			const date = new Date(
+				currentDate.getFullYear(),
+				currentDate.getMonth(),
+				day,
+			);
 			const dateKey = format(date, "yyyy-MM-dd");
 			const dayTasks = tasksByDate.get(dateKey) || [];
 			const isToday = isSameDay(date, today);
@@ -139,7 +146,7 @@ export function TasksCalendarView({
 							</div>
 						)}
 					</div>
-				</div>
+				</div>,
 			);
 		}
 
@@ -232,4 +239,3 @@ export function TasksCalendarView({
 		</div>
 	);
 }
-

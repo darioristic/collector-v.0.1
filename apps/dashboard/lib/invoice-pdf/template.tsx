@@ -3,12 +3,17 @@
  * This component structure mirrors the HTML template for consistency
  */
 
+import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import React from "react";
-import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
-import type { InvoicePDFProps, EditorDoc, EditorNode, EditorInlineContent } from "./types";
 import { LineItems } from "./line-items";
 import { Meta } from "./meta";
 import { Summary } from "./summary";
+import type {
+	EditorDoc,
+	EditorInlineContent,
+	EditorNode,
+	InvoicePDFProps,
+} from "./types";
 
 // Define styles
 const styles = StyleSheet.create({
@@ -24,12 +29,12 @@ const styles = StyleSheet.create({
 	header: {
 		marginBottom: 20,
 	},
-  logo: {
-    width: 120,
-    height: 40,
-    marginBottom: 20,
-    display: "none",
-  },
+	logo: {
+		width: 120,
+		height: 40,
+		marginBottom: 20,
+		display: "none",
+	},
 	section: {
 		marginBottom: 20,
 	},
@@ -76,23 +81,27 @@ export function InvoiceTemplate({
 	totalVat = 0,
 	total = 0,
 }: InvoicePDFProps) {
-  const toPlainText = (content?: EditorDoc): string => {
-    try {
-      const paras = content?.content ?? [];
-      if (!Array.isArray(paras)) return "";
-      return paras
-        .map((p: EditorNode) => (Array.isArray(p?.content) ? p.content.map((n: EditorInlineContent) => n?.text ?? "").join("") : ""))
-        .join("\n")
-        .trim();
-    } catch {
-      return "";
-    }
-  };
-  return (
-    <Document>
-      <Page size="A4" style={styles.page}>
-        <View style={styles.container}>
-          {/* Logo disabled for stability */}
+	const toPlainText = (content?: EditorDoc): string => {
+		try {
+			const paras = content?.content ?? [];
+			if (!Array.isArray(paras)) return "";
+			return paras
+				.map((p: EditorNode) =>
+					Array.isArray(p?.content)
+						? p.content.map((n: EditorInlineContent) => n?.text ?? "").join("")
+						: "",
+				)
+				.join("\n")
+				.trim();
+		} catch {
+			return "";
+		}
+	};
+	return (
+		<Document>
+			<Page size="A4" style={styles.page}>
+				<View style={styles.container}>
+					{/* Logo disabled for stability */}
 
 					{/* Meta Information */}
 					<View style={styles.section}>
@@ -105,16 +114,20 @@ export function InvoiceTemplate({
 					</View>
 
 					{/* From and To */}
-          <View style={styles.grid}>
-            <View style={styles.gridColumn}>
-              <Text style={styles.label}>{template.from_label}</Text>
-              <Text style={styles.text}>{toPlainText(from_details) || "—"}</Text>
-            </View>
-            <View style={styles.gridColumn}>
-              <Text style={styles.label}>{template.customer_label}</Text>
-              <Text style={styles.text}>{toPlainText(customer_details) || "—"}</Text>
-            </View>
-          </View>
+					<View style={styles.grid}>
+						<View style={styles.gridColumn}>
+							<Text style={styles.label}>{template.from_label}</Text>
+							<Text style={styles.text}>
+								{toPlainText(from_details) || "—"}
+							</Text>
+						</View>
+						<View style={styles.gridColumn}>
+							<Text style={styles.label}>{template.customer_label}</Text>
+							<Text style={styles.text}>
+								{toPlainText(customer_details) || "—"}
+							</Text>
+						</View>
+					</View>
 
 					{/* Line Items */}
 					<View style={styles.section}>
@@ -149,21 +162,25 @@ export function InvoiceTemplate({
 					</View>
 
 					{/* Notes and Payment Details */}
-          <View style={styles.footer}>
-            {note_details && (
-              <View style={styles.section}>
-                <Text style={styles.label}>{template.note_label}</Text>
-                <Text style={styles.text}>{toPlainText(note_details) || "—"}</Text>
-              </View>
-            )}
-            {payment_details && (
-              <View style={styles.section}>
-                <Text style={styles.text}>{toPlainText(payment_details) || "—"}</Text>
-              </View>
-            )}
-          </View>
-        </View>
-      </Page>
-    </Document>
-  );
+					<View style={styles.footer}>
+						{note_details && (
+							<View style={styles.section}>
+								<Text style={styles.label}>{template.note_label}</Text>
+								<Text style={styles.text}>
+									{toPlainText(note_details) || "—"}
+								</Text>
+							</View>
+						)}
+						{payment_details && (
+							<View style={styles.section}>
+								<Text style={styles.text}>
+									{toPlainText(payment_details) || "—"}
+								</Text>
+							</View>
+						)}
+					</View>
+				</View>
+			</Page>
+		</Document>
+	);
 }

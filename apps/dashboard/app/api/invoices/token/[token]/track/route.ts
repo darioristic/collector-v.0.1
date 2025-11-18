@@ -1,13 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 const API_URL = process.env.API_URL || "http://localhost:4000";
 
 export async function POST(
-    request: NextRequest,
-    { params }: { params: { token: string } },
+	request: NextRequest,
+	{ params }: { params: { token: string } },
 ) {
-    try {
-        const { token } = params;
+	try {
+		const { token } = params;
 
 		// Forward request to backend API
 		const response = await fetch(
@@ -35,5 +35,5 @@ export async function POST(
 			{ error: "Failed to track view" },
 			{ status: 500 },
 		);
-    }
+	}
 }

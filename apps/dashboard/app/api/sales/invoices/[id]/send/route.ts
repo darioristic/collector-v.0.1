@@ -1,14 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { isUuid } from "@/lib/utils";
 
 const API_URL = process.env.API_URL || "http://localhost:4000";
 
 export async function POST(
-    request: NextRequest,
-    { params }: { params: Promise<{ id: string }> },
+	request: NextRequest,
+	{ params }: { params: Promise<{ id: string }> },
 ) {
-    try {
-        const { id } = await params;
+	try {
+		const { id } = await params;
 
 		if (!isUuid(id)) {
 			return NextResponse.json(
@@ -25,7 +25,9 @@ export async function POST(
 		});
 
 		if (!response.ok) {
-			const error = await response.json().catch(() => ({ error: "Unknown error" }));
+			const error = await response
+				.json()
+				.catch(() => ({ error: "Unknown error" }));
 			return NextResponse.json(error, { status: response.status });
 		}
 
@@ -33,6 +35,9 @@ export async function POST(
 		return NextResponse.json(data);
 	} catch (error) {
 		console.error("Error sending invoice:", error);
-		return NextResponse.json({ error: "Failed to send invoice" }, { status: 500 });
+		return NextResponse.json(
+			{ error: "Failed to send invoice" },
+			{ status: 500 },
+		);
 	}
 }

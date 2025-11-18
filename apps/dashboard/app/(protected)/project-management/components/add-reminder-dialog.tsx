@@ -88,7 +88,6 @@ export function AddReminderDialog() {
 		setOpen(false);
 	};
 
-
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>

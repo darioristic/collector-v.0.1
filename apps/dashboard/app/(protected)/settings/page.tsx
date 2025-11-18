@@ -517,7 +517,11 @@ export default function SettingsPage() {
 				</p>
 			</div>
 
-			<Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col gap-6">
+			<Tabs
+				value={activeTab}
+				onValueChange={setActiveTab}
+				className="flex flex-col gap-6"
+			>
 				<TabsList className="flex h-auto flex-wrap justify-start gap-2 rounded-xl bg-transparent p-0">
 					{tabs.map(({ value, label, icon: Icon }) => (
 						<TabsTrigger
@@ -1203,22 +1207,22 @@ export default function SettingsPage() {
 					<CompanyTab />
 				</TabsContent>
 
-                <TabsContent value="teams" className="mt-0">
-                  <TeamsTab />
-                </TabsContent>
+				<TabsContent value="teams" className="mt-0">
+					<TeamsTab />
+				</TabsContent>
 
-                <TabsContent value="integrations" className="mt-0">
-                  <ImapTab />
-                </TabsContent>
+				<TabsContent value="integrations" className="mt-0">
+					<ImapTab />
+				</TabsContent>
 
 				{tabs
 					.filter(
-                    (tab) =>
-                      tab.value !== "profile" &&
-                      tab.value !== "notifications" &&
-                      tab.value !== "teams" &&
-                      tab.value !== "company" &&
-                      tab.value !== "integrations",
+						(tab) =>
+							tab.value !== "profile" &&
+							tab.value !== "notifications" &&
+							tab.value !== "teams" &&
+							tab.value !== "company" &&
+							tab.value !== "integrations",
 					)
 					.map((tab) => {
 						const Icon = tab.icon;

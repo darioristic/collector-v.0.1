@@ -1,2 +1,1 @@
 export const LEAVE_MANAGEMENT_PAGE_SIZE = 20;
-

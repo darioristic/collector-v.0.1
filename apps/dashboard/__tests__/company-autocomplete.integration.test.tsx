@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+import type { Account } from "@crm/types";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { CompanyAutocomplete } from "@/components/forms/CompanyAutocomplete";
 import { ensureResponse, getApiUrl } from "@/src/lib/fetch-utils";
-import type { Account } from "@crm/types";
 
 const createWrapper = () => {
 	const queryClient = new QueryClient({
@@ -64,7 +64,7 @@ describe("CompanyAutocomplete Integration Tests", () => {
 						taxId: testAccount.taxId,
 						country: testAccount.country,
 					}),
-				})
+				}),
 			);
 
 			const created = (await response.json()) as Account;
@@ -80,7 +80,7 @@ describe("CompanyAutocomplete Integration Tests", () => {
 				await ensureResponse(
 					fetch(getApiUrl(`accounts/${testAccountId}`), {
 						method: "DELETE",
-					})
+					}),
 				);
 			} catch (error) {
 				console.warn("Failed to delete test account:", error);
@@ -104,7 +104,7 @@ describe("CompanyAutocomplete Integration Tests", () => {
 			() => {
 				expect(screen.queryByRole("status")).toBeTruthy();
 			},
-			{ timeout: 5000 }
+			{ timeout: 5000 },
 		);
 
 		await waitFor(
@@ -112,20 +112,20 @@ describe("CompanyAutocomplete Integration Tests", () => {
 				const results = screen.queryAllByRole("option");
 				expect(results.length).toBeGreaterThan(0);
 			},
-			{ timeout: 5000 }
+			{ timeout: 5000 },
 		);
 	});
 
 	it("should handle API errors gracefully", async () => {
 		const originalFetch = global.fetch;
-		global.fetch = (vi.fn(() =>
+		global.fetch = vi.fn(() =>
 			Promise.resolve({
 				ok: false,
 				status: 500,
 				statusText: "Internal Server Error",
 				json: async () => ({ error: "Internal Server Error" }),
-			})
-		) as unknown) as typeof fetch;
+			}),
+		) as unknown as typeof fetch;
 
 		const onChange = vi.fn();
 		render(<CompanyAutocomplete value={undefined} onChange={onChange} />, {
@@ -142,7 +142,7 @@ describe("CompanyAutocomplete Integration Tests", () => {
 			() => {
 				expect(screen.queryByText(/No companies found/i)).toBeInTheDocument();
 			},
-			{ timeout: 5000 }
+			{ timeout: 5000 },
 		);
 
 		global.fetch = originalFetch;
@@ -168,11 +168,11 @@ describe("CompanyAutocomplete Integration Tests", () => {
 		await waitFor(
 			() => {
 				const calls = fetchSpy.mock.calls.filter((call) =>
-					call[0]?.toString().includes("/api/accounts")
+					call[0]?.toString().includes("/api/accounts"),
 				);
 				expect(calls.length).toBeLessThan(4);
 			},
-			{ timeout: 1000 }
+			{ timeout: 1000 },
 		);
 
 		fetchSpy.mockRestore();

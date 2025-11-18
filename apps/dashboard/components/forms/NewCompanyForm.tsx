@@ -1,10 +1,10 @@
 "use client";
 
+import type { Account } from "@crm/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import type { Account } from "@crm/types";
 import { Button } from "@/components/ui/button";
 import {
 	Form,
@@ -28,10 +28,12 @@ const ACCOUNT_TAG_OPTIONS = ["customer", "partner", "vendor"] as const;
 const formSchema = z.object({
 	name: z.string().trim().min(2, "Name is required."),
 	email: z.string().trim().email("Provide a valid email address."),
-	billingEmail: z.union([
-		z.string().trim().email("Provide a valid email address."),
-		z.literal(""),
-	]).optional(),
+	billingEmail: z
+		.union([
+			z.string().trim().email("Provide a valid email address."),
+			z.literal(""),
+		])
+		.optional(),
 	phone: z.string().trim().optional().or(z.literal("")),
 	website: z.string().trim().optional().or(z.literal("")),
 	type: z.enum(ACCOUNT_TAG_OPTIONS),
@@ -39,7 +41,10 @@ const formSchema = z.object({
 	country: z
 		.string()
 		.trim()
-		.length(2, "Country code must be exactly 2 characters (ISO 3166-1 alpha-2)."),
+		.length(
+			2,
+			"Country code must be exactly 2 characters (ISO 3166-1 alpha-2).",
+		),
 	contactPerson: z.string().trim().optional().or(z.literal("")),
 });
 
@@ -96,11 +101,7 @@ export function NewCompanyForm({
 							<FormItem className="sm:col-span-2">
 								<FormLabel>Company name</FormLabel>
 								<FormControl>
-									<Input
-										{...field}
-										placeholder="Acme Industries"
-										autoFocus
-									/>
+									<Input {...field} placeholder="Acme Industries" autoFocus />
 								</FormControl>
 								<FormMessage />
 							</FormItem>
@@ -140,7 +141,8 @@ export function NewCompanyForm({
 								</FormControl>
 								<FormMessage />
 								<p className="text-xs text-muted-foreground">
-									This is an additional email that will be used to send invoices to.
+									This is an additional email that will be used to send invoices
+									to.
 								</p>
 							</FormItem>
 						)}
@@ -171,11 +173,7 @@ export function NewCompanyForm({
 							<FormItem>
 								<FormLabel>Website</FormLabel>
 								<FormControl>
-									<Input
-										{...field}
-										placeholder="acme.com"
-										type="url"
-									/>
+									<Input {...field} placeholder="acme.com" type="url" />
 								</FormControl>
 								<FormMessage />
 							</FormItem>
@@ -233,7 +231,9 @@ export function NewCompanyForm({
 										placeholder="RS"
 										maxLength={2}
 										onChange={(event) =>
-											field.onChange(event.target.value.toUpperCase().slice(0, 2))
+											field.onChange(
+												event.target.value.toUpperCase().slice(0, 2),
+											)
 										}
 									/>
 								</FormControl>
@@ -249,10 +249,7 @@ export function NewCompanyForm({
 							<FormItem className="sm:col-span-2">
 								<FormLabel>Contact person</FormLabel>
 								<FormControl>
-									<Input
-										{...field}
-										placeholder="John Doe"
-									/>
+									<Input {...field} placeholder="John Doe" />
 								</FormControl>
 								<FormMessage />
 							</FormItem>
@@ -275,8 +272,10 @@ export function NewCompanyForm({
 								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 								{mode === "edit" ? "Updating…" : "Creating…"}
 							</>
+						) : mode === "edit" ? (
+							"Update company"
 						) : (
-							mode === "edit" ? "Update company" : "Create company"
+							"Create company"
 						)}
 					</Button>
 				</div>
@@ -284,4 +283,3 @@ export function NewCompanyForm({
 		</Form>
 	);
 }
-

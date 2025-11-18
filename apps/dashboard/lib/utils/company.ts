@@ -27,4 +27,3 @@ export function formatCompanyDisplay(company: Account): string {
 	}
 	return company.name;
 }
-

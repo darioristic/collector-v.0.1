@@ -48,4 +48,3 @@ function Book({ className, title, description, href, ...props }: BookProps) {
 
 export { Book };
 export type { BookProps };
-

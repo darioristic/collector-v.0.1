@@ -3,10 +3,14 @@
 import { NovuProvider as NovuProviderBase } from "@novu/react";
 import React from "react";
 import { useAuth } from "@/components/providers/auth-provider";
-import { getNovuSubscriberId, getNovuAppId, isNovuConfigured } from "./novu-client";
+import {
+	getNovuAppId,
+	getNovuSubscriberId,
+	isNovuConfigured,
+} from "./novu-client";
 
 interface NovuProviderProps {
-  children: React.ReactNode;
+	children: React.ReactNode;
 }
 
 /**
@@ -16,21 +20,21 @@ interface NovuProviderProps {
  * UI context for the bell is created inside the `NovuBell` component.
  */
 export function NovuProvider({ children }: NovuProviderProps) {
-  const { user } = useAuth();
-  const [mounted, setMounted] = React.useState(false);
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-  const appId = getNovuAppId();
-  const subscriberId = getNovuSubscriberId(user?.id);
-  const enabled = mounted && isNovuConfigured() && !!appId && !!subscriberId;
-  if (!enabled) {
-    return <>{children}</>;
-  }
+	const { user } = useAuth();
+	const [mounted, setMounted] = React.useState(false);
+	React.useEffect(() => {
+		setMounted(true);
+	}, []);
+	const appId = getNovuAppId();
+	const subscriberId = getNovuSubscriberId(user?.id);
+	const enabled = mounted && isNovuConfigured() && !!appId && !!subscriberId;
+	if (!enabled) {
+		return <>{children}</>;
+	}
 
-  return (
-    <NovuProviderBase applicationIdentifier={appId} subscriberId={subscriberId}>
-      {children}
-    </NovuProviderBase>
-  );
+	return (
+		<NovuProviderBase applicationIdentifier={appId} subscriberId={subscriberId}>
+			{children}
+		</NovuProviderBase>
+	);
 }

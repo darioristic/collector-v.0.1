@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import {
 	employmentStatusSchema,
-	employmentStatusValues,
+	type employmentStatusValues,
 } from "@/lib/validations/employees";
 
 export const departmentValues = [
@@ -118,7 +118,10 @@ export const transformAddEmployeeToAPI = (
 				? "Full-time"
 				: (values.employmentType as "Full-time" | "Contractor" | "Intern"),
 		status: values.status,
-		startDate: values.startDate instanceof Date ? values.startDate : new Date(values.startDate),
+		startDate:
+			values.startDate instanceof Date
+				? values.startDate
+				: new Date(values.startDate),
 		endDate: null,
 	};
 };

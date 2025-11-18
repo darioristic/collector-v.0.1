@@ -1,9 +1,9 @@
 /**
  * Vercel Geist Design System - Dark Theme
- * 
+ *
  * Complete dark theme color palette organized by category.
  * All colors are ready for use in CSS variables or JS objects.
- * 
+ *
  * Based on official Vercel Geist Design System specifications.
  * Includes P3 color values where supported.
  */
@@ -246,8 +246,10 @@ export const geistDarkThemeFlat = {
 	"--geist-dark-component-default": geistDarkTheme.backgrounds.componentDefault,
 	"--geist-dark-component-hover": geistDarkTheme.backgrounds.componentHover,
 	"--geist-dark-component-active": geistDarkTheme.backgrounds.componentActive,
-	"--geist-dark-high-contrast-default": geistDarkTheme.backgrounds.highContrastDefault,
-	"--geist-dark-high-contrast-hover": geistDarkTheme.backgrounds.highContrastHover,
+	"--geist-dark-high-contrast-default":
+		geistDarkTheme.backgrounds.highContrastDefault,
+	"--geist-dark-high-contrast-hover":
+		geistDarkTheme.backgrounds.highContrastHover,
 
 	// Borders
 	"--geist-dark-border-default": geistDarkTheme.borders.borderDefault,
@@ -376,11 +378,13 @@ export const geistDarkThemeFlat = {
 	"--geist-dark-secondary": geistDarkTheme.semantic.secondary,
 	"--geist-dark-secondary-hover": geistDarkTheme.semantic.secondaryHover,
 	"--geist-dark-secondary-active": geistDarkTheme.semantic.secondaryActive,
-	"--geist-dark-secondary-foreground": geistDarkTheme.semantic.secondaryForeground,
+	"--geist-dark-secondary-foreground":
+		geistDarkTheme.semantic.secondaryForeground,
 	"--geist-dark-destructive": geistDarkTheme.semantic.destructive,
 	"--geist-dark-destructive-hover": geistDarkTheme.semantic.destructiveHover,
 	"--geist-dark-destructive-active": geistDarkTheme.semantic.destructiveActive,
-	"--geist-dark-destructive-foreground": geistDarkTheme.semantic.destructiveForeground,
+	"--geist-dark-destructive-foreground":
+		geistDarkTheme.semantic.destructiveForeground,
 	"--geist-dark-accent": geistDarkTheme.semantic.accent,
 	"--geist-dark-accent-hover": geistDarkTheme.semantic.accentHover,
 	"--geist-dark-accent-active": geistDarkTheme.semantic.accentActive,
@@ -398,4 +402,3 @@ export const geistDarkThemeFlat = {
 } as const;
 
 export default geistDarkTheme;
-

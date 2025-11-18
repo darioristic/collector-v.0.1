@@ -85,11 +85,13 @@ export const createDirectMessageSchema = z.object({
 	targetUserId: z.string().uuid(),
 });
 
-export const createMessageSchema = z.object({
-	content: z.string(),
-	channelId: z.string().uuid(),
-	fileUrl: z.string().optional(),
-}).refine((data) => data.content.trim().length > 0 || data.fileUrl, {
-	message: "Message must have content or fileUrl",
-	path: ["content"],
-});
+export const createMessageSchema = z
+	.object({
+		content: z.string(),
+		channelId: z.string().uuid(),
+		fileUrl: z.string().optional(),
+	})
+	.refine((data) => data.content.trim().length > 0 || data.fileUrl, {
+		message: "Message must have content or fileUrl",
+		path: ["content"],
+	});

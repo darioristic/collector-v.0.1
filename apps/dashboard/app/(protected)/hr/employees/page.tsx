@@ -18,7 +18,9 @@ interface EmployeesPageProps {
 	searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default async function EmployeesPage({ searchParams }: EmployeesPageProps) {
+export default async function EmployeesPage({
+	searchParams,
+}: EmployeesPageProps) {
 	const params = await searchParams;
 	const initialQuery = parseEmployeesQueryState(params);
 

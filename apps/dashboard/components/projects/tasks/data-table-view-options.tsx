@@ -21,11 +21,7 @@ export function DataTableViewOptions<TData>({
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Button
-					variant="outline"
-					size="sm"
-					className="h-9 gap-2"
-				>
+				<Button variant="outline" size="sm" className="h-9 gap-2">
 					<Columns3 className="size-4" />
 					Columns
 				</Button>
@@ -55,4 +51,3 @@ export function DataTableViewOptions<TData>({
 		</DropdownMenu>
 	);
 }
-

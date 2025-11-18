@@ -40,7 +40,12 @@ interface TodoStore {
 	setActiveTab: (tab: FilterTab) => void;
 	setAddDialogOpen: (isOpen: boolean) => void;
 	setTodoSheetOpen: (isOpen: boolean) => void;
-	addComment: (todoId: string, text: string, author?: string, authorAvatar?: string) => void;
+	addComment: (
+		todoId: string,
+		text: string,
+		author?: string,
+		authorAvatar?: string,
+	) => void;
 	deleteComment: (todoId: string, commentId: string) => void;
 	reorderTodos: (todoPositions: { id: string; position: number }[]) => void;
 	setViewMode: (mode: ViewMode) => void;

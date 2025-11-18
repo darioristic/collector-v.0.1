@@ -69,7 +69,7 @@ type CreateMessageResponse = {
 // Chat service API calls now go through Next.js API routes
 // This allows us to read httpOnly cookies on the server side
 const getChatApiUrl = (path: string) => {
-    return `/api/chat${path}`;
+	return `/api/chat${path}`;
 };
 
 // Track one-time silent auth refresh attempt to avoid infinite loops
@@ -200,14 +200,17 @@ export const fetchConversations = async (): Promise<ChatConversation[]> => {
 
 			// Gracefully handle server errors (5xx) by returning empty data instead of breaking UI
 			if (status >= 500) {
-				console.warn("[fetchConversations] Server error, returning empty conversations", {
-					status,
-					statusText,
-					url: responseUrl || apiUrl,
-					apiUrl,
-					contentType,
-					responseTextPreview: trimmedText?.slice(0, 200)
-				});
+				console.warn(
+					"[fetchConversations] Server error, returning empty conversations",
+					{
+						status,
+						statusText,
+						url: responseUrl || apiUrl,
+						apiUrl,
+						contentType,
+						responseTextPreview: trimmedText?.slice(0, 200),
+					},
+				);
 				return [];
 			}
 
@@ -239,72 +242,81 @@ export const fetchConversations = async (): Promise<ChatConversation[]> => {
 				logDetails.responseText = "";
 			}
 
-        // Handle unauthorized by attempting silent session refresh once
-        if (status === 401) {
-            console.warn("[fetchConversations] Unauthorized (401). Attempting session refresh.");
-            if (!__conversationsAuthRetry) {
-                __conversationsAuthRetry = true;
-                try {
-                    const refresh = await fetch("/api/auth/me", {
-                        method: "GET",
-                        headers: { Accept: "application/json" },
-                        cache: "no-store",
-                        credentials: "include",
-                    });
-                    if (refresh.ok) {
-                        try {
-                            const retryResponse = await fetch(apiUrl, {
-                                method: "GET",
-                                headers: {
-                                    "Content-Type": "application/json",
-                                    Accept: "application/json",
-                                },
-                                cache: "no-store",
-                                credentials: "include",
-                            });
-                            __conversationsAuthRetry = false;
-                            if (retryResponse.ok) {
-                                const retryText = await retryResponse.text();
-                                const data = JSON.parse(retryText) as GetConversationsResponse;
-                                return Array.isArray(data.conversations) ? data.conversations : [];
-                            }
-                        } catch {
-                            // fall through to empty array
-                        }
-                    }
-                } catch {
-                    // ignore
-                }
-            }
-            // Return empty array to avoid noisy logs and let UI continue
-            return [];
-        }
+			// Handle unauthorized by attempting silent session refresh once
+			if (status === 401) {
+				console.warn(
+					"[fetchConversations] Unauthorized (401). Attempting session refresh.",
+				);
+				if (!__conversationsAuthRetry) {
+					__conversationsAuthRetry = true;
+					try {
+						const refresh = await fetch("/api/auth/me", {
+							method: "GET",
+							headers: { Accept: "application/json" },
+							cache: "no-store",
+							credentials: "include",
+						});
+						if (refresh.ok) {
+							try {
+								const retryResponse = await fetch(apiUrl, {
+									method: "GET",
+									headers: {
+										"Content-Type": "application/json",
+										Accept: "application/json",
+									},
+									cache: "no-store",
+									credentials: "include",
+								});
+								__conversationsAuthRetry = false;
+								if (retryResponse.ok) {
+									const retryText = await retryResponse.text();
+									const data = JSON.parse(
+										retryText,
+									) as GetConversationsResponse;
+									return Array.isArray(data.conversations)
+										? data.conversations
+										: [];
+								}
+							} catch {
+								// fall through to empty array
+							}
+						}
+					} catch {
+						// ignore
+					}
+				}
+				// Return empty array to avoid noisy logs and let UI continue
+				return [];
+			}
 
-        // Log actual errors (not service unavailable)
-        console.error(
-            "[fetchConversations] API error response:",
-            JSON.stringify(logDetails, null, 2),
-        );
-        console.error(
-            "[fetchConversations] API error response (object):",
-            logDetails,
-        );
+			// Log actual errors (not service unavailable)
+			console.error(
+				"[fetchConversations] API error response:",
+				JSON.stringify(logDetails, null, 2),
+			);
+			console.error(
+				"[fetchConversations] API error response (object):",
+				logDetails,
+			);
 
-        const error = new Error(errorMessage);
-        (error as Error & { status?: number }).status = status;
-        throw error;
+			const error = new Error(errorMessage);
+			(error as Error & { status?: number }).status = status;
+			throw error;
 		}
 
 		if (!contentType?.includes("application/json")) {
 			// If content type is not JSON (e.g., HTML error page), don't break the UI
-			console.warn("[fetchConversations] Non-JSON response received, returning empty list", {
-				status,
-				statusText,
-				url: responseUrl,
-				apiUrl,
-				contentType,
-				responseTextPreview: responseText.substring(0, 200),
-			});
+			console.warn(
+				"[fetchConversations] Non-JSON response received, returning empty list",
+				{
+					status,
+					statusText,
+					url: responseUrl,
+					apiUrl,
+					contentType,
+					responseTextPreview: responseText.substring(0, 200),
+				},
+			);
 			return [];
 		}
 
@@ -459,7 +471,8 @@ export const fetchConversationMessages = async (
 		});
 
 		if (!response.ok) {
-			let errorData: { error?: string; message?: string; details?: string } = {};
+			let errorData: { error?: string; message?: string; details?: string } =
+				{};
 			try {
 				const text = await response.text();
 				if (text) {
@@ -479,7 +492,7 @@ export const fetchConversationMessages = async (
 			if (response.status === 503) {
 				throw new Error(
 					errorMessage.includes("servis nije dostupan") ||
-					errorMessage.includes("service unavailable")
+						errorMessage.includes("service unavailable")
 						? errorMessage
 						: "Chat servis nije dostupan. Proverite da li je servis pokrenut na portu 4001.",
 				);
@@ -499,7 +512,8 @@ export const fetchConversationMessages = async (
 		} catch (parseError) {
 			console.error("[fetchConversationMessages] Failed to parse response:", {
 				conversationId,
-				error: parseError instanceof Error ? parseError.message : String(parseError),
+				error:
+					parseError instanceof Error ? parseError.message : String(parseError),
 			});
 			throw new Error("Neočekivan format odgovora od servera.");
 		}
@@ -533,7 +547,7 @@ export const fetchConversationMessages = async (
 };
 
 export const createConversation = async (
-    targetUserId: string,
+	targetUserId: string,
 ): Promise<ChatConversation> => {
 	const apiUrl = getChatApiUrl("/conversations");
 	const requestUrl =
@@ -770,102 +784,102 @@ export const createConversation = async (
 };
 
 export const createConversationByEmail = async (
-    targetEmail: string,
+	targetEmail: string,
 ): Promise<ChatConversation> => {
-    const apiUrl = getChatApiUrl("/conversations");
-    const requestUrl =
-        typeof window !== "undefined"
-            ? new URL(apiUrl, window.location.origin).toString()
-            : apiUrl;
-    let response: Response;
+	const apiUrl = getChatApiUrl("/conversations");
+	const requestUrl =
+		typeof window !== "undefined"
+			? new URL(apiUrl, window.location.origin).toString()
+			: apiUrl;
+	let response: Response;
 
-    try {
-        response = await fetch(requestUrl, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Accept: "application/json",
-            },
-            body: JSON.stringify({ targetEmail }),
-            cache: "no-store",
-            credentials: "include",
-        });
-    } catch (fetchError) {
-        const errorMessage =
-            fetchError instanceof Error ? fetchError.message : String(fetchError);
-        if (
-            errorMessage.includes("Failed to fetch") ||
-            errorMessage.includes("NetworkError") ||
-            errorMessage.includes("ERR_CONNECTION_REFUSED") ||
-            errorMessage.includes("connection refused")
-        ) {
-            throw new Error(
-                "Chat servis nije dostupan. Proverite da li je servis pokrenut.",
-            );
-        }
-        throw new Error(`Neuspešan zahtev ka API-ju: ${errorMessage}`);
-    }
+	try {
+		response = await fetch(requestUrl, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+			},
+			body: JSON.stringify({ targetEmail }),
+			cache: "no-store",
+			credentials: "include",
+		});
+	} catch (fetchError) {
+		const errorMessage =
+			fetchError instanceof Error ? fetchError.message : String(fetchError);
+		if (
+			errorMessage.includes("Failed to fetch") ||
+			errorMessage.includes("NetworkError") ||
+			errorMessage.includes("ERR_CONNECTION_REFUSED") ||
+			errorMessage.includes("connection refused")
+		) {
+			throw new Error(
+				"Chat servis nije dostupan. Proverite da li je servis pokrenut.",
+			);
+		}
+		throw new Error(`Neuspešan zahtev ka API-ju: ${errorMessage}`);
+	}
 
-    const status = response.status;
-    const statusText = response.statusText;
-    let responseText = "";
-    try {
-        responseText = await response.text();
-    } catch (readError) {
-        throw new Error(
-            `Neuspešno čitanje odgovora od servera: ${
-                readError instanceof Error ? readError.message : String(readError)
-            }`,
-        );
-    }
+	const status = response.status;
+	const statusText = response.statusText;
+	let responseText = "";
+	try {
+		responseText = await response.text();
+	} catch (readError) {
+		throw new Error(
+			`Neuspešno čitanje odgovora od servera: ${
+				readError instanceof Error ? readError.message : String(readError)
+			}`,
+		);
+	}
 
-    if (!response.ok) {
-        let errorData: { error?: string; details?: unknown } = {};
-        const trimmedText = responseText?.trim();
-        if (trimmedText) {
-            try {
-                const parsed = JSON.parse(trimmedText);
-                if (parsed && typeof parsed === "object") {
-                    errorData = parsed as typeof errorData;
-                } else {
-                    errorData = { error: trimmedText };
-                }
-            } catch {
-                errorData = { error: trimmedText };
-            }
-        }
-        let errorMessage = errorData.error || `HTTP ${status}: ${statusText}`;
-        if (errorData.details) {
-            errorMessage = `${errorMessage} - ${String(errorData.details)}`;
-        }
-        const isServiceUnavailable =
-            status === 503 ||
-            statusText?.toLowerCase().includes("service unavailable") ||
-            errorMessage.toLowerCase().includes("servis nije dostupan") ||
-            errorMessage.toLowerCase().includes("service unavailable") ||
-            errorMessage.toLowerCase().includes("nije dostupan");
-        if (isServiceUnavailable) {
-            throw new Error(
-                "Chat servis nije dostupan. Proverite da li je servis pokrenut.",
-            );
-        }
-        throw new Error(errorMessage);
-    }
+	if (!response.ok) {
+		let errorData: { error?: string; details?: unknown } = {};
+		const trimmedText = responseText?.trim();
+		if (trimmedText) {
+			try {
+				const parsed = JSON.parse(trimmedText);
+				if (parsed && typeof parsed === "object") {
+					errorData = parsed as typeof errorData;
+				} else {
+					errorData = { error: trimmedText };
+				}
+			} catch {
+				errorData = { error: trimmedText };
+			}
+		}
+		let errorMessage = errorData.error || `HTTP ${status}: ${statusText}`;
+		if (errorData.details) {
+			errorMessage = `${errorMessage} - ${String(errorData.details)}`;
+		}
+		const isServiceUnavailable =
+			status === 503 ||
+			statusText?.toLowerCase().includes("service unavailable") ||
+			errorMessage.toLowerCase().includes("servis nije dostupan") ||
+			errorMessage.toLowerCase().includes("service unavailable") ||
+			errorMessage.toLowerCase().includes("nije dostupan");
+		if (isServiceUnavailable) {
+			throw new Error(
+				"Chat servis nije dostupan. Proverite da li je servis pokrenut.",
+			);
+		}
+		throw new Error(errorMessage);
+	}
 
-    if (!responseText || !responseText.trim()) {
-        throw new Error("Prazan odgovor od chat servisa.");
-    }
-    let data: unknown;
-    try {
-        data = JSON.parse(responseText);
-    } catch (parseError) {
-        throw new Error(
-            `Neuspešno parsiranje JSON odgovora od chat servisa: ${
-                parseError instanceof Error ? parseError.message : String(parseError)
-            }`,
-        );
-    }
-    return data as ChatConversation;
+	if (!responseText || !responseText.trim()) {
+		throw new Error("Prazan odgovor od chat servisa.");
+	}
+	let data: unknown;
+	try {
+		data = JSON.parse(responseText);
+	} catch (parseError) {
+		throw new Error(
+			`Neuspešno parsiranje JSON odgovora od chat servisa: ${
+				parseError instanceof Error ? parseError.message : String(parseError)
+			}`,
+		);
+	}
+	return data as ChatConversation;
 };
 
 export const sendMessage = async ({
@@ -942,9 +956,9 @@ export const markConversationAsRead = async (
 		);
 
 		if (!response.ok) {
-			const errorData = await response
-				.json()
-				.catch(() => ({ error: "Označavanje poruka kao pročitanih nije uspelo." }));
+			const errorData = await response.json().catch(() => ({
+				error: "Označavanje poruka kao pročitanih nije uspelo.",
+			}));
 			console.warn("[markConversationAsRead] Server returned error:", {
 				status: response.status,
 				statusText: response.statusText,
@@ -955,7 +969,10 @@ export const markConversationAsRead = async (
 			return;
 		}
 
-		console.log("[markConversationAsRead] Successfully marked conversation as read:", conversationId);
+		console.log(
+			"[markConversationAsRead] Successfully marked conversation as read:",
+			conversationId,
+		);
 	} catch (error) {
 		// Network errors should be handled gracefully - just log and continue
 		const errorMessage = error instanceof Error ? error.message : String(error);

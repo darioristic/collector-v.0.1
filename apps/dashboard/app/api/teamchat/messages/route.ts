@@ -52,11 +52,7 @@ export async function GET(request: NextRequest) {
 		await ensureTeamChatSchemaReady();
 
 		try {
-			const messages = await getChannelMessages(
-				channelId,
-				auth.user.id,
-				limit,
-			);
+			const messages = await getChannelMessages(channelId, auth.user.id, limit);
 			const validated = messagesResponseSchema.parse({ messages });
 
 			return withNoStore(NextResponse.json(validated));
@@ -139,9 +135,7 @@ export async function POST(request: NextRequest) {
 		} catch (error) {
 			console.error("[teamchat] POST messages error:", error);
 			const message =
-				error instanceof Error
-					? error.message
-					: "Slanje poruke nije uspelo.";
+				error instanceof Error ? error.message : "Slanje poruke nije uspelo.";
 			return withNoStore(
 				NextResponse.json(
 					{
@@ -154,9 +148,7 @@ export async function POST(request: NextRequest) {
 	} catch (error) {
 		console.error("[teamchat] POST messages route error:", error);
 		const message =
-			error instanceof Error
-				? error.message
-				: "Slanje poruke nije uspelo.";
+			error instanceof Error ? error.message : "Slanje poruke nije uspelo.";
 		return withNoStore(
 			NextResponse.json(
 				{
@@ -167,4 +159,3 @@ export async function POST(request: NextRequest) {
 		);
 	}
 }
-

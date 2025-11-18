@@ -269,7 +269,7 @@ function resolveErrorVariant(
 	error: Error,
 ): "offline" | "not-found" | "generic" {
 	const message = error.message.toLowerCase();
-	
+
 	// Check for status code in error object
 	const status = (error as Error & { status?: number }).status;
 	if (status === 404) {

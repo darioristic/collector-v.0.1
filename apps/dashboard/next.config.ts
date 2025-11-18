@@ -6,10 +6,10 @@ const isProduction = process.env.NODE_ENV === "production";
 
 // Only set assetPrefix when explicitly provided via env; avoid hard-coded domain
 const nextConfig: NextConfig = {
-    assetPrefix:
-        isProduction && process.env.NEXT_PUBLIC_ASSET_PREFIX
-            ? process.env.NEXT_PUBLIC_ASSET_PREFIX
-            : undefined,
+	assetPrefix:
+		isProduction && process.env.NEXT_PUBLIC_ASSET_PREFIX
+			? process.env.NEXT_PUBLIC_ASSET_PREFIX
+			: undefined,
 	images: {
 		remotePatterns: [
 			{
@@ -123,13 +123,13 @@ const nextConfig: NextConfig = {
 	// Enable standalone output for Docker builds
 	// This creates a self-contained build with all dependencies
 	output: process.env.DOCKER_BUILD === "true" ? "standalone" : undefined,
-    // Transpile selected packages for Turbopack/HMR stability
-    // Ensure TanStack Query and core are transpiled to avoid module factory HMR issues
-    transpilePackages: [
-        ...(process.env.DOCKER_BUILD === "true" ? ["@crm/ui", "@crm/types"] : []),
-        "@tanstack/react-query",
-        "@tanstack/query-core",
-    ],
+	// Transpile selected packages for Turbopack/HMR stability
+	// Ensure TanStack Query and core are transpiled to avoid module factory HMR issues
+	transpilePackages: [
+		...(process.env.DOCKER_BUILD === "true" ? ["@crm/ui", "@crm/types"] : []),
+		"@tanstack/react-query",
+		"@tanstack/query-core",
+	],
 };
 
 export default nextConfig;

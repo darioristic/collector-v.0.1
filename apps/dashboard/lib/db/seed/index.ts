@@ -2,19 +2,18 @@ import "dotenv/config";
 
 import { drizzle as drizzlePostgresJs } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-
-import { runSeeds, type SeedModule } from "./seed-runner";
-import { seedEmployees } from "./employees";
-import { seedVault } from "./vault";
-import { seedDeals } from "./deals";
-import { seedTeamMembers } from "./team-members";
-import { seedNotifications } from "./notifications";
-import { seedTeamchat } from "./teamchat";
 import { seedChat } from "./chat";
-import { seedUsersCompanies } from "./users-companies";
 import { seedCompanies } from "./companies";
-import { seedUsers } from "./users";
 import { seedCompany } from "./company";
+import { seedDeals } from "./deals";
+import { seedEmployees } from "./employees";
+import { seedNotifications } from "./notifications";
+import { runSeeds, type SeedModule } from "./seed-runner";
+import { seedTeamMembers } from "./team-members";
+import { seedTeamchat } from "./teamchat";
+import { seedUsers } from "./users";
+import { seedUsersCompanies } from "./users-companies";
+import { seedVault } from "./vault";
 
 const DEFAULT_LOCAL_CONNECTION =
 	"postgres://postgres:postgres@localhost:5432/collector_dashboard";
@@ -52,7 +51,8 @@ const db = drizzlePostgresJs(client);
 const seedModules: SeedModule[] = [
 	{
 		name: "companies",
-		description: "Kreira osnovne kompanije (Collector Labs, TechFirm, Digital Solutions).",
+		description:
+			"Kreira osnovne kompanije (Collector Labs, TechFirm, Digital Solutions).",
 		dependencies: [],
 		seedFn: async (database, opts) => {
 			const result = await seedCompanies(database, opts);
@@ -129,7 +129,8 @@ const seedModules: SeedModule[] = [
 		seedFn: async (database, opts) => {
 			const result = await seedTeamchat(database, opts);
 			return {
-				recordsCreated: result.usersCreated + result.channelsCreated + result.messagesCreated,
+				recordsCreated:
+					result.usersCreated + result.channelsCreated + result.messagesCreated,
 				summary: `Korisnici: ${result.usersCreated}, Kanali: ${result.channelsCreated}, Poruke: ${result.messagesCreated}`,
 			};
 		},

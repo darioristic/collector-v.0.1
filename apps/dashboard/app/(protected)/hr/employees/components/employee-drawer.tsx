@@ -7,28 +7,25 @@ import {
 	Phone,
 	Trash2,
 	Upload,
-	UserCircle
+	UserCircle,
 } from "lucide-react";
 import * as React from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
 	Sheet,
 	SheetContent,
 	SheetDescription,
-	SheetTitle
+	SheetTitle,
 } from "@/components/ui/sheet";
 import {
 	Tooltip,
 	TooltipContent,
-	TooltipTrigger
+	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { generateAvatarFallback } from "@/lib/utils";
 import type { Employee } from "../types";
@@ -45,7 +42,7 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", { dateStyle: "medium" });
 const salaryFormatter = new Intl.NumberFormat("en-US", {
 	style: "currency",
 	currency: "USD",
-	maximumFractionDigits: 0
+	maximumFractionDigits: 0,
 });
 
 const RECENT_ACTIVITY = [
@@ -54,22 +51,22 @@ const RECENT_ACTIVITY = [
 		description: "Adjusted annual salary to reflect new compensation band.",
 		timestamp: "2 days ago",
 		icon: DollarSign,
-		color: "text-green-600"
+		color: "text-green-600",
 	},
 	{
 		title: "Performance review",
 		description: "Completed mid-year performance review with HR.",
 		timestamp: "1 week ago",
 		icon: CheckCircle2,
-		color: "text-blue-600"
+		color: "text-blue-600",
 	},
 	{
 		title: "Document upload",
 		description: "Uploaded signed NDA and compliance forms.",
 		timestamp: "3 weeks ago",
 		icon: Upload,
-		color: "text-purple-600"
-	}
+		color: "text-purple-600",
+	},
 ];
 
 const getAvatarUrl = (employee: Employee) =>
@@ -101,7 +98,7 @@ export default function EmployeeDrawer({
 	employee,
 	onClose,
 	onEdit,
-	onDelete
+	onDelete,
 }: EmployeeDrawerProps) {
 	if (!employee) return null;
 
@@ -141,7 +138,10 @@ export default function EmployeeDrawer({
 							<section className="space-y-4">
 								<div className="flex items-start gap-4">
 									<Avatar className="size-16">
-										<AvatarImage src={getAvatarUrl(employee)} alt={employee.fullName} />
+										<AvatarImage
+											src={getAvatarUrl(employee)}
+											alt={employee.fullName}
+										/>
 										<AvatarFallback className="text-lg font-semibold">
 											{generateAvatarFallback(employee.fullName)}
 										</AvatarFallback>
@@ -164,7 +164,8 @@ export default function EmployeeDrawer({
 											</Badge>
 										</div>
 										<p className="text-muted-foreground text-sm leading-relaxed">
-											{employee.role ?? "Role not set"} · {employee.department ?? "No department"}
+											{employee.role ?? "Role not set"} ·{" "}
+											{employee.department ?? "No department"}
 										</p>
 										<div className="flex flex-wrap items-center gap-2">
 											<Badge variant="outline">{employee.employmentType}</Badge>
@@ -175,7 +176,10 @@ export default function EmployeeDrawer({
 													</Badge>
 												</TooltipTrigger>
 												<TooltipContent>
-													<p>Hired on {dateFormatter.format(new Date(employee.startDate))}</p>
+													<p>
+														Hired on{" "}
+														{dateFormatter.format(new Date(employee.startDate))}
+													</p>
 												</TooltipContent>
 											</Tooltip>
 										</div>
@@ -191,7 +195,8 @@ export default function EmployeeDrawer({
 											<Mail className="text-muted-foreground h-4 w-4" />
 											<a
 												href={`mailto:${employee.email}`}
-												className="hover:text-primary text-sm transition-colors">
+												className="hover:text-primary text-sm transition-colors"
+											>
 												{employee.email}
 											</a>
 										</dd>
@@ -205,7 +210,8 @@ export default function EmployeeDrawer({
 												<Phone className="text-muted-foreground h-4 w-4" />
 												<a
 													href={`tel:${employee.phone}`}
-													className="hover:text-primary text-sm transition-colors">
+													className="hover:text-primary text-sm transition-colors"
+												>
 													{employee.phone}
 												</a>
 											</dd>
@@ -226,26 +232,33 @@ export default function EmployeeDrawer({
 												<p className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
 													Department
 												</p>
-												<p className="mt-1 font-medium">{employee.department ?? "—"}</p>
+												<p className="mt-1 font-medium">
+													{employee.department ?? "—"}
+												</p>
 											</div>
 											<div>
 												<p className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
 													Position
 												</p>
-												<p className="mt-1 font-medium">{employee.role ?? "—"}</p>
+												<p className="mt-1 font-medium">
+													{employee.role ?? "—"}
+												</p>
 											</div>
 											<div>
 												<p className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
 													Employment Type
 												</p>
-												<p className="mt-1 font-medium">{employee.employmentType}</p>
+												<p className="mt-1 font-medium">
+													{employee.employmentType}
+												</p>
 											</div>
 											<div>
 												<p className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
 													Salary
 												</p>
 												<p className="mt-1 font-medium">
-													{employee.salary !== null && employee.salary !== undefined
+													{employee.salary !== null &&
+													employee.salary !== undefined
 														? salaryFormatter.format(employee.salary)
 														: "—"}
 												</p>
@@ -281,9 +294,10 @@ export default function EmployeeDrawer({
 								<Card>
 									<CardContent className="pt-4">
 										<div className="bg-muted rounded-md p-4 text-sm leading-relaxed">
-											{employee.fullName} is a valued team member contributing to{" "}
-											{employee.department ?? "the team"}. Schedule regular check-ins to ensure
-											alignment on goals, career development, and overall wellbeing.
+											{employee.fullName} is a valued team member contributing
+											to {employee.department ?? "the team"}. Schedule regular
+											check-ins to ensure alignment on goals, career
+											development, and overall wellbeing.
 										</div>
 									</CardContent>
 								</Card>
@@ -311,7 +325,9 @@ export default function EmployeeDrawer({
 														<div className="flex-1 pb-6">
 															<div className="flex items-start justify-between gap-2">
 																<div>
-																	<p className="font-medium leading-tight">{item.title}</p>
+																	<p className="font-medium leading-tight">
+																		{item.title}
+																	</p>
 																	<p className="text-muted-foreground mt-1 text-sm leading-relaxed">
 																		{item.description}
 																	</p>
@@ -334,7 +350,11 @@ export default function EmployeeDrawer({
 					{/* Footer Actions */}
 					<div className="border-t bg-background px-6 py-4">
 						<div className="flex justify-end gap-2">
-							<Button type="button" variant="outline" onClick={() => onDelete(employee)}>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => onDelete(employee)}
+							>
 								<Trash2 className="mr-2 size-4" aria-hidden="true" />
 								Delete
 							</Button>

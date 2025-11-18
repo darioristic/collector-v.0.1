@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { company, companies, users } from "../schema/core";
+import { companies, company, users } from "../schema/core";
 import type { DashboardDatabase } from "./seed-runner";
 
 type CompanySeedResult = {
@@ -62,4 +62,3 @@ export async function seedCompany(
 		skipped: 0,
 	};
 }
-

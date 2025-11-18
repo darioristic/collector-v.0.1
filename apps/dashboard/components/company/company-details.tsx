@@ -3,6 +3,7 @@
 import { ExternalLink, Globe, Mail, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
+import { useCompanySettings } from "@/app/(protected)/settings/company/use-company-settings";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,18 +12,17 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { useCompanySettings } from "@/app/(protected)/settings/company/use-company-settings";
 
 /**
  * Company Details Component
- * 
+ *
  * Displays comprehensive company information including:
  * - Company name and logo
  * - Description/About section
  * - Contact information (email, phone, website, address)
  * - Company details (legal name, industry, employees, tax ID)
  * - Social media links
- * 
+ *
  * Features:
  * - Responsive design (mobile-first)
  * - Accessibility compliant (WCAG 2.1 AA)
@@ -37,7 +37,9 @@ export function CompanyDetails() {
 		if (!company?.name) return "CO";
 		const words = company.name.trim().split(/\s+/);
 		if (words.length >= 2) {
-			return (words[0][0]?.toUpperCase() ?? "") + (words[1][0]?.toUpperCase() ?? "");
+			return (
+				(words[0][0]?.toUpperCase() ?? "") + (words[1][0]?.toUpperCase() ?? "")
+			);
 		}
 		return company.name.substring(0, 2).toUpperCase();
 	}, [company?.name]);
@@ -139,12 +141,16 @@ export function CompanyDetails() {
 										className="h-3 w-3 rounded"
 										style={{ backgroundColor: company.brandColor ?? undefined }}
 									/>
-									<code className="text-muted-foreground">{company.brandColor}</code>
+									<code className="text-muted-foreground">
+										{company.brandColor}
+									</code>
 								</span>
 							)}
 						</div>
 						{company.legalName && company.legalName !== company.name && (
-							<p className="text-muted-foreground text-sm">{company.legalName}</p>
+							<p className="text-muted-foreground text-sm">
+								{company.legalName}
+							</p>
 						)}
 					</div>
 				</div>
@@ -155,7 +161,10 @@ export function CompanyDetails() {
 				<div className="flex flex-wrap gap-2">
 					{company.email && (
 						<Button asChild variant="secondary" size="sm">
-							<a href={`mailto:${company.email}`} aria-label={`Pošalji email na ${company.email}`}>
+							<a
+								href={`mailto:${company.email}`}
+								aria-label={`Pošalji email na ${company.email}`}
+							>
 								<Mail className="mr-2 h-4 w-4" />
 								Email
 							</a>
@@ -163,7 +172,10 @@ export function CompanyDetails() {
 					)}
 					{company.phone && (
 						<Button asChild variant="secondary" size="sm">
-							<a href={`tel:${company.phone}`} aria-label={`Pozovi ${company.phone}`}>
+							<a
+								href={`tel:${company.phone}`}
+								aria-label={`Pozovi ${company.phone}`}
+							>
 								<Phone className="mr-2 h-4 w-4" />
 								Poziv
 							</a>
@@ -273,17 +285,21 @@ export function CompanyDetails() {
 									<DetailItem label="Pravno ime" value={company.legalName} />
 								)}
 								{company.registrationNo && (
-									<DetailItem label="Registracioni broj" value={company.registrationNo} />
+									<DetailItem
+										label="Registracioni broj"
+										value={company.registrationNo}
+									/>
 								)}
 								{company.taxId && (
 									<DetailItem label="PIB" value={company.taxId} />
 								)}
-								{company.employees !== null && company.employees !== undefined && (
-									<DetailItem
-										label="Broj zaposlenih"
-										value={company.employees.toLocaleString()}
-									/>
-								)}
+								{company.employees !== null &&
+									company.employees !== undefined && (
+										<DetailItem
+											label="Broj zaposlenih"
+											value={company.employees.toLocaleString()}
+										/>
+									)}
 								<DetailItem
 									label="Kreirano"
 									value={new Intl.DateTimeFormat("sr-RS", {
@@ -315,20 +331,22 @@ export function CompanyDetails() {
 							<div className="grid gap-4 sm:grid-cols-3">
 								<div className="flex items-center gap-3 rounded-lg border border-border bg-card/50 p-3">
 									<div className="flex size-10 items-center justify-center rounded-md border">
-                    {company.faviconUrl ? (
-                      <Image
-                        src={company.faviconUrl}
-                        alt="Favicon"
-                        width={24}
-                        height={24}
-                        className="h-6 w-6"
-                      />
-                    ) : (
-                      <span className="text-muted-foreground text-xs">—</span>
-                    )}
+										{company.faviconUrl ? (
+											<Image
+												src={company.faviconUrl}
+												alt="Favicon"
+												width={24}
+												height={24}
+												className="h-6 w-6"
+											/>
+										) : (
+											<span className="text-muted-foreground text-xs">—</span>
+										)}
 									</div>
 									<div className="min-w-0">
-										<Label className="text-muted-foreground text-xs">Favicon</Label>
+										<Label className="text-muted-foreground text-xs">
+											Favicon
+										</Label>
 										<p className="text-foreground truncate text-sm">
 											{company.faviconUrl ?? "Nije postavljeno"}
 										</p>
@@ -336,20 +354,22 @@ export function CompanyDetails() {
 								</div>
 								<div className="flex items-center gap-3 rounded-lg border border-border bg-card/50 p-3">
 									<div className="flex size-10 items-center justify-center rounded-md border">
-                    {company.logoUrl ? (
-                      <Image
-                        src={company.logoUrl}
-                        alt="Logo"
-                        width={72}
-                        height={32}
-                        className="max-h-8 max-w-[72px] object-contain"
-                      />
-                    ) : (
-                      <span className="text-muted-foreground text-xs">—</span>
-                    )}
+										{company.logoUrl ? (
+											<Image
+												src={company.logoUrl}
+												alt="Logo"
+												width={72}
+												height={32}
+												className="max-h-8 max-w-[72px] object-contain"
+											/>
+										) : (
+											<span className="text-muted-foreground text-xs">—</span>
+										)}
 									</div>
 									<div className="min-w-0">
-										<Label className="text-muted-foreground text-xs">Logo</Label>
+										<Label className="text-muted-foreground text-xs">
+											Logo
+										</Label>
 										<p className="text-foreground truncate text-sm">
 											{company.logoUrl ?? "Nije postavljeno"}
 										</p>
@@ -361,7 +381,9 @@ export function CompanyDetails() {
 										style={{ backgroundColor: company.brandColor ?? undefined }}
 									/>
 									<div className="min-w-0">
-										<Label className="text-muted-foreground text-xs">Primarna boja</Label>
+										<Label className="text-muted-foreground text-xs">
+											Primarna boja
+										</Label>
 										<p className="text-foreground truncate text-sm">
 											{company.brandColor ?? "Nije postavljeno"}
 										</p>
@@ -371,7 +393,6 @@ export function CompanyDetails() {
 						</section>
 					</>
 				)}
-
 			</CardContent>
 		</Card>
 	);
@@ -409,7 +430,9 @@ function ContactItem({
 				<Icon className="h-4 w-4" aria-hidden="true" />
 			</div>
 			<div className="flex min-w-0 flex-1 flex-col gap-1">
-				<span className="text-muted-foreground text-xs font-medium">{label}</span>
+				<span className="text-muted-foreground text-xs font-medium">
+					{label}
+				</span>
 				<span className="text-foreground text-sm">{value}</span>
 			</div>
 			{isExternal && href && (

@@ -2,8 +2,8 @@
  * Meta information component for PDF (Invoice number, dates)
  */
 
+import { StyleSheet, Text, View } from "@react-pdf/renderer";
 import React from "react";
-import { View, Text, StyleSheet } from "@react-pdf/renderer";
 import type { TemplateConfig } from "./types";
 
 const styles = StyleSheet.create({
@@ -39,7 +39,12 @@ interface MetaProps {
 	dueDate?: string | null;
 }
 
-export function Meta({ template: _template, invoiceNumber, issueDate, dueDate }: MetaProps) {
+export function Meta({
+	template: _template,
+	invoiceNumber,
+	issueDate,
+	dueDate,
+}: MetaProps) {
 	const formatDate = (dateString: string): string => {
 		try {
 			const date = new Date(dateString);

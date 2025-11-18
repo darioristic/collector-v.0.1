@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 		});
 
 		const apiUrl = getApiUrl(`notifications?${searchParams.toString()}`);
-		
+
 		const response = await fetch(apiUrl, {
 			method: "GET",
 			headers: {
@@ -44,7 +44,9 @@ export async function GET(request: NextRequest) {
 		});
 
 		if (!response.ok) {
-			const error = await response.json().catch(() => ({ error: "Failed to fetch notifications" }));
+			const error = await response
+				.json()
+				.catch(() => ({ error: "Failed to fetch notifications" }));
 			console.error("[notifications] API error", {
 				status: response.status,
 				url: apiUrl,
@@ -53,7 +55,8 @@ export async function GET(request: NextRequest) {
 			return withNoStore(
 				NextResponse.json(
 					{
-						error: error.error || "Došlo je do greške pri preuzimanju notifikacija.",
+						error:
+							error.error || "Došlo je do greške pri preuzimanju notifikacija.",
 					},
 					{ status: response.status },
 				),

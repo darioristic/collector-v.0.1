@@ -6,7 +6,8 @@ export default function GeistDarkThemePage(): JSX.Element {
 			<div className="space-y-4">
 				<h1 className="text-heading-48">Geist Dark Theme</h1>
 				<p className="text-copy-16 text-secondary">
-					Kompletna Vercel Geist Design System dark tema sa svim bojama i skalama.
+					Kompletna Vercel Geist Design System dark tema sa svim bojama i
+					skalama.
 				</p>
 			</div>
 
@@ -23,7 +24,9 @@ export default function GeistDarkThemePage(): JSX.Element {
 						}}
 					>
 						<h3 className="text-label-16 mb-2">Background 1</h3>
-						<p className="text-copy-14 text-secondary">Default element background</p>
+						<p className="text-copy-14 text-secondary">
+							Default element background
+						</p>
 						<code className="text-copy-12 text-secondary">#000000</code>
 					</div>
 					<div
@@ -77,7 +80,8 @@ export default function GeistDarkThemePage(): JSX.Element {
 					<div
 						className="p-6 rounded-lg border"
 						style={{
-							backgroundColor: "var(--geist-dark-high-contrast-default, #525252)",
+							backgroundColor:
+								"var(--geist-dark-high-contrast-default, #525252)",
 							borderColor: "var(--geist-dark-border-default, #2A2A2A)",
 							color: "var(--geist-dark-text-primary, #FFFFFF)",
 						}}
@@ -114,7 +118,9 @@ export default function GeistDarkThemePage(): JSX.Element {
 						}}
 					>
 						<h3 className="text-label-16 mb-2">Border Hover</h3>
-						<p className="text-copy-14 text-secondary">Color 5 (hover) - Hover me</p>
+						<p className="text-copy-14 text-secondary">
+							Color 5 (hover) - Hover me
+						</p>
 						<code className="text-copy-12 text-secondary">#404040</code>
 					</div>
 					<div
@@ -511,4 +517,3 @@ export default function GeistDarkThemePage(): JSX.Element {
 		</div>
 	);
 }
-

@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as React from "react";
-import { useForm, type Resolver } from "react-hook-form";
+import { type Resolver, useForm } from "react-hook-form";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -19,13 +19,14 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
-	companyFormSchema,
 	type CompanyFormInput,
+	companyFormSchema,
 } from "@/lib/validations/settings/company";
 import { useCompanySettings } from "./use-company-settings";
 
 export default function CompanyTab() {
-	const { company, isLoading, updateCompany, isUpdating } = useCompanySettings();
+	const { company, isLoading, updateCompany, isUpdating } =
+		useCompanySettings();
 
 	const form = useForm<CompanyFormInput>({
 		resolver: zodResolver(companyFormSchema) as Resolver<CompanyFormInput>,
@@ -100,9 +101,9 @@ export default function CompanyTab() {
 					description: updatedCompany.description ?? "",
 				});
 			}
-        } catch {
-            void 0;
-        }
+		} catch {
+			void 0;
+		}
 	};
 
 	if (isLoading) {
@@ -137,7 +138,10 @@ export default function CompanyTab() {
 				</div>
 
 				<Form {...form}>
-					<form className="flex flex-col gap-8" onSubmit={form.handleSubmit(onSubmit)}>
+					<form
+						className="flex flex-col gap-8"
+						onSubmit={form.handleSubmit(onSubmit)}
+					>
 						<section className="flex flex-col gap-6">
 							<header className="flex flex-col gap-1">
 								<h3 className="text-foreground text-base font-semibold">
@@ -248,10 +252,14 @@ export default function CompanyTab() {
 													placeholder="Enter number of employees"
 													disabled={isUpdating}
 													{...field}
-													value={field.value === undefined ? "" : String(field.value)}
+													value={
+														field.value === undefined ? "" : String(field.value)
+													}
 													onChange={(e) => {
 														const value = e.target.value;
-														field.onChange(value === "" ? undefined : Number(value));
+														field.onChange(
+															value === "" ? undefined : Number(value),
+														);
 													}}
 												/>
 											</FormControl>
@@ -329,7 +337,9 @@ export default function CompanyTab() {
 
 						<section className="flex flex-col gap-6">
 							<header className="flex flex-col gap-1">
-								<h3 className="text-foreground text-base font-semibold">Address</h3>
+								<h3 className="text-foreground text-base font-semibold">
+									Address
+								</h3>
 							</header>
 
 							<div className="grid gap-4 md:grid-cols-2">
@@ -478,7 +488,9 @@ export default function CompanyTab() {
 													)}
 												</div>
 											</FormControl>
-											<FormDescription>HEX color format (e.g. #FF5733)</FormDescription>
+											<FormDescription>
+												HEX color format (e.g. #FF5733)
+											</FormDescription>
 											<FormMessage />
 										</FormItem>
 									)}
@@ -499,7 +511,8 @@ export default function CompanyTab() {
 												/>
 											</FormControl>
 											<FormDescription>
-												Brief description of your company (maximum 500 characters)
+												Brief description of your company (maximum 500
+												characters)
 											</FormDescription>
 											<FormMessage />
 										</FormItem>
@@ -532,4 +545,3 @@ export default function CompanyTab() {
 		</Card>
 	);
 }
-

@@ -1,11 +1,12 @@
+import { generateMeta } from "@/lib/utils";
 import { ClientActivitiesPageClient } from "./client-activities-page-client";
 import { fetchClientActivities, fetchClientActivityMetadata } from "./data";
-import { generateMeta } from "@/lib/utils";
 
 export async function generateMetadata() {
 	return generateMeta({
 		title: "Activities - Collector Dashboard",
-		description: "Manage and track client activities, meetings, and tasks in the CRM module.",
+		description:
+			"Manage and track client activities, meetings, and tasks in the CRM module.",
 		canonical: "/crm/activities",
 	});
 }

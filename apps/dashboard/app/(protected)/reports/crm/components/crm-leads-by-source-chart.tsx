@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import {
 	Card,
 	CardContent,
@@ -70,11 +70,7 @@ export function CRMLeadsBySourceChart() {
 							axisLine={false}
 							tickMargin={8}
 						/>
-						<YAxis
-							tickLine={false}
-							axisLine={false}
-							tickMargin={8}
-						/>
+						<YAxis tickLine={false} axisLine={false} tickMargin={8} />
 						<ChartTooltip
 							cursor={false}
 							content={<ChartTooltipContent indicator="line" />}
@@ -106,4 +102,3 @@ export function CRMLeadsBySourceChart() {
 		</Card>
 	);
 }
-

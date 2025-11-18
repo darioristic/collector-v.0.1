@@ -1,8 +1,7 @@
-import { cache } from "react";
 import { cookies } from "next/headers";
-
-import { getApiUrl } from "@/src/lib/fetch-utils";
+import { cache } from "react";
 import { SESSION_COOKIE_NAME } from "@/lib/session-constants";
+import { getApiUrl } from "@/src/lib/fetch-utils";
 
 export type AuthCompany = {
 	id: string;
@@ -39,7 +38,7 @@ type BackendResponse = {
 
 export const getCurrentAuth = cache(async (): Promise<AuthPayload | null> => {
 	const startTime = Date.now();
-	
+
 	try {
 		const cookieStore = await cookies();
 		const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
@@ -48,7 +47,7 @@ export const getCurrentAuth = cache(async (): Promise<AuthPayload | null> => {
 			const allCookies = cookieStore.getAll();
 			console.error("[auth] No session token found in cookies", {
 				cookieName: SESSION_COOKIE_NAME,
-				allCookies: allCookies.map(c => c.name),
+				allCookies: allCookies.map((c) => c.name),
 				cookieCount: allCookies.length,
 			});
 			return null;
@@ -91,12 +90,10 @@ export const getCurrentAuth = cache(async (): Promise<AuthPayload | null> => {
 			return null;
 		}
 
-		const payload = (await response
-			.json()
-			.catch((err) => {
-				console.error("[auth] Failed to parse JSON response", err);
-				return null;
-			})) as BackendResponse | null;
+		const payload = (await response.json().catch((err) => {
+			console.error("[auth] Failed to parse JSON response", err);
+			return null;
+		})) as BackendResponse | null;
 
 		if (!response.ok) {
 			if (response.status === 401) {
@@ -137,7 +134,10 @@ export const getCurrentAuth = cache(async (): Promise<AuthPayload | null> => {
 		return payload.data;
 	} catch (error) {
 		const elapsed = Date.now() - startTime;
-		console.error(`[auth] Unexpected error in getCurrentAuth after ${elapsed}ms:`, error);
+		console.error(
+			`[auth] Unexpected error in getCurrentAuth after ${elapsed}ms:`,
+			error,
+		);
 		// Always return null on error to prevent blocking
 		return null;
 	}

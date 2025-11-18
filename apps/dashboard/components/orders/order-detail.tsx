@@ -2,6 +2,8 @@
 
 import type { Order } from "@crm/types";
 import { FileEdit, Trash2 } from "lucide-react";
+import { useCompanySettings } from "@/app/(protected)/settings/company/use-company-settings";
+import Logo from "@/components/layout/logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,6 +45,7 @@ type OrderDetailProps = {
 
 export function OrderDetail({ orderId, onEdit, onDelete }: OrderDetailProps) {
 	const { data: order, isLoading } = useOrder(orderId);
+	const { company } = useCompanySettings();
 
 	if (isLoading) {
 		return (
@@ -68,6 +71,26 @@ export function OrderDetail({ orderId, onEdit, onDelete }: OrderDetailProps) {
 
 	return (
 		<Card>
+			<CardHeader>
+				<div className="flex items-start justify-between">
+					<div className="flex items-center gap-3">
+						<div className="bg-black text-white w-10 h-10 flex items-center justify-center rounded-sm">
+							<Logo />
+						</div>
+						<div className="text-sm">
+							<div className="font-medium">
+								{company?.name ?? "Your Company"}
+							</div>
+							<div className="text-muted-foreground">
+								{company?.email ?? "info@yourcompany.test"}
+							</div>
+							<div className="text-muted-foreground">
+								{company?.streetAddress ?? "Billing Office"}
+							</div>
+						</div>
+					</div>
+				</div>
+			</CardHeader>
 			<CardHeader>
 				<div className="flex items-center justify-between">
 					<div>
@@ -106,6 +129,32 @@ export function OrderDetail({ orderId, onEdit, onDelete }: OrderDetailProps) {
 			</CardHeader>
 
 			<CardContent className="space-y-6">
+				<div className="grid grid-cols-2 gap-8">
+					<div className="space-y-1 text-sm">
+						<div className="text-muted-foreground">Seller</div>
+						<div>{company?.name ?? "Your Company"}</div>
+						<div className="text-muted-foreground">
+							{company?.email ?? "info@yourcompany.test"}
+						</div>
+						<div className="text-muted-foreground">
+							{company?.streetAddress ?? "Billing Office"}
+						</div>
+						<div className="text-muted-foreground">
+							{company?.taxId ? `VAT ID: ${company.taxId}` : "VAT ID: —"}
+						</div>
+					</div>
+					<div className="space-y-1 text-sm">
+						<div className="text-muted-foreground">Customer</div>
+						<div>{order.customer?.name ?? "—"}</div>
+						<div className="text-muted-foreground">
+							{order.customer?.email ?? "—"}
+						</div>
+						<div className="text-muted-foreground">
+							{order.customer?.address ?? "—"}
+						</div>
+					</div>
+				</div>
+
 				{/* Order Information */}
 				<div className="grid grid-cols-2 gap-4">
 					<div>

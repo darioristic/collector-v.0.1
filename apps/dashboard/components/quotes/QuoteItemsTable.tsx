@@ -11,10 +11,10 @@ import { Plus, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useMemo } from "react";
 import {
-    type Control,
-    useFieldArray,
-    useFormContext,
-    useWatch,
+	type Control,
+	useFieldArray,
+	useFormContext,
+	useWatch,
 } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,26 +32,26 @@ type QuoteItem = QuoteItemCreateInput & {
 };
 
 type QuoteItemsFormValues = {
-    items: QuoteItemCreateInput[];
+	items: QuoteItemCreateInput[];
 };
 
 type QuoteItemsTableProps = {
-    control: Control<QuoteItemsFormValues>;
+	control: Control<QuoteItemsFormValues>;
 };
 
 export function QuoteItemsTable({ control }: QuoteItemsTableProps) {
-    const { fields, append, remove } = useFieldArray<QuoteItemsFormValues>({
-        control,
-        name: "items",
-        keyName: "id",
-    });
+	const { fields, append, remove } = useFieldArray<QuoteItemsFormValues>({
+		control,
+		name: "items",
+		keyName: "id",
+	});
 
-    const { setValue } = useFormContext<QuoteItemsFormValues>();
+	const { setValue } = useFormContext<QuoteItemsFormValues>();
 	const items =
 		(useWatch({
 			control,
-            name: "items",
-        }) as QuoteItemCreateInput[] | undefined) ?? [];
+			name: "items",
+		}) as QuoteItemCreateInput[] | undefined) ?? [];
 
 	const tableItems: QuoteItem[] = fields.map((field, index) => ({
 		id: field.id,
@@ -72,7 +72,7 @@ export function QuoteItemsTable({ control }: QuoteItemsTableProps) {
 							placeholder="Item description"
 							value={row.original.description || ""}
 							onChange={(e) => {
-                                setValue(`items.${index}.description`, e.target.value);
+								setValue(`items.${index}.description`, e.target.value);
 							}}
 							onKeyDown={(e) => {
 								if (e.key === "Enter") {
@@ -104,14 +104,16 @@ export function QuoteItemsTable({ control }: QuoteItemsTableProps) {
 							value={row.original.quantity || 1}
 							onChange={(e) => {
 								const value = Number.parseFloat(e.target.value) || 1;
-                                setValue(`items.${index}.quantity`, value);
+								setValue(`items.${index}.quantity`, value);
 							}}
 							onKeyDown={(e) => {
 								if (e.key === "Enter" || e.key === "Tab") {
 									e.preventDefault();
 									// Focus next cell (unit price)
 									const currentRow = e.currentTarget.closest("tr");
-									const inputs = currentRow?.querySelectorAll('input[type="number"]');
+									const inputs = currentRow?.querySelectorAll(
+										'input[type="number"]',
+									);
 									if (inputs && inputs.length > 1) {
 										(inputs[1] as HTMLInputElement)?.focus();
 									}
@@ -136,7 +138,7 @@ export function QuoteItemsTable({ control }: QuoteItemsTableProps) {
 							value={row.original.unitPrice || 0}
 							onChange={(e) => {
 								const value = Number.parseFloat(e.target.value) || 0;
-                                setValue(`items.${index}.unitPrice`, value);
+								setValue(`items.${index}.unitPrice`, value);
 							}}
 							onKeyDown={(e) => {
 								if (e.key === "Enter") {
@@ -146,11 +148,10 @@ export function QuoteItemsTable({ control }: QuoteItemsTableProps) {
 										quantity: 1,
 										unitPrice: 0,
 									};
-                                    append(emptyItem);
+									append(emptyItem);
 									// Focus first input of new row after a short delay
 									setTimeout(() => {
-										const tbody =
-											e.currentTarget.closest("tbody");
+										const tbody = e.currentTarget.closest("tbody");
 										const newRow = tbody?.querySelector(
 											"tr:last-child input",
 										) as HTMLInputElement;
@@ -170,11 +171,7 @@ export function QuoteItemsTable({ control }: QuoteItemsTableProps) {
 					const quantity = row.original.quantity || 0;
 					const unitPrice = row.original.unitPrice || 0;
 					const total = quantity * unitPrice;
-					return (
-						<span className="font-medium">
-							{total.toFixed(2)}
-						</span>
-					);
+					return <span className="font-medium">{total.toFixed(2)}</span>;
 				},
 			},
 			{
@@ -207,10 +204,12 @@ export function QuoteItemsTable({ control }: QuoteItemsTableProps) {
 	});
 
 	const handleAddItem = () => {
-        append({ description: "", quantity: 1, unitPrice: 0 });
+		append({ description: "", quantity: 1, unitPrice: 0 });
 		// Focus first input of new row after a short delay
 		setTimeout(() => {
-			const newRow = document.querySelector("tbody tr:last-child input") as HTMLInputElement;
+			const newRow = document.querySelector(
+				"tbody tr:last-child input",
+			) as HTMLInputElement;
 			newRow?.focus();
 		}, 100);
 	};
@@ -252,7 +251,10 @@ export function QuoteItemsTable({ control }: QuoteItemsTableProps) {
 						<AnimatePresence>
 							{table.getRowModel().rows.length === 0 ? (
 								<TableRow>
-									<TableCell colSpan={columns.length} className="h-24 text-center">
+									<TableCell
+										colSpan={columns.length}
+										className="h-24 text-center"
+									>
 										No items. Click &quot;Add Item&quot; to add one.
 									</TableCell>
 								</TableRow>
@@ -268,7 +270,10 @@ export function QuoteItemsTable({ control }: QuoteItemsTableProps) {
 									>
 										{row.getVisibleCells().map((cell) => (
 											<TableCell key={cell.id}>
-												{flexRender(cell.column.columnDef.cell, cell.getContext())}
+												{flexRender(
+													cell.column.columnDef.cell,
+													cell.getContext(),
+												)}
 											</TableCell>
 										))}
 									</motion.tr>
@@ -294,4 +299,3 @@ export function QuoteItemsTable({ control }: QuoteItemsTableProps) {
 		</div>
 	);
 }
-

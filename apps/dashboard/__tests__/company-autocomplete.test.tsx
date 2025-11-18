@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { Account } from "@crm/types";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CompanyAutocomplete } from "@/components/forms/CompanyAutocomplete";
-import type { Account } from "@crm/types";
 
 const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -128,7 +128,9 @@ describe("CompanyAutocomplete", () => {
 		await userEvent.click(button);
 
 		await waitFor(() => {
-			expect(screen.getByPlaceholderText("Search or add company…")).toHaveFocus();
+			expect(
+				screen.getByPlaceholderText("Search or add company…"),
+			).toHaveFocus();
 		});
 	});
 
@@ -155,7 +157,7 @@ describe("CompanyAutocomplete", () => {
 				const lastCall = mockFetch.mock.calls[mockFetch.mock.calls.length - 1];
 				expect(lastCall[0]).toContain("search=Acme");
 			},
-			{ timeout: 3000 }
+			{ timeout: 3000 },
 		);
 	});
 
@@ -177,12 +179,12 @@ describe("CompanyAutocomplete", () => {
 		const input = screen.getByPlaceholderText("Search or add company…");
 		await userEvent.type(input, "Acme", { delay: 50 });
 
-        await waitFor(
-            () => {
-                expect(screen.getByText(/Acme Corporation/i)).toBeInTheDocument();
-            },
-            { timeout: 3000 }
-        );
+		await waitFor(
+			() => {
+				expect(screen.getByText(/Acme Corporation/i)).toBeInTheDocument();
+			},
+			{ timeout: 3000 },
+		);
 	});
 
 	it("should show 'Create' option when no companies match", async () => {
@@ -206,15 +208,15 @@ describe("CompanyAutocomplete", () => {
 			() => {
 				expect(screen.getByText(/Create "NewCompany"/i)).toBeInTheDocument();
 			},
-			{ timeout: 3000 }
+			{ timeout: 3000 },
 		);
 	});
 
-    it("should open creation modal when create option is clicked", async () => {
-        mockFetch.mockResolvedValueOnce({
-            ok: true,
-            json: async () => [],
-        });
+	it("should open creation modal when create option is clicked", async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			json: async () => [],
+		});
 
 		const onChange = vi.fn();
 		render(<CompanyAutocomplete value={undefined} onChange={onChange} />, {
@@ -231,21 +233,23 @@ describe("CompanyAutocomplete", () => {
 			() => {
 				expect(screen.getByText(/Create "NewCompany"/i)).toBeInTheDocument();
 			},
-			{ timeout: 3000 }
+			{ timeout: 3000 },
 		);
 
-        const createButton = screen.getByText(/Create "NewCompany"/i).closest("div");
-        if (createButton) {
-            await userEvent.click(createButton);
+		const createButton = screen
+			.getByText(/Create "NewCompany"/i)
+			.closest("div");
+		if (createButton) {
+			await userEvent.click(createButton);
 
-            await waitFor(() => {
-                expect(screen.getByText("Create Customer")).toBeInTheDocument();
-            });
+			await waitFor(() => {
+				expect(screen.getByText("Create Customer")).toBeInTheDocument();
+			});
 
-            const nameInput = screen.getByLabelText("Company name");
-            expect(nameInput).toHaveValue("NewCompany");
-        }
-    });
+			const nameInput = screen.getByLabelText("Company name");
+			expect(nameInput).toHaveValue("NewCompany");
+		}
+	});
 
 	it("should call onChange when company is selected", async () => {
 		mockFetch.mockResolvedValueOnce({
@@ -264,14 +268,14 @@ describe("CompanyAutocomplete", () => {
 		const input = screen.getByPlaceholderText("Search or add company…");
 		await userEvent.type(input, "Acme", { delay: 50 });
 
-        await waitFor(
-            () => {
-                expect(screen.getByText(/Acme Corporation/i)).toBeInTheDocument();
-            },
-            { timeout: 3000 }
-        );
+		await waitFor(
+			() => {
+				expect(screen.getByText(/Acme Corporation/i)).toBeInTheDocument();
+			},
+			{ timeout: 3000 },
+		);
 
-        const companyItem = screen.getByText(/Acme Corporation/i).closest("div");
+		const companyItem = screen.getByText(/Acme Corporation/i).closest("div");
 		if (companyItem) {
 			await userEvent.click(companyItem);
 
@@ -291,7 +295,7 @@ describe("CompanyAutocomplete", () => {
 			Promise.resolve({
 				ok: true,
 				json: async () => promise,
-			})
+			}),
 		);
 
 		const onChange = vi.fn();
@@ -341,7 +345,7 @@ describe("CompanyAutocomplete", () => {
 			() => {
 				expect(screen.getByText(/Create "ABC"/i)).toBeInTheDocument();
 			},
-			{ timeout: 3000 }
+			{ timeout: 3000 },
 		);
 	});
 
@@ -363,27 +367,27 @@ describe("CompanyAutocomplete", () => {
 		await userEvent.type(input, "Acme", { delay: 50 });
 
 		await waitFor(
-            () => {
-                const companyItem = screen.getByText(/Acme Corporation/i);
-                expect(companyItem).toBeInTheDocument();
-                const mark = within(companyItem.parentElement!).queryByText("Acme");
-                expect(mark?.tagName.toLowerCase()).toBe("mark");
-            },
-			{ timeout: 3000 }
+			() => {
+				const companyItem = screen.getByText(/Acme Corporation/i);
+				expect(companyItem).toBeInTheDocument();
+				const mark = within(companyItem.parentElement!).queryByText("Acme");
+				expect(mark?.tagName.toLowerCase()).toBe("mark");
+			},
+			{ timeout: 3000 },
 		);
 	});
 
 	it("should limit visible companies to MAX_VISIBLE_ITEMS", async () => {
-    const manyCompanies = Array.from({ length: 100 }, (_, i) => ({
-        ...mockCompanies[0],
-        id: String(i + 1),
-        name: `Company ${i + 1}`,
-    }));
-    
-    mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => manyCompanies,
-    });
+		const manyCompanies = Array.from({ length: 100 }, (_, i) => ({
+			...mockCompanies[0],
+			id: String(i + 1),
+			name: `Company ${i + 1}`,
+		}));
+
+		mockFetch.mockResolvedValue({
+			ok: true,
+			json: async () => manyCompanies,
+		});
 
 		const onChange = vi.fn();
 		render(<CompanyAutocomplete value={undefined} onChange={onChange} />, {
@@ -401,15 +405,18 @@ describe("CompanyAutocomplete", () => {
 				const heading = screen.getByText(/showing first/i);
 				expect(heading).toBeInTheDocument();
 			},
-			{ timeout: 3000 }
+			{ timeout: 3000 },
 		);
 	});
 
 	it("should be disabled when disabled prop is true", () => {
 		const onChange = vi.fn();
-		render(<CompanyAutocomplete value={undefined} onChange={onChange} disabled />, {
-			wrapper: createWrapper(),
-		});
+		render(
+			<CompanyAutocomplete value={undefined} onChange={onChange} disabled />,
+			{
+				wrapper: createWrapper(),
+			},
+		);
 
 		const button = screen.getByRole("combobox");
 		expect(button).toBeDisabled();

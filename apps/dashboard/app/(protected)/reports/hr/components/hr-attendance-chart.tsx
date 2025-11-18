@@ -76,7 +76,11 @@ export function HRAttendanceChart() {
 							cursor={false}
 							content={<ChartTooltipContent indicator="line" />}
 						/>
-						<Bar dataKey="attendance" fill="var(--color-attendance)" radius={4} />
+						<Bar
+							dataKey="attendance"
+							fill="var(--color-attendance)"
+							radius={4}
+						/>
 						<Bar dataKey="target" fill="var(--color-target)" radius={4} />
 					</BarChart>
 				</ChartContainer>
@@ -84,4 +88,3 @@ export function HRAttendanceChart() {
 		</Card>
 	);
 }
-

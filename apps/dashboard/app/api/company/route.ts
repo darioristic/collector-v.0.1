@@ -54,7 +54,7 @@ const serializeCompany = (
 
 export async function GET() {
 	let auth: Awaited<ReturnType<typeof getCurrentAuth>>;
-	
+
 	try {
 		auth = await getCurrentAuth();
 	} catch (error) {
@@ -75,7 +75,7 @@ export async function GET() {
 	if (!auth || !auth.user) {
 		console.error("[company] Authentication failed", {
 			hasAuth: !!auth,
-			hasUser: !!(auth?.user),
+			hasUser: !!auth?.user,
 		});
 		return withNoStore(
 			NextResponse.json(
@@ -107,7 +107,8 @@ export async function GET() {
 		}
 
 		const errorMessage = error instanceof Error ? error.message : String(error);
-		const errorDetails = error instanceof Error ? { name: error.name, stack: error.stack } : {};
+		const errorDetails =
+			error instanceof Error ? { name: error.name, stack: error.stack } : {};
 
 		console.error("[company] Greška prilikom učitavanja podataka:", {
 			message: errorMessage,
@@ -188,7 +189,7 @@ const prepareValues = (payload: CompanyUpsertPayload) => {
 
 export async function PATCH(request: NextRequest) {
 	let auth: Awaited<ReturnType<typeof getCurrentAuth>>;
-	
+
 	try {
 		auth = await getCurrentAuth();
 	} catch (error) {
@@ -210,7 +211,7 @@ export async function PATCH(request: NextRequest) {
 	if (!auth || !auth.user) {
 		console.error("[company] Authentication failed", {
 			hasAuth: !!auth,
-			hasUser: !!(auth?.user),
+			hasUser: !!auth?.user,
 			url: request.url,
 			method: request.method,
 		});
@@ -308,4 +309,3 @@ export async function PATCH(request: NextRequest) {
 		);
 	}
 }
-

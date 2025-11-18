@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import {
 	Card,
 	CardContent,
@@ -47,7 +47,9 @@ export function ProjectsBudgetChart() {
 		<Card>
 			<CardHeader>
 				<CardTitle>Budget vs Spent</CardTitle>
-				<CardDescription>Monthly budget allocation and spending</CardDescription>
+				<CardDescription>
+					Monthly budget allocation and spending
+				</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<ChartContainer config={chartConfig}>
@@ -96,4 +98,3 @@ export function ProjectsBudgetChart() {
 		</Card>
 	);
 }
-

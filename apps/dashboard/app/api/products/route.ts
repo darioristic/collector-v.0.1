@@ -54,10 +54,7 @@ export async function GET(request: NextRequest) {
 		console.error(`[products] Error fetching products:`, error);
 		return NextResponse.json(
 			{
-				error:
-					error instanceof Error
-						? error.message
-						: "Internal server error",
+				error: error instanceof Error ? error.message : "Internal server error",
 			},
 			{ status: 500 },
 		);
@@ -113,13 +110,9 @@ export async function POST(request: NextRequest) {
 		console.error(`[products] Error creating product:`, error);
 		return NextResponse.json(
 			{
-				error:
-					error instanceof Error
-						? error.message
-						: "Internal server error",
+				error: error instanceof Error ? error.message : "Internal server error",
 			},
 			{ status: 500 },
 		);
 	}
 }
-

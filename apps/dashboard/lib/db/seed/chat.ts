@@ -1,9 +1,6 @@
 import { and, eq } from "drizzle-orm";
+import { chatConversations, chatMessages } from "../schema/chat";
 import { companies } from "../schema/core";
-import {
-	chatConversations,
-	chatMessages,
-} from "../schema/chat";
 import { teamchatUsers } from "../schema/teamchat";
 import type { DashboardDatabase } from "./seed-runner";
 
@@ -13,11 +10,17 @@ type ChatSeedResult = {
 };
 
 export async function seedChat(
-    db: DashboardDatabase,
-    _options: { force?: boolean } = {},
+	db: DashboardDatabase,
+	_options: { force?: boolean } = {},
 ): Promise<ChatSeedResult> {
-    const conversationsTarget = parseInt(process.env.SEED_CHAT_CONVERSATIONS_COUNT || "10", 10);
-    const messagesPerConversation = parseInt(process.env.SEED_CHAT_MESSAGES_PER_CONVERSATION || "5", 10);
+	const conversationsTarget = parseInt(
+		process.env.SEED_CHAT_CONVERSATIONS_COUNT || "10",
+		10,
+	);
+	const messagesPerConversation = parseInt(
+		process.env.SEED_CHAT_MESSAGES_PER_CONVERSATION || "5",
+		10,
+	);
 	// Get or create default company
 	let [company] = await db.select().from(companies).limit(1);
 
@@ -50,9 +53,13 @@ export async function seedChat(
 		// Create conversations between pairs of users
 		const conversations = [];
 
-        for (let i = 0; i < Math.min(allTeamchatUsers.length - 1, conversationsTarget); i++) {
-            const user1 = allTeamchatUsers[i];
-            const user2 = allTeamchatUsers[i + 1];
+		for (
+			let i = 0;
+			i < Math.min(allTeamchatUsers.length - 1, conversationsTarget);
+			i++
+		) {
+			const user1 = allTeamchatUsers[i];
+			const user2 = allTeamchatUsers[i + 1];
 
 			// Ensure userId1 < userId2 for consistency
 			const userId1 = user1.id < user2.id ? user1.id : user2.id;
@@ -94,33 +101,34 @@ export async function seedChat(
 		// Create messages for each conversation
 		const messagesToInsert = [];
 
-        for (const conversation of conversations) {
-            const user1 = allTeamchatUsers.find((u) => u.id === conversation.userId1);
-            const user2 = allTeamchatUsers.find((u) => u.id === conversation.userId2);
+		for (const conversation of conversations) {
+			const user1 = allTeamchatUsers.find((u) => u.id === conversation.userId1);
+			const user2 = allTeamchatUsers.find((u) => u.id === conversation.userId2);
 
-            if (!user1 || !user2) continue;
+			if (!user1 || !user2) continue;
 
-            for (let m = 0; m < messagesPerConversation; m++) {
-                const senderId = m % 2 === 0 ? conversation.userId1 : conversation.userId2;
-                const content =
-                    m % 5 === 0
-                        ? `Zdravo ${senderId === conversation.userId1 ? user2.firstName : user1.firstName}! Kako si?`
-                        : m % 5 === 1
-                        ? "Dobro sam, hvala! A ti?"
-                        : m % 5 === 2
-                        ? "Radujem se saradnji na projektu."
-                        : m % 5 === 3
-                        ? "Dogovorimo sastanak sledeće nedelje."
-                        : "Važi, javljam tačan termin uskoro.";
-                messagesToInsert.push({
-                    conversationId: conversation.id,
-                    senderId,
-                    content,
-                    type: "text" as const,
-                    status: "read" as const,
-                });
-            }
-        }
+			for (let m = 0; m < messagesPerConversation; m++) {
+				const senderId =
+					m % 2 === 0 ? conversation.userId1 : conversation.userId2;
+				const content =
+					m % 5 === 0
+						? `Zdravo ${senderId === conversation.userId1 ? user2.firstName : user1.firstName}! Kako si?`
+						: m % 5 === 1
+							? "Dobro sam, hvala! A ti?"
+							: m % 5 === 2
+								? "Radujem se saradnji na projektu."
+								: m % 5 === 3
+									? "Dogovorimo sastanak sledeće nedelje."
+									: "Važi, javljam tačan termin uskoro.";
+				messagesToInsert.push({
+					conversationId: conversation.id,
+					senderId,
+					content,
+					type: "text" as const,
+					status: "read" as const,
+				});
+			}
+		}
 
 		if (messagesToInsert.length > 0) {
 			await tx.insert(chatMessages).values(messagesToInsert);

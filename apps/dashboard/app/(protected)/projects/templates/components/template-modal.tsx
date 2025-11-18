@@ -1,10 +1,8 @@
 "use client";
 
 import { CheckCircle2, Loader2 } from "lucide-react";
-import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
-
-import type { ProjectTemplate } from "@/lib/data/projectTemplates";
+import { useForm } from "react-hook-form";
 import {
 	Accordion,
 	AccordionContent,
@@ -23,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { ProjectTemplate } from "@/lib/data/projectTemplates";
 import { useCreateProjectFromTemplate } from "@/src/hooks/useProjects";
 import type { ProjectUpdatePayload } from "@/src/types/projects";
 
@@ -76,9 +75,9 @@ export function TemplateModal({ template, open, onClose }: TemplateModalProps) {
 			onClose();
 			form.reset();
 			router.push(`/projects/${project.id}`);
-        } catch {
-            void 0;
-        }
+		} catch {
+			void 0;
+		}
 	};
 
 	return (
@@ -201,7 +200,11 @@ export function TemplateModal({ template, open, onClose }: TemplateModalProps) {
 								</div>
 								<div className="space-y-2">
 									<Label htmlFor="dueDate">Due date</Label>
-									<Input id="dueDate" type="date" {...form.register("dueDate")} />
+									<Input
+										id="dueDate"
+										type="date"
+										{...form.register("dueDate")}
+									/>
 								</div>
 							</div>
 						</div>
@@ -232,4 +235,3 @@ export function TemplateModal({ template, open, onClose }: TemplateModalProps) {
 		</Dialog>
 	);
 }
-

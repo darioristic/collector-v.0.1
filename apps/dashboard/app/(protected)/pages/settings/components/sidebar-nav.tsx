@@ -17,32 +17,32 @@ import { cn } from "@/lib/utils";
 const sidebarNavItems = [
 	{
 		title: "Profile",
-		href: "/pages/settings",
+		href: "/settings",
 		icon: UserIcon,
 	},
 	{
 		title: "Account",
-		href: "/pages/settings/account",
+		href: "/settings/account",
 		icon: ShieldIcon,
 	},
 	{
 		title: "Billing",
-		href: "/pages/settings/billing",
+		href: "/settings/billing",
 		icon: CreditCardIcon,
 	},
 	{
 		title: "Appearance",
-		href: "/pages/settings/appearance",
+		href: "/settings/appearance",
 		icon: PaletteIcon,
 	},
 	{
 		title: "Notifications",
-		href: "/pages/settings/notifications",
+		href: "/settings/notifications",
 		icon: BellIcon,
 	},
 	{
 		title: "Display",
-		href: "/pages/settings/display",
+		href: "/settings/display",
 		icon: ContrastIcon,
 	},
 ];

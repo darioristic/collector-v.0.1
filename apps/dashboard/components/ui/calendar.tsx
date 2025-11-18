@@ -80,7 +80,12 @@ function Calendar({
 		}, [yearRange]),
 	);
 
-const { onNextClick: _onNextClick, onPrevClick, startMonth, endMonth } = props;
+	const {
+		onNextClick: _onNextClick,
+		onPrevClick,
+		startMonth,
+		endMonth,
+	} = props;
 
 	const columnsDisplayed = navView === "years" ? 1 : numberOfMonths;
 
@@ -201,16 +206,16 @@ const { onNextClick: _onNextClick, onPrevClick, startMonth, endMonth } = props;
 					return <Icon className="h-4 w-4" />;
 				},
 				Nav: ({ className }) => (
-				<Nav
-					className={className}
-					displayYears={displayYears}
-					navView={navView}
-					setDisplayYears={setDisplayYears}
-					startMonth={startMonth}
-					endMonth={endMonth}
-					onPrevClick={onPrevClick}
-					onNextClick={_onNextClick}
-				/>
+					<Nav
+						className={className}
+						displayYears={displayYears}
+						navView={navView}
+						setDisplayYears={setDisplayYears}
+						startMonth={startMonth}
+						endMonth={endMonth}
+						onPrevClick={onPrevClick}
+						onNextClick={_onNextClick}
+					/>
 				),
 				CaptionLabel: (props) => (
 					<CaptionLabel

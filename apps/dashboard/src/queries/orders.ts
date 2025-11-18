@@ -37,7 +37,9 @@ export const orderKeys = {
 	byQuote: (quoteId: number) => [...orderKeys.lists(), { quoteId }] as const,
 };
 
-export async function fetchOrders(filters?: OrderListFilters): Promise<OrdersListResponse> {
+export async function fetchOrders(
+	filters?: OrderListFilters,
+): Promise<OrdersListResponse> {
 	const params = new URLSearchParams();
 	if (filters?.companyId) params.append("companyId", filters.companyId);
 	if (filters?.contactId) params.append("contactId", filters.contactId);

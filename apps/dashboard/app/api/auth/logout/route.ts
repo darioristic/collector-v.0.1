@@ -28,12 +28,10 @@ export async function POST(_request: NextRequest) {
 	});
 
 	if (!response.ok) {
-		const normalizedPayload = (payload ?? null) as
-			| {
-					error?: string;
-					message?: string;
-			  }
-			| null;
+		const normalizedPayload = (payload ?? null) as {
+			error?: string;
+			message?: string;
+		} | null;
 		return backendErrorResponse(
 			response,
 			normalizedPayload,

@@ -15,8 +15,8 @@ import {
 	useReactTable,
 	type VisibilityState,
 } from "@tanstack/react-table";
+import { ChevronRight } from "lucide-react";
 import * as React from "react";
-
 import {
 	Table,
 	TableBody,
@@ -25,11 +25,9 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-import { DataTablePagination } from "./data-table-pagination";
 import type { ProjectTask, TaskStatus } from "@/src/types/projects";
+import { DataTablePagination } from "./data-table-pagination";
 
 const statusConfig: Record<
 	TaskStatus,
@@ -74,15 +72,17 @@ export function DataTable<TData, TValue>({
 		[],
 	);
 	const [sorting, setSorting] = React.useState<SortingState>([]);
-	const [expanded, setExpanded] = React.useState<Record<string, boolean>>(() => {
-		// Initialize all groups as expanded by default
-		return {
-			todo: true,
-			in_progress: true,
-			blocked: true,
-			done: true,
-		};
-	});
+	const [expanded, setExpanded] = React.useState<Record<string, boolean>>(
+		() => {
+			// Initialize all groups as expanded by default
+			return {
+				todo: true,
+				in_progress: true,
+				blocked: true,
+				done: true,
+			};
+		},
+	);
 
 	// Group data by status
 	const groupedData = React.useMemo(() => {
@@ -141,7 +141,7 @@ export function DataTable<TData, TValue>({
 	// Get all table rows for lookup
 	const tableRows = React.useMemo(() => {
 		const rows = table.getRowModel().rows;
-		const rowMap = new Map<string, typeof rows[0]>();
+		const rowMap = new Map<string, (typeof rows)[0]>();
 		rows.forEach((row) => {
 			const task = row.original as ProjectTask;
 			rowMap.set(task.id, row);
@@ -237,7 +237,9 @@ export function DataTable<TData, TValue>({
 								</React.Fragment>
 							);
 						})}
-						{statusOrder.every((status) => groupedData[status].length === 0) && (
+						{statusOrder.every(
+							(status) => groupedData[status].length === 0,
+						) && (
 							<TableRow>
 								<TableCell
 									colSpan={columns.length}
@@ -254,4 +256,3 @@ export function DataTable<TData, TValue>({
 		</div>
 	);
 }
-

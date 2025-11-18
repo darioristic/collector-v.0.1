@@ -21,10 +21,7 @@ export function DashboardPageHeader({
 }: DashboardPageHeaderProps) {
 	return (
 		<div
-			className={cn(
-				"flex flex-row items-center justify-between",
-				className,
-			)}
+			className={cn("flex flex-row items-center justify-between", className)}
 		>
 			<div className="space-y-1">
 				<h1 className="text-xl font-bold tracking-tight lg:text-2xl">
@@ -75,4 +72,3 @@ export function TablePageHeader({
 		</div>
 	);
 }
-

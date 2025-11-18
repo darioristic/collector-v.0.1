@@ -1,6 +1,7 @@
 "use client";
 
 import type { Account, Quote } from "@crm/types";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { useQuery } from "@tanstack/react-query";
 import {
 	Building2,
@@ -8,23 +9,19 @@ import {
 	FileEdit,
 	FileText,
 	Globe,
+	Home,
 	Mail,
 	MapPin,
 	Phone,
 	Send,
 	XCircle,
-	Home,
 } from "lucide-react";
 import * as React from "react";
-
+import Logo from "@/components/layout/logo";
+import { QuoteActions } from "@/components/quotes/quote-actions";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import {
-	Sheet,
-	SheetContent,
-	SheetTitle,
-} from "@/components/ui/sheet";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import {
 	Table,
 	TableBody,
@@ -37,13 +34,11 @@ import {
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { useQuote } from "@/src/hooks/useQuotes";
 import { ensureResponse } from "@/src/lib/fetch-utils";
-import Logo from "@/components/layout/logo";
-import { QuoteActions } from "@/components/quotes/quote-actions";
 
 // Mapiranje country kodova u pun naziv
 const getCountryName = (code: string | null | undefined): string => {
 	if (!code) return "—";
-	
+
 	const countryMap: Record<string, string> = {
 		RS: "Serbia",
 		US: "United States",
@@ -82,7 +77,7 @@ const getCountryName = (code: string | null | undefined): string => {
 		IL: "Israel",
 		NZ: "New Zealand",
 	};
-	
+
 	return countryMap[code.toUpperCase()] || code;
 };
 
@@ -119,16 +114,16 @@ type QuoteDetailProps = {
 };
 
 async function fetchAccount(accountId: string): Promise<Account> {
-  const response = await ensureResponse(
-    fetch(`/api/accounts/${accountId}`, {
-      cache: "no-store",
-      headers: {
-        Accept: "application/json",
-      },
-    }),
-  );
-  const payload = (await response.json()) as { account: Account };
-  return payload.account;
+	const response = await ensureResponse(
+		fetch(`/api/accounts/${accountId}`, {
+			cache: "no-store",
+			headers: {
+				Accept: "application/json",
+			},
+		}),
+	);
+	const payload = (await response.json()) as { account: Account };
+	return payload.account;
 }
 
 export function QuoteDetail({
@@ -223,12 +218,13 @@ export function QuoteDetail({
 			>
 				<VisuallyHidden>
 					<SheetTitle>
-						{quote?.quoteNumber ? `Quote ${quote.quoteNumber}` : "Quote Details"}
+						{quote?.quoteNumber
+							? `Quote ${quote.quoteNumber}`
+							: "Quote Details"}
 					</SheetTitle>
 				</VisuallyHidden>
 				<div className="flex h-full flex-col">
-					<header className="sticky top-0 z-10 bg-background">
-					</header>
+					<header className="sticky top-0 z-10 bg-background"></header>
 
 					<div className="flex-1 overflow-y-auto px-3 py-3 pb-20">
 						{isLoading ? (
@@ -261,11 +257,14 @@ export function QuoteDetail({
 														{quote.quoteNumber}
 													</h2>
 													<Badge
-														variant={statusConfig[quote.status]?.variant || "secondary"}
+														variant={
+															statusConfig[quote.status]?.variant || "secondary"
+														}
 														icon={statusConfig[quote.status]?.icon}
 														className="capitalize"
 													>
-														{quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
+														{quote.status.charAt(0).toUpperCase() +
+															quote.status.slice(1)}
 													</Badge>
 												</div>
 												<div className="shrink-0">
@@ -293,10 +292,7 @@ export function QuoteDetail({
 											<div className="flex-1 space-y-4">
 												<div className="space-y-2">
 													<div className="text-muted-foreground flex items-center gap-2 text-sm font-medium tracking-wide uppercase">
-														<Building2
-															className="h-4 w-4"
-															aria-hidden="true"
-														/>
+														<Building2 className="h-4 w-4" aria-hidden="true" />
 														Company
 													</div>
 													{companyId ? (
@@ -332,7 +328,9 @@ export function QuoteDetail({
 																			aria-hidden="true"
 																		/>
 																		<span>
-																			<span className="font-medium">Address:</span>{" "}
+																			<span className="font-medium">
+																				Address:
+																			</span>{" "}
 																			<span className="text-muted-foreground">
 																				Not provided
 																			</span>
@@ -344,7 +342,9 @@ export function QuoteDetail({
 																				className="h-4 w-4"
 																				aria-hidden="true"
 																			/>
-																			<span>{getCountryName(company.country)}</span>
+																			<span>
+																				{getCountryName(company.country)}
+																			</span>
 																		</div>
 																	)}
 																	<div className="inline-flex items-center gap-2 text-muted-foreground">
@@ -447,27 +447,15 @@ export function QuoteDetail({
 											<Table>
 												<TableHeader>
 													<TableRow>
-														<TableHead className="w-[40px]">
-															#
-														</TableHead>
-														<TableHead>
-															Description
-														</TableHead>
-														<TableHead className="text-right">
-															Qty
-														</TableHead>
-														<TableHead className="text-right">
-															Unit
-														</TableHead>
+														<TableHead className="w-[40px]">#</TableHead>
+														<TableHead>Description</TableHead>
+														<TableHead className="text-right">Qty</TableHead>
+														<TableHead className="text-right">Unit</TableHead>
 														<TableHead className="text-right">
 															Unit Price
 														</TableHead>
-														<TableHead className="text-right">
-															Disc %
-														</TableHead>
-														<TableHead className="text-right">
-															VAT %
-														</TableHead>
+														<TableHead className="text-right">Disc %</TableHead>
+														<TableHead className="text-right">VAT %</TableHead>
 														<TableHead className="text-right!">
 															Amount
 														</TableHead>
@@ -498,10 +486,7 @@ export function QuoteDetail({
 																{"pcs"}
 															</TableCell>
 															<TableCell className="text-right text-sm align-top">
-																{formatCurrency(
-																	item.unitPrice,
-																	quote.currency,
-																)}
+																{formatCurrency(item.unitPrice, quote.currency)}
 															</TableCell>
 															<TableCell className="text-right text-sm align-top">
 																{"0%"}
@@ -517,97 +502,103 @@ export function QuoteDetail({
 												</TableBody>
 												<TableFooter>
 													{(() => {
-														const amountBeforeDiscount = quote.items?.reduce(
-															(sum, item) => sum + item.unitPrice * item.quantity,
-															0,
-														) ?? 0;
-														const discount = amountBeforeDiscount - quote.subtotal;
+														const amountBeforeDiscount =
+															quote.items?.reduce(
+																(sum, item) =>
+																	sum + item.unitPrice * item.quantity,
+																0,
+															) ?? 0;
+														const discount =
+															amountBeforeDiscount - quote.subtotal;
 														return (
 															<>
-																		<TableRow className="bg-background">
-																			<TableCell
-																				colSpan={7}
-																				className="text-right font-semibold text-foreground"
-																			>
-																				Amount before discount
-																			</TableCell>
-																			<TableCell className="text-right! font-semibold text-foreground">
-																				{formatCurrency(
-																					amountBeforeDiscount,
-																					quote.currency,
-																				)}
-																			</TableCell>
-																		</TableRow>
-																		<TableRow className="bg-background">
-																			<TableCell
-																				colSpan={7}
-																				className="text-right font-semibold text-foreground"
-																			>
-																				Discount
-																			</TableCell>
-																			<TableCell className="text-right! font-semibold text-destructive">
-																				{discount > 0 ? "-" : ""}
-																				{formatCurrency(Math.abs(discount), quote.currency)}
-																			</TableCell>
-																		</TableRow>
-																		<TableRow className="bg-background">
-																			<TableCell
-																				colSpan={7}
-																				className="text-right font-semibold text-foreground"
-																			>
-																				Subtotal
-																			</TableCell>
-																			<TableCell className="text-right! font-semibold text-foreground">
-																				{formatCurrency(
-																					quote.subtotal,
-																					quote.currency,
-																				)}
-																			</TableCell>
-																		</TableRow>
-																		<TableRow className="bg-background">
-																			<TableCell
-																				colSpan={7}
-																				className="text-right font-semibold text-foreground"
-																			>
-																				VAT Amount (20%)
-																			</TableCell>
-																			<TableCell className="text-right! font-semibold text-foreground">
-																				{formatCurrency(quote.tax, quote.currency)}
-																			</TableCell>
-																		</TableRow>
-																		<TableRow className="bg-muted/80 border-t-2 border-foreground/10">
-																			<TableCell
-																				colSpan={7}
-																				className="text-right font-bold text-foreground text-base"
-																			>
-																				Total
-																			</TableCell>
-																			<TableCell className="text-right! font-bold text-foreground text-base">
-																				{formatCurrency(quote.total, quote.currency)}
-																			</TableCell>
-																		</TableRow>
+																<TableRow className="bg-background">
+																	<TableCell
+																		colSpan={7}
+																		className="text-right font-semibold text-foreground"
+																	>
+																		Amount before discount
+																	</TableCell>
+																	<TableCell className="text-right! font-semibold text-foreground">
+																		{formatCurrency(
+																			amountBeforeDiscount,
+																			quote.currency,
+																		)}
+																	</TableCell>
+																</TableRow>
+																<TableRow className="bg-background">
+																	<TableCell
+																		colSpan={7}
+																		className="text-right font-semibold text-foreground"
+																	>
+																		Discount
+																	</TableCell>
+																	<TableCell className="text-right! font-semibold text-destructive">
+																		{discount > 0 ? "-" : ""}
+																		{formatCurrency(
+																			Math.abs(discount),
+																			quote.currency,
+																		)}
+																	</TableCell>
+																</TableRow>
+																<TableRow className="bg-background">
+																	<TableCell
+																		colSpan={7}
+																		className="text-right font-semibold text-foreground"
+																	>
+																		Subtotal
+																	</TableCell>
+																	<TableCell className="text-right! font-semibold text-foreground">
+																		{formatCurrency(
+																			quote.subtotal,
+																			quote.currency,
+																		)}
+																	</TableCell>
+																</TableRow>
+																<TableRow className="bg-background">
+																	<TableCell
+																		colSpan={7}
+																		className="text-right font-semibold text-foreground"
+																	>
+																		VAT Amount (20%)
+																	</TableCell>
+																	<TableCell className="text-right! font-semibold text-foreground">
+																		{formatCurrency(quote.tax, quote.currency)}
+																	</TableCell>
+																</TableRow>
+																<TableRow className="bg-muted/80 border-t-2 border-foreground/10">
+																	<TableCell
+																		colSpan={7}
+																		className="text-right font-bold text-foreground text-base"
+																	>
+																		Total
+																	</TableCell>
+																	<TableCell className="text-right! font-bold text-foreground text-base">
+																		{formatCurrency(
+																			quote.total,
+																			quote.currency,
+																		)}
+																	</TableCell>
+																</TableRow>
 															</>
 														);
 													})()}
 												</TableFooter>
 											</Table>
-												</div>
-											) : (
-												<p className="text-muted-foreground text-sm">
-													No items in this quote.
-												</p>
-											)}
-										</section>
+										</div>
+									) : (
+										<p className="text-muted-foreground text-sm">
+											No items in this quote.
+										</p>
+									)}
+								</section>
 
 								{quote.notes ? (
 									<section className="space-y-4">
 										<div className="border-border/60 bg-muted/40 rounded-lg border p-3">
 											<div className="space-y-2">
 												<div className="text-muted-foreground flex items-center gap-2 text-sm font-medium tracking-wide uppercase">
-													<FileText
-														className="h-4 w-4"
-														aria-hidden="true"
-													/>
+													<FileText className="h-4 w-4" aria-hidden="true" />
 													Notes
 												</div>
 												<p className="text-foreground text-sm leading-relaxed">
@@ -623,11 +614,7 @@ export function QuoteDetail({
 
 					{quote ? (
 						<div className="fixed bottom-8 right-6 z-50">
-							<QuoteActions
-								quote={quote}
-								onEdit={onEdit}
-								onDelete={onDelete}
-							/>
+							<QuoteActions quote={quote} onEdit={onEdit} onDelete={onDelete} />
 						</div>
 					) : null}
 				</div>

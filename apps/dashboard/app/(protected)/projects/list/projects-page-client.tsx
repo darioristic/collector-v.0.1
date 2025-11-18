@@ -249,12 +249,12 @@ export function ProjectsPageClient() {
 		},
 	});
 
-    const projects = useMemo(() => data ?? [], [data]);
+	const projects = useMemo(() => data ?? [], [data]);
 
 	const filteredProjects = useMemo(() => {
-        return projects.filter((project) => {
-            const haystack =
-                `${project.name} ${project.description ?? ""} ${project.customer ?? ""}`.toLowerCase();
+		return projects.filter((project) => {
+			const haystack =
+				`${project.name} ${project.description ?? ""} ${project.customer ?? ""}`.toLowerCase();
 			if (
 				searchTerm.trim().length > 0 &&
 				!haystack.includes(searchTerm.trim().toLowerCase())
@@ -318,14 +318,14 @@ export function ProjectsPageClient() {
 
 			return true;
 		});
-    }, [
-        projects,
-        searchTerm,
-        activeStatusTab,
-        priorityFilter,
-        timeframeFilter,
-        dueDateFilter,
-    ]);
+	}, [
+		projects,
+		searchTerm,
+		activeStatusTab,
+		priorityFilter,
+		timeframeFilter,
+		dueDateFilter,
+	]);
 
 	useEffect(() => {
 		setPage(1);

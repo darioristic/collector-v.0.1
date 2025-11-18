@@ -15,12 +15,10 @@ import useChatStore, {
 	type ChatItem,
 } from "@/app/(protected)/apps/chat/useChatStore";
 import {
-	type TeamMember,
-} from "@/app/(protected)/settings/teams/api";
-import {
-	fetchEmployees,
 	type Employee,
+	fetchEmployees,
 } from "@/app/(protected)/hr/employees/api";
+import type { TeamMember } from "@/app/(protected)/settings/teams/api";
 import { useAuth } from "@/components/providers/auth-provider";
 import {
 	Avatar,
@@ -135,7 +133,7 @@ export function ChatSidebar() {
 	const teamMembers = React.useMemo(() => {
 		const employees = employeesQuery.data || [];
 		const users = usersQuery.data || [];
-		
+
 		// Create email to userId map
 		const emailToUserIdMap = new Map<string, string>();
 		users.forEach((u: { email: string; id: string }) => {
@@ -288,11 +286,11 @@ export function ChatSidebar() {
 			setChatServiceUnavailable(false);
 
 			try {
-            console.log(
-                "[chat] Calling createConversationByEmail with email:",
-                member.email,
-            );
-            const conversation = await createConversationByEmail(member.email);
+				console.log(
+					"[chat] Calling createConversationByEmail with email:",
+					member.email,
+				);
+				const conversation = await createConversationByEmail(member.email);
 				console.log("[chat] Conversation created successfully:", conversation);
 
 				// If we successfully created a conversation, service is available

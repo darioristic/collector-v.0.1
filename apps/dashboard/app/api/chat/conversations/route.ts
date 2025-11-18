@@ -4,7 +4,9 @@ import { type NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE_NAME } from "@/lib/session-constants";
 
 const CHAT_SERVICE_URL =
-    process.env.CHAT_SERVICE_URL || process.env.NEXT_PUBLIC_CHAT_SERVICE_URL || "http://localhost:4001";
+	process.env.CHAT_SERVICE_URL ||
+	process.env.NEXT_PUBLIC_CHAT_SERVICE_URL ||
+	"http://localhost:4001";
 
 export async function GET(_request: NextRequest) {
 	try {
@@ -227,7 +229,9 @@ export async function POST(request: NextRequest) {
 			(!("targetUserId" in body) && !("targetEmail" in body))
 		) {
 			return NextResponse.json(
-				{ error: "Nevalidni podaci. targetUserId ili targetEmail je obavezan." },
+				{
+					error: "Nevalidni podaci. targetUserId ili targetEmail je obavezan.",
+				},
 				{ status: 400 },
 			);
 		}
@@ -259,9 +263,7 @@ export async function POST(request: NextRequest) {
 					Authorization: `Bearer ${sessionToken}`,
 					"x-session-token": sessionToken,
 				},
-				body: JSON.stringify(
-					targetEmail ? { targetEmail } : { targetUserId },
-				),
+				body: JSON.stringify(targetEmail ? { targetEmail } : { targetUserId }),
 				cache: "no-store",
 			});
 		} catch (fetchError) {

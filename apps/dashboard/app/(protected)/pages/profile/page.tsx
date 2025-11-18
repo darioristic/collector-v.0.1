@@ -28,7 +28,7 @@ export default function Page() {
 				</h1>
 				<div className="flex items-center space-x-2">
 					<Button asChild>
-						<Link href="/pages/settings">
+						<Link href="/settings">
 							<Settings />
 							Settings
 						</Link>

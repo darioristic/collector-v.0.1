@@ -11,4 +11,3 @@ export function DataTableToolbar<TData>({
 }: DataTableToolbarProps<TData>) {
 	return null;
 }
-

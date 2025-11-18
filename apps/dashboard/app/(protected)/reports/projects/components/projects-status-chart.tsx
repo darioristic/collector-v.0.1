@@ -70,11 +70,7 @@ export function ProjectsStatusChart() {
 							axisLine={false}
 							tickMargin={8}
 						/>
-						<YAxis
-							tickLine={false}
-							axisLine={false}
-							tickMargin={8}
-						/>
+						<YAxis tickLine={false} axisLine={false} tickMargin={8} />
 						<ChartTooltip
 							cursor={false}
 							content={<ChartTooltipContent indicator="line" />}
@@ -88,4 +84,3 @@ export function ProjectsStatusChart() {
 		</Card>
 	);
 }
-

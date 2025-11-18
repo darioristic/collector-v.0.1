@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
 import {
 	useNotifications as novuUseNotifications,
 	useCounts,
 } from "@novu/react";
+import { useCallback, useMemo } from "react";
 
 type NovuNotification = {
 	_id?: string;

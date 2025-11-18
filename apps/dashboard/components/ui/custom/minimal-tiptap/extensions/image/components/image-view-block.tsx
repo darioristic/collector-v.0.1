@@ -204,13 +204,13 @@ export const ImageViewBlock: React.FC<NodeViewProps> = ({
 				}));
 
 				updateAttributes(normalizedData);
-            } catch {
-                setImageState((prev) => ({
-                    ...prev,
-                    error: true,
-                    isServerUploading: false,
-                }));
-            }
+			} catch {
+				setImageState((prev) => ({
+					...prev,
+					error: true,
+					isServerUploading: false,
+				}));
+			}
 		};
 
 		handleImage();

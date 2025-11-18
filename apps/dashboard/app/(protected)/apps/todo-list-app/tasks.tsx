@@ -19,9 +19,9 @@ export default function Tasks({ tasks }: { tasks: Todo[] }) {
 		setSelectedTodoId,
 	} = useTodoStore();
 
-    useEffect(() => {
-        setTodos(tasks);
-    }, [tasks, setTodos]);
+	useEffect(() => {
+		setTodos(tasks);
+	}, [tasks, setTodos]);
 
 	// Add state for managing edit mode
 	const [editTodoId, setEditTodoId] = React.useState<string | null>(null);

@@ -53,9 +53,9 @@ export function OrderList({
 	showCreateAction = true,
 }: OrderListProps) {
 	const [search, setSearch] = useState("");
-    const [statusFilter, setStatusFilter] = useState<OrderStatus | undefined>(
-        undefined,
-    );
+	const [statusFilter, setStatusFilter] = useState<OrderStatus | undefined>(
+		undefined,
+	);
 	const [page, setPage] = useState(0);
 	const limit = 10;
 
@@ -109,8 +109,9 @@ export function OrderList({
 					<Select
 						value={statusFilter ?? "all"}
 						onValueChange={(value) => {
-                            const normalized = value === "all" ? undefined : (value as OrderStatus);
-                            setStatusFilter(normalized);
+							const normalized =
+								value === "all" ? undefined : (value as OrderStatus);
+							setStatusFilter(normalized);
 							setPage(0);
 						}}
 					>

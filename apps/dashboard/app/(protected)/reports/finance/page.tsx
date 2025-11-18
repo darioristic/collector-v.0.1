@@ -1,11 +1,11 @@
-import CalendarDateRangePicker from "@/components/custom-date-range-picker";
 import { ExportButton } from "@/components/CardActionMenus";
+import CalendarDateRangePicker from "@/components/custom-date-range-picker";
 import { generateMeta } from "@/lib/utils";
 import {
-	FinanceKPICards,
-	FinanceRevenueExpensesChart,
-	FinanceProfitTrendChart,
 	FinanceDataTable,
+	FinanceKPICards,
+	FinanceProfitTrendChart,
+	FinanceRevenueExpensesChart,
 } from "./components";
 
 export async function generateMetadata() {
@@ -41,4 +41,3 @@ export default function FinanceReportsPage() {
 		</div>
 	);
 }
-

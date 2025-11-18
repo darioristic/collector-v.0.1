@@ -3,13 +3,7 @@
 import { Plus } from "lucide-react";
 import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
-import {
-	Fragment,
-	useEffect,
-	useId,
-	useRef,
-	useState,
-} from "react";
+import { Fragment, useEffect, useId, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
 	AlertDialog,
@@ -82,7 +76,7 @@ export function ProjectDetailsView({ projectId }: ProjectDetailsViewProps) {
 	const startDateId = useId();
 	const dueDateId = useId();
 
-    const projectQuery = useProjectDetails(projectId);
+	const projectQuery = useProjectDetails(projectId);
 	const updateProjectMutation = useUpdateProject(projectId);
 	const deleteProjectMutation = useDeleteProject(projectId, {
 		onDeleted: () => router.push("/projects/list"),
@@ -109,23 +103,23 @@ export function ProjectDetailsView({ projectId }: ProjectDetailsViewProps) {
 			return;
 		}
 
-    const p = project as unknown as ProjectDetails;
-    editForm.reset({
-        name: p.name,
-        description: p.description ?? "",
-        status: p.status,
-        customer: p.customer ?? "",
-        ownerId: p.owner?.id ?? "",
-        startDate: p.startDate ? p.startDate.slice(0, 10) : "",
-        dueDate: p.dueDate ? p.dueDate.slice(0, 10) : "",
-    });
+		const p = project as unknown as ProjectDetails;
+		editForm.reset({
+			name: p.name,
+			description: p.description ?? "",
+			status: p.status,
+			customer: p.customer ?? "",
+			ownerId: p.owner?.id ?? "",
+			startDate: p.startDate ? p.startDate.slice(0, 10) : "",
+			dueDate: p.dueDate ? p.dueDate.slice(0, 10) : "",
+		});
 	}, [project, editForm]);
 
-    if (!project) {
-        return null;
-    }
+	if (!project) {
+		return null;
+	}
 
-    const p = project as unknown as ProjectDetails;
+	const p = project as unknown as ProjectDetails;
 
 	const submitProjectUpdate = async (values: ProjectEditFormValues) => {
 		const payload: ProjectUpdatePayload = {
@@ -186,7 +180,7 @@ export function ProjectDetailsView({ projectId }: ProjectDetailsViewProps) {
 			>
 				<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 					<div className="space-y-1">
-                        <h1 className="text-3xl font-bold tracking-tight">{p.name}</h1>
+						<h1 className="text-3xl font-bold tracking-tight">{p.name}</h1>
 						<p className="text-muted-foreground text-sm">
 							Monitor each task's status, assignee, and due date to keep your
 							project moving.
@@ -203,14 +197,14 @@ export function ProjectDetailsView({ projectId }: ProjectDetailsViewProps) {
 					</Button>
 				</div>
 
-                <ProjectTasks
-                    ref={projectTasksRef}
-                    project={p}
-                    viewMode={viewMode}
-                    onViewModeChange={setViewMode}
-                    onUpdateTask={(taskId, payload) =>
-                        updateTaskMutation.mutateAsync({ taskId, input: payload })
-                    }
+				<ProjectTasks
+					ref={projectTasksRef}
+					project={p}
+					viewMode={viewMode}
+					onViewModeChange={setViewMode}
+					onUpdateTask={(taskId, payload) =>
+						updateTaskMutation.mutateAsync({ taskId, input: payload })
+					}
 					onDeleteTask={(taskId) => deleteTaskMutation.mutateAsync(taskId)}
 					onCreateTask={(payload) => createTaskMutation.mutateAsync(payload)}
 				/>

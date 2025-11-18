@@ -1,7 +1,7 @@
+import { randomBytes } from "node:crypto";
 import { compare } from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
-import { randomBytes } from "node:crypto";
 import { getDb } from "@/lib/db";
 import { employees } from "@/lib/db/schema/employees";
 import { companies, teamchatUsers } from "@/lib/db/schema/teamchat";
@@ -93,10 +93,7 @@ export async function POST(request: NextRequest) {
 		}
 
 		// Get or create company (default company for employees)
-		let [company] = await db
-			.select()
-			.from(companies)
-			.limit(1);
+		let [company] = await db.select().from(companies).limit(1);
 
 		if (!company) {
 			// Create default company if it doesn't exist
@@ -188,4 +185,3 @@ export async function POST(request: NextRequest) {
 		);
 	}
 }
-

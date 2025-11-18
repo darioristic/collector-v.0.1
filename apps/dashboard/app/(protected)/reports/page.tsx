@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import CalendarDateRangePicker from "@/components/custom-date-range-picker";
+import Link from "next/link";
 import { ExportButton } from "@/components/CardActionMenus";
+import CalendarDateRangePicker from "@/components/custom-date-range-picker";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -25,7 +25,8 @@ export default function ReportsOverviewPage() {
 	const reportModules = [
 		{
 			title: "Sales Reports",
-			description: "Revenue, orders, conversion rates, and sales performance metrics",
+			description:
+				"Revenue, orders, conversion rates, and sales performance metrics",
 			href: "/reports/sales",
 			metrics: [
 				{ label: "Total Revenue", value: "$124,580" },
@@ -55,7 +56,8 @@ export default function ReportsOverviewPage() {
 		},
 		{
 			title: "Projects Reports",
-			description: "Project status, budget, progress, and performance analytics",
+			description:
+				"Project status, budget, progress, and performance analytics",
 			href: "/reports/projects",
 			metrics: [
 				{ label: "Active Projects", value: "42" },
@@ -65,7 +67,8 @@ export default function ReportsOverviewPage() {
 		},
 		{
 			title: "Finance Reports",
-			description: "Revenue, expenses, profit, and financial transaction analytics",
+			description:
+				"Revenue, expenses, profit, and financial transaction analytics",
 			href: "/reports/finance",
 			metrics: [
 				{ label: "Total Revenue", value: "$485,750" },
@@ -94,7 +97,10 @@ export default function ReportsOverviewPage() {
 
 			<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 				{reportModules.map((module) => (
-					<Card key={module.title} className="hover:shadow-md transition-shadow">
+					<Card
+						key={module.title}
+						className="hover:shadow-md transition-shadow"
+					>
 						<CardHeader>
 							<CardTitle>{module.title}</CardTitle>
 							<CardDescription>{module.description}</CardDescription>
@@ -127,4 +133,3 @@ export default function ReportsOverviewPage() {
 		</div>
 	);
 }
-

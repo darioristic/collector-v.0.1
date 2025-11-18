@@ -5,7 +5,7 @@
 	"scripts": {
 		"dev": "bun --watch server.ts",
 		"dev:socket": "bun --watch socket-server.ts",
-		"dev:webpack": "next dev",
+		"dev:webpack": "OTEL_SDK_DISABLED=true NEXT_OTEL_VERBOSE=0 next dev",
 		"build": "next build --turbo",
 		"build:webpack": "next build",
 		"start": "NODE_ENV=production node server.ts",
@@ -125,6 +125,7 @@
 		"zustand": "^5.0.5"
 	},
 	"devDependencies": {
+		"@biomejs/biome": "^1.8.3",
 		"@tailwindcss/postcss": "^4.1.10",
 		"@testing-library/jest-dom": "^6.6.3",
 		"@testing-library/react": "^16.1.0",

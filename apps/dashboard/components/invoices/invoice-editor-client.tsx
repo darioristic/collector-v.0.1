@@ -1,11 +1,11 @@
 "use client";
 
-import * as React from "react";
+import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import * as React from "react";
+import { Card, CardContent } from "@/components/ui/card";
 import { useInvoice } from "@/src/hooks/useInvoices";
 import { InvoiceEditor } from "./invoice-editor";
-import { Card, CardContent } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
 
 type InvoiceEditorClientProps = {
 	invoiceId: string;
@@ -20,7 +20,9 @@ export function InvoiceEditorClient({ invoiceId }: InvoiceEditorClientProps) {
 			<Card>
 				<CardContent className="flex h-64 items-center justify-center">
 					<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-					<p className="ml-4 text-muted-foreground text-sm">Loading invoice...</p>
+					<p className="ml-4 text-muted-foreground text-sm">
+						Loading invoice...
+					</p>
 				</CardContent>
 			</Card>
 		);
@@ -45,11 +47,11 @@ export function InvoiceEditorClient({ invoiceId }: InvoiceEditorClientProps) {
 		);
 	}
 
-  return (
-    <InvoiceEditor
-      invoice={invoice}
-      onCancel={() => router.push("/invoices")}
-      onSaved={() => router.push("/invoices")}
-    />
-  );
+	return (
+		<InvoiceEditor
+			invoice={invoice}
+			onCancel={() => router.push("/invoices")}
+			onSaved={() => router.push("/invoices")}
+		/>
+	);
 }

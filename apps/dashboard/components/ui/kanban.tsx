@@ -306,7 +306,12 @@ function KanbanRoot<T>(props: KanbanRootProps<T>) {
 		[activeId, value, getItemValue],
 	);
 
-	const { onDragStart: onDragStartProp, onDragOver: onDragOverProp, onDragEnd: onDragEndProp, onDragCancel: onDragCancelProp } = kanbanProps;
+	const {
+		onDragStart: onDragStartProp,
+		onDragOver: onDragOverProp,
+		onDragEnd: onDragEndProp,
+		onDragCancel: onDragCancelProp,
+	} = kanbanProps;
 
 	const onDragStart = React.useCallback(
 		(event: DragStartEvent) => {
@@ -455,14 +460,7 @@ function KanbanRoot<T>(props: KanbanRootProps<T>) {
 			setActiveId(null);
 			hasMovedRef.current = false;
 		},
-		[
-			value,
-			getColumn,
-			getItemValue,
-			onValueChange,
-			onMove,
-			onDragEndProp,
-		],
+		[value, getColumn, getItemValue, onValueChange, onMove, onDragEndProp],
 	);
 
 	const onDragCancel = React.useCallback(

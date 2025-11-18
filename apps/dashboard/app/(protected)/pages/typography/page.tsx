@@ -3,9 +3,12 @@ export default function TypographyPage() {
 		<div className="container mx-auto p-8 space-y-12">
 			<div className="space-y-4">
 				<h1 className="text-heading-72">Geist Typography</h1>
-				<p className="text-copy-16" style={{
-					color: "var(--muted-foreground)",
-				}}>
+				<p
+					className="text-copy-16"
+					style={{
+						color: "var(--muted-foreground)",
+					}}
+				>
 					Kompletna Geist tipografija i boje integrisane u Vercel temu.{" "}
 					<strong>Geist design language</strong> primenjen na light theme.
 				</p>
@@ -99,24 +102,36 @@ export default function TypographyPage() {
 			{/* Semantic Colors */}
 			<section className="space-y-4">
 				<h2 className="text-heading-24">Semantic Colors</h2>
-				<div className="space-y-4 p-6 rounded-lg border" style={{
-					backgroundColor: "var(--geist-background-1, #FFFFFF)",
-					borderColor: "var(--geist-border-1, #EAEAEA)",
-				}}>
-					<p className="text-copy-16" style={{
-						color: "var(--geist-text-10, #111111)",
-					}}>
+				<div
+					className="space-y-4 p-6 rounded-lg border"
+					style={{
+						backgroundColor: "var(--geist-background-1, #FFFFFF)",
+						borderColor: "var(--geist-border-1, #EAEAEA)",
+					}}
+				>
+					<p
+						className="text-copy-16"
+						style={{
+							color: "var(--geist-text-10, #111111)",
+						}}
+					>
 						Primary Text - Geist text primary
 					</p>
-					<p className="text-copy-16" style={{
-						color: "var(--geist-text-9, #666666)",
-					}}>
+					<p
+						className="text-copy-16"
+						style={{
+							color: "var(--geist-text-9, #666666)",
+						}}
+					>
 						Secondary Text - Geist text secondary
 					</p>
-					<div className="p-4 rounded border" style={{
-						backgroundColor: "var(--geist-background-2, #F9F9F9)",
-						borderColor: "var(--geist-border-1, #EAEAEA)",
-					}}>
+					<div
+						className="p-4 rounded border"
+						style={{
+							backgroundColor: "var(--geist-background-2, #F9F9F9)",
+							borderColor: "var(--geist-border-1, #EAEAEA)",
+						}}
+					>
 						Secondary Background with Default Border
 					</div>
 				</div>
@@ -231,22 +246,31 @@ export default function TypographyPage() {
 			<section className="space-y-4">
 				<h2 className="text-heading-24">Buttons</h2>
 				<div className="flex gap-4 items-center">
-					<button className="text-button-16 px-4 py-2 rounded" style={{
-						backgroundColor: "var(--primary)",
-						color: "var(--primary-foreground)",
-					}}>
+					<button
+						className="text-button-16 px-4 py-2 rounded"
+						style={{
+							backgroundColor: "var(--primary)",
+							color: "var(--primary-foreground)",
+						}}
+					>
 						Button 16
 					</button>
-					<button className="text-button-14 px-4 py-2 rounded" style={{
-						backgroundColor: "var(--primary)",
-						color: "var(--primary-foreground)",
-					}}>
+					<button
+						className="text-button-14 px-4 py-2 rounded"
+						style={{
+							backgroundColor: "var(--primary)",
+							color: "var(--primary-foreground)",
+						}}
+					>
 						Button 14
 					</button>
-					<button className="text-button-12 px-3 py-1.5 rounded" style={{
-						backgroundColor: "var(--primary)",
-						color: "var(--primary-foreground)",
-					}}>
+					<button
+						className="text-button-12 px-3 py-1.5 rounded"
+						style={{
+							backgroundColor: "var(--primary)",
+							color: "var(--primary-foreground)",
+						}}
+					>
 						Button 12
 					</button>
 				</div>
@@ -272,25 +296,35 @@ export default function TypographyPage() {
 			{/* Example Usage */}
 			<section className="space-y-4">
 				<h2 className="text-heading-24">Example Usage</h2>
-				<div className="space-y-4 p-6 border rounded-lg" style={{
-					backgroundColor: "var(--geist-background-1, #FFFFFF)",
-					borderColor: "var(--geist-border-1, #EAEAEA)",
-				}}>
-					<h1 className="text-heading-72" style={{
-						color: "var(--geist-text-10, #111111)",
-					}}>
+				<div
+					className="space-y-4 p-6 border rounded-lg"
+					style={{
+						backgroundColor: "var(--geist-background-1, #FFFFFF)",
+						borderColor: "var(--geist-border-1, #EAEAEA)",
+					}}
+				>
+					<h1
+						className="text-heading-72"
+						style={{
+							color: "var(--geist-text-10, #111111)",
+						}}
+					>
 						Geist White Theme
 					</h1>
-					<p className="text-copy-16" style={{
-						color: "var(--geist-text-10, #111111)",
-					}}>
-						This paragraph uses Geist <strong>Typography</strong> in the light theme.
+					<p
+						className="text-copy-16"
+						style={{
+							color: "var(--geist-text-10, #111111)",
+						}}
+					>
+						This paragraph uses Geist <strong>Typography</strong> in the light
+						theme.
 					</p>
 					<div className="flex gap-4 mt-4">
 						<button
 							className="text-button-14 px-6 py-3 rounded-md text-white hover:opacity-90 transition-opacity"
 							style={{
-								backgroundColor: "var(--geist-blue-6, #0070F3)"
+								backgroundColor: "var(--geist-blue-6, #0070F3)",
 							}}
 						>
 							Get Started
@@ -303,19 +337,24 @@ export default function TypographyPage() {
 								backgroundColor: "var(--geist-background-1, #FFFFFF)",
 							}}
 							onMouseEnter={(e) => {
-								e.currentTarget.style.borderColor = "var(--geist-border-2, #D4D4D4)";
+								e.currentTarget.style.borderColor =
+									"var(--geist-border-2, #D4D4D4)";
 							}}
 							onMouseLeave={(e) => {
-								e.currentTarget.style.borderColor = "var(--geist-border-1, #EAEAEA)";
+								e.currentTarget.style.borderColor =
+									"var(--geist-border-1, #EAEAEA)";
 							}}
 						>
 							Secondary Action
 						</button>
 					</div>
-					<div className="mt-4 p-4 rounded-lg text-copy-14" style={{
-						backgroundColor: "var(--geist-blue-1, #F5F9FF)",
-						color: "var(--geist-blue-10, #001C55)"
-					}}>
+					<div
+						className="mt-4 p-4 rounded-lg text-copy-14"
+						style={{
+							backgroundColor: "var(--geist-blue-1, #F5F9FF)",
+							color: "var(--geist-blue-10, #001C55)",
+						}}
+					>
 						Example using Geist blue-1 background with blue-10 text
 					</div>
 				</div>
@@ -360,4 +399,3 @@ export default function TypographyPage() {
 		</div>
 	);
 }
-

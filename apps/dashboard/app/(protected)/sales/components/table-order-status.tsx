@@ -12,11 +12,7 @@ import {
 	useReactTable,
 	type VisibilityState,
 } from "@tanstack/react-table";
-import {
-	ArrowDownIcon,
-	ArrowUpIcon,
-	ChevronDown,
-} from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, ChevronDown } from "lucide-react";
 import * as React from "react";
 import { ExportButton } from "@/components/CardActionMenus";
 import { Badge } from "@/components/ui/badge";

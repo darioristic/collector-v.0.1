@@ -1,2 +1,1 @@
 export const PERFORMANCE_REVIEWS_PAGE_SIZE = 20;
-

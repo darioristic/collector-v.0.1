@@ -42,9 +42,7 @@ export async function GET(_request: NextRequest) {
 		} catch (error) {
 			console.error("[teamchat] GET bootstrap error:", error);
 			const message =
-				error instanceof Error
-					? error.message
-					: "Bootstrap nije uspeo.";
+				error instanceof Error ? error.message : "Bootstrap nije uspeo.";
 			return withNoStore(
 				NextResponse.json(
 					{
@@ -57,9 +55,7 @@ export async function GET(_request: NextRequest) {
 	} catch (error) {
 		console.error("[teamchat] GET bootstrap route error:", error);
 		const message =
-			error instanceof Error
-				? error.message
-				: "Bootstrap nije uspeo.";
+			error instanceof Error ? error.message : "Bootstrap nije uspeo.";
 		return withNoStore(
 			NextResponse.json(
 				{
@@ -70,4 +66,3 @@ export async function GET(_request: NextRequest) {
 		);
 	}
 }
-

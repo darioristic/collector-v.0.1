@@ -34,19 +34,23 @@ export const projectTemplates: ProjectTemplate[] = [
 				tasks: [
 					{
 						title: "Assess current infrastructure and applications",
-						description: "Review existing infrastructure, identify workloads for migration",
+						description:
+							"Review existing infrastructure, identify workloads for migration",
 					},
 					{
 						title: "Design OpenShift cluster architecture",
-						description: "Plan cluster topology, networking, and resource allocation",
+						description:
+							"Plan cluster topology, networking, and resource allocation",
 					},
 					{
 						title: "Create migration strategy document",
-						description: "Document migration approach, timelines, and rollback procedures",
+						description:
+							"Document migration approach, timelines, and rollback procedures",
 					},
 					{
 						title: "Identify security and compliance requirements",
-						description: "Map security policies and compliance needs to OpenShift",
+						description:
+							"Map security policies and compliance needs to OpenShift",
 					},
 				],
 			},
@@ -60,7 +64,8 @@ export const projectTemplates: ProjectTemplate[] = [
 					},
 					{
 						title: "Configure networking and storage",
-						description: "Set up SDN, ingress controllers, and persistent storage",
+						description:
+							"Set up SDN, ingress controllers, and persistent storage",
 					},
 					{
 						title: "Set up authentication and authorization",
@@ -132,11 +137,13 @@ export const projectTemplates: ProjectTemplate[] = [
 				tasks: [
 					{
 						title: "Design infrastructure architecture",
-						description: "Plan cloud infrastructure layout and resource organization",
+						description:
+							"Plan cloud infrastructure layout and resource organization",
 					},
 					{
 						title: "Create Terraform modules",
-						description: "Develop reusable Terraform modules for common resources",
+						description:
+							"Develop reusable Terraform modules for common resources",
 					},
 					{
 						title: "Set up state management",
@@ -154,7 +161,8 @@ export const projectTemplates: ProjectTemplate[] = [
 				tasks: [
 					{
 						title: "Create Ansible playbooks",
-						description: "Develop playbooks for server provisioning and configuration",
+						description:
+							"Develop playbooks for server provisioning and configuration",
 					},
 					{
 						title: "Set up Ansible inventory",
@@ -162,7 +170,8 @@ export const projectTemplates: ProjectTemplate[] = [
 					},
 					{
 						title: "Implement secrets management",
-						description: "Integrate Vault or similar for secure credential handling",
+						description:
+							"Integrate Vault or similar for secure credential handling",
 					},
 					{
 						title: "Automate application deployment",
@@ -180,7 +189,8 @@ export const projectTemplates: ProjectTemplate[] = [
 					},
 					{
 						title: "Create pipeline jobs",
-						description: "Develop Jenkinsfile pipelines for build and deployment",
+						description:
+							"Develop Jenkinsfile pipelines for build and deployment",
 					},
 					{
 						title: "Integrate automated testing",
@@ -230,7 +240,8 @@ export const projectTemplates: ProjectTemplate[] = [
 				tasks: [
 					{
 						title: "Deploy Prometheus cluster",
-						description: "Install and configure Prometheus for metrics scraping",
+						description:
+							"Install and configure Prometheus for metrics scraping",
 					},
 					{
 						title: "Configure service discovery",
@@ -274,7 +285,8 @@ export const projectTemplates: ProjectTemplate[] = [
 				tasks: [
 					{
 						title: "Deploy Jaeger backend",
-						description: "Install Jaeger collector, query, and storage components",
+						description:
+							"Install Jaeger collector, query, and storage components",
 					},
 					{
 						title: "Instrument applications with OpenTelemetry",
@@ -286,7 +298,8 @@ export const projectTemplates: ProjectTemplate[] = [
 					},
 					{
 						title: "Create trace analysis dashboards",
-						description: "Build dashboards for trace visualization and analysis",
+						description:
+							"Build dashboards for trace visualization and analysis",
 					},
 				],
 			},
@@ -320,7 +333,13 @@ export const projectTemplates: ProjectTemplate[] = [
 		description:
 			"Implement Infrastructure as Code practices with Terraform, automated provisioning, and environment management.",
 		durationEstimate: "5-9 weeks",
-		keyTools: ["Terraform", "CloudFormation", "Git", "GitHub Actions", "AWS/Azure"],
+		keyTools: [
+			"Terraform",
+			"CloudFormation",
+			"Git",
+			"GitHub Actions",
+			"AWS/Azure",
+		],
 		phases: [
 			{
 				title: "Foundation Setup",
@@ -354,7 +373,8 @@ export const projectTemplates: ProjectTemplate[] = [
 					},
 					{
 						title: "Create compute module",
-						description: "Build modules for EC2, ECS, or similar compute resources",
+						description:
+							"Build modules for EC2, ECS, or similar compute resources",
 					},
 					{
 						title: "Create storage module",
@@ -376,11 +396,13 @@ export const projectTemplates: ProjectTemplate[] = [
 					},
 					{
 						title: "Create staging environment",
-						description: "Set up staging environment with production-like config",
+						description:
+							"Set up staging environment with production-like config",
 					},
 					{
 						title: "Create production environment",
-						description: "Provision production infrastructure with high availability",
+						description:
+							"Provision production infrastructure with high availability",
 					},
 					{
 						title: "Implement environment-specific configurations",
@@ -413,4 +435,3 @@ export const projectTemplates: ProjectTemplate[] = [
 		],
 	},
 ];
-

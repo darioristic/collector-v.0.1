@@ -259,19 +259,19 @@ export const useFileUpload = (
 				inputRef.current.value = "";
 			}
 		},
-        [
-            state.files,
-            maxFiles,
-            multiple,
-            maxSize,
-            validateFile,
-            createPreview,
-            generateUniqueId,
-            clearFiles,
-            onFilesChange,
-            onFilesAdded,
-        ],
-        );
+		[
+			state.files,
+			maxFiles,
+			multiple,
+			maxSize,
+			validateFile,
+			createPreview,
+			generateUniqueId,
+			clearFiles,
+			onFilesChange,
+			onFilesAdded,
+		],
+	);
 
 	const removeFile = useCallback(
 		(id: string) => {

@@ -11,9 +11,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 import { useEffect } from "react";
+import { useCompanySettings } from "@/app/(protected)/settings/company/use-company-settings";
 import Logo from "@/components/layout/logo";
 import { NavMain } from "@/components/layout/sidebar/nav-main";
 import { NavUser } from "@/components/layout/sidebar/nav-user";
+import { QueryProvider } from "@/components/providers/query-provider";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -44,6 +46,7 @@ import {
 import { useIsTablet } from "@/hooks/use-mobile";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+	const { company } = useCompanySettings();
 	const pathname = usePathname();
 	const { setOpen, setOpenMobile, isMobile, isMounted } = useSidebar();
 	const isTablet = useIsTablet();
@@ -69,7 +72,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 							<DropdownMenuTrigger asChild>
 								<SidebarMenuButton className="hover:text-foreground h-10 group-data-[collapsible=icon]:px-0! hover:bg-primary/5">
 									<Logo />
-									<span className="font-semibold">Cloud Native d.o.o.</span>
+									<span className="font-semibold">
+										{company?.name ?? "Cloud Native d.o.o."}
+									</span>
 									<ChevronsUpDown className="ml-auto group-data-[collapsible=icon]:hidden" />
 								</SidebarMenuButton>
 							</DropdownMenuTrigger>
@@ -113,7 +118,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 			</SidebarHeader>
 			<SidebarContent>
 				<ScrollArea className="h-full">
-					<NavMain />
+					<QueryProvider>
+						<NavMain />
+					</QueryProvider>
 				</ScrollArea>
 			</SidebarContent>
 			<SidebarFooter>

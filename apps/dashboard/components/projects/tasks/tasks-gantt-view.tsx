@@ -1,7 +1,5 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Filter, Plus } from "lucide-react";
-import { useMemo, useState } from "react";
 import {
 	addDays,
 	addWeeks,
@@ -11,6 +9,8 @@ import {
 	startOfWeek,
 	subWeeks,
 } from "date-fns";
+import { ChevronLeft, ChevronRight, Filter, Plus } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -62,7 +62,9 @@ function getInitials(value: string) {
 		.toUpperCase();
 }
 
-function calculateTaskDuration(task: ProjectTask): { start: Date; end: Date; days: number } | null {
+function calculateTaskDuration(
+	task: ProjectTask,
+): { start: Date; end: Date; days: number } | null {
 	if (!task.dueDate) return null;
 
 	try {
@@ -70,9 +72,9 @@ function calculateTaskDuration(task: ProjectTask): { start: Date; end: Date; day
 		// If no start date, assume task starts 3 days before due date or from creation
 		const createdAt = new Date(task.createdAt);
 		const startDate = createdAt < endDate ? createdAt : addDays(endDate, -3);
-		
+
 		const days = Math.max(1, differenceInDays(endDate, startDate) + 1);
-		
+
 		return {
 			start: startDate,
 			end: endDate,
@@ -83,10 +85,7 @@ function calculateTaskDuration(task: ProjectTask): { start: Date; end: Date; day
 	}
 }
 
-export function TasksGanttView({
-	tasks,
-	onTaskSelect,
-}: TasksGanttViewProps) {
+export function TasksGanttView({ tasks, onTaskSelect }: TasksGanttViewProps) {
 	const [currentWeekStart, setCurrentWeekStart] = useState(() =>
 		startOfWeek(new Date(), { weekStartsOn: 1 }),
 	);
@@ -130,13 +129,22 @@ export function TasksGanttView({
 
 				return { task, duration };
 			})
-			.filter((item): item is { task: ProjectTask; duration: { start: Date; end: Date; days: number } } => item !== null);
+			.filter(
+				(
+					item,
+				): item is {
+					task: ProjectTask;
+					duration: { start: Date; end: Date; days: number };
+				} => item !== null,
+			);
 	}, [tasks, currentWeekStart, weekEnd]);
 
 	// Calculate position and width for Gantt bars
-	const getTaskBarStyle = (
-		taskDuration: { start: Date; end: Date; days: number },
-	) => {
+	const getTaskBarStyle = (taskDuration: {
+		start: Date;
+		end: Date;
+		days: number;
+	}) => {
 		const weekStartDate = currentWeekStart;
 		const weekEndDate = weekEnd;
 		const totalDays = 7;
@@ -186,7 +194,8 @@ export function TasksGanttView({
 						<ChevronLeft className="h-4 w-4" />
 					</Button>
 					<h2 className="text-lg font-semibold min-w-[200px] text-center">
-						{format(currentWeekStart, "MMM d")} - {format(weekEnd, "MMM d, yyyy")}
+						{format(currentWeekStart, "MMM d")} -{" "}
+						{format(weekEnd, "MMM d, yyyy")}
 					</h2>
 					<Button
 						variant="outline"
@@ -284,7 +293,8 @@ export function TasksGanttView({
 													key={day.toISOString()}
 													className={cn(
 														"border-r last:border-r-0 border-dashed border-border/50",
-														isWeekend(day) && "bg-yellow-50/50 dark:bg-yellow-950/10",
+														isWeekend(day) &&
+															"bg-yellow-50/50 dark:bg-yellow-950/10",
 													)}
 												/>
 											))}
@@ -343,7 +353,9 @@ export function TasksGanttView({
 												</Avatar>
 											) : (
 												<div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-													<span className="text-xs text-muted-foreground">?</span>
+													<span className="text-xs text-muted-foreground">
+														?
+													</span>
 												</div>
 											)}
 											<div className="flex-1">
@@ -367,4 +379,3 @@ export function TasksGanttView({
 		</div>
 	);
 }
-

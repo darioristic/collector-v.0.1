@@ -1,8 +1,6 @@
 "use client";
 
 import { FileText } from "lucide-react";
-
-import type { ProjectTemplate } from "@/lib/data/projectTemplates";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +10,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import type { ProjectTemplate } from "@/lib/data/projectTemplates";
 
 type TemplateCardProps = {
 	template: ProjectTemplate;
@@ -78,9 +77,7 @@ export function TemplateCard({ template, onUseTemplate }: TemplateCardProps) {
 						<span className="text-xs uppercase text-muted-foreground">
 							Template
 						</span>
-						<p className="text-sm font-medium text-foreground">
-							Ready to use
-						</p>
+						<p className="text-sm font-medium text-foreground">Ready to use</p>
 					</div>
 					<Button
 						onClick={() => onUseTemplate(template)}
@@ -94,4 +91,3 @@ export function TemplateCard({ template, onUseTemplate }: TemplateCardProps) {
 		</Card>
 	);
 }
-

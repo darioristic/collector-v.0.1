@@ -62,11 +62,8 @@ export function Summary({
 				}}
 			>
 				<Text style={{ fontSize: 9, marginRight: 10 }}>{totalLabel}</Text>
-				<Text style={{ fontSize: 21 }}>
-					{formatCurrency(amount, currency)}
-				</Text>
+				<Text style={{ fontSize: 21 }}>{formatCurrency(amount, currency)}</Text>
 			</View>
 		</View>
 	);
 }
-

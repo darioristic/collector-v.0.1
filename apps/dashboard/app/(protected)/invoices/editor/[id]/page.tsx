@@ -12,4 +12,3 @@ export default function InvoiceEditorPage({
 
 	return <InvoiceEditorClient invoiceId={id} />;
 }
-

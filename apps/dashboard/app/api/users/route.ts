@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { users } from "@/lib/db/schema/core";
 
@@ -33,11 +33,9 @@ export async function GET(_request: NextRequest) {
 		return NextResponse.json(
 			{
 				error: "Failed to fetch users",
-				details:
-					error instanceof Error ? error.message : String(error),
+				details: error instanceof Error ? error.message : String(error),
 			},
 			{ status: 500 },
 		);
 	}
 }
-

@@ -98,8 +98,7 @@ function Stack({
 		directionClasses = responsiveClasses.join(" ");
 	} else {
 		// Handle simple string direction
-		directionClasses =
-			direction === "column" ? "flex-col" : "flex-row";
+		directionClasses = direction === "column" ? "flex-col" : "flex-row";
 	}
 
 	return (
@@ -120,4 +119,3 @@ function Stack({
 export type StackProps = React.ComponentProps<typeof Stack>;
 
 export { Stack, stackVariants };
-

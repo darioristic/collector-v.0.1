@@ -20,9 +20,9 @@ export default function QuotesPage() {
 		setIsDrawerOpen(true);
 	};
 
-  const handleCreateQuote = () => {
-    setIsCreateDialogOpen(true);
-  };
+	const handleCreateQuote = () => {
+		setIsCreateDialogOpen(true);
+	};
 
 	const handleDeleteQuote = async (quoteId: number) => {
 		// Confirm se već radi u QuoteActions komponenti
@@ -38,18 +38,18 @@ export default function QuotesPage() {
 		setSelectedQuoteId(null);
 	};
 
-  return (
-    <div className="space-y-8">
-      <TablePageHeader
-        title="Offers"
-        description="Manage and track your sales offers across accounts and stakeholders."
-        actions={
-          <Button type="button" onClick={handleCreateQuote} className="gap-2">
-            <Plus className="size-4" aria-hidden="true" />
-            New Offer
-          </Button>
-        }
-      />
+	return (
+		<div className="space-y-8">
+			<TablePageHeader
+				title="Offers"
+				description="Manage and track your sales offers across accounts and stakeholders."
+				actions={
+					<Button type="button" onClick={handleCreateQuote} className="gap-2">
+						<Plus className="size-4" aria-hidden="true" />
+						New Offer
+					</Button>
+				}
+			/>
 
 			<QuoteList onQuoteClick={handleQuoteClick} showCreateAction={false} />
 
@@ -63,13 +63,13 @@ export default function QuotesPage() {
 				onDelete={handleDeleteQuote}
 			/>
 
-      {isCreateDialogOpen && (
-        <InvoiceCreateSheet
-          open={isCreateDialogOpen}
-          onClose={() => setIsCreateDialogOpen(false)}
-          context="offer"
-        />
-      )}
-    </div>
-  );
+			{isCreateDialogOpen && (
+				<InvoiceCreateSheet
+					open={isCreateDialogOpen}
+					onClose={() => setIsCreateDialogOpen(false)}
+					context="offer"
+				/>
+			)}
+		</div>
+	);
 }

@@ -1,157 +1,160 @@
 import type {
-  PerformanceReview,
-  PerformanceReviewsListResponse,
-  PerformanceReviewsQueryState,
+	PerformanceReview,
+	PerformanceReviewsListResponse,
+	PerformanceReviewsQueryState,
 } from "./types";
 
 const DEFAULT_HEADERS = {
-  "Content-Type": "application/json",
-  Accept: "application/json",
+	"Content-Type": "application/json",
+	Accept: "application/json",
 } as const;
 
 const handleResponse = async <T>(response: Response): Promise<T> => {
-  if (!response.ok) {
-    let message = "Unexpected error.";
-    try {
-      const body = (await response.json()) as {
-        error?: string;
-        details?: unknown;
-      };
-      if (body?.error) {
-        message = body.error;
-      }
-    } catch {
-      // ignore
-    }
-    throw new Error(message);
-  }
+	if (!response.ok) {
+		let message = "Unexpected error.";
+		try {
+			const body = (await response.json()) as {
+				error?: string;
+				details?: unknown;
+			};
+			if (body?.error) {
+				message = body.error;
+			}
+		} catch {
+			// ignore
+		}
+		throw new Error(message);
+	}
 
-  return (await response.json()) as T;
+	return (await response.json()) as T;
 };
 
 const buildQueryString = (
-  params: Record<string, string | number | undefined>,
+	params: Record<string, string | number | undefined>,
 ) => {
-  const searchParams = new URLSearchParams();
+	const searchParams = new URLSearchParams();
 
-  Object.entries(params).forEach(([key, value]) => {
-    if (value === undefined || value === null) {
-      return;
-    }
-    searchParams.set(key, String(value));
-  });
+	Object.entries(params).forEach(([key, value]) => {
+		if (value === undefined || value === null) {
+			return;
+		}
+		searchParams.set(key, String(value));
+	});
 
-  return searchParams.toString();
+	return searchParams.toString();
 };
 
 // Helper function to convert Date to ISO string
-const dateToISOString = (value: Date | string | undefined): string | undefined => {
-  if (!value) return undefined;
-  if (typeof value === "string") return value;
-  return value.toISOString();
+const dateToISOString = (
+	value: Date | string | undefined,
+): string | undefined => {
+	if (!value) return undefined;
+	if (typeof value === "string") return value;
+	return value.toISOString();
 };
 
 export async function fetchPerformanceReviews(params: {
-  query: PerformanceReviewsQueryState;
+	query: PerformanceReviewsQueryState;
 }): Promise<PerformanceReviewsListResponse> {
-  const { query } = params;
+	const { query } = params;
 
-  const queryString = buildQueryString({
-    employeeId: query.employeeId,
-    reviewerId: query.reviewerId,
-    search: query.search,
-    limit: query.limit,
-    offset: query.offset,
-  });
+	const queryString = buildQueryString({
+		employeeId: query.employeeId,
+		reviewerId: query.reviewerId,
+		search: query.search,
+		limit: query.limit,
+		offset: query.offset,
+	});
 
-  const response = await fetch(`/api/hr/performance-reviews?${queryString}`, {
-    method: "GET",
-    headers: DEFAULT_HEADERS,
-    cache: "no-store",
-  });
+	const response = await fetch(`/api/hr/performance-reviews?${queryString}`, {
+		method: "GET",
+		headers: DEFAULT_HEADERS,
+		cache: "no-store",
+	});
 
-  return handleResponse<PerformanceReviewsListResponse>(response);
+	return handleResponse<PerformanceReviewsListResponse>(response);
 }
 
-export async function getPerformanceReviewById(id: string): Promise<PerformanceReview> {
-  const response = await fetch(`/api/hr/performance-reviews/${id}`, {
-    method: "GET",
-    headers: DEFAULT_HEADERS,
-    cache: "no-store",
-  });
+export async function getPerformanceReviewById(
+	id: string,
+): Promise<PerformanceReview> {
+	const response = await fetch(`/api/hr/performance-reviews/${id}`, {
+		method: "GET",
+		headers: DEFAULT_HEADERS,
+		cache: "no-store",
+	});
 
-  const payload = await handleResponse<{ data: PerformanceReview }>(response);
-  return payload.data;
+	const payload = await handleResponse<{ data: PerformanceReview }>(response);
+	return payload.data;
 }
 
 export async function createPerformanceReview(
-  values: Partial<PerformanceReview> & {
-    reviewDate?: Date | string;
-    periodStart?: Date | string;
-    periodEnd?: Date | string;
-  },
+	values: Partial<PerformanceReview> & {
+		reviewDate?: Date | string;
+		periodStart?: Date | string;
+		periodEnd?: Date | string;
+	},
 ): Promise<PerformanceReview> {
-  // Convert Date objects to ISO strings for API
-  const apiValues: Partial<PerformanceReview> = {
-    ...values,
-    reviewDate: dateToISOString(values.reviewDate),
-    periodStart: dateToISOString(values.periodStart),
-    periodEnd: dateToISOString(values.periodEnd),
-  };
-  
-  const response = await fetch("/api/hr/performance-reviews", {
-    method: "POST",
-    headers: DEFAULT_HEADERS,
-    body: JSON.stringify(apiValues),
-  });
+	// Convert Date objects to ISO strings for API
+	const apiValues: Partial<PerformanceReview> = {
+		...values,
+		reviewDate: dateToISOString(values.reviewDate),
+		periodStart: dateToISOString(values.periodStart),
+		periodEnd: dateToISOString(values.periodEnd),
+	};
 
-  const result = await handleResponse<{ data: PerformanceReview }>(response);
-  return result.data;
+	const response = await fetch("/api/hr/performance-reviews", {
+		method: "POST",
+		headers: DEFAULT_HEADERS,
+		body: JSON.stringify(apiValues),
+	});
+
+	const result = await handleResponse<{ data: PerformanceReview }>(response);
+	return result.data;
 }
 
 export async function updatePerformanceReview(
-  id: string,
-  values: Partial<PerformanceReview> & {
-    reviewDate?: Date | string;
-    periodStart?: Date | string;
-    periodEnd?: Date | string;
-  },
+	id: string,
+	values: Partial<PerformanceReview> & {
+		reviewDate?: Date | string;
+		periodStart?: Date | string;
+		periodEnd?: Date | string;
+	},
 ): Promise<PerformanceReview> {
-  // Convert Date objects to ISO strings for API
-  const apiValues: Partial<PerformanceReview> = {
-    ...values,
-    reviewDate: dateToISOString(values.reviewDate),
-    periodStart: dateToISOString(values.periodStart),
-    periodEnd: dateToISOString(values.periodEnd),
-  };
-  
-  const response = await fetch(`/api/hr/performance-reviews/${id}`, {
-    method: "PUT",
-    headers: DEFAULT_HEADERS,
-    body: JSON.stringify(apiValues),
-  });
+	// Convert Date objects to ISO strings for API
+	const apiValues: Partial<PerformanceReview> = {
+		...values,
+		reviewDate: dateToISOString(values.reviewDate),
+		periodStart: dateToISOString(values.periodStart),
+		periodEnd: dateToISOString(values.periodEnd),
+	};
 
-  const result = await handleResponse<{ data: PerformanceReview }>(response);
-  return result.data;
+	const response = await fetch(`/api/hr/performance-reviews/${id}`, {
+		method: "PUT",
+		headers: DEFAULT_HEADERS,
+		body: JSON.stringify(apiValues),
+	});
+
+	const result = await handleResponse<{ data: PerformanceReview }>(response);
+	return result.data;
 }
 
 export async function deletePerformanceReview(id: string): Promise<void> {
-  const response = await fetch(`/api/hr/performance-reviews/${id}`, {
-    method: "DELETE",
-    headers: DEFAULT_HEADERS,
-  });
+	const response = await fetch(`/api/hr/performance-reviews/${id}`, {
+		method: "DELETE",
+		headers: DEFAULT_HEADERS,
+	});
 
-  if (!response.ok && response.status !== 204) {
-    let message = "Unable to delete performance review.";
-    try {
-      const body = (await response.json()) as { error?: string };
-      if (body?.error) {
-        message = body.error;
-      }
-    } catch {
-      // ignore
-    }
-    throw new Error(message);
-  }
+	if (!response.ok && response.status !== 204) {
+		let message = "Unable to delete performance review.";
+		try {
+			const body = (await response.json()) as { error?: string };
+			if (body?.error) {
+				message = body.error;
+			}
+		} catch {
+			// ignore
+		}
+		throw new Error(message);
+	}
 }
-

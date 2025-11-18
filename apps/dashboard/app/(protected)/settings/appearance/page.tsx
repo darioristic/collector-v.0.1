@@ -43,7 +43,7 @@ const defaultValues: Partial<AppearanceFormValues> = {
 };
 
 export default function Page() {
-    const { setTheme } = useTheme();
+	const { setTheme } = useTheme();
 
 	const form = useForm<AppearanceFormValues>({
 		resolver: zodResolver(appearanceFormSchema),

@@ -1,11 +1,11 @@
-import CalendarDateRangePicker from "@/components/custom-date-range-picker";
 import { ExportButton } from "@/components/CardActionMenus";
+import CalendarDateRangePicker from "@/components/custom-date-range-picker";
 import { generateMeta } from "@/lib/utils";
 import {
-	ProjectsKPICards,
-	ProjectsStatusChart,
 	ProjectsBudgetChart,
 	ProjectsDataTable,
+	ProjectsKPICards,
+	ProjectsStatusChart,
 } from "./components";
 
 export async function generateMetadata() {
@@ -41,4 +41,3 @@ export default function ProjectsReportsPage() {
 		</div>
 	);
 }
-

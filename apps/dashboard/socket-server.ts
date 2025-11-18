@@ -2,7 +2,7 @@
 
 /**
  * Standalone Socket.IO Server
- * 
+ *
  * Ovaj server pokreće socket.io servise za notifikacije i team chat
  * nezavisno od Next.js servera. Ovo omogućava bolju izolaciju i lakše
  * održavanje.
@@ -31,7 +31,9 @@ const notificationIo = new SocketIOServer(httpServer, {
 	addTrailingSlash: false,
 	serveClient: false,
 	cors: {
-		origin: dev ? "*" : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+		origin: dev
+			? "*"
+			: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
 		methods: ["GET", "POST"],
 		credentials: true,
 	},
@@ -44,7 +46,9 @@ const teamchatIo = new SocketIOServer(httpServer, {
 	addTrailingSlash: false,
 	serveClient: false,
 	cors: {
-		origin: dev ? "*" : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+		origin: dev
+			? "*"
+			: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
 		methods: ["GET", "POST"],
 		credentials: true,
 	},
@@ -103,7 +107,9 @@ teamchatIo.on("connection", (socket) => {
 	socket.on("join", (payload: { channelId?: string }) => {
 		if (payload?.channelId) {
 			socket.join(`channel:${payload.channelId}`);
-			console.log(`[socket-server] Socket joined channel: ${payload.channelId}`);
+			console.log(
+				`[socket-server] Socket joined channel: ${payload.channelId}`,
+			);
 		}
 	});
 
@@ -138,10 +144,10 @@ httpServer.on("request", (req, res) => {
 					res.writeHead(400, { "Content-Type": "application/json" });
 					res.end(JSON.stringify({ error: "Missing userId or event" }));
 				}
-            } catch {
-                res.writeHead(400, { "Content-Type": "application/json" });
-                res.end(JSON.stringify({ error: "Invalid JSON" }));
-            }
+			} catch {
+				res.writeHead(400, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ error: "Invalid JSON" }));
+			}
 		});
 	} else {
 		res.writeHead(404, { "Content-Type": "application/json" });
@@ -152,7 +158,9 @@ httpServer.on("request", (req, res) => {
 // Start server
 httpServer.listen(port, hostname, () => {
 	console.log("[socket-server] ========================================");
-	console.log(`[socket-server] Socket.IO server listening on http://${hostname}:${port}`);
+	console.log(
+		`[socket-server] Socket.IO server listening on http://${hostname}:${port}`,
+	);
 	console.log("[socket-server] Notification path: /socket/notifications");
 	console.log("[socket-server] TeamChat path: /socket/teamchat");
 	console.log("[socket-server] HTTP API: /api/notifications/emit");
@@ -175,4 +183,3 @@ process.on("SIGINT", () => {
 		process.exit(0);
 	});
 });
-

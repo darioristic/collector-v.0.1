@@ -80,29 +80,35 @@ export function ChatListItem({
 			</Avatar>
 			<div className="min-w-0 grow">
 				<div className="flex items-center justify-between gap-2">
-					<span className={cn(
-						"truncate text-sm",
-						hasUnread ? "font-bold" : "font-medium"
-					)}>
+					<span
+						className={cn(
+							"truncate text-sm",
+							hasUnread ? "font-bold" : "font-medium",
+						)}
+					>
 						{chat.user?.name}
 					</span>
 					<div className="flex items-center gap-2 flex-none">
 						{hasUnread && (
 							<span className="bg-primary text-primary-foreground flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-bold">
-								{chat.conversation.unreadCount > 99 ? "99+" : chat.conversation.unreadCount}
+								{chat.conversation.unreadCount > 99
+									? "99+"
+									: chat.conversation.unreadCount}
 							</span>
 						)}
-						<span className="text-muted-foreground text-xs">
-							{chat.date}
-						</span>
+						<span className="text-muted-foreground text-xs">{chat.date}</span>
 					</div>
 				</div>
 				<div className="flex items-center gap-2">
 					<MessageStatusIcon status={chat.status} />
-					<span className={cn(
-						"truncate text-start text-sm",
-						hasUnread ? "text-foreground font-semibold" : "text-muted-foreground"
-					)}>
+					<span
+						className={cn(
+							"truncate text-start text-sm",
+							hasUnread
+								? "text-foreground font-semibold"
+								: "text-muted-foreground",
+						)}
+					>
 						{chat.last_message}
 					</span>
 				</div>

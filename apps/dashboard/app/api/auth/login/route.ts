@@ -36,12 +36,14 @@ export async function POST(request: NextRequest) {
 	// Try employees login first (new authentication system)
 	try {
 		// Import and call employees login handler directly
-		const { POST: employeesLoginPOST } = await import("../employees-login/route");
+		const { POST: employeesLoginPOST } = await import(
+			"../employees-login/route"
+		);
 		const employeesLoginResponse = await employeesLoginPOST(request);
 
-        if (employeesLoginResponse.ok) {
-            return employeesLoginResponse;
-        }
+		if (employeesLoginResponse.ok) {
+			return employeesLoginResponse;
+		}
 
 		// If employees login fails with 401/403, return that error
 		if (

@@ -40,7 +40,7 @@ interface MailDisplayProps {
 }
 
 export function MailDisplay({ mail }: MailDisplayProps) {
-  const today = new Date();
+	const today = new Date();
 
 	return (
 		<div className="flex h-full flex-col">
@@ -208,9 +208,9 @@ export function MailDisplay({ mail }: MailDisplayProps) {
 						)}
 					</div>
 					<Separator />
-          <div className="flex-1 p-4 text-sm whitespace-pre-wrap">
-            {mail.text}
-          </div>
+					<div className="flex-1 p-4 text-sm whitespace-pre-wrap">
+						{mail.text}
+					</div>
 					<Separator className="mt-auto" />
 					<div className="p-4">
 						<form>

@@ -6,11 +6,7 @@ import type {
 	QuoteStatus,
 	QuoteUpdateInput,
 } from "@crm/types";
-import {
-	useMutation,
-	useQuery,
-	useQueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -23,14 +19,14 @@ import {
 } from "@/src/queries/quotes";
 
 type UseQuotesOptions = {
-    companyId?: string;
-    contactId?: string;
-    status?: QuoteStatus;
-    search?: string;
-    limit?: number;
-    offset?: number;
-    sortField?: QuoteSortField;
-    sortOrder?: "asc" | "desc";
+	companyId?: string;
+	contactId?: string;
+	status?: QuoteStatus;
+	search?: string;
+	limit?: number;
+	offset?: number;
+	sortField?: QuoteSortField;
+	sortOrder?: "asc" | "desc";
 };
 
 export function useQuotes(options: UseQuotesOptions = {}) {

@@ -84,7 +84,10 @@ export default function LoginPage() {
 				setRedirectTo(redirect);
 			}
 			// Check if we're in development mode
-			setIsDevelopment(window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+			setIsDevelopment(
+				window.location.hostname === "localhost" ||
+					window.location.hostname === "127.0.0.1",
+			);
 		}
 	}, []);
 
@@ -141,7 +144,9 @@ export default function LoginPage() {
 								<li>• miha@collectorlabs.test (manager)</li>
 								<li>• tara@collectorlabs.test (user)</li>
 							</ul>
-							<p className="mt-2 text-muted-foreground">Password: Collector!2025</p>
+							<p className="mt-2 text-muted-foreground">
+								Password: Collector!2025
+							</p>
 						</div>
 					)}
 				</CardHeader>
@@ -204,9 +209,7 @@ export default function LoginPage() {
 								className="w-full"
 								disabled={form.formState.isSubmitting}
 							>
-								{form.formState.isSubmitting
-									? "Signing in..."
-									: "Sign in"}
+								{form.formState.isSubmitting ? "Signing in..." : "Sign in"}
 							</Button>
 						</form>
 					</Form>

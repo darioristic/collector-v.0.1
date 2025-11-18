@@ -1,8 +1,7 @@
 "use client";
 
 import type { Quote } from "@crm/types";
-import { FileEdit, Download, Copy, Send, X, Eye, Trash2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Copy, Download, Eye, FileEdit, Send, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -10,6 +9,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
 import {
 	useCreateQuote,
 	useDeleteQuote,
@@ -79,18 +79,16 @@ export function QuoteActions({
 				break;
 
 			case "Delete":
-				if (
-					confirm("Are you sure you want to delete this quote?")
-				) {
+				if (confirm("Are you sure you want to delete this quote?")) {
 					try {
 						await deleteQuote.mutateAsync(quote.id);
 						// onDelete callback se poziva za dodatno zatvaranje drawer-a ili slično
 						if (onDelete) {
 							onDelete(quote.id);
 						}
-                    } catch {
-                        void 0;
-                    }
+					} catch {
+						void 0;
+					}
 				}
 				break;
 
@@ -130,8 +128,7 @@ export function QuoteActions({
 					});
 					toast({
 						title: "Quote withdrawn",
-						description:
-							"The quote has been withdrawn and set to draft.",
+						description: "The quote has been withdrawn and set to draft.",
 					});
 				} catch (error) {
 					toast({
@@ -230,12 +227,7 @@ export function QuoteActions({
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Button
-					variant="outline"
-					size="sm"
-					className="shadow-lg"
-					type="button"
-				>
+				<Button variant="outline" size="sm" className="shadow-lg" type="button">
 					Actions
 				</Button>
 			</DropdownMenuTrigger>
@@ -262,4 +254,3 @@ export function QuoteActions({
 		</DropdownMenu>
 	);
 }
-

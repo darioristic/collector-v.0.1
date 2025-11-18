@@ -423,4 +423,3 @@ import { Shield } from 'lucide-react';
 		</div>
 	);
 }
-
