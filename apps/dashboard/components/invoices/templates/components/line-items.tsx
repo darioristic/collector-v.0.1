@@ -20,6 +20,8 @@ type Props = {
 	includeVAT?: boolean;
 	editable?: boolean;
 	interactive?: boolean;
+	startIndex?: number;
+	showHeader?: boolean;
 	onChangeDescription?: (index: number, description: string) => void;
 	onChangeQuantity?: (index: number, quantity: number) => void;
 	onChangePrice?: (index: number, price: number) => void;
@@ -115,6 +117,8 @@ export function LineItems({
 	includeVAT = false,
 	editable = false,
 	interactive = true,
+	startIndex = 0,
+	showHeader = true,
 	onChangeDescription,
 	onChangeQuantity,
 	onChangePrice,
@@ -194,54 +198,55 @@ export function LineItems({
 
 	return (
 		<div className="mt-4 font-mono">
-			{interactive ? (
-				<div
-					className={`grid ${gridCols} group border-border relative mb-2 w-full items-start gap-2 pb-1`}
-				>
-					<div className="text-center text-[10px] text-[#878787] font-medium">#</div>
-					<div className="text-[10px] text-[#878787] font-medium">{descriptionLabel}</div>
-					<div className="text-center text-[10px] text-[#878787] font-medium">
-						{quantityLabel}
+			{showHeader &&
+				(interactive ? (
+					<div
+						className={`grid ${gridCols} group border-border relative mb-2 w-full items-start gap-2 pb-1`}
+					>
+						<div className="text-center text-[10px] text-[#878787] font-medium">#</div>
+						<div className="text-[10px] text-[#878787] font-medium">{descriptionLabel}</div>
+						<div className="text-center text-[10px] text-[#878787] font-medium">
+							{quantityLabel}
+						</div>
+						<div className="text-center text-[10px] text-[#878787] font-medium">Unit</div>
+						<div className="text-center text-[10px] text-[#878787] font-medium">
+							{priceLabel}
+						</div>
+						{includeVAT && (
+							<>
+								<div className="text-center text-[10px] text-[#878787] font-medium">Disc %</div>
+								<div className="text-center text-[10px] text-[#878787] font-medium">VAT %</div>
+							</>
+						)}
+						<div className="text-center text-[10px] text-[#878787] font-medium">
+							{totalLabel}
+						</div>
 					</div>
-					<div className="text-center text-[10px] text-[#878787] font-medium">Unit</div>
-					<div className="text-center text-[10px] text-[#878787] font-medium">
-						{priceLabel}
+				) : (
+					<div
+						className={`group border-border relative mb-2 grid w-full items-start gap-2 pb-1`}
+						style={{ gridTemplateColumns: gridStatic }}
+					>
+						<div className="text-center text-[10px] text-[#878787] font-medium">#</div>
+						<div className="text-[10px] text-[#878787] font-medium">{descriptionLabel}</div>
+						<div className="text-center text-[10px] text-[#878787] font-medium">
+							{quantityLabel}
+						</div>
+						<div className="text-center text-[10px] text-[#878787] font-medium">Unit</div>
+						<div className="text-center text-[10px] text-[#878787] font-medium">
+							{priceLabel}
+						</div>
+						{includeVAT && (
+							<>
+								<div className="text-center text-[10px] text-[#878787] font-medium">Disc %</div>
+								<div className="text-center text-[10px] text-[#878787] font-medium">VAT %</div>
+							</>
+						)}
+						<div className="text-center text-[10px] text-[#878787] font-medium">
+							{totalLabel}
+						</div>
 					</div>
-					{includeVAT && (
-						<>
-							<div className="text-center text-[10px] text-[#878787] font-medium">Disc %</div>
-							<div className="text-center text-[10px] text-[#878787] font-medium">VAT %</div>
-						</>
-					)}
-					<div className="text-center text-[10px] text-[#878787] font-medium">
-						{totalLabel}
-					</div>
-				</div>
-			) : (
-				<div
-					className={`group border-border relative mb-2 grid w-full items-start gap-2 pb-1`}
-					style={{ gridTemplateColumns: gridStatic }}
-				>
-					<div className="text-center text-[10px] text-[#878787] font-medium">#</div>
-					<div className="text-[10px] text-[#878787] font-medium">{descriptionLabel}</div>
-					<div className="text-center text-[10px] text-[#878787] font-medium">
-						{quantityLabel}
-					</div>
-					<div className="text-center text-[10px] text-[#878787] font-medium">Unit</div>
-					<div className="text-center text-[10px] text-[#878787] font-medium">
-						{priceLabel}
-					</div>
-					{includeVAT && (
-						<>
-							<div className="text-center text-[10px] text-[#878787] font-medium">Disc %</div>
-							<div className="text-center text-[10px] text-[#878787] font-medium">VAT %</div>
-						</>
-					)}
-					<div className="text-center text-[10px] text-[#878787] font-medium">
-						{totalLabel}
-					</div>
-				</div>
-			)}
+				))}
 			{editable ? (
 				<DndContext onDragEnd={handleDragEnd}>
 					<SortableContext
@@ -279,7 +284,7 @@ export function LineItems({
 									>
 										<div className="flex items-center justify-center gap-1 self-start text-center text-[11px]">
 											<SortableHandle />
-											<span className="tabular-nums">{index + 1}</span>
+											<span className="tabular-nums">{startIndex + index + 1}</span>
 											<button
 												type="button"
 												aria-label="Delete line"
@@ -539,7 +544,7 @@ export function LineItems({
 							}`}
 						>
 							<div className="flex items-center justify-center gap-1 self-start text-center text-[11px]">
-								<span className="tabular-nums">{index + 1}</span>
+								<span className="tabular-nums">{startIndex + index + 1}</span>
 							</div>
 							<div className="text-[11px]">
 								<span className="break-words whitespace-pre-wrap">
@@ -601,7 +606,7 @@ export function LineItems({
 							style={{ gridTemplateColumns: gridStatic }}
 						>
 							<div className="self-start text-center text-[11px] tabular-nums">
-								{index + 1}
+								{startIndex + index + 1}
 							</div>
 							<div className="text-[11px]">
 								<span className="break-words whitespace-pre-wrap">

@@ -522,7 +522,7 @@ export function InvoiceDetail({
 			<SheetContent
 				side="right"
 				className="w-full border-l-0 p-0 md:w-[calc(50vw-20px)] md:max-w-[calc(900px-20px)] [&>button]:hidden"
-				style={{ top: 15, right: 15, bottom: 15 }}
+				style={{ top: 0, right: 0, bottom: 15 }}
 			>
 				<VisuallyHidden>
 					<SheetTitle>Invoice {invoice?.invoiceNumber ?? ""}</SheetTitle>
@@ -608,7 +608,7 @@ export function InvoiceDetail({
 				{isEditing ? (
 					<div
 						style={{
-							marginTop: "15px",
+							marginTop: "0",
 							marginBottom: "15px",
 							height: "100%",
 							position: "relative",
@@ -783,7 +783,7 @@ export function InvoiceDetail({
 				) : (
 					<div
 						style={{
-							marginTop: "15px",
+							marginTop: "0",
 							marginBottom: "15px",
 							height: "100%",
 							position: "relative",
