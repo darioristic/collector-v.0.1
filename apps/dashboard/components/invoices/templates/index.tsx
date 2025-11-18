@@ -138,7 +138,19 @@ export function HtmlTemplate({
       const heights = rows.map((r) => r.offsetHeight);
       const headerEl = el.querySelector<HTMLElement>(".measure-header");
       const footerEl = el.querySelector<HTMLElement>(".measure-footer");
-      const extraTopPx = headerEl ? headerEl.offsetHeight : 0;
+
+      // Measure Meta and From/To sections separately
+      const metaEl = headerEl?.querySelector<HTMLElement>(".meta-section");
+      const fromToEl = headerEl?.querySelector<HTMLElement>(".from-to-section");
+
+      const metaHeight = metaEl ? metaEl.offsetHeight : 0;
+      const fromToHeight = fromToEl ? fromToEl.offsetHeight : 0;
+
+      // extraTopPx = ONLY From/To section (Meta is handled by headerPx in pager)
+      // But we override the config's headerHeightMm with actual measured height
+      const extraTopPx = fromToHeight;
+
+      console.log('📏 Measurements:', { metaHeight, fromToHeight, extraTopPx });
 
       // Measure footer components separately
       const summaryEl = footerEl?.querySelector<HTMLElement>(".measure-footer > div:first-child");
@@ -248,13 +260,15 @@ export function HtmlTemplate({
         className={preview_mode ? "preview-page" : ""}>
         <div className="p-[20px]">
           <div className="measure-header mt-0">
-            <Meta
-              template={template}
-              invoiceNumber={invoice_number}
-              issueDate={issue_date}
-              dueDate={due_date}
-            />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="meta-section">
+              <Meta
+                template={template}
+                invoiceNumber={invoice_number}
+                issueDate={issue_date}
+                dueDate={due_date}
+              />
+            </div>
+            <div className="from-to-section mt-4 grid grid-cols-2 gap-8 pl-4">
               <div>
                 <p className="mb-2 text-[11px] font-medium text-[#878787]">{template.from_label}</p>
                 <div className="text-[11px] leading-relaxed">

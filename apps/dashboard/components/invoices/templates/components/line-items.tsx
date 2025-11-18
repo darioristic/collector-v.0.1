@@ -203,19 +203,29 @@ export function LineItems({
 					<div
 						className={`grid ${gridCols} group border-border relative mb-2 w-full items-start gap-2 pb-1`}
 					>
-						<div className="text-center text-[10px] text-[#878787] font-medium">#</div>
-						<div className="text-[10px] text-[#878787] font-medium">{descriptionLabel}</div>
+						<div className="text-center text-[10px] text-[#878787] font-medium">
+							#
+						</div>
+						<div className="text-[10px] text-[#878787] font-medium">
+							{descriptionLabel}
+						</div>
 						<div className="text-center text-[10px] text-[#878787] font-medium">
 							{quantityLabel}
 						</div>
-						<div className="text-center text-[10px] text-[#878787] font-medium">Unit</div>
+						<div className="text-center text-[10px] text-[#878787] font-medium">
+							Unit
+						</div>
 						<div className="text-center text-[10px] text-[#878787] font-medium">
 							{priceLabel}
 						</div>
 						{includeVAT && (
 							<>
-								<div className="text-center text-[10px] text-[#878787] font-medium">Disc %</div>
-								<div className="text-center text-[10px] text-[#878787] font-medium">VAT %</div>
+								<div className="text-center text-[10px] text-[#878787] font-medium">
+									Disc %
+								</div>
+								<div className="text-center text-[10px] text-[#878787] font-medium">
+									VAT %
+								</div>
 							</>
 						)}
 						<div className="text-center text-[10px] text-[#878787] font-medium">
@@ -227,19 +237,29 @@ export function LineItems({
 						className={`group border-border relative mb-2 grid w-full items-start gap-2 pb-1`}
 						style={{ gridTemplateColumns: gridStatic }}
 					>
-						<div className="text-center text-[10px] text-[#878787] font-medium">#</div>
-						<div className="text-[10px] text-[#878787] font-medium">{descriptionLabel}</div>
+						<div className="text-center text-[10px] text-[#878787] font-medium">
+							#
+						</div>
+						<div className="text-[10px] text-[#878787] font-medium">
+							{descriptionLabel}
+						</div>
 						<div className="text-center text-[10px] text-[#878787] font-medium">
 							{quantityLabel}
 						</div>
-						<div className="text-center text-[10px] text-[#878787] font-medium">Unit</div>
+						<div className="text-center text-[10px] text-[#878787] font-medium">
+							Unit
+						</div>
 						<div className="text-center text-[10px] text-[#878787] font-medium">
 							{priceLabel}
 						</div>
 						{includeVAT && (
 							<>
-								<div className="text-center text-[10px] text-[#878787] font-medium">Disc %</div>
-								<div className="text-center text-[10px] text-[#878787] font-medium">VAT %</div>
+								<div className="text-center text-[10px] text-[#878787] font-medium">
+									Disc %
+								</div>
+								<div className="text-center text-[10px] text-[#878787] font-medium">
+									VAT %
+								</div>
 							</>
 						)}
 						<div className="text-center text-[10px] text-[#878787] font-medium">
@@ -284,7 +304,9 @@ export function LineItems({
 									>
 										<div className="flex items-center justify-center gap-1 self-start text-center text-[11px]">
 											<SortableHandle />
-											<span className="tabular-nums">{startIndex + index + 1}</span>
+											<span className="tabular-nums">
+												{startIndex + index + 1}
+											</span>
 											<button
 												type="button"
 												aria-label="Delete line"

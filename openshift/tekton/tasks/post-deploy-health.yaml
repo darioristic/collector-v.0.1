@@ -7,6 +7,7 @@ spec:
     Verifikuje da je API spreman nakon deploy-a pozivanjem /api/health rute.
   params:
     - name: service-url
+      type: string
       description: URL servisa koji se proverava (npr. http://api:4000/api/health)
   steps:
     - name: check-health
@@ -31,4 +32,3 @@ spec:
         done
 
         echo "Health check uspešan za ${URL}"
-

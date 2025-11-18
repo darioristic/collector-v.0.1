@@ -7,8 +7,10 @@ spec:
     Clone the specified Git repository into the provided workspace using alpine/git.
   params:
     - name: url
+      type: string
       description: HTTPS URL repozitorijuma
     - name: revision
+      type: string
       description: Grana ili commit koji se klonira
       default: main
   workspaces:
@@ -79,4 +81,3 @@ spec:
             git checkout "${REF}"
           fi
         fi
-

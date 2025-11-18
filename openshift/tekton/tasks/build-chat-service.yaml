@@ -1,11 +1,10 @@
 apiVersion: tekton.dev/v1
 kind: Task
 metadata:
-  name: build-api
+  name: build-chat-service
 spec:
   description: >
-    Build the Fastify API using Node 20 and pnpm, then build and push a container
-    image to the OpenShift internal registry with buildah.
+    Build the Chat Service using Bun/Node and push a container image to the OpenShift internal registry with buildah.
   params:
     - name: registry
       type: string
@@ -20,7 +19,7 @@ spec:
     - name: dockerfile
       type: string
       description: Relative path to the Dockerfile
-      default: apps/api/Dockerfile.prod
+      default: services/chat-service/Dockerfile
     - name: context
       type: string
       description: Build context directory
@@ -36,15 +35,12 @@ spec:
     - name: source
       description: Workspace with the cloned repository
   steps:
-    - name: prepare-node-build
+    - name: prepare-deps
       image: oven/bun:1.1.38-debian
       workingDir: $(workspaces.source.path)
       securityContext:
         privileged: true
         runAsUser: 0
-      env:
-        - name: BUN_INSTALL_IGNORE_SCRIPTS
-          value: "1"
       script: |
         #!/bin/sh
         set -eu
@@ -53,14 +49,10 @@ spec:
         export DEBIAN_FRONTEND=noninteractive
 
         apt-get update
-        apt-get install -y --no-install-recommends python3 build-essential libsqlite3-dev ca-certificates
-        ln -sf /usr/bin/python3 /usr/bin/python
+        apt-get install -y --no-install-recommends ca-certificates
         rm -rf /var/lib/apt/lists/*
-        export PYTHON=python3
 
-        bun install --ignore-scripts
-        bunx tsc -p packages/types/tsconfig.json --moduleResolution bundler --module ESNext || true
-        bun run --filter api build
+        bun install --ignore-scripts || bun install --no-verify
     - name: build-and-push
       image: quay.io/buildah/stable:v1.41.4
       workingDir: $(workspaces.source.path)
@@ -90,34 +82,32 @@ spec:
         export BUILDAH_ROOTLESS=0
         TOKEN_FILE="/var/run/secrets/kubernetes.io/serviceaccount/token"
 
-        IMAGE_REF="${REGISTRY}/${NAMESPACE}/api:${IMAGE_TAG}"
+        IMAGE_REF="${REGISTRY}/${NAMESPACE}/chat-service:${IMAGE_TAG}"
 
-        cat > /tmp/Dockerfile.api.ci <<'EOF'
+        cat > /tmp/Dockerfile.chat.ci <<'EOF'
         FROM docker.io/oven/bun:1.1.38-debian AS builder
         WORKDIR /workspace
         ENV BUN_NO_TELEMETRY=1
-        COPY . .
+        COPY tsconfig.base.json ./
+        COPY services/chat-service/package.json services/chat-service/bun.lock ./services/chat-service/
         RUN bun pm untrusted || true
-        RUN bun install --ignore-scripts || bun install --no-verify
-        RUN bunx tsc -p packages/types/tsconfig.json --moduleResolution bundler --module ESNext
-        RUN bun run --filter api build
-        RUN cd apps/api && bun install --production --ignore-scripts || bun install --production --no-verify
+        RUN cd services/chat-service && bun install --ignore-scripts || bun install --no-verify
+        COPY services/chat-service/ ./services/chat-service/
+        WORKDIR /workspace/services/chat-service
+        RUN bun run build
 
-        FROM docker.io/library/node:20-bookworm-slim AS runner
+        FROM docker.io/library/node:20-alpine AS runner
         WORKDIR /app
         ENV NODE_ENV=production
-        COPY --from=builder /workspace/apps/api/package.json ./package.json
-        COPY --from=builder /workspace/apps/api/dist ./dist
-        COPY --from=builder /workspace/apps/api/src/db/migrations ./dist/db/migrations
-        COPY --from=builder /workspace/apps/api/node_modules ./node_modules
-        COPY --from=builder /workspace/node_modules /node_modules
-        COPY --from=builder /workspace/apps/api/esm-loader.mjs ./esm-loader.mjs
-        EXPOSE 4000
-        ENV PORT=4000 HOST=0.0.0.0
+        COPY --from=builder /workspace/services/chat-service/dist ./dist
+        COPY --from=builder /workspace/services/chat-service/node_modules ./node_modules
+        COPY --from=builder /workspace/services/chat-service/package.json ./
+        COPY apps/api/esm-loader.mjs ./esm-loader.mjs
+        EXPOSE 4001
         CMD ["node", "--loader", "./esm-loader.mjs", "dist/server.js"]
         EOF
 
-        DOCKERFILE="/tmp/Dockerfile.api.ci"
+        DOCKERFILE="/tmp/Dockerfile.chat.ci"
         echo "Using CI Dockerfile: ${DOCKERFILE}"
 
         buildah bud \
@@ -125,9 +115,9 @@ spec:
           --storage-driver="${STORAGE_DRIVER}" \
           --isolation=chroot \
           --userns=host \
-          --no-cache \
           -t "${IMAGE_REF}" \
-          -f "/tmp/Dockerfile.api.ci" \
+          --no-cache \
+          -f "/tmp/Dockerfile.chat.ci" \
           "${CONTEXT_DIR}"
 
         if [ -f "${TOKEN_FILE}" ]; then

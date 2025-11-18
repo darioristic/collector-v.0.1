@@ -91,99 +91,160 @@ export const paginateByHeightsWithExtras = (
 	notesHeightPx = 0,
 ) => {
 	const pagePx = mmToPx(cfg.pageHeightMm);
-	const paddingPx = 40; // Account for 20px top + 20px bottom padding
-	const footerPx = mmToPx(cfg.footerHeightMm); // Space for footer on every page
-	const headerPx = mmToPx(cfg.headerHeightMm); // Space for header on every page
+	const paddingPx = 40;
+	const footerPx = mmToPx(cfg.footerHeightMm);
+	const headerPx = mmToPx(cfg.headerHeightMm);
 
-	// Calculate exact capacities for each page type
+	// Calculate capacities using actual measurements
+	// extraTopPx = From/To section height (109px typically)
+	// All pages (first and middle) must have the same capacity
+	// Use full extraTopPx for all pages to ensure consistent spacing
 	const firstPageCapacity = Math.max(
 		0,
-		pagePx - paddingPx - headerPx - footerPx - Math.max(0, extraTopPx * 0.6),
+		pagePx - paddingPx - headerPx - footerPx - extraTopPx,
 	);
-	const middlePageCapacity = Math.max(0, pagePx - paddingPx - headerPx - footerPx);
+	// Middle pages must have same capacity as first page
+	const middlePageCapacity = firstPageCapacity;
 	const lastPageCapacity = Math.max(
 		0,
 		pagePx - paddingPx - headerPx - footerPx - Math.max(0, extraBottomPx),
 	);
 
-	// Step 1: Best Fit Decreasing algorithm
-	// Sort items by height (largest first) for better packing
-	const itemsWithHeights = heightsPx.map((height, idx) => ({ idx, height }));
-	itemsWithHeights.sort((a, b) => b.height - a.height); // Sort descending
-	
+	// Step 1: Smart packing - try to maximize each page
 	const pages: number[][] = [];
-	
-	// Place each item using Best Fit strategy
-	for (const { idx: itemIdx, height: itemHeight } of itemsWithHeights) {
-		let bestPageIdx = -1;
-		let bestRemainingSpace = Infinity;
+	const remainingItems = heightsPx.map((_, idx) => idx);
+	let isFirstPage = true;
+
+	while (remainingItems.length > 0) {
+		const capacity = isFirstPage ? firstPageCapacity : middlePageCapacity;
+		const currentPage: number[] = [];
+		let currentHeight = 0;
 		
-		// Find the best page where this item fits with minimum wasted space
-		for (let pageIdx = 0; pageIdx < pages.length; pageIdx++) {
-			const page = pages[pageIdx];
-			const capacity = pageIdx === 0 ? firstPageCapacity : middlePageCapacity;
-			const currentHeight = page.reduce((sum, idx) => sum + (heightsPx[idx] || 0), 0);
-			const remainingSpace = capacity - currentHeight;
-			
-			// Check if item fits and if this is the best fit (minimum wasted space)
-			if (itemHeight <= remainingSpace && remainingSpace < bestRemainingSpace) {
-				bestPageIdx = pageIdx;
-				bestRemainingSpace = remainingSpace;
+		// Try to pack as many items as possible on current page
+		// Use multiple passes to find best combination
+		for (let pass = 0; pass < 3; pass++) {
+			for (let i = 0; i < remainingItems.length; i++) {
+				const itemIdx = remainingItems[i];
+				const itemHeight = heightsPx[itemIdx] || 0;
+				
+				if (currentHeight + itemHeight <= capacity) {
+					currentPage.push(itemIdx);
+					currentHeight += itemHeight;
+					remainingItems.splice(i, 1);
+					i--;
+				}
 			}
 		}
 		
-		// If we found a page where it fits, add it there
-		if (bestPageIdx !== -1) {
-			pages[bestPageIdx].push(itemIdx);
+		if (currentPage.length > 0) {
+			pages.push(currentPage);
+			isFirstPage = false;
 		} else {
-			// Item doesn't fit on any existing page, create a new one
-			const newPageIdx = pages.length;
-			const isFirstPage = newPageIdx === 0;
-			const capacity = isFirstPage ? firstPageCapacity : middlePageCapacity;
-			
-			// Even if item is too large, we must place it
-			pages.push([itemIdx]);
+			// No items fit, but we must place at least one
+			const itemIdx = remainingItems.shift();
+			if (itemIdx !== undefined) {
+				pages.push([itemIdx]);
+				isFirstPage = false;
+			}
 		}
 	}
-	
-	// Sort items back to original order within each page
-	for (const page of pages) {
-		page.sort((a, b) => a - b);
-	}
 
-	// Step 2: Aggressive optimization - multiple passes to maximize space usage
-	for (let pass = 0; pass < 10; pass++) {
+	// Step 2: ULTRA AGGRESSIVE optimization - fill pages with single items
+	// Keep optimizing until no more changes can be made
+	for (let pass = 0; pass < 500; pass++) {
 		let madeChanges = false;
 		
-		// Forward pass: move items from later pages to earlier pages
-		for (let pageIdx = 0; pageIdx < pages.length - 1; pageIdx++) {
+		// PRIORITY 1: Find ALL pages with single items and fill them
+		const singleItemPages: number[] = [];
+		for (let i = 0; i < pages.length; i++) {
+			if (pages[i].length === 1) {
+				singleItemPages.push(i);
+			}
+		}
+		
+		// Process single-item pages
+		for (const pageIdx of singleItemPages) {
 			const page = pages[pageIdx];
-			let pageHeight = page.reduce((sum, idx) => sum + (heightsPx[idx] || 0), 0);
+			const singleItemIdx = page[0];
+			const singleItemHeight = heightsPx[singleItemIdx] || 0;
 			const capacity = pageIdx === 0 ? firstPageCapacity : middlePageCapacity;
-			const usagePercent = (pageHeight / capacity) * 100;
+			let availableSpace = capacity - singleItemHeight;
 			
-			// If page has less than 95% usage, try to fill from next page
-			if (usagePercent < 95 && pageIdx + 1 < pages.length) {
-				const nextPage = pages[pageIdx + 1];
+			// If there's space, try to fill it from ANY other page
+			if (availableSpace > 0) {
+				// Get all items from all other pages, sorted by height (smallest first for better fit)
+				const allOtherItems: Array<{ itemIdx: number; height: number; sourcePageIdx: number; sourcePos: number }> = [];
 				
-				// Try to move items from next page
-				for (let j = 0; j < nextPage.length; j++) {
-					const itemIdx = nextPage[j];
-					const itemHeight = heightsPx[itemIdx] || 0;
-					const newHeight = pageHeight + itemHeight;
+				for (let sourcePageIdx = 0; sourcePageIdx < pages.length; sourcePageIdx++) {
+					if (sourcePageIdx === pageIdx) continue;
+					const sourcePage = pages[sourcePageIdx];
 					
-					if (newHeight <= capacity) {
+					for (let pos = 0; pos < sourcePage.length; pos++) {
+						allOtherItems.push({
+							itemIdx: sourcePage[pos],
+							height: heightsPx[sourcePage[pos]] || 0,
+							sourcePageIdx,
+							sourcePos: pos
+						});
+					}
+				}
+				
+				// Sort by height (smallest first) to maximize number of items we can fit
+				allOtherItems.sort((a, b) => a.height - b.height);
+				
+				// Try to fit as many items as possible
+				for (const { itemIdx, height, sourcePageIdx, sourcePos } of allOtherItems) {
+					if (height <= availableSpace) {
 						page.push(itemIdx);
-						nextPage.splice(j, 1);
-						j--; // Adjust index
-						pageHeight = newHeight;
+						pages[sourcePageIdx].splice(sourcePos, 1);
+						availableSpace -= height;
 						madeChanges = true;
-					} else {
-						break;
+						
+						// Update positions for remaining items
+						for (let i = 0; i < allOtherItems.length; i++) {
+							if (allOtherItems[i].sourcePageIdx === sourcePageIdx && allOtherItems[i].sourcePos > sourcePos) {
+								allOtherItems[i].sourcePos--;
+							}
+						}
+						
+						if (availableSpace <= 0) break;
 					}
 				}
 				
 				// Remove empty pages
+				for (let i = pages.length - 1; i >= 0; i--) {
+					if (pages[i].length === 0 && i !== pages.length - 1) {
+						pages.splice(i, 1);
+						madeChanges = true;
+					}
+				}
+			}
+		}
+		
+		// PRIORITY 2: Fill any page with space from next page
+		for (let pageIdx = 0; pageIdx < pages.length - 1; pageIdx++) {
+			const page = pages[pageIdx];
+			let pageHeight = page.reduce((sum, idx) => sum + (heightsPx[idx] || 0), 0);
+			const capacity = pageIdx === 0 ? firstPageCapacity : middlePageCapacity;
+			let spaceLeft = capacity - pageHeight;
+
+			if (spaceLeft > 0 && pageIdx + 1 < pages.length) {
+				const nextPage = pages[pageIdx + 1];
+				
+				for (let j = 0; j < nextPage.length; j++) {
+					const itemIdx = nextPage[j];
+					const itemHeight = heightsPx[itemIdx] || 0;
+
+					if (itemHeight <= spaceLeft) {
+						page.push(itemIdx);
+						nextPage.splice(j, 1);
+						j--;
+						pageHeight += itemHeight;
+						spaceLeft = capacity - pageHeight;
+						madeChanges = true;
+					}
+				}
+				
 				if (nextPage.length === 0 && pageIdx + 1 < pages.length - 1) {
 					pages.splice(pageIdx + 1, 1);
 					madeChanges = true;
@@ -191,53 +252,10 @@ export const paginateByHeightsWithExtras = (
 			}
 		}
 		
-		// Backward pass: balance pages by moving items from full pages to empty ones
-		for (let pageIdx = pages.length - 2; pageIdx >= 1; pageIdx--) {
-			const page = pages[pageIdx];
-			let pageHeight = page.reduce((sum, idx) => sum + (heightsPx[idx] || 0), 0);
-			const capacity = middlePageCapacity;
-			const usagePercent = (pageHeight / capacity) * 100;
-			
-			// If page is very empty (<70%), try to fill from previous page
-			if (usagePercent < 70 && pageIdx > 0) {
-				const prevPage = pages[pageIdx - 1];
-				const prevCapacity = pageIdx - 1 === 0 ? firstPageCapacity : middlePageCapacity;
-				let prevPageHeight = prevPage.reduce((sum, idx) => sum + (heightsPx[idx] || 0), 0);
-				const prevUsagePercent = (prevPageHeight / prevCapacity) * 100;
-				
-				// Only move if previous page is reasonably full (>60%) or has many items
-				if (prevUsagePercent > 60 || prevPage.length > 1) {
-					// Try to move items from end of previous page
-					for (let j = prevPage.length - 1; j >= 0; j--) {
-						const itemIdx = prevPage[j];
-						const itemHeight = heightsPx[itemIdx] || 0;
-						const newHeight = pageHeight + itemHeight;
-						const newPrevHeight = prevPageHeight - itemHeight;
-						const newPrevUsagePercent = (newPrevHeight / prevCapacity) * 100;
-						
-						// Move if it fits and previous page still has reasonable usage
-						if (newHeight <= capacity && (newPrevUsagePercent > 50 || prevPage.length > 1)) {
-							page.unshift(itemIdx);
-							prevPage.splice(j, 1);
-							pageHeight = newHeight;
-							prevPageHeight = newPrevHeight;
-							madeChanges = true;
-							
-							// Stop if current page is now well-utilized
-							if ((pageHeight / capacity) * 100 >= 75) break;
-						} else {
-							break;
-						}
-					}
-				}
-			}
-		}
-		
-		// If no changes were made, we're done optimizing
 		if (!madeChanges) break;
 	}
 	
-	// Sort items back to original order within each page after optimization
+	// Sort items back to original order
 	for (const page of pages) {
 		page.sort((a, b) => a - b);
 	}

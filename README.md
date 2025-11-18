@@ -26,6 +26,7 @@ API je dostupan na `http://localhost:4000`, Dashboard na `http://localhost:3000`
 ## API Dokumentacija
 
 Nakon pokretanja servera, interaktivna API dokumentacija je dostupna na:
+
 - **Swagger UI**: http://localhost:4000/api/docs
 - **OpenAPI JSON**: http://localhost:4000/api/docs/json
 
@@ -38,6 +39,71 @@ Nakon pokretanja servera, interaktivna API dokumentacija je dostupna na:
 - `packages/config` – Centralizovane ESLint, Tailwind i TypeScript konfiguracije
 - `services/` – Mikroservisi (chat, notifications)
 - `docs/` – Dokumentacija projekta
+
+## Git Workflow
+
+- Grane: `main` (stabilna), `feature/<naziv>`, `fix/<naziv>`, `chore/<naziv>`
+- Commit pravila: koristi Conventional Commits
+  - Primeri: `feat(settings): company branding propagates to invoices`, `fix(teams): robust error logging`, `chore(dashboard): add Biome`
+- Pull Request: otvori PR ka `main`, opiši promene i referenciraj relevantne fajlove/rute
+- Tagovanje i release: nakon značajnih izmena taguj `vX.Y.Z` i kreiraj GitHub Release sa sažetkom promena
+- CI/Quality: lint i test se pokreću pre build-a (vidi Tekton pipeline sekciju niže)
+
+## Komande za rad
+
+- Pokretanje lokalnog dev okruženja:
+  - Monorepo: `bun scripts/dev.ts`
+  - Samo Dashboard: `cd apps/dashboard && npm run dev:webpack` (u dev režimu OTEL je onemogućen)
+- Build: `bun run build`
+- Lint: `bun run lint`
+- Test: `bun run test` ili per-app (`cd apps/dashboard && bun run test`)
+
+## Linting & Formatting
+
+- ESLint (shared config): `bun run lint`
+- Biome (lokalno u dashboard-u):
+  - Provera: `cd apps/dashboard && bunx biome check .`
+  - Formatiranje: `cd apps/dashboard && bunx biome format .`
+- Prettier (tailwind plugin u dashboard-u): koristi se u `apps/dashboard` za konzistentan stil
+
+## Testing
+
+- Unit testovi: Vitest u `apps/api` i `apps/dashboard`
+- Pokretanje: `bun run test` (monorepo) ili po workspace-u
+- Test env (`apps/api/.env.test`) se automatski učitava kada je `NODE_ENV=test`
+
+## Observability & Analytics
+
+- Next.js OpenTelemetry: u dev-u je onemogućen da bi se izbegla greška `span.recordException`
+  - Dev skripta: `apps/dashboard/package.json` → `dev:webpack` postavlja `OTEL_SDK_DISABLED=true` i `NEXT_OTEL_VERBOSE=0`
+  - Re-ENABLE u dev-u: pokreni `next dev` bez tih varijabli ili ukloni ih iz skripte (samo ako želiš OTEL u dev-u)
+- Produkcija: možeš dodati `instrumentation.ts` ako želiš detaljno praćenje (traces, exporters). Za edge runtime koristi `@vercel/otel`
+
+## Company Settings & Branding
+
+- UI: `apps/dashboard/app/(protected)/settings/company/company-tab.tsx`
+- Hook: `apps/dashboard/app/(protected)/settings/company/use-company-settings.ts` – dohvat i ažuriranje preko React Query
+- Validacija: `apps/dashboard/lib/validations/settings/company.ts` – `companyUpsertSchema` (Zod)
+- API ruta: `apps/dashboard/app/api/company/route.ts` – `GET`/`PATCH`, čuva u bazi (Drizzle)
+- Logo & naziv kompanije se odmah propagiraju:
+  - Sidebar/quote/order header koristi dinamični `Logo` (`apps/dashboard/components/layout/logo.tsx`) koji čita `company.logoUrl` i `company.name`
+  - Fakture/ponude/narudžbine prikazuju podatke iz podešavanja u realnom vremenu
+
+## Invoices, Quotes & Orders templati
+
+- Fakture (preview kao HTML):
+  - Public preview: `apps/dashboard/app/(public)/invoices/[id]/preview/page.tsx` – čita kompaniju iz DB i prosleđuje `template.logo_url`
+  - Detalj (sidebar): `apps/dashboard/components/invoices/invoice-detail.tsx` – mapira `company.logoUrl` u `TemplateConfig`
+- Ponude (preview): `apps/dashboard/app/(protected)/quotes/preview/page.tsx` – koristi `Logo` i `useCompanySettings`
+- Narudžbine: `apps/dashboard/components/orders/order-detail.tsx` – header prikazuje logo, naziv i podatke kompanije
+
+## Brza navigacija po kodu
+
+- Company settings: `apps/dashboard/app/(protected)/settings/company/*`
+- Logo komponenta: `apps/dashboard/components/layout/logo.tsx`
+- Fakture – templati: `apps/dashboard/components/invoices/templates/*`
+- Ponude – preview: `apps/dashboard/app/(protected)/quotes/preview/page.tsx`
+- Narudžbine – detalj: `apps/dashboard/components/orders/order-detail.tsx`
 
 ## Getting Started
 
@@ -263,12 +329,12 @@ Na taj način se build ne nastavlja ukoliko lint/test padnu, migracije se izvrš
    Zapamti URL koji dobiješ (`oc get route crm-monorepo-listener -o jsonpath='{.spec.host}'`).
 
 4. **Podesi GitHub webhook**
-
    - Repository → Settings → Webhooks → Add webhook
    - Payload URL: `https://<route-host>`
    - Content type: `application/json`
-  - Secret: isti kao u koraku 1
-   - Event: “Just the push event”
+
+- Secret: isti kao u koraku 1
+- Event: “Just the push event”
 
 Sada će svaki push na `main` (ili granu definisanu u CEL filteru unutar `eventlistener.yaml`) automatski pokrenuti `crm-monorepo-pipeline` i odraditi build + rollout bez ručnog kucanja komandi.
 
@@ -289,11 +355,13 @@ lsof -ti:3000 | xargs kill -9
 Ako imaš probleme sa konekcijom na bazu:
 
 1. Proveri da li je PostgreSQL pokrenut:
+
    ```bash
    docker compose ps
    ```
 
 2. Proveri `DATABASE_URL` u `.env.local`:
+
    ```ini
    DATABASE_URL=postgresql://collector:collector@localhost:5432/collector
    ```
@@ -337,6 +405,7 @@ await request.cache?.deletePattern("pattern:*");
 Ako build pada:
 
 1. Očisti node_modules i reinstaliraj:
+
    ```bash
    rm -rf node_modules apps/*/node_modules packages/*/node_modules
    bun install

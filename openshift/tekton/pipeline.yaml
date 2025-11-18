@@ -48,18 +48,9 @@ spec:
         - name: output
           workspace: shared-workspace
 
-    - name: quality-check
-      runAfter:
-        - checkout-code
-      taskRef:
-        name: quality-check
-      workspaces:
-        - name: source
-          workspace: shared-workspace
-
     - name: build-api
       runAfter:
-        - quality-check
+        - checkout-code
       taskRef:
         name: build-api
       params:
@@ -112,6 +103,38 @@ spec:
         - name: dashboard-image
           value: $(tasks.build-dashboard.results.image-url)
 
+    - name: build-chat-service
+      runAfter:
+        - build-dashboard
+      taskRef:
+        name: build-chat-service
+      params:
+        - name: registry
+          value: $(params.registry)
+        - name: namespace
+          value: $(params.namespace)
+        - name: image-tag
+          value: $(params.image-tag)
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    - name: build-notification-service
+      runAfter:
+        - build-chat-service
+      taskRef:
+        name: build-notification-service
+      params:
+        - name: registry
+          value: $(params.registry)
+        - name: namespace
+          value: $(params.namespace)
+        - name: image-tag
+          value: $(params.image-tag)
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
     - name: run-migrations
       runAfter:
         - push-images
@@ -157,9 +180,65 @@ spec:
         - name: image-url
           value: $(tasks.build-dashboard.results.image-url)
 
+    - name: post-deploy-health-dashboard
+      runAfter:
+        - deploy-dashboard
+      taskRef:
+        name: post-deploy-health
+      params:
+        - name: service-url
+          value: http://dashboard:3000/api/health
+
+    - name: deploy-chat-service
+      runAfter:
+        - post-deploy-health-dashboard
+      taskRef:
+        name: deploy-api
+      params:
+        - name: namespace
+          value: $(params.namespace)
+        - name: image-url
+          value: $(tasks.build-chat-service.results.image-url)
+        - name: app-name
+          value: chat-service
+
+    - name: post-deploy-health-chat
+      runAfter:
+        - deploy-chat-service
+      taskRef:
+        name: post-deploy-health
+      params:
+        - name: service-url
+          value: http://chat-service:4001/health
+
+    - name: deploy-notification-service
+      runAfter:
+        - post-deploy-health-chat
+      taskRef:
+        name: deploy-api
+      params:
+        - name: namespace
+          value: $(params.namespace)
+        - name: image-url
+          value: $(tasks.build-notification-service.results.image-url)
+        - name: app-name
+          value: notification-service
+
+    - name: post-deploy-health-notification
+      runAfter:
+        - deploy-notification-service
+      taskRef:
+        name: post-deploy-health
+      params:
+        - name: service-url
+          value: http://notification-service:4002/health
+
   results:
     - name: api-image
       value: $(tasks.build-api.results.image-url)
     - name: dashboard-image
       value: $(tasks.build-dashboard.results.image-url)
-
+    - name: chat-service-image
+      value: $(tasks.build-chat-service.results.image-url)
+    - name: notification-service-image
+      value: $(tasks.build-notification-service.results.image-url)

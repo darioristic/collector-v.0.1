@@ -26,8 +26,16 @@ export function NovuBell() {
 
 	if (!enabled) return null;
 
+	// Use proxy route to avoid CORS issues
+	const backendUrl =
+		typeof window !== "undefined" ? "/api/novu" : undefined;
+
 	return (
-		<NovuInbox applicationIdentifier={appId} subscriberId={subscriberId}>
+		<NovuInbox
+			applicationIdentifier={appId}
+			subscriberId={subscriberId}
+			backendUrl={backendUrl}
+		>
 			<Bell />
 		</NovuInbox>
 	);

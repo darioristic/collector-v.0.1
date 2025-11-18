@@ -7,8 +7,10 @@ spec:
     Pokreće Bun migracije nad bazom koristeći definisan DATABASE_URL iz tajne.
   params:
     - name: database-secret-name
+      type: string
       description: Naziv Kubernetes Secret resursa sa konekcionim stringom
     - name: database-secret-key
+      type: string
       description: Ključ unutar tajne koji sadrži DATABASE_URL
       default: DATABASE_URL
   workspaces:
@@ -39,6 +41,5 @@ spec:
         apt-get install -y --no-install-recommends ca-certificates
         rm -rf /var/lib/apt/lists/*
 
-        bun install --frozen-lockfile
+        bun install --ignore-scripts || bun install --no-verify
         bun run --filter api db:migrate
-

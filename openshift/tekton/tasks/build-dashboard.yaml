@@ -8,19 +8,25 @@ spec:
     image to the OpenShift internal registry with buildah.
   params:
     - name: registry
+      type: string
       description: OpenShift internal registry host (e.g. image-registry.openshift-image-registry.svc:5000)
     - name: namespace
+      type: string
       description: OpenShift project/namespace for the image stream
     - name: image-tag
+      type: string
       description: Image tag to apply when pushing
       default: $(context.pipelineRun.uid)
     - name: dockerfile
+      type: string
       description: Relative path to the Dockerfile
       default: apps/dashboard/Dockerfile.prod
     - name: context
+      type: string
       description: Build context directory
       default: .
     - name: tls-verify
+      type: string
       description: Whether to verify TLS when pushing to the registry
       default: "false"
   results:
@@ -38,6 +44,8 @@ spec:
           value: production
         - name: NEXT_TELEMETRY_DISABLED
           value: "1"
+        - name: BUN_INSTALL_IGNORE_SCRIPTS
+          value: "1"
       securityContext:
         privileged: true
         runAsUser: 0
@@ -54,7 +62,8 @@ spec:
         rm -rf /var/lib/apt/lists/*
         export PYTHON=python3
 
-        bun install --frozen-lockfile
+        bun install --ignore-scripts
+        bunx tsc -p packages/types/tsconfig.json --moduleResolution bundler --module ESNext || true
         bun run --filter ./apps/dashboard build
     - name: build-and-push
       image: quay.io/buildah/stable:v1.41.4
@@ -87,9 +96,53 @@ spec:
         export BUILDAH_ISOLATION=chroot
         export BUILDAH_USERNS=host
         export BUILDAH_ROOTLESS=0
-        export REGISTRY_AUTH_FILE="${REGISTRY_AUTH_FILE:-/tekton/home/auth.json}"
+        TOKEN_FILE="/var/run/secrets/kubernetes.io/serviceaccount/token"
 
         IMAGE_REF="${REGISTRY}/${NAMESPACE}/dashboard:${IMAGE_TAG}"
+
+        cat > /tmp/Dockerfile.dashboard.ci <<'EOF'
+        FROM docker.io/oven/bun:1.1.38-debian AS deps
+        WORKDIR /workspace
+        ENV BUN_NO_TELEMETRY=1
+        ENV NEXT_TELEMETRY_DISABLED=1
+        COPY package.json bun.lock* ./
+        COPY tsconfig.base.json ./
+        COPY apps/dashboard/package.json ./apps/dashboard/
+        COPY apps/dashboard/tsconfig.json ./apps/dashboard/
+        COPY packages ./packages
+        RUN bun pm untrusted || true
+        RUN bun install --ignore-scripts || bun install --no-verify
+
+        FROM docker.io/library/node:20-bookworm AS builder
+        WORKDIR /workspace
+        ENV NEXT_TELEMETRY_DISABLED=1
+        ENV DOCKER_BUILD=true
+        ENV NODE_ENV=production
+        COPY --from=deps /workspace/node_modules ./node_modules
+        COPY --from=deps /workspace/packages ./packages
+        COPY --from=deps /workspace/package.json ./package.json
+        COPY --from=deps /workspace/tsconfig.base.json ./tsconfig.base.json
+        COPY apps/dashboard ./apps/dashboard
+        WORKDIR /workspace/apps/dashboard
+        RUN rm -rf node_modules && ln -s ../../node_modules ./node_modules
+        RUN npm run build:webpack
+
+        FROM docker.io/library/node:20-bookworm-slim AS runner
+        WORKDIR /app
+        ENV NODE_ENV=production
+        ENV NEXT_TELEMETRY_DISABLED=1
+        COPY --from=builder /workspace/apps/dashboard/.next ./.next
+        COPY --from=builder /workspace/apps/dashboard/public ./public
+        COPY --from=builder /workspace/apps/dashboard/package.json ./package.json
+        COPY --from=deps /workspace/node_modules ./node_modules
+        EXPOSE 3000
+        ENV PORT=3000
+        ENV HOSTNAME="0.0.0.0"
+        CMD ["npx", "next", "start"]
+        EOF
+
+        DOCKERFILE="/tmp/Dockerfile.dashboard.ci"
+        echo "Using CI Dockerfile: ${DOCKERFILE}"
 
         buildah bud \
           --layers \
@@ -97,15 +150,22 @@ spec:
           --isolation=chroot \
           --userns=host \
           -t "${IMAGE_REF}" \
-          -f "${DOCKERFILE}" \
+          --no-cache \
+          -f "/tmp/Dockerfile.dashboard.ci" \
           "${CONTEXT_DIR}"
+
+        if [ -f "${TOKEN_FILE}" ]; then
+          TOKEN="$(cat "${TOKEN_FILE}")"
+          buildah login \
+            --tls-verify="${TLS_VERIFY}" \
+            -u openshift \
+            -p "${TOKEN}" \
+            "${REGISTRY}"
+        fi
 
         buildah push \
           --storage-driver="${STORAGE_DRIVER}" \
-          --isolation=chroot \
-          --userns=host \
           --tls-verify="${TLS_VERIFY}" \
           "${IMAGE_REF}"
 
         printf "%s" "${IMAGE_REF}" > "$(results.image-url.path)"
-

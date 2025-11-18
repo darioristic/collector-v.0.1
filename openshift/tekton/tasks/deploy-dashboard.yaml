@@ -7,10 +7,13 @@ spec:
     Tag the newly built dashboard image, update the DeploymentConfig and roll out the change.
   params:
     - name: namespace
+      type: string
       description: OpenShift project/namespace for the deployment
     - name: image-url
+      type: string
       description: Fully qualified image URL to deploy
     - name: app-name
+      type: string
       description: Application name / DeploymentConfig name
       default: dashboard
   steps:
@@ -29,4 +32,3 @@ spec:
         oc rollout restart "dc/$(params.app-name)" -n "$(params.namespace)"
 
         oc rollout status "dc/$(params.app-name)" -n "$(params.namespace)" --watch --timeout=5m
-

@@ -28,7 +28,7 @@ spec:
         apt-get install -y --no-install-recommends ca-certificates
         rm -rf /var/lib/apt/lists/*
 
-        bun install --frozen-lockfile
+        bun install
     - name: lint
       image: oven/bun:1.1.38-debian
       workingDir: $(workspaces.source.path)
@@ -53,4 +53,16 @@ spec:
         set -eu
 
         bun run --filter api test
+    - name: test-dashboard
+      image: oven/bun:1.1.38-debian
+      workingDir: $(workspaces.source.path)
+      env:
+        - name: BUN_NO_TELEMETRY
+          value: "1"
+        - name: NODE_ENV
+          value: test
+      script: |
+        #!/bin/sh
+        set -eu
 
+        bun run --filter ./apps/dashboard test

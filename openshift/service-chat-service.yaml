@@ -7,10 +7,8 @@ metadata:
 spec:
   selector:
     app: chat-service
-    deploymentconfig: chat-service
   ports:
     - name: http
       port: 4001
       targetPort: 4001
       protocol: TCP
-

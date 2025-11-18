@@ -4,11 +4,11 @@ import { isUuid } from "@/lib/utils";
 const API_URL = process.env.API_URL || "http://localhost:4000";
 
 export async function POST(
-	request: NextRequest,
-	{ params }: { params: Promise<{ id: string }> },
+    request: NextRequest,
+    { params }: { params: { id: string } },
 ) {
 	try {
-		const { id } = await params;
+        const { id } = params;
 
 		if (!isUuid(id)) {
 			return NextResponse.json(

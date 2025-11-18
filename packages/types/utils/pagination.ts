@@ -1,4 +1,4 @@
-import { mmToPx } from "./units";
+import { mmToPx } from "./units.js";
 
 export type PagerConfig = {
   pageHeightMm: number;

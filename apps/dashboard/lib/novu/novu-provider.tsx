@@ -32,8 +32,16 @@ export function NovuProvider({ children }: NovuProviderProps) {
 		return <>{children}</>;
 	}
 
+	// Use proxy route to avoid CORS issues
+	const backendUrl =
+		typeof window !== "undefined" ? "/api/novu" : undefined;
+
 	return (
-		<NovuProviderBase applicationIdentifier={appId} subscriberId={subscriberId}>
+		<NovuProviderBase
+			applicationIdentifier={appId}
+			subscriberId={subscriberId}
+			backendUrl={backendUrl}
+		>
 			{children}
 		</NovuProviderBase>
 	);

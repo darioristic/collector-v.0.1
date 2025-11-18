@@ -4,13 +4,16 @@ metadata:
   name: deploy-api
 spec:
   description: >
-    Tag the newly built API image, update the DeploymentConfig and roll out the change.
+    Update the Deployment image and roll out the change.
   params:
     - name: namespace
+      type: string
       description: OpenShift project/namespace for the deployment
     - name: image-url
+      type: string
       description: Fully qualified image URL to deploy
     - name: app-name
+      type: string
       description: Application name / DeploymentConfig name
       default: api
   steps:
@@ -24,9 +27,8 @@ spec:
 
         oc tag --source=docker "$(params.image-url)" "$(params.app-name):latest" --reference-policy=local -n "$(params.namespace)"
 
-        oc set image "dc/$(params.app-name)" "$(params.app-name)=$(params.image-url)" -n "$(params.namespace)"
+        oc set image "deployment/$(params.app-name)" "$(params.app-name)=$(params.image-url)" -n "$(params.namespace)"
 
-        oc rollout restart "dc/$(params.app-name)" -n "$(params.namespace)"
+        oc rollout restart "deployment/$(params.app-name)" -n "$(params.namespace)"
 
-        oc rollout status "dc/$(params.app-name)" -n "$(params.namespace)" --watch --timeout=5m
-
+        oc rollout status "deployment/$(params.app-name)" -n "$(params.namespace)" --watch --timeout=5m

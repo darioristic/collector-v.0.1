@@ -13,7 +13,7 @@ export function MetaCore({
   fromLabel?: string;
   customerLabel?: string;
 }) {
-  const fmtDate = (d: any) => {
+  const fmtDate = (d: string | Date | null | undefined) => {
     if (!d) return "—";
     const date = d instanceof Date ? d : new Date(d);
     return new Intl.DateTimeFormat(undefined, { year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
@@ -33,4 +33,3 @@ export function MetaCore({
     </div>
   );
 }
-

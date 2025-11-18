@@ -4,7 +4,7 @@ ENV BUN_NO_TELEMETRY=1
 COPY tsconfig.base.json ./
 COPY services/notification-service/package.json services/notification-service/bun.lock ./services/notification-service/
 RUN bun pm untrusted || true
-RUN cd services/notification-service && bun install --frozen-lockfile --ignore-scripts || bun install --frozen-lockfile --no-verify
+RUN cd services/notification-service && bun install --ignore-scripts || bun install --no-verify
 COPY services/notification-service/ ./services/notification-service/
 WORKDIR /workspace/services/notification-service
 RUN bun run build

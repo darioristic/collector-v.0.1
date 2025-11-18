@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1
 kind: PipelineRun
 metadata:
-  name: crm-monorepo-pipeline-run
+  generateName: crm-monorepo-
 spec:
   pipelineRef:
     name: crm-monorepo-pipeline
@@ -23,7 +23,7 @@ spec:
     - name: namespace
       value: crm-platform-prod
     - name: image-tag
-      value: latest
+      value: $(context.pipelineRun.uid)
   workspaces:
     - name: shared-workspace
       volumeClaimTemplate:

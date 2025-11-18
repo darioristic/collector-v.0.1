@@ -7,10 +7,8 @@ metadata:
 spec:
   selector:
     app: notification-service
-    deploymentconfig: notification-service
   ports:
     - name: http
       port: 4002
       targetPort: 4002
       protocol: TCP
-

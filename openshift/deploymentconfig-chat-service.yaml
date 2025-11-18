@@ -1,5 +1,5 @@
-apiVersion: apps.openshift.io/v1
-kind: DeploymentConfig
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: chat-service
   labels:
@@ -7,19 +7,16 @@ metadata:
 spec:
   replicas: 2
   selector:
-    app: chat-service
-    deploymentconfig: chat-service
-  strategy:
-    type: Rolling
+    matchLabels:
+      app: chat-service
   template:
     metadata:
       labels:
         app: chat-service
-        deploymentconfig: chat-service
     spec:
       containers:
         - name: chat-service
-          image: image-registry.openshift-image-registry.svc:5000/$(NAMESPACE)/chat-service:latest
+          image: image-registry.openshift-image-registry.svc:5000/crm-platform-prod/chat-service:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 4001
@@ -62,14 +59,3 @@ spec:
               cpu: 500m
               memory: 512Mi
       restartPolicy: Always
-  triggers:
-    - type: ConfigChange
-    - type: ImageChange
-      imageChangeParams:
-        automatic: true
-        containerNames:
-          - chat-service
-        from:
-          kind: ImageStreamTag
-          name: chat-service:latest
-

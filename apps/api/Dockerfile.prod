@@ -3,10 +3,10 @@ WORKDIR /workspace
 ENV BUN_NO_TELEMETRY=1
 COPY . .
 RUN bun pm untrusted || true
-RUN bun install --frozen-lockfile --ignore-scripts || bun install --frozen-lockfile --no-verify
-RUN bun run --filter @crm/types build
+RUN bun install --ignore-scripts || bun install --no-verify
+RUN bunx tsc -p packages/types/tsconfig.json --moduleResolution bundler --module ESNext
 RUN bun run --filter api build
-RUN cd apps/api && bun install --frozen-lockfile --production --ignore-scripts || bun install --frozen-lockfile --production --no-verify
+RUN cd apps/api && bun install --production --ignore-scripts || bun install --production --no-verify
 
 FROM docker.io/library/node:20-bookworm-slim AS runner
 WORKDIR /app
@@ -22,4 +22,3 @@ COPY --from=builder /workspace/apps/api/esm-loader.mjs ./esm-loader.mjs
 EXPOSE 4000
 ENV PORT=4000 HOST=0.0.0.0
 CMD ["sh", "-c", "node --loader ./esm-loader.mjs dist/db/migrate.js && node --loader ./esm-loader.mjs dist/server.js"]
-

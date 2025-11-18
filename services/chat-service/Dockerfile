@@ -4,7 +4,7 @@ ENV BUN_NO_TELEMETRY=1
 COPY tsconfig.base.json ./
 COPY services/chat-service/package.json services/chat-service/bun.lock ./services/chat-service/
 RUN bun pm untrusted || true
-RUN cd services/chat-service && bun install --frozen-lockfile --ignore-scripts || bun install --frozen-lockfile --no-verify
+RUN cd services/chat-service && bun install --ignore-scripts || bun install --no-verify
 COPY services/chat-service/ ./services/chat-service/
 WORKDIR /workspace/services/chat-service
 RUN bun run build
