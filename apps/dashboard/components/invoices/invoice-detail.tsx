@@ -753,18 +753,60 @@ export function InvoiceDetail({
 										);
 									},
 									onMoveLineItem: (fromIndex: number, toIndex: number) => {
-										const move = <T,>(arr: T[]) => {
-											const next = [...arr];
-											const [m] = next.splice(fromIndex, 1);
-											next.splice(toIndex, 0, m);
-											return next;
-										};
-										setEditLineNames((prev) => move(prev));
-										setEditLineQty((prev) => move(prev));
-										setEditLinePrice((prev) => move(prev));
-										setEditLineUnit((prev) => move(prev));
-										setEditLineVat((prev) => move(prev));
-										setEditLineDiscount((prev) => move(prev));
+										try {
+											// Validate indices
+											if (
+												fromIndex < 0 ||
+												toIndex < 0 ||
+												fromIndex >= editLineNames.length ||
+												toIndex >= editLineNames.length ||
+												fromIndex === toIndex
+											) {
+												console.warn("Invalid move indices:", {
+													fromIndex,
+													toIndex,
+													length: editLineNames.length,
+												});
+												return;
+											}
+
+											const move = <T,>(arr: T[]) => {
+												if (arr.length === 0) return arr;
+												const next = [...arr];
+												const [m] = next.splice(fromIndex, 1);
+												if (m === undefined) return arr;
+												next.splice(toIndex, 0, m);
+												return next;
+											};
+
+											// Update all state arrays synchronously
+											setEditLineNames((prev) => {
+												if (prev.length === 0) return prev;
+												return move(prev);
+											});
+											setEditLineQty((prev) => {
+												if (prev.length === 0) return prev;
+												return move(prev);
+											});
+											setEditLinePrice((prev) => {
+												if (prev.length === 0) return prev;
+												return move(prev);
+											});
+											setEditLineUnit((prev) => {
+												if (prev.length === 0) return prev;
+												return move(prev);
+											});
+											setEditLineVat((prev) => {
+												if (prev.length === 0) return prev;
+												return move(prev);
+											});
+											setEditLineDiscount((prev) => {
+												if (prev.length === 0) return prev;
+												return move(prev);
+											});
+										} catch (error) {
+											console.error("Error moving line item:", error);
+										}
 									},
 								}}
 							/>

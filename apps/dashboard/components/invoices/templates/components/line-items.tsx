@@ -1,4 +1,10 @@
-import { DndContext, type DragEndEvent } from "@dnd-kit/core";
+import {
+	DndContext,
+	type DragEndEvent,
+	PointerSensor,
+	useSensor,
+	useSensors,
+} from "@dnd-kit/core";
 import {
 	SortableContext,
 	useSortable,
@@ -89,7 +95,7 @@ function SortableRow({
 	disabled?: boolean;
 	children: React.ReactNode;
 }) {
-	const { attributes, listeners, setNodeRef, transform, transition } =
+	const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
 		useSortable({
 			id,
 			disabled,
@@ -97,6 +103,7 @@ function SortableRow({
 	const style = {
 		transform: CSS.Transform.toString(transform),
 		transition,
+		opacity: isDragging ? 0.5 : 1,
 	} as React.CSSProperties;
 	return (
 		<SortableHandleCtx.Provider value={{ attributes, listeners }}>
@@ -149,19 +156,39 @@ export function LineItems({
 	>({});
 	const numericPattern = React.useMemo(() => /^-?\d*(?:[.,]\d*)?$/, []);
 
+	// Configure sensors for better drag detection
+	// Use PointerSensor as primary, with lower activation distance for better responsiveness
+	const sensors = useSensors(
+		useSensor(PointerSensor, {
+			activationConstraint: {
+				distance: 5,
+			},
+		}),
+	);
+
 	const handleDragEnd = React.useCallback(
 		(event: DragEndEvent) => {
-			const { active, over } = event;
-			if (!over || active.id === over.id) return;
-			const fromIndex = lineItems.findIndex(
-				(it, i) =>
-					(it.id ? `line-item-${it.id}` : `line-item-${i}`) === active.id,
-			);
-			const toIndex = lineItems.findIndex(
-				(it, i) =>
-					(it.id ? `line-item-${it.id}` : `line-item-${i}`) === over.id,
-			);
-			if (fromIndex >= 0 && toIndex >= 0) onMoveLineItem?.(fromIndex, toIndex);
+			try {
+				const { active, over } = event;
+				if (!over || active.id === over.id) {
+					return;
+				}
+				
+				const fromIndex = lineItems.findIndex(
+					(it, i) =>
+						(it.id ? `line-item-${it.id}` : `line-item-${i}`) === active.id,
+				);
+				const toIndex = lineItems.findIndex(
+					(it, i) =>
+						(it.id ? `line-item-${it.id}` : `line-item-${i}`) === over.id,
+				);
+				
+				if (fromIndex >= 0 && toIndex >= 0 && fromIndex !== toIndex) {
+					onMoveLineItem?.(fromIndex, toIndex);
+				}
+			} catch (error) {
+				console.error("Error in handleDragEnd:", error);
+			}
 		},
 		[lineItems, onMoveLineItem],
 	);
@@ -268,7 +295,7 @@ export function LineItems({
 					</div>
 				))}
 			{editable ? (
-				<DndContext onDragEnd={handleDragEnd}>
+				<DndContext sensors={sensors} onDragEnd={handleDragEnd}>
 					<SortableContext
 						items={itemsIds}
 						strategy={verticalListSortingStrategy}
@@ -666,11 +693,15 @@ export function LineItems({
 					);
 				})
 			)}
-			{editable && (
+			{editable && onAddLineItem && (
 				<div className="mt-3">
 					<button
 						type="button"
-						onClick={onAddLineItem}
+						onClick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							onAddLineItem();
+						}}
 						className="text-primary font-mono text-[11px] underline underline-offset-2 hover:opacity-80"
 					>
 						+ Add item
@@ -691,12 +722,13 @@ const SortableHandleCtx = React.createContext<SortableHandleCtxType | null>(
 
 function SortableHandle() {
 	const ctx = React.useContext(SortableHandleCtx);
-	if (!ctx)
+	if (!ctx) {
 		return <GripVertical className="text-muted-foreground h-3.5 w-3.5" />;
+	}
 	return (
 		<button
 			type="button"
-			className="text-muted-foreground hover:text-foreground cursor-grab"
+			className="text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing"
 			{...ctx.attributes}
 			{...ctx.listeners}
 		>

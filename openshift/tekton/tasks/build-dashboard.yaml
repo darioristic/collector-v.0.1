@@ -64,7 +64,7 @@ spec:
 
         bun install --ignore-scripts
         bunx tsc -p packages/types/tsconfig.json --moduleResolution bundler --module ESNext || true
-        bun run --filter ./apps/dashboard build
+        echo "Skipping dashboard build in prepare step; build happens in Dockerfile with Node"
     - name: build-and-push
       image: quay.io/buildah/stable:v1.41.4
       workingDir: $(workspaces.source.path)

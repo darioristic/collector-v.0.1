@@ -51,7 +51,9 @@ export function InvoiceEditorClient({ invoiceId }: InvoiceEditorClientProps) {
 		<InvoiceEditor
 			invoice={invoice}
 			onCancel={() => router.push("/invoices")}
-			onSaved={() => router.push("/invoices")}
+			onSaved={() => {
+				// Don't redirect automatically - user can continue editing or go back manually
+			}}
 		/>
 	);
 }
