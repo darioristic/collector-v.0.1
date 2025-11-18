@@ -179,8 +179,8 @@ export async function POST(
 }
 
 export async function PUT(
-	request: NextRequest,
-	{ params }: { params: Promise<{ path: string[] }> | { path: string[] } },
+    request: NextRequest,
+    { params }: { params: { path: string[] } },
 ) {
 	const auth = await getCurrentAuth();
 
@@ -188,8 +188,7 @@ export async function PUT(
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
-	const resolvedParams = await Promise.resolve(params);
-	const path = resolvedParams.path.join("/");
+    const path = params.path.join("/");
 	const url = `${NOVU_API_URL}/${path}`;
 	const body = await request.json().catch(() => ({}));
 
@@ -242,8 +241,8 @@ export async function PUT(
 }
 
 export async function DELETE(
-	request: NextRequest,
-	{ params }: { params: Promise<{ path: string[] }> | { path: string[] } },
+    request: NextRequest,
+    { params }: { params: { path: string[] } },
 ) {
 	const auth = await getCurrentAuth();
 
@@ -251,8 +250,7 @@ export async function DELETE(
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
-	const resolvedParams = await Promise.resolve(params);
-	const path = resolvedParams.path.join("/");
+    const path = params.path.join("/");
 	const searchParams = request.nextUrl.searchParams.toString();
 	const url = `${NOVU_API_URL}/${path}${searchParams ? `?${searchParams}` : ""}`;
 
