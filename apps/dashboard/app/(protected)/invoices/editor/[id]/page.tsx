@@ -4,11 +4,11 @@ import { use } from "react";
 import { InvoiceEditorClient } from "@/components/invoices/invoice-editor-client";
 
 export default function InvoiceEditorPage({
-	params,
+    params,
 }: {
-	params: Promise<{ id: string }>;
+    params: { id: string };
 }) {
-	const { id } = use(params);
+    const { id } = params;
 
 	return <InvoiceEditorClient invoiceId={id} />;
 }

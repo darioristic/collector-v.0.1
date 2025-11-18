@@ -9,11 +9,11 @@ import { isUuid } from "@/lib/utils";
 import { fetchInvoice } from "@/src/queries/invoices";
 
 export default async function InvoiceHtmlPreviewPage({
-	params,
+    params,
 }: {
-	params: Promise<{ id: string }>;
+    params: { id: string };
 }) {
-	const { id } = await params;
+    const { id } = params;
 	if (!isUuid(id)) {
 		redirect(`/invoices/${id}`);
 	}

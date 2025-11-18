@@ -535,6 +535,6 @@ export type SettingsIntegration = {
     status: IntegrationStatus;
     connectedAt: string;
 };
-export * from "./invoice";
-export * from "./utils/units";
-export * from "./utils/pagination";
+export * from "./invoice.js";
+export * from "./utils/units.js";
+export * from "./utils/pagination.js";

@@ -7,15 +7,15 @@ import { ProjectDetailsSkeleton } from "@/components/projects/project-details-sk
 import { ProjectDetailsView } from "@/components/projects/project-details-view";
 
 type ProjectDetailsPageProps = {
-	params: Promise<{
-		id: string;
-	}>;
+    params: {
+        id: string;
+    };
 };
 
 export default async function ProjectDetailsPage({
-	params,
+    params,
 }: ProjectDetailsPageProps) {
-	const { id } = await params;
+    const { id } = params;
 	const projectId = normaliseProjectId(id);
 
 	if (!projectId) {
