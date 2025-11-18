@@ -33,34 +33,28 @@ export async function POST(request: NextRequest) {
 		return createJsonError(400, "INVALID_BODY", "Nevalidan payload.");
 	}
 
-	// Try employees login first (new authentication system)
-	try {
-		// Import and call employees login handler directly
-		const { POST: employeesLoginPOST } = await import(
-			"../employees-login/route"
-		);
-		const employeesLoginResponse = await employeesLoginPOST(request);
+    const enableEmployeesLogin = process.env.ENABLE_EMPLOYEES_LOGIN === "true";
+    if (enableEmployeesLogin) {
+        try {
+            const { POST: employeesLoginPOST } = await import(
+                "../employees-login/route"
+            );
+            const employeesLoginResponse = await employeesLoginPOST(request);
 
-		if (employeesLoginResponse.ok) {
-			return employeesLoginResponse;
-		}
+            if (employeesLoginResponse.ok) {
+                return employeesLoginResponse;
+            }
 
-		// If employees login fails with 401/403, return that error
-		if (
-			employeesLoginResponse.status === 401 ||
-			employeesLoginResponse.status === 403
-		) {
-			return employeesLoginResponse;
-		}
-	} catch (error) {
-		// If employees login endpoint doesn't exist or fails, fall back to API
-		if (process.env.NODE_ENV === "development") {
-			console.warn(
-				"[Next.js API /auth/login] Employees login failed, falling back to API:",
-				error,
-			);
-		}
-	}
+            if (
+                employeesLoginResponse.status === 401 ||
+                employeesLoginResponse.status === 403
+            ) {
+                return employeesLoginResponse;
+            }
+        } catch {
+            // fall through to API auth
+        }
+    }
 
 	// Fallback to API server authentication
 	const { response, payload } = await forwardAuthRequest<AuthBackendResponse>(
