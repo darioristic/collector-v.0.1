@@ -5,7 +5,7 @@ import type {
 	QuoteStatus,
 	QuoteUpdateInput,
 } from "@crm/types";
-import { ensureResponse, getApiUrl } from "@/src/lib/fetch-utils";
+import { ensureResponse } from "@/src/lib/fetch-utils";
 
 type QuoteListFilters = {
 	companyId?: string;
@@ -51,29 +51,29 @@ export async function fetchQuotes(
 	if (filters?.sortField) params.append("sortField", filters.sortField);
 	if (filters?.sortOrder) params.append("sortOrder", filters.sortOrder);
 
-	const endpoint = params.toString()
-		? `sales/quotes?${params.toString()}`
-		: "sales/quotes";
+  const endpoint = params.toString()
+    ? `/api/quotes?${params.toString()}`
+    : "/api/quotes";
 
-	const response = await ensureResponse(fetch(getApiUrl(endpoint)));
+  const response = await ensureResponse(fetch(endpoint));
 	const payload = (await response.json()) as QuotesListResponse;
 	return payload;
 }
 
 export async function fetchQuote(id: number): Promise<Quote> {
-	const response = await ensureResponse(fetch(getApiUrl(`sales/quotes/${id}`)));
+  const response = await ensureResponse(fetch(`/api/quotes/${id}`));
 	const payload = (await response.json()) as { data: Quote };
 	return payload.data;
 }
 
 export async function createQuote(input: QuoteCreateInput): Promise<Quote> {
-	const response = await ensureResponse(
-		fetch(getApiUrl("sales/quotes"), {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(input),
-		}),
-	);
+  const response = await ensureResponse(
+    fetch("/api/quotes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  );
 	const payload = (await response.json()) as { data: Quote };
 	return payload.data;
 }
