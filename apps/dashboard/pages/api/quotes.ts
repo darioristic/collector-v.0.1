@@ -3,12 +3,12 @@ import type { NextApiRequest, NextApiResponse } from "next";
 const DEFAULT_API_BASE = "http://localhost:4000/api";
 
 function getApiBaseUrl() {
-	const configured = process.env.NEXT_PUBLIC_API_URL;
-	if (!configured) {
-		return DEFAULT_API_BASE;
-	}
-
-	return configured.endsWith("/") ? configured.slice(0, -1) : configured;
+    const configured = process.env.NEXT_PUBLIC_API_URL;
+    const raw = configured && configured.length > 0 ? configured : DEFAULT_API_BASE;
+    const withoutTrailingSlash = raw.endsWith("/") ? raw.slice(0, -1) : raw;
+    return withoutTrailingSlash.toLowerCase().endsWith("/api")
+        ? withoutTrailingSlash
+        : `${withoutTrailingSlash}/api`;
 }
 
 export default async function handler(
